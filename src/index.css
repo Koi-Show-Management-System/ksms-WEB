@@ -1,0 +1,76 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .scrollbar {
+    &::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
+    &::-webkit-scrollbar-thumb {
+      background-color: #d3d3d3;
+      border-radius: 3px;
+    }
+    &::-webkit-scrollbar-thumb:active {
+      background-color: #c7c7c7;
+    }
+  }
+}
+
+* {
+  font-family: "Josefin Sans", sans-serif !important;
+  font-family: "Montserrat", sans-serif !important;
+}
+
+.background {
+  background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3)),
+    url("https://images.unsplash.com/photo-1521120795805-a189ab807138?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fGtvaSUyMGZpc2h8ZW58MHwwfDB8fHww");
+  background-size: cover;
+  background-position: center;
+}
+
+.header {
+  width: -webkit-fill-available;
+}
+.container {
+  width: 1200px;
+  max-width: 100%;
+  margin: 0 auto;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.ant-table-wrapper .ant-table {
+  width: 100%;
+  overflow-x: auto;
+  max-height: 80vh;
+}
+
+@media (max-width: 768px) {
+  .ant-table-wrapper .ant-table {
+    width: 100%;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .ant-table-cell {
+    font-size: 12px;
+  }
+
+  .header {
+    font-size: 14px;
+  }
+}
+
+.search,
+.select-category {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .search,
+  .select-category {
+    width: 30%;
+  }
+}
