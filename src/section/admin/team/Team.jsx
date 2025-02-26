@@ -8,17 +8,17 @@ function Team() {
   const items = [
     {
       key: "manager",
-      label: <span className="text-lg">Manager</span>,
+      label: <span className="text-lg">Quản lý</span>,
       children: <Manager />,
     },
     {
       key: "staff",
-      label: <span className="text-lg">Staff</span>,
+      label: <span className="text-lg">Nhân viên</span>,
       children: <Staff />,
     },
     {
       key: "referees",
-      label: <span className="text-lg">Referees</span>,
+      label: <span className="text-lg">Trọng tài</span>,
       children: <Referees />,
     },
   ];

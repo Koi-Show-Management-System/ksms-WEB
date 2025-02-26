@@ -11,16 +11,16 @@ function StepTwo() {
 
   // Constants
   const criteriaOptions = [
-    { value: "color", label: "Color" },
-    { value: "bodyShape", label: "Body Shape" },
-    { value: "pattern", label: "Pattern" },
-    { value: "size", label: "Size" },
-    { value: "quality", label: "Quality" },
-    { value: "health", label: "Health" },
-    { value: "swimming", label: "Swimming" },
-    { value: "markings", label: "Markings" },
-    { value: "balance", label: "Balance" },
-    { value: "elegance", label: "Elegance" },
+    { value: "color", label: "Màu sắc" },
+    { value: "bodyShape", label: "Hình dáng cơ thể" },
+    { value: "pattern", label: "Họa tiết" },
+    { value: "size", label: "Kích thước" },
+    { value: "quality", label: "Chất lượng" },
+    { value: "health", label: "Sức khỏe" },
+    { value: "swimming", label: "Bơi lội" },
+    { value: "markings", label: "Đặc điểm phân biệt" },
+    { value: "balance", label: "Cân bằng" },
+    { value: "elegance", label: "Sự thanh lịch" },
   ];
 
   const mainRounds = [
@@ -74,39 +74,39 @@ function StepTwo() {
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold mb-6">
-        Step 2: Competition Categories & Judging Criteria
+        Bước 2: Các Thể Loại và Tiêu Chí Đánh Giá
       </h2>
 
       {/* Category Information */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Category Name
+          Tên thể loại
         </label>
-        <Input placeholder="Enter category name" />
+        <Input placeholder="Nhập tên thể loại" />
       </div>
 
       {/* Size Information */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Size
+          Kích thước
         </label>
-        <Input placeholder="Enter size" />
+        <Input placeholder="Nhập kích thước" />
       </div>
 
       {/* Variety Information */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Variety
+          Giống
         </label>
-        <Input placeholder="Enter Variety" />
+        <Input placeholder="Nhập giống" />
       </div>
 
       {/* Round Selection */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Main Round
+          Vòng chính
         </label>
-        <Select placeholder="Select main round" className="w-full">
+        <Select placeholder="Chọn vòng chính" className="w-full">
           {mainRounds.map((round) => (
             <Option key={round.value} value={round.value}>
               {round.label}
@@ -118,12 +118,12 @@ function StepTwo() {
       {/* Sub Rounds */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Round
+          Vòng phụ
         </label>
         <Select
           mode="tags"
           style={{ width: "100%" }}
-          placeholder="Enter round number (e.g. Round 1)"
+          placeholder="Nhập số vòng (vd: Vòng 1)"
           value={subRounds}
           onChange={setSubRounds}
           dropdownStyle={{ display: "none" }}
@@ -142,11 +142,11 @@ function StepTwo() {
       {/* Criteria Selection */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Criteria Selection (Select up to 3)
+          Lựa chọn tiêu chí (Chọn tối đa 3)
         </label>
         <Select
           mode="multiple"
-          placeholder="Select criteria"
+          placeholder="Chọn tiêu chí"
           value={selectedCriteria}
           onChange={handleCriteriaChange}
           maxTagCount={3}
@@ -171,18 +171,18 @@ function StepTwo() {
       {selectedCriteria.length > 0 && (
         <div className="mb-4">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Criteria Percentages
+            Tỉ lệ phần trăm tiêu chí
           </label>
           <div className="space-y-2">
             {selectedCriteria.map((criteria) => (
               <div key={criteria} className="mb-2">
                 <label className="block text-sm text-gray-600 mb-1">
                   {criteriaOptions.find((opt) => opt.value === criteria)?.label}
-                  {` (Remaining: ${getRemainingPercentage()}%)`}
+                  {` (Còn lại: ${getRemainingPercentage()}%)`}
                 </label>
                 <Input
                   suffix="%"
-                  placeholder="Enter percentage"
+                  placeholder="Nhập tỉ lệ phần trăm"
                   value={criteriaPercentages[criteria]}
                   onChange={(e) =>
                     handlePercentageChange(criteria, e.target.value)
@@ -193,9 +193,9 @@ function StepTwo() {
               </div>
             ))}
             <div className="text-right text-sm">
-              Total: {totalPercentage}%
+              Tổng cộng: {totalPercentage}%
               {!isValidTotal() && (
-                <span className="text-red-500 ml-2">(Must equal 100%)</span>
+                <span className="text-red-500 ml-2">(Phải bằng 100%)</span>
               )}
             </div>
           </div>
@@ -205,32 +205,28 @@ function StepTwo() {
       {/* Number of Koi */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Number of Koi
+          Số lượng Koi
         </label>
-        <Input placeholder="Enter number of koi" type="number" />
+        <Input placeholder="Nhập số lượng koi" type="number" />
       </div>
 
       {/* Awards */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Awards
+          Giải thưởng
         </label>
         <div className="grid grid-cols-2 gap-4">
-          <Input placeholder="Enter awards" />
-          <Input placeholder="Prize" />
+          <Input placeholder="Nhập giải thưởng" />
+          <Input placeholder="Giải thưởng tiền tệ" />
         </div>
       </div>
 
       {/* Referee Selection */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Referee
+          Trọng tài
         </label>
-        <Select
-          mode="multiple"
-          placeholder="Select referees"
-          className="w-full"
-        >
+        <Select mode="multiple" placeholder="Chọn trọng tài" className="w-full">
           <Option value="referee1">Mary Johnson</Option>
           <Option value="referee2">James Smith</Option>
         </Select>

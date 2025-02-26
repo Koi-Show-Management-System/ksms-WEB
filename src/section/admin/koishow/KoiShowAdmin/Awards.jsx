@@ -4,35 +4,35 @@ import { Badge, Card, Divider, Typography } from "antd";
 // Dữ liệu giải thưởng
 const awardsData = [
   {
-    category: "Mini Kohaku	",
+    category: "Mini Kohaku",
     fishType: "Showa",
     size: "15-25cm",
     prize: "$10,000",
     trophy: true,
-    winner: "Pending",
-    referee: "Mr. Messi",
+    winner: "Chưa có",
+    referee: "Ông Messi",
     imageUrl:
       "https://aquariumcare.vn/upload/user/images/Thi%E1%BA%BFt%20k%E1%BA%BF%20ch%C6%B0a%20c%C3%B3%20t%C3%AAn.jpg",
   },
   {
-    category: "Standard Showa	",
+    category: "Standard Showa",
     fishType: "Kohaku",
-    size: "Under 10-15cm",
+    size: "Dưới 10-15cm",
     prize: "$8,000",
     trophy: true,
-    winner: "Pending",
-    referee: "Mr. Ronaldo",
+    winner: "Chưa có",
+    referee: "Ông Ronaldo",
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2KFBka8D7AW2kyC1JJe1sf5CfhjJFBu7NN723Ji8S2reehSpEMRG2bVN8H99yr264W3M&usqp=CAU",
   },
   {
-    category: "Premium Taisho Sanke		",
+    category: "Premium Taisho Sanke",
     fishType: "Sanke",
-    size: "30-50 cm	",
+    size: "30-50 cm",
     prize: "$8,000",
     trophy: true,
-    winner: "Pending",
-    referee: "Mr. Ronaldo",
+    winner: "Chưa có",
+    referee: "Ông Ronaldo",
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcQ2KFBka8D7AW2kyC1JJe1sf5CfhjJFBu7NN723Ji8S2reehSpEMRG2bVN8H99yr264W3M&usqp=CAU",
   },
@@ -42,9 +42,9 @@ const awardsData = [
     size: "10-15cm",
     prize: "$8,000",
     trophy: true,
-    winner: "Pending",
+    winner: "Chưa có",
     grandChampion: true,
-    referee: "Mr. Neymar",
+    referee: "Ông Neymar",
     imageUrl:
       "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcR38wS6A72mmfDxo4MrbeufelTre9EC1TRnlB2g-OqKGP0sIZ_rq1zXk07dJjN40Li_7MM&usqp=CAU",
   },
@@ -68,7 +68,7 @@ const Awards = () => {
               <span>{award.category}</span>
               {award.trophy && (
                 <Badge
-                  count="Trophy"
+                  count="Cúp"
                   style={{ backgroundColor: "#f7c100", fontWeight: "bold" }}
                 />
               )}
@@ -84,17 +84,17 @@ const Awards = () => {
               />
               <div>
                 <p className="text-gray-700 text-lg">
-                  {award.fishType} - Size {award.size}
+                  {award.fishType} - Kích thước {award.size}
                 </p>
-                <p className="text-lg text-green-500">Prize: {award.prize}</p>
+                <p className="text-lg text-green-500">Giải thưởng: {award.prize}</p>
               </div>
             </div>
-            <div className="text-lg flex-end">Winner: {award.winner}</div>
+            <div className="text-lg flex-end">Người thắng: {award.winner}</div>
           </div>
 
           <Divider className="my-4" />
           <div className="text-center">
-            <Text strong>Referee: {award.referee}</Text>
+            <Text strong>Trọng tài: {award.referee}</Text>
           </div>
         </Card>
       ))}

@@ -17,7 +17,7 @@ function Staff() {
   };
   const columns = [
     {
-      title: "Name",
+      title: "Tên",
       dataIndex: "name",
       key: "name",
     },
@@ -27,12 +27,12 @@ function Staff() {
       key: "email",
     },
     {
-      title: "Phone",
+      title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
@@ -44,12 +44,12 @@ function Staff() {
       ),
     },
     {
-      title: "Role",
+      title: "Vai trò",
       dataIndex: "role",
       key: "role",
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       render: () => (
         <div className="flex gap-3">
@@ -67,7 +67,7 @@ function Staff() {
       email: "john@example.com",
       phone: "123-456-789",
       status: "Active",
-      role: "Staff",
+      role: "Nhân viên",
     },
     {
       key: "2",
@@ -75,7 +75,7 @@ function Staff() {
       email: "leo@example.com",
       phone: "987-654-321",
       status: "Active",
-      role: "Staff",
+      role: "Nhân viên",
     },
   ];
 
@@ -84,46 +84,37 @@ function Staff() {
       <div className="mb-4 flex justify-end">
         <div className="absolute top-[-50px] right-0">
           <Button type="primary" onClick={showModal}>
-            Add New
+            Thêm mới
           </Button>{" "}
         </div>
       </div>
       <Modal
-        title="Add New Manager"
+        title="Thêm Nhân Viên Mới"
         open={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
       >
         <Form layout="vertical" className="space-y-4">
           <Form.Item
-            label="Name"
+            label="Tên"
             name="name"
-            rules={[{ required: true, message: "Please input the name!" }]}
-            className="flex flex-col"
+            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
             label="Email"
             name="email"
-            rules={[
-              {
-                required: true,
-                message: "Please input the email!",
-                type: "email",
-              },
-            ]}
-            className="flex flex-col"
+            rules={[{ required: true, message: "Vui lòng nhập email!" }]}
           >
             <Input />
           </Form.Item>
           <Form.Item
-            label="Phone"
+            label="Số điện thoại"
             name="phone"
             rules={[
-              { required: true, message: "Please input the phone number!" },
+              { required: true, message: "Vui lòng nhập số điện thoại!" },
             ]}
-            className="flex flex-col"
           >
             <Input />
           </Form.Item>
@@ -137,7 +128,7 @@ function Staff() {
           pageSize: 6,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
         }}
       />
     </div>

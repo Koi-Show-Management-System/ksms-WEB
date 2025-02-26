@@ -5,186 +5,185 @@ const { Option } = Select;
 function StepOne() {
   return (
     <div className="space-y-4">
-      {/* Show Information */}
+      {/* Thông tin chương trình */}
       <div className="mb-4 ">
         <h2 className="text-2xl font-semibold mb-6">
-          Step 1: Show Information & Details
+          Bước 1: Thông tin và Chi tiết
         </h2>
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Show Name
+          Tên chương trình
         </label>
-        <Input placeholder="Enter show name" />
+        <Input placeholder="Nhập tên chương trình" />
       </div>
 
-      {/* Show Description */}
+      {/* Mô tả chương trình */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Show Description
+          Mô tả chương trình
         </label>
-        <Input.TextArea rows={3} placeholder="Enter show description" />
+        <Input.TextArea rows={3} placeholder="Nhập mô tả chương trình" />
       </div>
 
-      {/* Registration Period */}
+      {/* Thời gian đăng ký */}
       <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Registration Start Date
+            Ngày bắt đầu đăng ký
           </label>
           <DatePicker className="w-full" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Registration End Date
+            Ngày kết thúc đăng ký
           </label>
           <DatePicker className="w-full" />
         </div>
       </div>
 
-      {/* Show Duration */}
+      {/* Thời gian diễn ra chương trình */}
       <div className="mb-4 grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Show Start Date
+            Ngày bắt đầu chương trình
           </label>
           <DatePicker className="w-full" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Show End Date
+            Ngày kết thúc chương trình
           </label>
           <DatePicker className="w-full" />
         </div>
       </div>
 
-      {/* Exhibition Time */}
+      {/* Giờ triển lãm */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Exhibition Time
+          Giờ triển lãm
         </label>
-        <Input placeholder="Daily 9:00 AM - 5:00 PM" />
+        <Input placeholder="Hàng ngày từ 9:00 sáng đến 5:00 chiều" />
       </div>
 
-      {/* Minimum and Maximum Quantity */}
+      {/* Số lượng tối thiểu và tối đa */}
       <div className="mb-4 grid grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Minimum Quantity
+            Số lượng tối thiểu
           </label>
-          <Input type="number" placeholder="e.g. 10" />
+          <Input type="number" placeholder="ví dụ: 10" />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Maximum Quantity
+            Số lượng tối đa
           </label>
-          <Input type="number" placeholder="e.g. 200" />
+          <Input type="number" placeholder="ví dụ: 200" />
         </div>
       </div>
 
-      {/* Location */}
+      {/* Địa điểm */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Location
+          Địa điểm
         </label>
-        <Input placeholder="Enter location" />
+        <Input placeholder="Nhập địa điểm" />
       </div>
 
-      {/* Image Show */}
+      {/* Hình ảnh chương trình */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Image Show
+          Hình ảnh chương trình
         </label>
         <Input type="file" />
       </div>
 
-      {/* Major Awards */}
+      {/* Giải thưởng lớn */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Major Awards
+          Giải thưởng lớn
         </label>
         <Checkbox.Group>
           <div className="space-y-2">
             <Checkbox value="grandChampion">
-              Include Grand Champion Award
+              Bao gồm giải thưởng Grand Champion
             </Checkbox>
-            <Checkbox value="bestInShow">Include Best in Show Award</Checkbox>
+            <Checkbox value="bestInShow">
+              Bao gồm giải thưởng Best in Show
+            </Checkbox>
           </div>
         </Checkbox.Group>
       </div>
 
-      {/* Competition Registration */}
+      {/* Quản lý nhà tài trợ */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Competition Registration
+          Quản lý nhà tài trợ
         </label>
-        <div className="grid grid-cols-3 gap-4">
-          <Input placeholder="Enter Participant Fee" />
-          <Input placeholder="Prize" />
-          <Input placeholder="Total Number of Tickets" />
+        <div className="grid grid-cols-2 gap-4">
+          <Input placeholder="Nhà tài trợ chính" />
+          <Input placeholder="Giải thưởng" />
+          <div className="mb-4">
+            <label className="">Hình ảnh nhà tài trợ</label>
+            <Input type="file" />
+          </div>
         </div>
       </div>
 
-      {/* Sponsor Management */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Sponsor Management
-        </label>
-        <div className="grid grid-cols-3 gap-4">
-          <Input placeholder="Primary Sponsor" />
-          <Input placeholder="Logo Sponsor" />
-          <Input placeholder="Prize" />
+      {/* Quản lý vé */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Quản lý vé</h3>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Vé Đăng Kí
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            <Input placeholder="Nhập tên vé" />
+            <Input placeholder="Giá vé" />
+            <Input placeholder="Tổng số vé" />
+          </div>
+        </div>
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Vé tham dự
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            <Input placeholder="Nhập tên vé" />
+            <Input placeholder="Giá vé" />
+            <Input placeholder="Tổng số vé" />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Vé thi đấu
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            <Input placeholder="Nhập tên vé" />
+            <Input placeholder="Giá vé" />
+            <Input placeholder="Tổng số vé" />
+          </div>
+        </div>
+
+        <div className="mb-4">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Vé triển lãm
+          </label>
+          <div className="grid grid-cols-3 gap-4">
+            <Input placeholder="Nhập tên vé" />
+            <Input placeholder="Giá vé" />
+            <Input placeholder="Tổng số vé" />
+          </div>
         </div>
       </div>
 
-      {/* Assign Managers */}
+      {/* Phân công quản lý */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Assign Managers
+          Phân công quản lý
         </label>
-        <Select
-          mode="multiple"
-          placeholder="Select Managers"
-          className="w-full"
-        >
+        <Select mode="multiple" placeholder="Chọn quản lý" className="w-full">
           <Option value="manager1">Alice Johnson</Option>
           <Option value="manager2">John Doe</Option>
         </Select>
-      </div>
-
-      {/* Ticket Management */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Ticket Management</h3>
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Viewing Ticket
-          </label>
-          <div className="grid grid-cols-3 gap-4">
-            <Input placeholder="Price" />
-            <Input placeholder="Prize" />
-            <Input placeholder="Total Number of Tickets" />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Competition Ticket
-          </label>
-          <div className="grid grid-cols-3 gap-4">
-            <Input placeholder="Price" />
-            <Input placeholder="Prize" />
-            <Input placeholder="Total Number of Tickets" />
-          </div>
-        </div>
-
-        <div className="mb-4">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Exhibition Ticket
-          </label>
-          <div className="grid grid-cols-3 gap-4">
-            <Input placeholder="Price" />
-            <Input placeholder="Prize" />
-            <Input placeholder="Total Number of Tickets" />
-          </div>
-        </div>
       </div>
     </div>
   );

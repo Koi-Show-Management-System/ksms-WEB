@@ -7,7 +7,7 @@ function UserView() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6 mt-5">
-        <h2 className="text-3xl font-semibold">User Management</h2>
+        <h2 className="text-3xl font-semibold">Quản lý Người Dùng</h2>
       </div>
       <User />
     </div>

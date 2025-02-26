@@ -5,35 +5,40 @@ import Authentication from "../pages/AdminPage/Authentication";
 import AdminDashboard from "../layout/admin";
 import ManagerDashboard from "../layout/manager";
 import RefereeDashboard from "../layout/referee";
+import Cookies from "js-cookie";
 
-export const KoiShowPageAdmin = lazy(() =>
-  import("../pages/AdminPage/KoiShowPage")
+export const KoiShowPageAdmin = lazy(
+  () => import("../pages/AdminPage/KoiShowPage")
 );
 export const MyShowPage = lazy(() => import("../pages/AdminPage/MyShowPage"));
-export const KoiShowDetailAdmin = lazy(() =>
-  import("../pages/AdminPage/KoiShowDetailPage")
+export const KoiShowDetailAdmin = lazy(
+  () => import("../pages/AdminPage/KoiShowDetailPage")
 );
-export const CreateShow = lazy(() =>
-  import("../pages/AdminPage/CreateShowPage")
+export const CreateShow = lazy(
+  () => import("../pages/AdminPage/CreateShowPage")
 );
-export const KoiShowPageManager = lazy(() =>
-  import("../pages/ManagerPage/KoiShowPage")
+export const KoiShowPageManager = lazy(
+  () => import("../pages/ManagerPage/KoiShowPage")
 );
-export const KoiShowDetailManager = lazy(() =>
-  import("../pages/ManagerPage/KoiShowDetailPage")
+export const KoiShowDetailManager = lazy(
+  () => import("../pages/ManagerPage/KoiShowDetailPage")
 );
-export const KoiShowPageReferee = lazy(() =>
-  import("../pages/RefereePage/KoiShowPage")
+export const KoiShowPageReferee = lazy(
+  () => import("../pages/RefereePage/KoiShowPage")
 );
-export const KoiShowDetailReferee = lazy(() =>
-  import("../pages/RefereePage/KoiShowDetailPage")
+export const KoiShowDetailReferee = lazy(
+  () => import("../pages/RefereePage/KoiShowDetailPage")
 );
 export const UserPage = lazy(() => import("../pages/AdminPage/UserPage"));
 export const TeamPage = lazy(() => import("../pages/AdminPage/TeamPage"));
-export const OverviewAdmin = lazy(() =>
-  import("../pages/AdminPage/OverviewPage")
+export const OverviewAdmin = lazy(
+  () => import("../pages/AdminPage/OverviewPage")
 );
 export const NewsPage = lazy(() => import("../pages/AdminPage/NewsPage"));
+export const CriteriaPage = lazy(
+  () => import("../pages/AdminPage/CriteriaPage")
+);
+
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
   if (userRole !== allowedRole) {
     return <Navigate to="/" replace />;
@@ -42,16 +47,16 @@ const ProtectedRoute = ({ children, allowedRole, userRole }) => {
 };
 
 export const Router = () => {
-  const userRole = "admin";
+  const userRole = Cookies.get("__role") || "guest"; 
 
   const routes = useRoutes([
     {
       path: "/",
-      element: <Authentication />,
+      element: <Authentication />, 
     },
     {
       element: (
-        <ProtectedRoute allowedRole="admin" userRole={userRole}>
+        <ProtectedRoute allowedRole="Admin" userRole={userRole}>
           <AdminDashboard>
             <Suspense fallback={<Loading />}>
               <Outlet />
@@ -68,15 +73,15 @@ export const Router = () => {
         { element: <UserPage />, path: "users" },
         { element: <TeamPage />, path: "teams" },
         { element: <NewsPage />, path: "news" },
+        { element: <CriteriaPage />, path: "criteria" },
         { element: <KoiShowDetailAdmin />, path: "koiShow/detail/:id" },
-        // { element: <Category />, path: "koiShow/detail/:id" },
-        { element: <Navigate to="/admin/koiShow" replace />, index: true },
+        { element: <Navigate to="/admin/overview" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],
     },
     {
       element: (
-        <ProtectedRoute allowedRole="manager" userRole={userRole}>
+        <ProtectedRoute allowedRole="Manager" userRole={userRole}>
           <ManagerDashboard>
             <Suspense fallback={<Loading />}>
               <Outlet />
@@ -111,7 +116,7 @@ export const Router = () => {
       ],
     },
     {
-      path: "*",
+      path: "*", 
       element: <Error404 />,
     },
   ]);

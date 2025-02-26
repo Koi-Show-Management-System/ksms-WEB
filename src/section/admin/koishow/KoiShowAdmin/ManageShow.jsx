@@ -8,28 +8,24 @@ function ManageShow() {
   const items = [
     {
       key: "manager",
-      label: <span className="text-lg">Manager</span>,
+      label: <span className="text-lg">Quản lý</span>,
       children: <Manager />,
     },
     {
       key: "staff",
-      label: <span className="text-lg">Staff</span>,
+      label: <span className="text-lg">Nhân viên</span>,
       children: <Staff />,
     },
     {
       key: "referees",
-      label: <span className="text-lg">Referees</span>,
+      label: <span className="text-lg">Trọng tài</span>,
       children: <Referees />,
     },
   ];
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      <div className="flex items-center justify-between mx-2">
-        <div className="flex-1">
-          <Tabs defaultActiveKey="manager" items={items} />
-        </div>
-      </div>
+      <Tabs defaultActiveKey="manager" items={items} />
     </div>
   );
 }

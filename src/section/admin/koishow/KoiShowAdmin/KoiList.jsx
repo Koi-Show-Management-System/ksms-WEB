@@ -1,29 +1,27 @@
 import React, { useState, useEffect } from "react";
 import {
   Table,
-  Tag,
   Select,
   Input,
   Button,
   Popconfirm,
   Modal,
   Image,
+  Col,
+  Row,
+  Card,
 } from "antd";
-import {
-  EditOutlined,
-  DeleteOutlined,
-  PlayCircleOutlined,
-} from "@ant-design/icons";
+import { EditOutlined, DeleteOutlined, EyeOutlined } from "@ant-design/icons";
 
 const { Option } = Select;
 const { Search } = Input;
+const categories = ["Mini Kohaku", "Standard Showa", "Premium Taisho Sanke"];
 
 function KoiList({ categoryId }) {
   const [data, setData] = useState([
     {
       id: "1",
       name: "Nguyen Van A",
-      email: "nguyenvana@example.com",
       koiName: "Koi Kohaku 1",
       size: "20 cm",
       variety: "Kohaku",
@@ -34,13 +32,13 @@ function KoiList({ categoryId }) {
         "https://videos.pexels.com/video-files/856951/856951-hd_1920_1080_25fps.mp4",
       status: "Approved",
       categoryId: "1",
+      category: "Mini Kohaku",
     },
     {
       id: "2",
       name: "Tran Thi B",
-      email: "tranthib@example.com",
       koiName: "Koi Showa 1",
-      size: "40 cm",
+      size: "30 cm",
       variety: "Showa",
       description: "A stunning Showa koi with vibrant colors.",
       image:
@@ -48,13 +46,13 @@ function KoiList({ categoryId }) {
       video: "https://www.example.com/video2",
       status: "Pending",
       categoryId: "2",
+      category: "Standard Showa",
     },
     {
       id: "3",
       name: "Le Van C",
-      email: "levanc@example.com",
       koiName: "Koi Sanke 1",
-      size: "35 cm",
+      size: "40 cm",
       variety: "Sanke",
       description: "A young Sanke koi with great potential.",
       image:
@@ -62,67 +60,29 @@ function KoiList({ categoryId }) {
       video: "https://www.example.com/video3",
       status: "Rejected",
       categoryId: "1",
+      category: "Premium Taisho Sanke",
     },
   ]);
 
-  const [filteredData, setFilteredData] = useState([]);
-  const [searchText, setSearchText] = useState("");
-  const [selectedCategory, setSelectedCategory] = useState(categoryId || "");
-  const [filterVariety, setFilterVariety] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [videoUrl, setVideoUrl] = useState("");
+  const [currentKoi, setCurrentKoi] = useState(null);
 
-  // Lọc dữ liệu dựa trên categoryId và searchText
-  useEffect(() => {
-    let filtered = data;
-
-    if (selectedCategory) {
-      filtered = filtered.filter(
-        (item) => item.categoryId === selectedCategory
-      );
-    }
-
-    if (searchText) {
-      filtered = filtered.filter(
-        (item) =>
-          item.name.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.koiName.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.variety.toLowerCase().includes(searchText.toLowerCase())
-      );
-    }
-
-    if (filterVariety) {
-      filtered = filtered.filter((item) => item.variety === filterVariety);
-    }
-
-    if (filterStatus) {
-      filtered = filtered.filter((item) => item.status === filterStatus);
-    }
-
-    setFilteredData(filtered);
-  }, [selectedCategory, searchText, filterVariety, filterStatus, data]);
-
-  const handleStatusChange = (value, recordId) => {
-    const updatedData = data.map((item) =>
-      item.id === recordId ? { ...item, status: value } : item
-    );
-    setData(updatedData);
-  };
-
-  const handleDelete = (recordId) => {
-    const updatedData = data.filter((item) => item.id !== recordId);
-    setData(updatedData);
-  };
-
-  const handleVideoClick = (url) => {
-    setVideoUrl(url);
+  const handleViewDetails = (record) => {
+    setCurrentKoi(record);
     setIsModalVisible(true);
   };
 
   const handleCancel = () => {
     setIsModalVisible(false);
-    setVideoUrl("");
+    setCurrentKoi(null);
+  };
+
+  const handleApproveReject = (status) => {
+    const updatedData = data.map((item) =>
+      item.id === currentKoi.id ? { ...item, status } : item
+    );
+    setData(updatedData);
+    setIsModalVisible(false); // Close the modal after update
   };
 
   const columns = [
@@ -135,36 +95,16 @@ function KoiList({ categoryId }) {
       title: "Name",
       dataIndex: "name",
       key: "name",
-      width: 130,
     },
     {
       title: "Koi Name",
       dataIndex: "koiName",
       key: "koiName",
-      width: 120,
     },
     {
-      title: "Size",
-      dataIndex: "size",
-      key: "size",
-      width: 80,
-    },
-    {
-      title: "Variety",
-      dataIndex: "variety",
-      key: "variety",
-      filters: [
-        { text: "Kohaku", value: "Kohaku" },
-        { text: "Showa", value: "Showa" },
-        { text: "Sanke", value: "Sanke" },
-      ],
-      onFilter: (value, record) => record.variety === value,
-    },
-
-    {
-      title: "Description",
-      dataIndex: "description",
-      key: "description",
+      title: "Category",
+      dataIndex: "category",
+      key: "category",
     },
     {
       title: "Image",
@@ -180,63 +120,20 @@ function KoiList({ categoryId }) {
       ),
     },
     {
-      title: "Video",
-      dataIndex: "video",
-      key: "video",
-      render: (video, record) => (
-        <div onClick={() => handleVideoClick(video)}>
-          {" "}
-          {/* Click để mở modal */}
-          <Button
-            icon={<PlayCircleOutlined />}
-            style={{
-              position: "absolute",
-              top: "46%",
-              left: "50%",
-              width: 50,
-              height: 35,
-              transform: "translate(-50%, -50%)",
-            }}
-            onClick={() => handleVideoClick(video)}
-          ></Button>
-        </div>
-      ),
-    },
-    {
       title: "Status",
       dataIndex: "status",
       key: "status",
-      render: (status, record) => {
-        let color = "";
-        if (status === "Approved") color = "green";
-        else if (status === "Pending") color = "orange";
-        else if (status === "Rejected") color = "red";
+      render: (status) => {
+        let statusClass = "";
+        if (status === "Approved") statusClass = "text-green-600 font-bold";
+        else if (status === "Pending")
+          statusClass = "text-yellow-600 font-bold";
+        else if (status === "Rejected") statusClass = "text-red-600 font-bold";
 
-        return (
-          <Select
-            value={status}
-            onChange={(value) => handleStatusChange(value, record.id)}
-            style={{ width: 120 }}
-          >
-            <Option value="Approved" style={{ color: "green" }}>
-              Approved
-            </Option>
-            <Option value="Pending" style={{ color: "orange" }}>
-              Pending
-            </Option>
-            <Option value="Rejected" style={{ color: "red" }}>
-              Rejected
-            </Option>
-          </Select>
-        );
+        return <span className={statusClass}>{status}</span>;
       },
-      filters: [
-        { text: "Approved", value: "Approved" },
-        { text: "Pending", value: "Pending" },
-        { text: "Rejected", value: "Rejected" },
-      ],
-      onFilter: (value, record) => record.status === value,
     },
+
     {
       title: "Actions",
       key: "actions",
@@ -244,8 +141,9 @@ function KoiList({ categoryId }) {
         <div className="flex items-center space-x-2">
           <Button
             type="text"
-            icon={<EditOutlined />}
+            icon={<EyeOutlined />}
             className="text-gray-500 hover:text-blue-500"
+            onClick={() => handleViewDetails(record)}
           />
           <Popconfirm
             title="Are you sure to delete this koi?"
@@ -267,34 +165,103 @@ function KoiList({ categoryId }) {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-        <Search
-          placeholder="Search Koi..."
-          onSearch={(value) => setSearchText(value)}
-          allowClear
-          className="w-full md:w-1/3 mb-2 md:mb-0"
-        />
-      </div>
-
       <Table
         columns={columns}
-        dataSource={filteredData}
+        dataSource={data}
         pagination={{ pageSize: 5 }}
         rowKey="id"
       />
 
-      {/* Modal Video */}
       <Modal
-        title="Video"
-        visible={isModalVisible}
+        title={currentKoi ? `${currentKoi.koiName} Details` : "Koi Details"}
+        open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
-        width={800}
+        width={900}
       >
-        <video width="100%" controls>
-          <source src={videoUrl} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
+        {currentKoi && (
+          <div className="p-4">
+            <Row gutter={[16, 16]}>
+              {/* Koi Information - Top Section */}
+              <Card title="Koi Information" bordered={false} className="w-full">
+                <Row gutter={[16, 16]}>
+                  <Col span={12}>
+                    <h4>
+                      <strong>Name:</strong> {currentKoi.name}
+                    </h4>
+                    <p>
+                      <strong>Koi Name:</strong> {currentKoi.koiName}
+                    </p>
+                    <p>
+                      <strong>Size:</strong> {currentKoi.size}
+                    </p>
+                    <p>
+                      <strong>Variety:</strong> {currentKoi.variety}
+                    </p>
+                  </Col>
+                  <Col span={12}>
+                    <p>
+                      <strong>Description:</strong> {currentKoi.description}
+                    </p>
+                    <p>
+                      <strong>Category:</strong> {currentKoi.category}
+                    </p>
+                    <p>
+                      <strong>Status:</strong>
+                      <span
+                        className={`ml-2 font-bold 
+      ${currentKoi.status === "Approved" ? "text-green-600" : ""}
+      ${currentKoi.status === "Pending" ? "text-yellow-600" : ""}
+      ${currentKoi.status === "Rejected" ? "text-red-600" : ""}`}
+                      >
+                        {currentKoi.status}
+                      </span>
+                    </p>
+                  </Col>
+                </Row>
+              </Card>
+
+              <Card title="Media" bordered={false} className="w-full">
+                <Row gutter={[16, 16]}>
+                  <Col span={12}>
+                    <Image
+                      src={currentKoi.image}
+                      alt="Koi"
+                      className="w-full  object-cover"
+                      style={{ height: "210px" }}
+                    />
+                  </Col>
+                  <Col span={12}>
+                    <video className="w-full h-[210px] object-cover" controls>
+                      <source src={currentKoi.video} type="video/mp4" />
+                      Your browser does not support the video tag.
+                    </video>
+                  </Col>
+                </Row>
+              </Card>
+            </Row>
+
+            {/* Approve/Reject Buttons */}
+            <div className="mt-4 text-center space-x-3">
+              <Button
+                type="primary"
+                onClick={() => handleApproveReject("Approved")}
+                className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
+              >
+                Approve
+              </Button>
+
+              <Button
+                type="primary"
+                danger
+                onClick={() => handleApproveReject("Rejected")}
+                className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
+              >
+                Reject
+              </Button>
+            </div>
+          </div>
+        )}
       </Modal>
     </div>
   );

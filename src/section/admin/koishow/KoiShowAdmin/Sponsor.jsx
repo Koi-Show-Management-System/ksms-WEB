@@ -3,14 +3,16 @@ import { Card, Row, Col, Tag, Button } from "antd";
 import { GlobalOutlined, MailOutlined, PhoneOutlined } from "@ant-design/icons";
 import sponsor1 from "../../../../assets/sponsorLogo1.png";
 import sponsor2 from "../../../../assets/sponsorLogo2.png";
+
+// Dữ liệu nhà tài trợ
 const sponsors = [
   {
     id: 1,
     name: "Koi Palace",
-    type: "Platinum",
+    type: "Bạch Kim",
     typeColor: "gold",
     description:
-      "Leading supplier of high-quality koi fish and pond equipment. Supporting the koi community for over 20 years.",
+      "Nhà cung cấp hàng đầu về cá Koi và thiết bị hồ cá chất lượng cao. Hỗ trợ cộng đồng Koi hơn 20 năm.",
     image: sponsor1,
     website: "https://example.com",
     email: "contact@koipalace.com",
@@ -19,10 +21,10 @@ const sponsors = [
   {
     id: 2,
     name: "Aqua Systems",
-    type: "Gold",
+    type: "Vàng",
     typeColor: "orange",
     description:
-      "Specialized in advanced filtration systems and pond maintenance solutions for koi enthusiasts.",
+      "Chuyên cung cấp hệ thống lọc nước tiên tiến và giải pháp bảo trì hồ cho những người yêu thích cá Koi.",
     image: sponsor2,
     website: "https://example.com",
     email: "info@aquasystems.com",
@@ -70,7 +72,7 @@ const Sponsor = () => {
                   Email
                 </Button>
                 <Button icon={<PhoneOutlined />} href={`tel:${sponsor.phone}`}>
-                  Call
+                  Gọi
                 </Button>
               </div>
             </div>

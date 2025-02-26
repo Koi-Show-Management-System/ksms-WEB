@@ -15,9 +15,10 @@ function Referees() {
   const handleCancel = () => {
     setIsModalVisible(false);
   };
+
   const columns = [
     {
-      title: "Name",
+      title: "Tên",
       dataIndex: "name",
       key: "name",
     },
@@ -27,29 +28,29 @@ function Referees() {
       key: "email",
     },
     {
-      title: "Phone",
+      title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <span
-          className={status === "Active" ? "text-green-500" : "text-red-500"}
+          className={status === "Hoạt động" ? "text-green-500" : "text-red-500"}
         >
           {status}
         </span>
       ),
     },
     {
-      title: "Role",
+      title: "Vai trò",
       dataIndex: "role",
       key: "role",
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       render: () => (
         <div className="flex gap-3">
@@ -66,32 +67,29 @@ function Referees() {
       name: "Mike Referee",
       email: "referee@example.com",
       phone: "123-456-789",
-      status: "Active",
-      role: "Referee",
+      status: "Hoạt động",
+      role: "Trọng tài",
     },
   ];
 
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <div className="absolute top-[-50px] right-0">
-          <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
-            Add New
-          </Button>
-        </div>
+        <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
+          Thêm mới
+        </Button>
       </div>
       <Modal
-        title="Add New Manager"
+        title="Thêm Trọng Tài"
         open={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
       >
         <Form layout="vertical" className="space-y-4">
           <Form.Item
-            label="Name"
+            label="Tên"
             name="name"
-            rules={[{ required: true, message: "Please input the name!" }]}
-            className="flex flex-col"
+            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
           >
             <Input />
           </Form.Item>
@@ -99,23 +97,15 @@ function Referees() {
             label="Email"
             name="email"
             rules={[
-              {
-                required: true,
-                message: "Please input the email!",
-                type: "email",
-              },
+              { required: true, message: "Vui lòng nhập email!" },
             ]}
-            className="flex flex-col"
           >
             <Input />
           </Form.Item>
           <Form.Item
-            label="Phone"
+            label="Số điện thoại"
             name="phone"
-            rules={[
-              { required: true, message: "Please input the phone number!" },
-            ]}
-            className="flex flex-col"
+            rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
           >
             <Input />
           </Form.Item>
@@ -129,7 +119,7 @@ function Referees() {
           pageSize: 6,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
         }}
       />
     </div>

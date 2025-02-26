@@ -1,7 +1,5 @@
-import React, { useState } from "react";
-import { Table, Tag, Space, Select, Row, Col } from "antd";
-
-const { Option } = Select;
+import React from "react";
+import { Table, Tag } from "antd";
 
 const competitionData = [
   {
@@ -9,48 +7,48 @@ const competitionData = [
     entryNumber: "SW-001",
     image:
       "https://cdn.pixabay.com/photo/2018/08/19/18/29/carp-3617292_640.jpg",
-
     size: "53 cm",
     variety: "Taisho Sanke",
     category: "Standard Showa",
     totalVote: 200,
-    status: "Complete",
+    status: "Hoàn thành",
+    tank: "Bể A", // New field for tank
   },
   {
     key: "2",
     entryNumber: "TC-005",
     image:
       "https://cdn.pixabay.com/photo/2021/04/04/05/43/animal-6149183_640.jpg",
-
     size: "58 cm",
     variety: "Showa",
     category: "Mini Kohaku",
     totalVote: 180,
-    status: "Complete",
+    status: "Hoàn thành",
+    tank: "Bể B", // New field for tank
   },
   {
     key: "3",
     entryNumber: "KH-004",
     image:
       "https://cdn.pixabay.com/photo/2018/03/28/01/12/nature-3267971_640.jpg",
-
     size: "60 cm",
     variety: "Kohaku",
     category: "Premium Taisho Sanke",
     totalVote: 150,
-    status: "Complete",
+    status: "Hoàn thành",
+    tank: "Bể C", // New field for tank
   },
   {
     key: "4",
     entryNumber: "SW-004",
     image:
       "https://cdn.pixabay.com/photo/2020/06/04/20/25/koi-fish-5260406_640.jpg",
-
     size: "62 cm",
     variety: "Showa",
     category: "Mini Kohaku",
     totalVote: 120,
-    status: "Complete",
+    status: "Hoàn thành",
+    tank: "Bể D", // New field for tank
   },
   {
     key: "5",
@@ -60,7 +58,8 @@ const competitionData = [
     variety: "Kohaku",
     category: "Standard Showa",
     totalVote: 100,
-    status: "Notcomplete",
+    status: "Chưa hoàn thành",
+    tank: "Bể E", // New field for tank
   },
 ];
 
@@ -74,12 +73,12 @@ function Votes() {
       ),
     },
     {
-      title: "Registration Number",
+      title: "Mã Đăng Ký",
       dataIndex: "entryNumber",
       width: 180,
     },
     {
-      title: "Image",
+      title: "Hình ảnh",
       dataIndex: "image",
       render: (text) => (
         <img
@@ -92,24 +91,29 @@ function Votes() {
       ),
     },
     {
-      title: "Size",
+      title: "Kích thước",
       dataIndex: "size",
     },
     {
-      title: "Variety",
+      title: "Giống",
       dataIndex: "variety",
     },
     {
-      title: "Total Vote",
+      title: "Tổng Số Phiếu",
       dataIndex: "totalVote",
       render: (totalVote) => <span>{totalVote}</span>,
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       render: (status) => (
-        <Tag color={status === "Complete" ? "green" : "red"}>{status}</Tag>
+        <Tag color={status === "Hoàn thành" ? "green" : "red"}>{status}</Tag>
       ),
+    },
+    {
+      title: "Bể", // New column for tank
+      dataIndex: "tank",
+      render: (tank) => <span>{tank}</span>,
     },
   ];
 

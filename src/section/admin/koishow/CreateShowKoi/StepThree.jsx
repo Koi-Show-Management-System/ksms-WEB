@@ -8,9 +8,9 @@ import {
 
 // Initial rules data
 const initialRules = [
-  { text: "Entry fee is $5 / Koi", completed: false },
-  { text: "All Koi must be owned by the entrant", completed: false },
-  { text: "Images should only show the Koi", completed: false },
+  { text: "Phí tham gia là $5 / Koi", completed: false },
+  { text: "Tất cả Koi phải thuộc sở hữu của người tham gia", completed: false },
+  { text: "Hình ảnh chỉ nên hiển thị Koi", completed: false },
 ];
 
 function StepThree() {
@@ -47,20 +47,22 @@ function StepThree() {
   };
 
   return (
-    <div className=" bg-white rounded-lg">
-      <h2 className="text-2xl font-semibold mb-6">Step 3: Rules & Regulations</h2>
+    <div className="bg-white rounded-lg p-4">
+      <h2 className="text-2xl font-semibold mb-6">
+        Bước 3: Quy Tắc & Quy Định
+      </h2>
 
       {/* Input field to add new rule */}
       <div className="flex mb-6">
         <Input
           value={newRule}
           onChange={(e) => setNewRule(e.target.value)}
-          placeholder="Enter new rule..."
+          placeholder="Nhập quy tắc mới..."
           className="mr-2"
           onPressEnter={addRule}
         />
         <Button type="primary" onClick={addRule}>
-          Add Rule
+          Thêm Quy Tắc
         </Button>
       </div>
 

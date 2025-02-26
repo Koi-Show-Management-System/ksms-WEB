@@ -4,12 +4,11 @@ import {
   DeleteOutlined,
   EyeOutlined,
   EyeInvisibleOutlined,
-} from "@ant-design/icons"; // Added icons
+} from "@ant-design/icons"; 
 import axios from "axios";
 import qs from "qs";
 import { useEffect, useState } from "react";
 
-// Modified columns to include ID and icon-based actions
 const columns = [
   {
     title: "ID",
@@ -17,7 +16,7 @@ const columns = [
     width: "10%",
   },
   {
-    title: "Name",
+    title: "Họ và Tên",
     dataIndex: "name",
     sorter: true,
     render: (name) => `${name.first} ${name.last}`,
@@ -29,7 +28,7 @@ const columns = [
     width: "25%",
   },
   {
-    title: "Password",
+    title: "Mật khẩu",
     dataIndex: "login",
     width: "15%",
     render: (login, record) => (
@@ -37,22 +36,20 @@ const columns = [
         {record.showPassword ? login.password : "••••••••"}
         <Button
           type="text"
-          icon={
-            record.showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />
-          }
+          icon={record.showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
           onClick={() => handleTogglePassword(record)}
         />
       </Space>
     ),
   },
   {
-    title: "Status",
+    title: "Trạng thái",
     dataIndex: "status",
-    render: () => "Active",
+    render: () => "Hoạt động",
     width: "15%",
   },
   {
-    title: "Action",
+    title: "Hành động",
     key: "action",
     width: "15%",
     render: (_, record) => (
@@ -73,15 +70,12 @@ const columns = [
   },
 ];
 
-// Add handlers for actions
 const handleEdit = (record) => {
-  console.log("Edit record:", record);
-  // Add edit logic here
+  console.log("Chỉnh sửa bản ghi:", record);
 };
 
 const handleDelete = (record) => {
-  console.log("Delete record:", record);
-  // Add delete logic here
+  console.log("Xóa bản ghi:", record);
 };
 
 const handleTogglePassword = (record) => {
@@ -94,7 +88,6 @@ const handleTogglePassword = (record) => {
   );
 };
 
-// Rest of the code remains the same
 const getRandomuserParams = (params) => ({
   results: params.pagination?.pageSize,
   page: params.pagination?.current,
@@ -135,7 +128,7 @@ const User = () => {
         },
       });
     } catch (error) {
-      console.error("Error fetching data:", error);
+      console.error("Lỗi khi lấy dữ liệu:", error);
       setLoading(false);
     }
   };
@@ -160,6 +153,7 @@ const User = () => {
       pagination={tableParams.pagination}
       loading={loading}
       onChange={handleTableChange}
+      className="w-full"
     />
   );
 };

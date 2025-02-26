@@ -6,32 +6,32 @@ import {
   EditOutlined,
 } from "@ant-design/icons";
 
-// Dữ liệu giải thưởng
+// Dữ liệu quy định
 const initialRules = [
-  { text: "Entry fee is $5 / Koi. We also welcome", completed: false },
-  { text: "Our team will upload your entry for a $", completed: false },
+  { text: "Phí tham gia là $5 / con cá Koi. Chúng tôi cũng chào đón", completed: false },
+  { text: "Đội ngũ của chúng tôi sẽ tải lên thông tin của bạn với phí $", completed: false },
   {
-    text: "This Koi show is open to all Koi lovers including hobbyists and dealers.",
+    text: "Cuộc thi Koi này mở cho tất cả những người yêu thích cá Koi, bao gồm cả những người chơi và người bán.",
     completed: false,
   },
   {
-    text: "The entrants must be from America (North, Central and South America) to win awards.",
+    text: "Người tham gia phải đến từ Mỹ (Bắc, Trung và Nam Mỹ) để giành giải thưởng.",
     completed: false,
   },
   {
-    text: "All the Koi must be entered by a personal name, not a",
+    text: "Tất cả các cá Koi phải được đăng ký dưới tên cá nhân, không phải dưới tên công ty.",
     completed: false,
   },
   {
-    text: "All the entered Koi must be owned by the entrant at the time of",
+    text: "Tất cả các cá Koi phải thuộc sở hữu của người tham gia vào thời điểm đăng ký.",
     completed: false,
   },
   {
-    text: "All the submitted image and information must be owned",
+    text: "Tất cả các hình ảnh và thông tin gửi phải là của người tham gia.",
     completed: false,
   },
   {
-    text: "The images and videos should not show anything but Koi as",
+    text: "Hình ảnh và video chỉ được hiển thị cá Koi, không có gì khác.",
     completed: false,
   },
 ];
@@ -42,7 +42,7 @@ const Rules = () => {
   const [editingIndex, setEditingIndex] = useState(null);
   const [editingText, setEditingText] = useState("");
 
-  // Handle adding new rule
+  // Thêm quy tắc mới
   const addRule = () => {
     if (newRule) {
       setRules([...rules, { text: newRule, completed: false }]);
@@ -50,20 +50,20 @@ const Rules = () => {
     }
   };
 
-  // Handle toggling rule completion
+  // Thay đổi trạng thái hoàn thành của quy tắc
   const toggleCompletion = (index) => {
     const updatedRules = [...rules];
     updatedRules[index].completed = !updatedRules[index].completed;
     setRules(updatedRules);
   };
 
-  // Handle deleting rule
+  // Xóa quy tắc
   const deleteRule = (index) => {
     const updatedRules = rules.filter((_, idx) => idx !== index);
     setRules(updatedRules);
   };
 
-  // Handle inline editing of a rule
+  // Chỉnh sửa quy tắc
   const handleInlineEdit = (e, index) => {
     const updatedRules = [...rules];
     updatedRules[index].text = e.target.value;
@@ -72,20 +72,18 @@ const Rules = () => {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      <h1 className="text-3xl font-bold mb-6 text-center">
-        Rules & Regulations
-      </h1>
+      <h1 className="text-3xl font-bold mb-6 text-center">Quy Định & Quy Tắc</h1>
 
       {/* Input field to add new rule */}
       <div className="flex mb-6">
         <Input
           value={newRule}
           onChange={(e) => setNewRule(e.target.value)}
-          placeholder="Enter new rule ..."
+          placeholder="Nhập quy tắc mới ..."
           className="mr-2"
         />
         <Button type="primary" onClick={addRule}>
-          Add Rule
+          Thêm Quy Tắc
         </Button>
       </div>
 

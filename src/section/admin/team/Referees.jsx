@@ -17,7 +17,7 @@ function Referees() {
   };
   const columns = [
     {
-      title: "Name",
+      title: "Tên",
       dataIndex: "name",
       key: "name",
     },
@@ -27,12 +27,12 @@ function Referees() {
       key: "email",
     },
     {
-      title: "Phone",
+      title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
@@ -44,12 +44,12 @@ function Referees() {
       ),
     },
     {
-      title: "Role",
+      title: "Vai trò",
       dataIndex: "role",
       key: "role",
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       render: () => (
         <div className="flex gap-3">
@@ -67,7 +67,7 @@ function Referees() {
       email: "referee@example.com",
       phone: "123-456-789",
       status: "Active",
-      role: "Referee",
+      role: "Trọng tài",
     },
   ];
 
@@ -76,47 +76,33 @@ function Referees() {
       <div className="mb-4 flex justify-end">
         <div className="absolute top-[-50px] right-0">
           <Button type="primary" onClick={showModal}>
-            Add New
+            Thêm mới
           </Button>
         </div>
       </div>
       <Modal
-        title="Add New Manager"
+        title="Thêm Trọng Tài Mới"
         open={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
       >
         <Form layout="vertical" className="space-y-4">
           <Form.Item
-            label="Name"
+            label="Tên"
             name="name"
-            rules={[{ required: true, message: "Please input the name!" }]}
-            className="flex flex-col"
-          >
+            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}>
             <Input />
           </Form.Item>
           <Form.Item
             label="Email"
             name="email"
-            rules={[
-              {
-                required: true,
-                message: "Please input the email!",
-                type: "email",
-              },
-            ]}
-            className="flex flex-col"
-          >
+            rules={[{ required: true, message: "Vui lòng nhập email!" }]}>
             <Input />
           </Form.Item>
           <Form.Item
-            label="Phone"
+            label="Số điện thoại"
             name="phone"
-            rules={[
-              { required: true, message: "Please input the phone number!" },
-            ]}
-            className="flex flex-col"
-          >
+            rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}>
             <Input />
           </Form.Item>
         </Form>
@@ -129,7 +115,7 @@ function Referees() {
           pageSize: 6,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
         }}
       />
     </div>

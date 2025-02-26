@@ -13,6 +13,7 @@ const competitionData = [
     variety: "Showa",
     result: "Pass",
     status: "Complete",
+    tank: "Bể A",
   },
   {
     key: "2",
@@ -23,6 +24,7 @@ const competitionData = [
     variety: "Showa",
     result: "Pass",
     status: "Complete",
+    tank: "Bể B",
   },
   {
     key: "3",
@@ -33,31 +35,13 @@ const competitionData = [
     variety: "Showa",
     result: "Pass",
     status: "Complete",
-  },
-  {
-    key: "4",
-    entryNumber: "SW-004",
-    image: "https://cdn.pixabay.com/photo/2019/08/20/09/22/koi-4418256_640.jpg",
-    size: "23 cm",
-    variety: "Showa",
-    result: "Fail",
-    status: "Complete",
-  },
-  {
-    key: "5",
-    entryNumber: "SW-005",
-    image:
-      "https://cdn.pixabay.com/photo/2020/06/04/20/25/koi-fish-5260406_640.jpg",
-    size: "23 cm",
-    variety: "Showa",
-    result: "Fail",
-    status: "Notcomplete",
+    tank: "Bể C",
   },
 ];
 
-const categories = ["Mini Kohaku	", "Standard Showa	", "Premium Taisho Sanke	"];
+const categories = ["Mini Kohaku", "Standard Showa", "Premium Taisho Sanke"];
 const mainRounds = ["Vòng Sơ Khảo", "Vòng Đánh Giá Chính", "Vòng Chung Kết"];
-const subRounds = ["Round 1", "Round 2"];
+const subRounds = ["Vòng 1", "Vòng 2"];
 
 function CompetitionRound() {
   const [category, setCategory] = useState(categories[0]);
@@ -77,12 +61,12 @@ function CompetitionRound() {
       ),
     },
     {
-      title: "Registration Number",
+      title: "Mã Đăng Ký",
       dataIndex: "entryNumber",
       width: 180,
     },
     {
-      title: "Image",
+      title: "Hình ảnh",
       dataIndex: "image",
       render: (text) => (
         <img
@@ -95,35 +79,40 @@ function CompetitionRound() {
       ),
     },
     {
-      title: "Size",
+      title: "Kích thước",
       dataIndex: "size",
     },
     {
-      title: "Variety",
+      title: "Giống",
       dataIndex: "variety",
     },
     {
-      title: "Result",
+      title: "Kết quả",
       dataIndex: "result",
       render: (result) => (
         <Tag color={result === "Pass" ? "green" : "red"}>{result}</Tag>
       ),
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       render: (status) => (
         <Tag color={status === "Complete" ? "green" : "red"}>{status}</Tag>
       ),
+    },
+    {
+      title: "Bể",
+      dataIndex: "tank",
+      render: (tank) => <span>{tank}</span>,
     },
   ];
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <Row gutter={16}>
-        <Col span={8}>
+        <Col xs={24} sm={8}>
           <div className="mb-4">
-            <span className="block text-lg font-medium">Category:</span>
+            <span className="block text-lg font-medium">Danh Mục:</span>
             <Select
               value={category}
               onChange={handleCategoryChange}
@@ -139,9 +128,9 @@ function CompetitionRound() {
           </div>
         </Col>
 
-        <Col span={8}>
+        <Col xs={24} sm={8}>
           <div className="mb-4">
-            <span className="block text-lg font-medium">Main Round:</span>
+            <span className="block text-lg font-medium">Vòng Chính:</span>
             <Select
               value={mainRound}
               onChange={handleMainRoundChange}
@@ -158,9 +147,9 @@ function CompetitionRound() {
         </Col>
 
         {mainRound === "Vòng Đánh Giá Chính" && (
-          <Col span={8}>
+          <Col xs={24} sm={8}>
             <div className="mb-4">
-              <span className="block text-lg font-medium">Sub-round:</span>
+              <span className="block text-lg font-medium">Vòng Phụ:</span>
               <Select
                 value={subRound}
                 onChange={handleSubRoundChange}
@@ -178,7 +167,18 @@ function CompetitionRound() {
         )}
       </Row>
 
-      <Table columns={columns} dataSource={competitionData} />
+      <Table
+        columns={columns}
+        dataSource={competitionData}
+        pagination={{
+          total: competitionData.length,
+          pageSize: 6,
+          showSizeChanger: true,
+          showQuickJumper: true,
+          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+        }}
+        className="mt-4"
+      />
     </div>
   );
 }

@@ -27,7 +27,7 @@ const Overview = () => {
   const [selectedShow, setSelectedShow] = useState("all");
 
   const showData = {
-    "Grand Koi Exhibition": {
+    "Triển lãm Koi lớn": {
       competitions: 2,
       users: 8,
       koiFish: 35,
@@ -35,7 +35,7 @@ const Overview = () => {
       refund: 500000,
       profit: 3500000,
     },
-    "Premium Koi Show": {
+    "Triển lãm Koi cao cấp": {
       competitions: 1,
       users: 10,
       koiFish: 40,
@@ -43,7 +43,7 @@ const Overview = () => {
       refund: 300000,
       profit: 4700000,
     },
-    "Rare Koi Search": {
+    "Tìm kiếm Koi hiếm": {
       competitions: 2,
       users: 7,
       koiFish: 30,
@@ -51,7 +51,7 @@ const Overview = () => {
       refund: 400000,
       profit: 4100000,
     },
-    "Spring Koi Festival": {
+    "Lễ hội Koi mùa xuân": {
       competitions: 1,
       users: 5,
       koiFish: 25,
@@ -59,7 +59,7 @@ const Overview = () => {
       refund: 200000,
       profit: 2800000,
     },
-    "Koi Paradise Show": {
+    "Triển lãm Koi thiên đường": {
       competitions: 2,
       users: 8,
       koiFish: 36,
@@ -67,7 +67,7 @@ const Overview = () => {
       refund: 250000,
       profit: 3250000,
     },
-    "Tropical Koi Masters": {
+    "Giải Koi nhiệt đới": {
       competitions: 2,
       users: 5,
       koiFish: 25,
@@ -87,9 +87,10 @@ const Overview = () => {
   const profitDistributionData = Object.entries(showData).map(
     ([name, data]) => ({
       name,
-      value: data.profit, // Thay vì tính phần trăm, ta sẽ dùng giá trị profit trực tiếp
+      value: data.profit,
     })
   );
+
   const filteredProfitData =
     selectedShow === "all"
       ? profitDistributionData
@@ -99,6 +100,7 @@ const Overview = () => {
             value: showData[selectedShow].profit,
           },
         ];
+
   function getTotalValue(key) {
     if (selectedShow === "all") {
       return Object.values(showData).reduce((sum, data) => sum + data[key], 0);
@@ -148,15 +150,14 @@ const Overview = () => {
 
   return (
     <div>
-      {/* Filter Section */}
       <div className="mb-6">
         <Select
           style={{ width: 300 }}
-          placeholder="Select a show"
+          placeholder="Chọn một triển lãm"
           onChange={(value) => setSelectedShow(value)}
           defaultValue="all"
         >
-          <Option value="all">All Shows</Option>
+          <Option value="all">Tất cả các triển lãm</Option>
           {Object.keys(showData).map((show) => (
             <Option key={show} value={show}>
               {show}
@@ -165,11 +166,10 @@ const Overview = () => {
         </Select>
       </div>
 
-      {/* General Information Section */}
       <Row gutter={[24, 24]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Total Competitions"
+            title="Số lượng cuộc thi"
             value={getTotalValue("competitions")}
             icon={<TrophyOutlined style={{ fontSize: "24px" }} />}
             color="#1890ff"
@@ -177,7 +177,7 @@ const Overview = () => {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Total Users"
+            title="Tổng số người dùng"
             value={getTotalValue("users")}
             icon={<UserOutlined style={{ fontSize: "24px" }} />}
             color="#52c41a"
@@ -185,7 +185,7 @@ const Overview = () => {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Total Koi Fish"
+            title="Tổng số Koi"
             value={getTotalValue("koiFish")}
             icon={<GoldOutlined style={{ fontSize: "24px" }} />}
             color="#722ed1"
@@ -193,11 +193,10 @@ const Overview = () => {
         </Col>
       </Row>
 
-      {/* Revenue Information Section */}
       <Row gutter={[24, 24]} className="mb-6">
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Total Revenue"
+            title="Tổng doanh thu"
             value={`${getTotalValue("revenue").toLocaleString()} đ`}
             icon={<DollarOutlined style={{ fontSize: "24px" }} />}
             color="#13c2c2"
@@ -205,7 +204,7 @@ const Overview = () => {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Refunds"
+            title="Hoàn trả"
             value={`${getTotalValue("refund").toLocaleString()} đ`}
             icon={<RollbackOutlined style={{ fontSize: "24px" }} />}
             color="#f5222d"
@@ -213,7 +212,7 @@ const Overview = () => {
         </Col>
         <Col xs={24} sm={12} lg={8}>
           <StatCard
-            title="Net Profit"
+            title="Lợi nhuận ròng"
             value={`${getTotalValue("profit").toLocaleString()} đ`}
             icon={<LineChartOutlined style={{ fontSize: "24px" }} />}
             color="#faad14"
@@ -222,10 +221,9 @@ const Overview = () => {
       </Row>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Revenue Chart */}
         <Card className="shadow-lg" bodyStyle={{ padding: "20px" }}>
           <h3 className="text-lg font-semibold text-center mb-4">
-            Revenue Chart
+            Biểu đồ doanh thu
           </h3>
           <div style={{ height: "300px" }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -234,18 +232,17 @@ const Overview = () => {
                 <YAxis />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="revenue" fill="#0088FE" name="Revenue" />
-                <Bar dataKey="refund" fill="#FF8042" name="Refunds" />
-                <Bar dataKey="profit" fill="#00C49F" name="Profit" />
+                <Bar dataKey="revenue" fill="#0088FE" name="Doanh thu" />
+                <Bar dataKey="refund" fill="#FF8042" name="Hoàn trả" />
+                <Bar dataKey="profit" fill="#00C49F" name="Lợi nhuận" />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        {/* Profit Distribution Chart */}
         <Card className="shadow-lg" bodyStyle={{ padding: "20px" }}>
           <h3 className="text-lg font-semibold text-center mb-4">
-            Profit Distribution by Competition
+            Phân phối lợi nhuận theo cuộc thi
           </h3>
           <div style={{ height: "300px" }}>
             <ResponsiveContainer width="100%" height="100%">

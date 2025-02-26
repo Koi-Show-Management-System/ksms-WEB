@@ -11,16 +11,16 @@ function Manager() {
       name: "John Manager",
       email: "john@example.com",
       phone: "123-456-789",
-      status: "Active",
-      role: "Manager",
+      status: "Hoạt động",
+      role: "Quản lý",
     },
     {
       key: "2",
       name: "Jane Manager",
       email: "jane@example.com",
       phone: "123-456-789",
-      status: "Active",
-      role: "Manager",
+      status: "Hoạt động",
+      role: "Quản lý",
     },
   ]);
 
@@ -42,15 +42,13 @@ function Manager() {
 
   const handleClick = () => {
     console.log("Selected Managers:", selectedManagers);
-
     setSelectedManagers([]);
-
     setIsModalVisible(false);
   };
 
   const columns = [
     {
-      title: "Name",
+      title: "Tên",
       dataIndex: "name",
       key: "name",
     },
@@ -60,29 +58,29 @@ function Manager() {
       key: "email",
     },
     {
-      title: "Phone",
+      title: "Số điện thoại",
       dataIndex: "phone",
       key: "phone",
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <span
-          className={status === "Active" ? "text-green-500" : "text-red-500"}
+          className={status === "Hoạt động" ? "text-green-500" : "text-red-500"}
         >
           {status}
         </span>
       ),
     },
     {
-      title: "Role",
+      title: "Vai trò",
       dataIndex: "role",
       key: "Role",
     },
     {
-      title: "Action",
+      title: "Hành động",
       key: "action",
       render: () => (
         <div className="flex gap-3">
@@ -96,20 +94,18 @@ function Manager() {
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <div className="absolute top-[-50px] right-0">
-          <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
-            Add New
-          </Button>
-        </div>
+        <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
+          Thêm mới
+        </Button>
       </div>
       <Modal
-        title="Add Managers"
+        title="Thêm Quản Lý"
         open={isModalVisible}
         onOk={handleOk}
         onCancel={handleCancel}
         footer={[
           <Button key="cancel" onClick={handleCancel}>
-            Cancel
+            Hủy
           </Button>,
           <Button
             key="submit"
@@ -117,11 +113,10 @@ function Manager() {
             onClick={handleClick}
             disabled={selectedManagers.length === 0}
           >
-            Add Selected Managers
+            Thêm Quản Lý Đã Chọn
           </Button>,
         ]}
         width={400}
-        style={{ maxHeight: "300px" }}
       >
         <Checkbox.Group
           options={managerData.map((manager) => ({
@@ -140,7 +135,7 @@ function Manager() {
           pageSize: 6,
           showSizeChanger: true,
           showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} of ${total}`,
+          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
         }}
       />
     </div>

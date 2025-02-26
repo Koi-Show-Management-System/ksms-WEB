@@ -17,7 +17,7 @@ function CreateShow() {
   };
 
   return (
-    <div className="p-6 max-w-5xl mx-auto">
+    <div className="p-6">
       {/* Progress Bar */}
       <div className="flex justify-between mb-8">
         <div className="flex items-center gap-2">
@@ -34,7 +34,7 @@ function CreateShow() {
             </div>
           ))}
         </div>
-        <div className="ml-4 text-gray-500">{`Step ${currentStep} of 3`}</div>
+        <div className="ml-4 text-gray-500">{`Bước ${currentStep} của 3`}</div>
       </div>
 
       <Form layout="vertical">
@@ -49,7 +49,7 @@ function CreateShow() {
               onClick={handlePrevious}
               className="bg-gray-300 hover:bg-gray-400"
             >
-              Back
+              Quay lại
             </Button>
           )}
           {currentStep < 3 ? (
@@ -58,16 +58,16 @@ function CreateShow() {
               onClick={handleNext}
               className="bg-blue-500 hover:bg-blue-600"
             >
-              Next
+              Tiếp theo
             </Button>
           ) : (
-            <Link to="/admin/koishow">
+            <Link to="/admin/showlist">
               <Button
                 type="primary"
                 htmlType="submit"
                 className="bg-green-500 hover:bg-green-600"
               >
-                Submit
+                Gửi
               </Button>
             </Link>
           )}

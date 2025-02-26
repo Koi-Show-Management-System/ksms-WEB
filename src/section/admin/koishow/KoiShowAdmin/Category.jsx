@@ -24,10 +24,10 @@ function Category() {
     {
       key: "1",
       categoryName: "Mini Kohaku",
-      sizeCategory: "Under 20 cm",
+      sizeCategory: "Dưới 20 cm",
       variety: "Kohaku",
       participatingKoi: 120,
-      status: "Active",
+      status: "Hoạt động",
     },
     {
       key: "2",
@@ -35,7 +35,7 @@ function Category() {
       sizeCategory: "20-30 cm",
       variety: "Showa",
       participatingKoi: 80,
-      status: "Inactive",
+      status: "Không hoạt động",
     },
     {
       key: "3",
@@ -43,7 +43,7 @@ function Category() {
       sizeCategory: "30-50 cm",
       variety: "Sanke",
       participatingKoi: 50,
-      status: "Active",
+      status: "Hoạt động",
     },
   ]);
 
@@ -88,19 +88,19 @@ function Category() {
 
   const columns = [
     {
-      title: "Category Name",
+      title: "Tên Danh Mục",
       dataIndex: "categoryName",
       key: "categoryName",
       sorter: (a, b) => a.categoryName.localeCompare(b.categoryName),
     },
     {
-      title: "Size Category",
+      title: "Danh Mục Kích Thước",
       dataIndex: "sizeCategory",
       key: "sizeCategory",
       sorter: (a, b) => a.sizeCategory.localeCompare(b.sizeCategory),
     },
     {
-      title: "Variety",
+      title: "Giống",
       dataIndex: "variety",
       key: "variety",
       filters: [
@@ -111,31 +111,31 @@ function Category() {
       onFilter: (value, record) => record.variety === value,
     },
     {
-      title: "Participating Koi",
+      title: "Số Cá Koi Tham Gia",
       dataIndex: "participatingKoi",
       key: "participatingKoi",
       sorter: (a, b) => a.participatingKoi - b.participatingKoi,
     },
     {
-      title: "Status",
+      title: "Trạng Thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <Tag
-          color={status === "Active" ? "green" : "red"}
+          color={status === "Hoạt động" ? "green" : "red"}
           className="rounded-full px-3 py-1"
         >
           {status}
         </Tag>
       ),
       filters: [
-        { text: "Active", value: "Active" },
-        { text: "Inactive", value: "Inactive" },
+        { text: "Hoạt động", value: "Hoạt động" },
+        { text: "Không hoạt động", value: "Không hoạt động" },
       ],
       onFilter: (value, record) => record.status === value,
     },
     {
-      title: "Actions",
+      title: "Hành Động",
       key: "actions",
       render: (_, record) => (
         <div className="flex items-center space-x-2">
@@ -160,7 +160,7 @@ function Category() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
         <div className="flex items-center space-x-2 mb-2 md:mb-0">
           <Search
-            placeholder="Search categories..."
+            placeholder="Tìm kiếm danh mục..."
             onSearch={handleSearch}
             className="w-full md:w-64"
             allowClear
@@ -173,7 +173,7 @@ function Category() {
           onClick={showModal}
           className="bg-blue-500 hover:bg-blue-600"
         >
-          Create
+          Tạo mới
         </Button>
       </div>
 
@@ -185,7 +185,7 @@ function Category() {
       />
 
       <Modal
-        title="Create New Category"
+        title="Tạo Danh Mục Mới"
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
@@ -193,33 +193,33 @@ function Category() {
         <Form form={form} layout="vertical" onFinish={handleCreate}>
           <Form.Item
             name="categoryName"
-            label="Category Name"
-            rules={[{ required: true, message: "Please input category name!" }]}
+            label="Tên Danh Mục"
+            rules={[{ required: true, message: "Vui lòng nhập tên danh mục!" }]}
           >
-            <Input placeholder="Enter category name" />
+            <Input placeholder="Nhập tên danh mục" />
           </Form.Item>
 
           <Form.Item
             name="sizeCategory"
-            label="Size Category"
+            label="Danh Mục Kích Thước"
             rules={[
-              { required: true, message: "Please select size category!" },
+              { required: true, message: "Vui lòng chọn danh mục kích thước!" },
             ]}
           >
-            <Select placeholder="Select size category">
-              <Option value="Under 20 cm">Under 20 cm</Option>
+            <Select placeholder="Chọn danh mục kích thước">
+              <Option value="Dưới 20 cm">Dưới 20 cm</Option>
               <Option value="20-30 cm">20-30 cm</Option>
               <Option value="30-50 cm">30-50 cm</Option>
-              <Option value="Over 50 cm">Over 50 cm</Option>
+              <Option value="Trên 50 cm">Trên 50 cm</Option>
             </Select>
           </Form.Item>
 
           <Form.Item
             name="variety"
-            label="Variety"
-            rules={[{ required: true, message: "Please select variety!" }]}
+            label="Giống"
+            rules={[{ required: true, message: "Vui lòng chọn giống!" }]}
           >
-            <Select placeholder="Select variety">
+            <Select placeholder="Chọn giống">
               <Option value="Kohaku">Kohaku</Option>
               <Option value="Showa">Showa</Option>
               <Option value="Sanke">Sanke</Option>
@@ -228,21 +228,21 @@ function Category() {
 
           <Form.Item
             name="status"
-            label="Status"
-            rules={[{ required: true, message: "Please select status!" }]}
+            label="Trạng Thái"
+            rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
           >
-            <Select placeholder="Select status">
-              <Option value="Active">Active</Option>
-              <Option value="Inactive">Inactive</Option>
+            <Select placeholder="Chọn trạng thái">
+              <Option value="Hoạt động">Hoạt động</Option>
+              <Option value="Không hoạt động">Không hoạt động</Option>
             </Select>
           </Form.Item>
 
           <Form.Item className="flex justify-end mb-0">
             <Button onClick={handleCancel} className="mr-2">
-              Cancel
+              Hủy
             </Button>
             <Button type="primary" htmlType="submit" className="bg-blue-500">
-              Create
+              Tạo mới
             </Button>
           </Form.Item>
         </Form>

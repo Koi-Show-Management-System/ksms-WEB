@@ -13,18 +13,18 @@ function KoiShow() {
     {
       key: "1",
       id: "1",
-      showName: "Koi Fish Show 2025",
+      showName: "Triển lãm Cá Koi 2025",
       date: "29/05/2025",
       participants: "684/1000",
-      status: "InProgress",
+      status: "Đang diễn ra",
     },
     {
       key: "2",
       id: "2",
-      showName: "Koi Fish Show 2024",
+      showName: "Triển lãm Cá Koi 2024",
       date: "29/05/2024",
       participants: "680/1000",
-      status: "Completed",
+      status: "Hoàn thành",
     },
   ]);
 
@@ -33,7 +33,7 @@ function KoiShow() {
       if (item.key === record.key) {
         return {
           ...item,
-          status: item.status === "Completed" ? "InProgress" : "Completed",
+          status: item.status === "Hoàn thành" ? "Đang diễn ra" : "Hoàn thành",
         };
       }
       return item;
@@ -55,7 +55,7 @@ function KoiShow() {
 
   const handleSearch = () => {
     console.log(
-      "Searching with:",
+      "Tìm kiếm với:",
       searchText,
       selectedDate?.format("DD/MM/YYYY")
     );
@@ -69,7 +69,7 @@ function KoiShow() {
       sorter: (a, b) => a.id.localeCompare(b.id),
     },
     {
-      title: "Show Name",
+      title: "Tên Triển Lãm",
       dataIndex: "showName",
       key: "showName",
       sorter: (a, b) => a.showName.localeCompare(b.showName),
@@ -83,13 +83,13 @@ function KoiShow() {
       ),
     },
     {
-      title: "Date",
+      title: "Ngày",
       dataIndex: "date",
       key: "date",
       sorter: (a, b) => new Date(a.date) - new Date(b.date),
     },
     {
-      title: "Participants",
+      title: "Số Người Tham Gia",
       dataIndex: "participants",
       key: "participants",
       sorter: (a, b) => {
@@ -99,13 +99,13 @@ function KoiShow() {
       },
     },
     {
-      title: "Status",
+      title: "Trạng Thái",
       dataIndex: "status",
       key: "status",
       sorter: (a, b) => a.status.localeCompare(b.status),
       render: (status, record) => (
         <Tag
-          color={status === "Completed" ? "success" : "processing"}
+          color={status === "Hoàn thành" ? "success" : "processing"}
           className="rounded-full px-3 py-1 cursor-pointer"
           onClick={() => handleStatusChange(record)}
         >
@@ -114,7 +114,7 @@ function KoiShow() {
       ),
     },
     {
-      title: "Action",
+      title: "Hành Động",
       key: "action",
       render: () => (
         <div className="flex items-center space-x-2">
@@ -140,18 +140,19 @@ function KoiShow() {
     <div>
       <div className="flex gap-4 mb-6">
         <div className="flex-1">
-          <div className="mb-2 text-sm">Search for show :</div>
+          <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>
           <Input
-            placeholder="Search..."
+            placeholder="Tìm kiếm..."
             className="max-w-md"
             value={searchText}
             onChange={(e) => setSearchText(e.target.value)}
           />
         </div>
         <div>
-          <div className="mb-2 text-sm">Select Date:</div>
+          <div className="mb-2 text-sm">Ngày:</div>
           <div className="flex gap-2">
             <DatePicker
+              placeholder="Chọn ngày"
               className="w-96"
               format="DD/MM/YYYY"
               value={selectedDate}
@@ -162,7 +163,7 @@ function KoiShow() {
               className="bg-blue-500"
               onClick={handleSearch}
             >
-              Search
+              Tìm kiếm
             </Button>
           </div>
         </div>
@@ -175,7 +176,9 @@ function KoiShow() {
         locale={{
           emptyText: (
             <div className="flex flex-col items-center justify-center py-12">
-              <h3 className="text-xl font-bold">No Shows Today</h3>
+              <h3 className="text-xl font-bold">
+                Không có triển lãm nào hôm nay
+              </h3>
               <img
                 src={NoKoiShow}
                 alt="No shows"
