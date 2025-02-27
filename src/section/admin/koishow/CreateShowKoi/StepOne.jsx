@@ -36,12 +36,15 @@ function StepOne({ updateFormData }) {
     minParticipants: "",
     maxParticipants: "",
     location: "",
-    images: [],
+    imgUrl: "", // Changed from array to string
     hasGrandChampion: false,
     hasBestInShow: false,
     createSponsorRequests: [],
     createTicketTypeRequests: [],
   });
+
+  // Track uploaded images separately for UI display
+  const [uploadedImages, setUploadedImages] = useState([]);
 
   useEffect(() => {
     updateFormData(data);
@@ -81,16 +84,26 @@ function StepOne({ updateFormData }) {
         })
       );
 
-      setData((prevData) => ({
-        ...prevData,
-        images: uploadedImages.filter((url) => url !== null),
-      }));
+      const filteredImages = uploadedImages.filter((url) => url !== null);
+
+      // Store the images for display
+      setUploadedImages(filteredImages);
+
+      // Set the first image as the imgUrl (since it should be a string)
+      if (filteredImages.length > 0) {
+        setData((prevData) => ({
+          ...prevData,
+          imgUrl: filteredImages[0], // Use the first image as the imgUrl
+        }));
+      }
+
       message.success("Ảnh đã được tải lên thành công!");
     } catch (error) {
       console.error("Error uploading images:", error);
       message.error("Lỗi khi tải ảnh lên!");
     }
   };
+
   const handleAddSponsor = () => {
     setData((prevData) => ({
       ...prevData,
@@ -100,6 +113,7 @@ function StepOne({ updateFormData }) {
       ],
     }));
   };
+
   const handleSponsorChange = (index, field, value) => {
     setData((prevData) => {
       const newSponsorRequests = prevData.createSponsorRequests.map(
@@ -111,52 +125,55 @@ function StepOne({ updateFormData }) {
 
   const handleLogoUpload = async (index, { fileList }) => {
     try {
-      const uploadedLogo = await Promise.all(
-        fileList.map(async (file) => {
-          if (file.url) {
-            return file.url;
-          }
-          if (file.originFileObj) {
-            const formData = new FormData();
-            formData.append("file", file.originFileObj);
-            formData.append("upload_preset", "ml_default");
+      // Only process if there's at least one file
+      if (fileList && fileList.length > 0) {
+        const file = fileList[0]; // Take only the first file
+        let logoUrl = "";
 
-            const response = await fetch(
-              "https://api.cloudinary.com/v1_1/dphupjpqt/image/upload",
-              {
-                method: "POST",
-                body: formData,
-              }
-            );
+        if (file.url) {
+          logoUrl = file.url;
+        } else if (file.originFileObj) {
+          const formData = new FormData();
+          formData.append("file", file.originFileObj);
+          formData.append("upload_preset", "ml_default");
 
-            const data = await response.json();
-
-            if (!response.ok) {
-              console.error("Cloudinary upload error:", data);
-              throw new Error(data.error.message || "Image upload failed");
+          const response = await fetch(
+            "https://api.cloudinary.com/v1_1/dphupjpqt/image/upload",
+            {
+              method: "POST",
+              body: formData,
             }
+          );
 
-            return data.secure_url;
+          const data = await response.json();
+
+          if (!response.ok) {
+            console.error("Cloudinary upload error:", data);
+            throw new Error(data.error.message || "Image upload failed");
           }
-          return null;
-        })
-      );
 
-      const newSponsorRequests = [...data.createSponsorRequests];
-      newSponsorRequests[index].logoUrl = uploadedLogo[0]; // Lưu URL logo vào mảng sponsor
-      setData({ ...data, createSponsorRequests: newSponsorRequests });
-      message.success("Logo đã được tải lên thành công!");
+          logoUrl = data.secure_url;
+        }
+
+        // Update the sponsor's logoUrl as a string
+        const newSponsorRequests = [...data.createSponsorRequests];
+        newSponsorRequests[index].logoUrl = logoUrl; // Store as string
+        setData({ ...data, createSponsorRequests: newSponsorRequests });
+        message.success("Logo đã được tải lên thành công!");
+      }
     } catch (error) {
       console.error("Error uploading logo:", error);
       message.error("Lỗi khi tải logo lên!");
     }
   };
+
   const handleRemoveSponsor = (index) => {
     const newSponsorRequests = data.createSponsorRequests.filter(
       (_, i) => i !== index
     );
     setData({ ...data, createSponsorRequests: newSponsorRequests });
   };
+
   // Thêm loại vé mới
   const handleAddTicketType = () => {
     setData((prevData) => ({
@@ -182,6 +199,7 @@ function StepOne({ updateFormData }) {
     );
     setData({ ...data, createTicketTypeRequests: newTicketTypes });
   };
+
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold mb-6">
@@ -315,7 +333,7 @@ function StepOne({ updateFormData }) {
         <Upload
           accept=".jpg,.jpeg,.png"
           listType="picture-card"
-          fileList={data.images.map((url, index) => ({
+          fileList={uploadedImages.map((url, index) => ({
             uid: index.toString(),
             name: `image-${index}`,
             status: "done",
@@ -329,6 +347,13 @@ function StepOne({ updateFormData }) {
             <div className="mt-2">Upload</div>
           </div>
         </Upload>
+        {data.imgUrl && (
+          <div className="mt-2">
+            <p className="text-sm text-gray-500">
+              Selected image URL: {data.imgUrl}
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Phần Sponsor Requests */}
@@ -395,6 +420,13 @@ function StepOne({ updateFormData }) {
                     <div className="mt-2">Upload Logo</div>
                   </div>
                 </Upload>
+                {sponsor.logoUrl && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      Logo URL: {sponsor.logoUrl}
+                    </p>
+                  </div>
+                )}
               </div>
 
               <div>

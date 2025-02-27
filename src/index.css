@@ -24,7 +24,8 @@
 }
 
 .background {
-  background-image: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3)),
+  background-image:
+    linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.3)),
     url("https://images.unsplash.com/photo-1521120795805-a189ab807138?w=600&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NjZ8fGtvaSUyMGZpc2h8ZW58MHwwfDB8fHww");
   background-size: cover;
   background-position: center;
@@ -73,4 +74,12 @@
   .select-category {
     width: 30%;
   }
+}
+.ant-form-item-label {
+  font-weight: bold;
+  margin-bottom: 10px; /* Khoảng cách giữa label và input */
+}
+
+.ant-form-item-control-wrapper {
+  margin-top: 5px; /* Khoảng cách giữa các input */
 }

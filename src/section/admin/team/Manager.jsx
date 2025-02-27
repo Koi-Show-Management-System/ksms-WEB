@@ -1,24 +1,95 @@
 import React, { useState } from "react";
-import { Table, Button, Modal, Form, Input } from "antd";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Input,
+  Spin,
+  Select,
+  notification,
+} from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import useAccountTeam from "../../../hooks/useAccountTeam";
+import { updateStatus } from "../../../api/accountManage";
 
-function Manager() {
+function Manager({ accounts = [], isLoading }) {
+  const { updateStatusAccount, fetchAccountTeam, updateAccountTeam } =
+    useAccountTeam();
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const showModal = () => {
+  const [currentAccount, setCurrentAccount] = useState(null);
+
+  const handleStatusChange = async (accountId, newStatus) => {
+    try {
+      console.log(`Changing status for account ${accountId} to ${newStatus}`);
+
+      // Gọi API để cập nhật trạng thái
+      const res = await updateStatus(accountId, newStatus);
+
+      if (res && res.status === 200) {
+        notification.success({
+          message: "Thành công",
+          description: `Trạng thái tài khoản đã được cập nhật thành ${newStatus}`,
+          placement: "topRight",
+        });
+
+        // Refresh danh sách tài khoản
+        fetchAccountTeam();
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể cập nhật trạng thái tài khoản",
+          placement: "topRight",
+        });
+      }
+    } catch (error) {
+      console.error("Error in handleStatusChange:", error);
+      notification.error({
+        message: "Lỗi",
+        description: "Đã xảy ra lỗi khi cập nhật trạng thái tài khoản",
+        placement: "topRight",
+      });
+    }
+  };
+
+  const handleEdit = (account) => {
+    setCurrentAccount(account);
     setIsModalVisible(true);
   };
 
-  const handleOk = () => {
-    setIsModalVisible(false);
+  const handleUpdate = async (values) => {
+    try {
+      const res = await updateAccountTeam(currentAccount.key, values);
+
+      if (res.success) {
+        notification.success({
+          message: "Thành công",
+          description: "Cập nhật tài khoản thành công!",
+          placement: "topRight",
+        });
+
+        fetchAccountTeam();
+        setIsModalVisible(false);
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: res.error || "Không thể cập nhật tài khoản.",
+          placement: "topRight",
+        });
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: "Đã xảy ra lỗi khi cập nhật tài khoản",
+        placement: "topRight",
+      });
+    }
   };
 
-  const handleCancel = () => {
-    setIsModalVisible(false);
-  };
   const columns = [
     {
       title: "Tên",
-      dataIndex: "name",
+      dataIndex: "fullName",
       key: "name",
     },
     {
@@ -35,89 +106,139 @@ function Manager() {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status) => (
-        <span
-          className={status === "Active" ? "text-green-500" : "text-red-500"}
-        >
-          {status}
-        </span>
-      ),
+      render: (status, record) => {
+        const options = [
+          {
+            value: "active",
+            label: <span className="text-green-500">Active</span>,
+          },
+          {
+            value: "blocked",
+            label: <span className="text-orange-500">Blocked</span>,
+          },
+          {
+            value: "deleted",
+            label: <span className="text-red-500">Deleted</span>,
+          },
+        ];
+
+        return (
+          <Select
+            value={status.toLowerCase()}
+            style={{ width: 120 }}
+            onChange={(value) => handleStatusChange(record.key, value)}
+            options={options}
+            dropdownStyle={{ minWidth: 120 }}
+          />
+        );
+      },
     },
     {
       title: "Vai trò",
       dataIndex: "role",
       key: "role",
+      render: (role) => role || "Quản lý",
     },
     {
       title: "Hành động",
       key: "action",
-      render: () => (
-        <div className="flex gap-3">
-          <EditOutlined className="cursor-pointer" />
-          <DeleteOutlined className="cursor-pointer" />
+      render: (_, record) => (
+        <div className="flex mx-3">
+          <EditOutlined
+            onClick={() => handleEdit(record)}
+            style={{ fontSize: 16, color: "#1890ff" }}
+          />
         </div>
       ),
     },
   ];
 
-  const managerData = [
-    {
-      key: "1",
-      name: "John Manager",
-      email: "manager@example.com",
-      phone: "123-456-789",
-      status: "Active",
-      role: "Quản lý",
-    },
-  ];
+  // Transform API data to match table structure
+  const managerData = accounts.map((account, index) => ({
+    key: account.id || index.toString(),
+    fullName: account.fullName || account.name || "N/A",
+    email: account.email || "N/A",
+    phone: account.phone || "N/A",
+    status: account.status || "inactive",
+    role: account.role || "MANAGER",
+  }));
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <div className="absolute top-[-50px] right-0">
-          <Button type="primary" onClick={showModal}>
-            Thêm mới
-          </Button>
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <Spin size="large" />
         </div>
-      </div>
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={managerData}
+          pagination={{
+            total: managerData.length,
+            pageSize: 6,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+          }}
+        />
+      )}
       <Modal
-        title="Thêm Quản Lý Mới"
+        title="Chỉnh sửa tài khoản"
         open={isModalVisible}
-        onOk={handleOk}
-        onCancel={handleCancel}
+        onCancel={() => setIsModalVisible(false)}
+        footer={null}
       >
-        <Form layout="vertical" className="space-y-4">
+        <Form
+          initialValues={{
+            fullName: currentAccount?.fullName,
+            userName: currentAccount?.userName,
+            phone: currentAccount?.phone,
+            avatar: currentAccount?.avatar,
+            role: currentAccount?.role,
+          }}
+          onFinish={handleUpdate}
+          labelAlign="left"
+          layout="vertical"
+        >
+          <Form.Item
+            label="Tên đầy đủ"
+            name="fullName"
+            rules={[{ required: true, message: "Vui lòng nhập tên đầy đủ!" }]}
+          >
+            <Input />
+          </Form.Item>
+
           <Form.Item
             label="Tên"
-            name="name"
-            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}>
+            name="userName"
+            rules={[
+              { required: true, message: "Vui lòng nhập tên đăng nhập!" },
+            ]}
+          >
             <Input />
           </Form.Item>
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[{ required: true, message: "Vui lòng nhập email!" }]}>
-            <Input />
-          </Form.Item>
+
           <Form.Item
             label="Số điện thoại"
             name="phone"
-            rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}>
+            rules={[
+              { required: true, message: "Vui lòng nhập số điện thoại!" },
+            ]}
+          >
             <Input />
+          </Form.Item>
+
+          <Form.Item label="Ảnh đại diện" name="avatar">
+            <Input />
+          </Form.Item>
+
+          <Form.Item>
+            <Button type="primary" htmlType="submit">
+              Cập nhật
+            </Button>
           </Form.Item>
         </Form>
       </Modal>
-      <Table
-        columns={columns}
-        dataSource={managerData}
-        pagination={{
-          total: managerData.length,
-          pageSize: 6,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
-        }}
-      />
     </div>
   );
 }

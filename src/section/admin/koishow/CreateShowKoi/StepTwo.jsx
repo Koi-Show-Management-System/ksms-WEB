@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
-import { Form, Input, Select } from "antd";
+import { Button, Card, Form, Input, Select, Space } from "antd";
+import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 const { Option } = Select;
 
 function StepTwo({ updateFormData, initialData }) {
@@ -72,7 +73,7 @@ function StepTwo({ updateFormData, initialData }) {
   const isValidTotal = () => totalPercentage === 100;
   const [categories, setCategories] = useState(
     initialData.createCategorieShowRequests || [
-      { name: "", sizeMin: "", sizeMax: "", description: "" },
+      { name: "", sizeMin: "", sizeMax: "", description: "", awards: [] },
     ]
   );
 
@@ -86,6 +87,28 @@ function StepTwo({ updateFormData, initialData }) {
   };
   const handleCategoryChange = (field, value) => {
     setCategories([{ ...categories[0], [field]: value }]); // Cập nhật field cụ thể
+  };
+  const handleAddAward = () => {
+    setCategories([
+      {
+        ...categories[0],
+        awards: [
+          ...(categories[0]?.awards || []), 
+          { name: "", awardType: "", prizeValue: "", description: "" },
+        ],
+      },
+    ]);
+  };
+
+  const handleAwardChange = (index, field, value) => {
+    const updatedAwards = [...categories[0].awards];
+    updatedAwards[index][field] = value;
+    setCategories([{ ...categories[0], awards: updatedAwards }]);
+  };
+
+  const handleRemoveAward = (index) => {
+    const updatedAwards = categories[0].awards.filter((_, i) => i !== index);
+    setCategories([{ ...categories[0], awards: updatedAwards }]);
   };
 
   return (
@@ -259,15 +282,86 @@ function StepTwo({ updateFormData, initialData }) {
         <Input placeholder="Nhập số lượng koi" type="number" />
       </div>
 
-      {/* Awards */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Giải thưởng
-        </label>
-        <div className="grid grid-cols-2 gap-4">
-          <Input placeholder="Nhập giải thưởng" />
-          <Input placeholder="Giải thưởng tiền tệ" />
-        </div>
+      {/* Giải thưởng */}
+      <h3 className="text-lg font-semibold mt-6">Giải thưởng</h3>
+      <Button onClick={handleAddAward} icon={<PlusOutlined />}>
+        Thêm Giải Thưởng
+      </Button>
+
+      <div className="mt-4 space-y-4">
+        {Array.isArray(categories[0]?.awards) &&
+          categories[0].awards.map((award, index) => (
+            <Card
+              key={index}
+              title={`Giải thưởng ${index + 1}`}
+              extra={
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined/>}
+                  danger
+                  onClick={() => handleRemoveAward(index)}
+                >
+                  Xóa
+                </Button>
+              }
+            >
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tên Giải Thưởng
+                  </label>
+                  <Input
+                    placeholder="Nhập tên giải thưởng"
+                    value={award.name}
+                    onChange={(e) =>
+                      handleAwardChange(index, "name", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Loại Giải Thưởng
+                  </label>
+                  <Input
+                    placeholder="Nhập loại giải thưởng"
+                    value={award.awardType}
+                    onChange={(e) =>
+                      handleAwardChange(index, "awardType", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Giá Trị Giải Thưởng
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Nhập giá trị (VND)"
+                    value={award.prizeValue}
+                    onChange={(e) =>
+                      handleAwardChange(index, "prizeValue", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Mô Tả Giải Thưởng
+                  </label>
+                  <Input.TextArea
+                    rows={2}
+                    placeholder="Nhập mô tả giải thưởng"
+                    value={award.description}
+                    onChange={(e) =>
+                      handleAwardChange(index, "description", e.target.value)
+                    }
+                  />
+                </div>
+              </Space>
+            </Card>
+          ))}
       </div>
 
       {/* Referee Selection */}

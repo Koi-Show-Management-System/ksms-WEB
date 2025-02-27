@@ -1,9 +1,10 @@
 import React, { useState } from "react";
-import { Table, Button, Modal, Form, Input } from "antd";
+import { Table, Button, Modal, Form, Input, Spin } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 
-function Staff() {
+function Staff({ accounts = [], isLoading }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
+
   const showModal = () => {
     setIsModalVisible(true);
   };
@@ -15,10 +16,11 @@ function Staff() {
   const handleCancel = () => {
     setIsModalVisible(false);
   };
+
   const columns = [
     {
       title: "Tên",
-      dataIndex: "name",
+      dataIndex: "fullName",
       key: "name",
     },
     {
@@ -37,9 +39,9 @@ function Staff() {
       key: "status",
       render: (status) => (
         <span
-          className={status === "Active" ? "text-green-500" : "text-red-500"}
+          className={status === "active" ? "text-green-500" : "text-red-500"}
         >
-          {status}
+          {status === "active" ? "Active" : "Inactive"}
         </span>
       ),
     },
@@ -47,6 +49,7 @@ function Staff() {
       title: "Vai trò",
       dataIndex: "role",
       key: "role",
+      render: () => "Nhân viên",
     },
     {
       title: "Hành động",
@@ -60,34 +63,18 @@ function Staff() {
     },
   ];
 
-  const staffData = [
-    {
-      key: "1",
-      name: "John Smith",
-      email: "john@example.com",
-      phone: "123-456-789",
-      status: "Active",
-      role: "Nhân viên",
-    },
-    {
-      key: "2",
-      name: "Leo",
-      email: "leo@example.com",
-      phone: "987-654-321",
-      status: "Active",
-      role: "Nhân viên",
-    },
-  ];
+  // Transform API data to match table structure
+  const staffData = accounts.map((account, index) => ({
+    key: account.id || index.toString(),
+    fullName: account.fullName || account.name || "N/A",
+    email: account.email || "N/A",
+    phone: account.phone || "N/A",
+    status: account.status || "INACTIVE",
+    role: account.role || "STAFF",
+  }));
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <div className="absolute top-[-50px] right-0">
-          <Button type="primary" onClick={showModal}>
-            Thêm mới
-          </Button>{" "}
-        </div>
-      </div>
       <Modal
         title="Thêm Nhân Viên Mới"
         open={isModalVisible}
@@ -120,17 +107,24 @@ function Staff() {
           </Form.Item>
         </Form>
       </Modal>
-      <Table
-        columns={columns}
-        dataSource={staffData}
-        pagination={{
-          total: staffData.length,
-          pageSize: 6,
-          showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
-        }}
-      />
+
+      {isLoading ? (
+        <div className="flex justify-center items-center h-64">
+          <Spin size="large" />
+        </div>
+      ) : (
+        <Table
+          columns={columns}
+          dataSource={staffData}
+          pagination={{
+            total: staffData.length,
+            pageSize: 6,
+            showSizeChanger: true,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+          }}
+        />
+      )}
     </div>
   );
 }
