@@ -1,19 +1,79 @@
 import React, { useState } from "react";
-import { Button, Form } from "antd";
+import { Button, Form, message } from "antd";
 import StepOne from "./StepOne";
 import StepTwo from "./StepTwo";
 import StepThree from "./StepThree";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 
 function CreateShow() {
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState({
+    name: "",
+    description: "",
+    startDate: null,
+    endDate: null,
+    startExhibitionDate: null,
+    endExhibitionDate: null,
+    minParticipants: "",
+    maxParticipants: "",
+    location: "",
+    images: [],
+    hasGrandChampion: false,
+    hasBestInShow: false,
+    createSponsorRequests: [],
+    createTicketTypeRequests: [],
+  });
+
+  // Cập nhật dữ liệu từ các bước
+  const updateFormData = (newData) => {
+    setFormData((prev) => ({ ...prev, ...newData }));
+  };
 
   const handleNext = () => {
+    // Kiểm tra dữ liệu trước khi chuyển bước
+    if (currentStep === 1) {
+      if (!formData.name || !formData.description) {
+        message.error("Vui lòng điền đầy đủ tên và mô tả chương trình");
+        return;
+      }
+    }
+    // Thêm kiểm tra cho các bước khác nếu cần
+    
     setCurrentStep((prevStep) => Math.min(prevStep + 1, 3));
   };
 
   const handlePrevious = () => {
     setCurrentStep((prevStep) => Math.max(prevStep - 1, 1));
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setIsSubmitting(true);
+      
+      // Kiểm tra dữ liệu trước khi gửi
+      if (!formData.name || !formData.description || !formData.location) {
+        message.error("Vui lòng điền đầy đủ thông tin cơ bản");
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // Gửi dữ liệu lên server (giả lập)
+      console.log("Submitting data:", formData);
+      
+      // Giả lập API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      message.success("Tạo chương trình thành công!");
+      navigate("/admin/showlist");
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      message.error("Có lỗi xảy ra khi gửi dữ liệu");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -37,10 +97,10 @@ function CreateShow() {
         <div className="ml-4 text-gray-500">{`Bước ${currentStep} của 3`}</div>
       </div>
 
-      <Form layout="vertical">
-        {currentStep === 1 && <StepOne />}
-        {currentStep === 2 && <StepTwo />}
-        {currentStep === 3 && <StepThree />}
+      <Form layout="vertical" form={form}>
+        {currentStep === 1 && <StepOne updateFormData={updateFormData} initialData={formData} />}
+        {currentStep === 2 && <StepTwo updateFormData={updateFormData} initialData={formData} />}
+        {currentStep === 3 && <StepThree updateFormData={updateFormData} initialData={formData} />}
 
         {/* Navigation Buttons */}
         <div className="flex justify-between mt-8">
@@ -61,18 +121,23 @@ function CreateShow() {
               Tiếp theo
             </Button>
           ) : (
-            <Link to="/admin/showlist">
-              <Button
-                type="primary"
-                htmlType="submit"
-                className="bg-green-500 hover:bg-green-600"
-              >
-                Gửi
-              </Button>
-            </Link>
+            <Button
+              type="primary"
+              onClick={handleSubmit}
+              loading={isSubmitting}
+              className="bg-green-500 hover:bg-green-600"
+            >
+              Gửi
+            </Button>
           )}
         </div>
       </Form>
+
+      {/* Debug Panel - có thể xóa trong production */}
+      <div className="mt-6 p-4 bg-gray-100 rounded-md">
+        <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
+        <pre className="overflow-auto max-h-96">{JSON.stringify(formData, null, 2)}</pre>
+      </div>
     </div>
   );
 }
