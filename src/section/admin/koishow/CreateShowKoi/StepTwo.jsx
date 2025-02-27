@@ -1,8 +1,8 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { Form, Input, Select } from "antd";
 const { Option } = Select;
 
-function StepTwo() {
+function StepTwo({ updateFormData, initialData }) {
   // States
   const [selectedCriteria, setSelectedCriteria] = useState([]);
   const [criteriaPercentages, setCriteriaPercentages] = useState({});
@@ -70,6 +70,23 @@ function StepTwo() {
   };
 
   const isValidTotal = () => totalPercentage === 100;
+  const [categories, setCategories] = useState(
+    initialData.createCategorieShowRequests || [
+      { name: "", sizeMin: "", sizeMax: "", description: "" },
+    ]
+  );
+
+  // Khi state categories thay đổi, cập nhật formData
+  useEffect(() => {
+    updateFormData({ createCategorieShowRequests: categories });
+  }, [categories]);
+
+  const handleCategoryNameChange = (e) => {
+    setCategories([{ name: e.target.value }]); // Cập nhật name vào createCategorieShowRequests
+  };
+  const handleCategoryChange = (field, value) => {
+    setCategories([{ ...categories[0], [field]: value }]); // Cập nhật field cụ thể
+  };
 
   return (
     <div className="space-y-4">
@@ -77,20 +94,52 @@ function StepTwo() {
         Bước 2: Các Thể Loại và Tiêu Chí Đánh Giá
       </h2>
 
-      {/* Category Information */}
+      {/* Tên thể loại */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
           Tên thể loại
         </label>
-        <Input placeholder="Nhập tên thể loại" />
+        <Input
+          placeholder="Nhập tên thể loại"
+          value={categories.length > 0 ? categories[0].name : ""}
+          onChange={handleCategoryNameChange}
+        />
       </div>
-
-      {/* Size Information */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Kích thước
-        </label>
-        <Input placeholder="Nhập kích thước" />
+      <div className="flex space-x-4">
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Kích thước tối thiểu (cm)
+          </label>
+          <Input
+            type="number"
+            placeholder="Nhập kích thước tối thiểu"
+            value={categories[0]?.sizeMin || ""}
+            onChange={(e) => handleCategoryChange("sizeMin", e.target.value)}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Kích thước tối đa (cm)
+          </label>
+          <Input
+            type="number"
+            placeholder="Nhập kích thước tối đa"
+            value={categories[0]?.sizeMax || ""}
+            onChange={(e) => handleCategoryChange("sizeMax", e.target.value)}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Mô tả
+          </label>
+          <Input
+            placeholder="Nhập mô tả thể loại"
+            value={categories[0]?.description || ""}
+            onChange={(e) =>
+              handleCategoryChange("description", e.target.value)
+            }
+          />{" "}
+        </div>
       </div>
 
       {/* Variety Information */}

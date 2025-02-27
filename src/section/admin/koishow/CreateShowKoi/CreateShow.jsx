@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Button, Form, message } from "antd";
 import StepOne from "./StepOne";
 import StepTwo from "./StepTwo";
@@ -25,6 +25,7 @@ function CreateShow() {
     hasBestInShow: false,
     createSponsorRequests: [],
     createTicketTypeRequests: [],
+    createCategorieShowRequests: [], // ✅ Thêm danh sách thể loại từ StepTwo
   });
 
   // Cập nhật dữ liệu từ các bước
@@ -32,16 +33,22 @@ function CreateShow() {
     setFormData((prev) => ({ ...prev, ...newData }));
   };
 
+  // Kiểm tra trước khi chuyển bước
   const handleNext = () => {
-    // Kiểm tra dữ liệu trước khi chuyển bước
     if (currentStep === 1) {
       if (!formData.name || !formData.description) {
-        message.error("Vui lòng điền đầy đủ tên và mô tả chương trình");
+        message.error("Vui lòng điền đầy đủ tên và mô tả chương trình.");
         return;
       }
     }
-    // Thêm kiểm tra cho các bước khác nếu cần
-    
+
+    if (currentStep === 2) {
+      if (formData.createCategorieShowRequests.length === 0) {
+        message.error("Vui lòng nhập ít nhất một thể loại.");
+        return;
+      }
+    }
+
     setCurrentStep((prevStep) => Math.min(prevStep + 1, 3));
   };
 
@@ -50,27 +57,39 @@ function CreateShow() {
   };
 
   const handleSubmit = async () => {
+    console.log("Final formData before API call:", formData); // DEBUG
+
     try {
       setIsSubmitting(true);
-      
-      // Kiểm tra dữ liệu trước khi gửi
+
       if (!formData.name || !formData.description || !formData.location) {
-        message.error("Vui lòng điền đầy đủ thông tin cơ bản");
+        message.error("Vui lòng điền đầy đủ thông tin.");
         setIsSubmitting(false);
         return;
       }
-      
-      // Gửi dữ liệu lên server (giả lập)
-      console.log("Submitting data:", formData);
-      
-      // Giả lập API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      message.success("Tạo chương trình thành công!");
-      navigate("/admin/showlist");
+
+      const response = await fetch(
+        "https://your-api-endpoint.com/create-show",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(formData),
+        }
+      );
+
+      const result = await response.json();
+
+      if (response.ok) {
+        message.success("Tạo chương trình thành công!");
+        navigate("/admin/showlist");
+      } else {
+        message.error(`Lỗi: ${result.message}`);
+      }
     } catch (error) {
       console.error("Error submitting form:", error);
-      message.error("Có lỗi xảy ra khi gửi dữ liệu");
+      message.error("Có lỗi xảy ra khi gửi dữ liệu.");
     } finally {
       setIsSubmitting(false);
     }
@@ -98,9 +117,15 @@ function CreateShow() {
       </div>
 
       <Form layout="vertical" form={form}>
-        {currentStep === 1 && <StepOne updateFormData={updateFormData} initialData={formData} />}
-        {currentStep === 2 && <StepTwo updateFormData={updateFormData} initialData={formData} />}
-        {currentStep === 3 && <StepThree updateFormData={updateFormData} initialData={formData} />}
+        {currentStep === 1 && (
+          <StepOne updateFormData={updateFormData} initialData={formData} />
+        )}
+        {currentStep === 2 && (
+          <StepTwo updateFormData={updateFormData} initialData={formData} />
+        )}
+        {currentStep === 3 && (
+          <StepThree updateFormData={updateFormData} initialData={formData} />
+        )}
 
         {/* Navigation Buttons */}
         <div className="flex justify-between mt-8">
@@ -133,10 +158,12 @@ function CreateShow() {
         </div>
       </Form>
 
-      {/* Debug Panel - có thể xóa trong production */}
+      {/* Debug Panel */}
       <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
-        <pre className="overflow-auto max-h-96">{JSON.stringify(formData, null, 2)}</pre>
+        <pre className="overflow-auto max-h-96">
+          {JSON.stringify(formData, null, 2)}
+        </pre>
       </div>
     </div>
   );
