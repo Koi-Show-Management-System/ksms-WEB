@@ -20,12 +20,12 @@ function CreateShow() {
     minParticipants: "",
     maxParticipants: "",
     location: "",
-    images: [],
+    imgUrl: "",
     hasGrandChampion: false,
     hasBestInShow: false,
     createSponsorRequests: [],
     createTicketTypeRequests: [],
-    createCategorieShowRequests: [], // ✅ Thêm danh sách thể loại từ StepTwo
+    createCategorieShowRequests: [],
   });
 
   // Cập nhật dữ liệu từ các bước

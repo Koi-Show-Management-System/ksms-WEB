@@ -1,7 +1,11 @@
 import React, { useEffect, useState } from "react";
-import { Button, Card, Form, Input, Select, Space } from "antd";
+import { Button, Card, Collapse, Form, Input, Select, Space, Spin } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import useVariety from "../../../../hooks/useVariety";
+import useAccountTeam from "../../../../hooks/useAccountTeam";
+
 const { Option } = Select;
+const { Panel } = Collapse;
 
 function StepTwo({ updateFormData, initialData }) {
   // States
@@ -9,7 +13,12 @@ function StepTwo({ updateFormData, initialData }) {
   const [criteriaPercentages, setCriteriaPercentages] = useState({});
   const [totalPercentage, setTotalPercentage] = useState(0);
   const [subRounds, setSubRounds] = useState([]);
-
+  const { variety, fetchVariety, isLoading } = useVariety();
+  const [selectedRoundType, setSelectedRoundType] = useState("");
+  const { accountManage, fetchAccountTeam } = useAccountTeam();
+  const referee = accountManage.referees || [];
+  const adminId =
+    accountManage.admin.length > 0 ? accountManage.admin[0].id : null;
   // Constants
   const criteriaOptions = [
     { value: "color", label: "Màu sắc" },
@@ -25,9 +34,9 @@ function StepTwo({ updateFormData, initialData }) {
   ];
 
   const mainRounds = [
-    { value: "preliminary", label: "Vòng Sơ Khảo" },
-    { value: "evaluation", label: "Vòng Đánh Giá Chính" },
-    { value: "final", label: "Vòng Chung Kết" },
+    { value: "Vòng Sơ Khảo", label: "Vòng Sơ Khảo" },
+    { value: "Vòng Đánh Giá Chính", label: "Vòng Đánh Giá Chính" },
+    { value: "Vòng Chung Kết", label: "Vòng Chung Kết" },
   ];
 
   // Handlers
@@ -42,6 +51,46 @@ function StepTwo({ updateFormData, initialData }) {
       });
       setCriteriaPercentages(newPercentages);
     }
+  };
+
+  const handleRoundTypeChange = (value) => {
+    setSelectedRoundType(value); // Chỉ lưu vào state, không lưu vào JSON
+  };
+
+  const handleAddRound = () => {
+    if (!categories[0]?.rounds) {
+      setCategories([{ ...categories[0], rounds: [] }]); // Khởi tạo rounds nếu chưa có
+    }
+
+    const roundsLength = categories[0]?.rounds?.length ?? 0; // Đảm bảo không lỗi
+
+    const newRound = {
+      name: `Round ${roundsLength + 1}`,
+      roundOrder: roundsLength + 1,
+      roundType: selectedRoundType, // Gán từ state `selectedRoundType`
+      startTime: "2025-02-25T17:12:33.567Z",
+      endTime: "2025-03-25T17:12:33.567Z",
+      minScoreToAdvance: 80,
+      status: "Ongoing",
+    };
+
+    setCategories([
+      {
+        ...categories[0],
+        rounds: [...(categories[0]?.rounds ?? []), newRound],
+      },
+    ]);
+  };
+
+  const handleRoundChange = (index, field, value) => {
+    const updatedRounds = [...categories[0].rounds];
+    updatedRounds[index][field] = value;
+    setCategories([{ ...categories[0], rounds: updatedRounds }]);
+  };
+
+  const handleRemoveRound = (index) => {
+    const updatedRounds = categories[0].rounds.filter((_, i) => i !== index);
+    setCategories([{ ...categories[0], rounds: updatedRounds }]);
   };
 
   const handlePercentageChange = (criteria, value) => {
@@ -72,28 +121,43 @@ function StepTwo({ updateFormData, initialData }) {
 
   const isValidTotal = () => totalPercentage === 100;
   const [categories, setCategories] = useState(
-    initialData.createCategorieShowRequests || [
-      { name: "", sizeMin: "", sizeMax: "", description: "", awards: [] },
-    ]
+    initialData?.createCategorieShowRequests?.length > 0
+      ? initialData.createCategorieShowRequests
+      : [
+          {
+            name: "",
+            sizeMin: "",
+            sizeMax: "",
+            description: "",
+            awards: [],
+            categoryVarietys: [],
+            rounds: [],
+            refereeAssignments: [],
+          },
+        ]
   );
 
-  // Khi state categories thay đổi, cập nhật formData
   useEffect(() => {
     updateFormData({ createCategorieShowRequests: categories });
   }, [categories]);
 
+  useEffect(() => {
+    fetchVariety();
+    fetchAccountTeam(1, 100);
+  }, []);
+
   const handleCategoryNameChange = (e) => {
-    setCategories([{ name: e.target.value }]); // Cập nhật name vào createCategorieShowRequests
+    setCategories([{ name: e.target.value }]);
   };
   const handleCategoryChange = (field, value) => {
-    setCategories([{ ...categories[0], [field]: value }]); // Cập nhật field cụ thể
+    setCategories([{ ...categories[0], [field]: value }]);
   };
   const handleAddAward = () => {
     setCategories([
       {
         ...categories[0],
         awards: [
-          ...(categories[0]?.awards || []), 
+          ...(categories[0]?.awards || []),
           { name: "", awardType: "", prizeValue: "", description: "" },
         ],
       },
@@ -109,6 +173,66 @@ function StepTwo({ updateFormData, initialData }) {
   const handleRemoveAward = (index) => {
     const updatedAwards = categories[0].awards.filter((_, i) => i !== index);
     setCategories([{ ...categories[0], awards: updatedAwards }]);
+  };
+
+  const handleVarietyChange = (varietyId) => {
+    const selectedVariety = variety.find((item) => item.id === varietyId);
+
+    if (selectedVariety) {
+      setCategories([
+        {
+          ...categories[0],
+          categoryVarietys: [
+            {
+              varietyId: selectedVariety.id,
+              variety: {
+                name: selectedVariety.name,
+                description: selectedVariety.description || "",
+              },
+            },
+          ],
+        },
+      ]);
+    }
+  };
+
+  const handleRefereeChange = (selectedReferees) => {
+    setCategories((prevCategories) => {
+      const updatedCategories = [...prevCategories];
+
+      const newAssignments = selectedReferees.map((refereeId) => {
+        const existingAssignment = updatedCategories[0].refereeAssignments.find(
+          (assignment) => assignment.refereeAccountId === refereeId
+        );
+
+        return existingAssignment
+          ? existingAssignment
+          : {
+              refereeAccountId: refereeId,
+              assignedAt: new Date().toISOString(),
+              roundType: [], // Bây giờ trọng tài có thể chọn nhiều vòng
+              assignedBy: adminId,
+            };
+      });
+
+      updatedCategories[0].refereeAssignments = newAssignments;
+      return updatedCategories;
+    });
+  };
+
+  const handleRefereeRoundChange = (refereeId, selectedRounds) => {
+    setCategories((prevCategories) => {
+      const updatedCategories = [...prevCategories];
+      const assignments = updatedCategories[0].refereeAssignments.map(
+        (assignment) =>
+          assignment.refereeAccountId === refereeId
+            ? { ...assignment, roundType: selectedRounds }
+            : assignment
+      );
+
+      updatedCategories[0].refereeAssignments = assignments;
+      return updatedCategories;
+    });
   };
 
   return (
@@ -165,20 +289,41 @@ function StepTwo({ updateFormData, initialData }) {
         </div>
       </div>
 
-      {/* Variety Information */}
+      {/* Select giống cá Koi */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
-          Giống
+          Chọn giống cá Koi
         </label>
-        <Input placeholder="Nhập giống" />
+        {isLoading ? (
+          <Spin size="small" />
+        ) : (
+          <Select
+            placeholder="Chọn giống"
+            className="w-full"
+            value={
+              categories[0]?.categoryVarietys?.length > 0
+                ? categories[0].categoryVarietys[0].varietyId
+                : ""
+            }
+            onChange={handleVarietyChange}
+          >
+            {variety.map((item) => (
+              <Option key={item.id} value={item.id}>
+                {item.name}
+              </Option>
+            ))}
+          </Select>
+        )}
       </div>
 
-      {/* Round Selection */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Vòng chính
-        </label>
-        <Select placeholder="Chọn vòng chính" className="w-full">
+        <h3 className="text-sn font-semibold">Chọn vòng chính</h3>
+        <Select
+          placeholder="Chọn vòng chính"
+          className="w-full"
+          value={selectedRoundType} // Hiển thị giá trị đã chọn
+          onChange={handleRoundTypeChange}
+        >
           {mainRounds.map((round) => (
             <Option key={round.value} value={round.value}>
               {round.label}
@@ -187,30 +332,99 @@ function StepTwo({ updateFormData, initialData }) {
         </Select>
       </div>
 
-      {/* Sub Rounds */}
+      {/* Danh sách vòng nhỏ */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Vòng phụ
-        </label>
-        <Select
-          mode="tags"
-          style={{ width: "100%" }}
-          placeholder="Nhập số vòng (vd: Vòng 1)"
-          value={subRounds}
-          onChange={setSubRounds}
-          dropdownStyle={{ display: "none" }}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              const value = e.target.value;
-              if (value && !subRounds.includes(value)) {
-                setSubRounds([...subRounds, value]);
-              }
-            }
-          }}
-        />
-      </div>
+        <h3 className="text-sm font-semibold">Danh sách vòng nhỏ</h3>
+        <Button onClick={handleAddRound} icon={<PlusOutlined />}>
+          Thêm Vòng Nhỏ
+        </Button>
 
+        <Collapse className="mt-4">
+          {(categories[0]?.rounds ?? []).map((round, index) => (
+            <Panel
+              header={`${round.name} - ${round.roundType}`}
+              key={index}
+              extra={
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  danger
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveRound(index);
+                  }}
+                >
+                  Xóa
+                </Button>
+              }
+            >
+              <Space direction="vertical" style={{ width: "100%" }}>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Tên vòng
+                  </label>
+                  <Input
+                    placeholder="Nhập tên vòng"
+                    value={round.name}
+                    onChange={(e) =>
+                      handleRoundChange(index, "name", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Thứ tự vòng
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Nhập thứ tự vòng"
+                    value={round.roundOrder}
+                    onChange={(e) =>
+                      handleRoundChange(index, "roundOrder", e.target.value)
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Điểm tối thiểu để qua vòng
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Nhập điểm tối thiểu"
+                    value={round.minScoreToAdvance}
+                    onChange={(e) =>
+                      handleRoundChange(
+                        index,
+                        "minScoreToAdvance",
+                        e.target.value
+                      )
+                    }
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">
+                    Trạng thái
+                  </label>
+                  <Select
+                    value={round.status}
+                    onChange={(value) =>
+                      handleRoundChange(index, "status", value)
+                    }
+                    className="w-full"
+                  >
+                    <Option value="Ongoing">Đang diễn ra</Option>
+                    <Option value="Completed">Hoàn thành</Option>
+                    <Option value="Pending">Chờ bắt đầu</Option>
+                  </Select>
+                </div>
+              </Space>
+            </Panel>
+          ))}
+        </Collapse>
+      </div>
       {/* Criteria Selection */}
       <div className="mb-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -288,18 +502,21 @@ function StepTwo({ updateFormData, initialData }) {
         Thêm Giải Thưởng
       </Button>
 
-      <div className="mt-4 space-y-4">
+      <Collapse className="mt-4">
         {Array.isArray(categories[0]?.awards) &&
           categories[0].awards.map((award, index) => (
-            <Card
+            <Panel
+              header={`Giải thưởng ${index + 1}`}
               key={index}
-              title={`Giải thưởng ${index + 1}`}
               extra={
                 <Button
                   type="text"
-                  icon={<DeleteOutlined/>}
+                  icon={<DeleteOutlined />}
                   danger
-                  onClick={() => handleRemoveAward(index)}
+                  onClick={(e) => {
+                    e.stopPropagation(); // Ngăn mở panel khi xóa
+                    handleRemoveAward(index);
+                  }}
                 >
                   Xóa
                 </Button>
@@ -360,20 +577,116 @@ function StepTwo({ updateFormData, initialData }) {
                   />
                 </div>
               </Space>
-            </Card>
+            </Panel>
           ))}
-      </div>
+      </Collapse>
 
-      {/* Referee Selection */}
+      {/* Chọn trọng tài */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Trọng tài
-        </label>
-        <Select mode="multiple" placeholder="Chọn trọng tài" className="w-full">
-          <Option value="referee1">Mary Johnson</Option>
-          <Option value="referee2">James Smith</Option>
+        <h3 className="text-lg font-semibold">Chọn trọng tài</h3>
+        <Select
+          mode="multiple"
+          placeholder="Chọn trọng tài"
+          className="w-full"
+          onChange={handleRefereeChange}
+        >
+          {referee.map((referee) => (
+            <Option key={referee.id} value={referee.id}>
+              {referee.fullName}
+            </Option>
+          ))}
         </Select>
       </div>
+
+      {/* Hiển thị danh sách trọng tài đã chọn */}
+      <Collapse className="mt-4">
+        {categories[0]?.refereeAssignments?.map((assignment, index) => (
+          <Panel
+            header={`Trọng tài ${index + 1}`}
+            key={index}
+            extra={
+              <Button
+                type="text"
+                icon={<DeleteOutlined />}
+                danger
+                onClick={() => {
+                  const updatedAssignments =
+                    categories[0].refereeAssignments.filter(
+                      (_, i) => i !== index
+                    );
+                  setCategories([
+                    {
+                      ...categories[0],
+                      refereeAssignments: updatedAssignments,
+                    },
+                  ]);
+                }}
+              >
+                Xóa
+              </Button>
+            }
+          >
+            <Space direction="vertical" style={{ width: "100%" }}>
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Trọng tài
+                </label>
+                <Input
+                  value={
+                    referee.find((r) => r.id === assignment.refereeAccountId)
+                      ?.fullName || "Không xác định"
+                  }
+                  disabled
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Thời gian phân công
+                </label>
+                <Input
+                  value={new Date(assignment.assignedAt).toLocaleString()}
+                  disabled
+                />
+              </div>
+
+              <div>
+                <label>Chọn vòng chính</label>
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn vòng chính"
+                  className="w-full"
+                  value={assignment.roundType || []}
+                  onChange={(value) =>
+                    handleRefereeRoundChange(assignment.refereeAccountId, value)
+                  }
+                >
+                  {mainRounds.map((round) => (
+                    <Option key={round.value} value={round.value}>
+                      {round.label}
+                    </Option>
+                  ))}
+                </Select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Phân công bởi
+                </label>
+                <Input
+                  value={
+                    adminId
+                      ? referee.find((r) => r.id === adminId)?.fullName ||
+                        "Admin"
+                      : "Không có Admin"
+                  }
+                  disabled
+                />
+              </div>
+            </Space>
+          </Panel>
+        ))}
+      </Collapse>
     </div>
   );
 }

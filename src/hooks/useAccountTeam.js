@@ -12,6 +12,7 @@ const useAccountTeam = create((set, get) => ({
     staff: [],
     referees: [],
     allAccounts: [],
+    admin: [],
   },
   isLoading: false,
   error: null,
@@ -71,6 +72,9 @@ const useAccountTeam = create((set, get) => ({
 
         set({
           accountManage: {
+            admin: filteredAccounts.filter(
+              (account) => account.role === "Admin"
+            ),
             managers: filteredAccounts.filter(
               (account) => account.role === "Manager"
             ),
@@ -106,7 +110,6 @@ const useAccountTeam = create((set, get) => ({
         userName: accountData.userName || accountData.email.split("@")[0],
         phone: accountData.phone,
         role: accountData.role,
-        avatar: accountData.avatar || null,
       };
 
       const res = await createAccount(data);

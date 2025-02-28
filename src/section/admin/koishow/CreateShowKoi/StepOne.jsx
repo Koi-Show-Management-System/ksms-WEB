@@ -9,6 +9,7 @@ import {
   Checkbox,
   Card,
   Space,
+  Collapse,
 } from "antd";
 import {
   DeleteOutlined,
@@ -17,7 +18,9 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { Cloudinary } from "@cloudinary/url-gen";
+
 const { Option } = Select;
+const { Panel } = Collapse;
 
 const cloudinary = new Cloudinary({
   cloud: {
@@ -36,7 +39,7 @@ function StepOne({ updateFormData }) {
     minParticipants: "",
     maxParticipants: "",
     location: "",
-    imgUrl: "", // Changed from array to string
+    imgUrl: "",
     hasGrandChampion: false,
     hasBestInShow: false,
     createSponsorRequests: [],
@@ -358,22 +361,25 @@ function StepOne({ updateFormData }) {
 
       {/* Phần Sponsor Requests */}
       <label className="block text-sm font-bold text-gray-700 mb-1">
-        Sponsor Management{" "}
+        Quản lý nhà tài trợ{" "}
       </label>
       <Button onClick={handleAddSponsor} icon={<PlusOutlined />}>
         Thêm Sponsor
       </Button>
-      <div className="mt-4 space-y-4">
+      <Collapse className="mt-4">
         {data.createSponsorRequests.map((sponsor, index) => (
-          <Card
+          <Panel
+            header={`Sponsor ${index + 1}`}
             key={index}
-            title={`Sponsor ${index + 1}`}
             extra={
               <Button
                 type="text"
                 icon={<DeleteOutlined />}
                 danger
-                onClick={() => handleRemoveSponsor(index)}
+                onClick={(e) => {
+                  e.stopPropagation(); // Ngăn mở panel khi xóa
+                  handleRemoveSponsor(index);
+                }}
               >
                 Xóa
               </Button>
@@ -443,9 +449,9 @@ function StepOne({ updateFormData }) {
                 />
               </div>
             </Space>
-          </Card>
+          </Panel>
         ))}
-      </div>
+      </Collapse>
 
       <div className="mt-4">
         <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -469,28 +475,30 @@ function StepOne({ updateFormData }) {
         </Checkbox>
       </div>
       {/* Phần Loại Vé */}
-      <h3 className="text-sm font-bold mb-4">Ticket Management</h3>
+      <h3 className="text-sm font-bold mb-4">Quản lý vé</h3>
 
       <Button onClick={handleAddTicketType} icon={<PlusOutlined />}>
         Thêm Loại Vé
       </Button>
 
-      <div className="mt-4 space-y-4">
+      <Collapse className="mt-4">
         {data.createTicketTypeRequests.map((ticket, index) => (
-          <Card
+          <Panel
+            header={`Loại Vé ${index + 1}`}
             key={index}
-            title={`Loại Vé ${index + 1}`}
             extra={
               <Button
                 type="text"
                 icon={<DeleteOutlined />}
                 danger
-                onClick={() => handleRemoveTicketType(index)}
+                onClick={(e) => {
+                  e.stopPropagation(); // Ngăn mở panel khi xóa
+                  handleRemoveTicketType(index);
+                }}
               >
                 Xóa
               </Button>
             }
-            style={{ background: "#f9f9f9", borderRadius: "8px" }}
           >
             <Space direction="vertical" style={{ width: "100%" }}>
               <div>
@@ -538,9 +546,9 @@ function StepOne({ updateFormData }) {
                 />
               </div>
             </Space>
-          </Card>
+          </Panel>
         ))}
-      </div>
+      </Collapse>
     </div>
   );
 }
