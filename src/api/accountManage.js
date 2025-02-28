@@ -1,8 +1,9 @@
 import axiosClient from "../config/axiosClient";
 
-const accountTeam = (page, size) => {
-  return axiosClient.get("/account/admin/get-all-user-account", {
+const accountTeam = (page, size, role) => {
+  return axiosClient.get("/account/admin/get-paging-account", {
     params: {
+      roleName: role,
       page: page,
       size: size,
     },

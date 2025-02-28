@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Form, Input, Spin } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import useAccountTeam from "../../../hooks/useAccountTeam";
 
-function Referees({ accounts = [], isLoading }) {
+function Referees({ accounts = [], isLoading, role }) {
+  const { fetchAccountTeam } = useAccountTeam();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const showModal = () => {
@@ -41,20 +43,19 @@ function Referees({ accounts = [], isLoading }) {
         let color = "";
         let text = "";
 
-        // Chuẩn hóa status thành chữ thường để dễ so sánh
         const normalizedStatus = status ? status.toLowerCase() : "";
 
         if (normalizedStatus === "active") {
           color = "text-green-500";
           text = "Active";
         } else if (normalizedStatus === "blocked") {
-          color = "text-orange-500"; // Màu cam cho trạng thái Blocked
+          color = "text-orange-500";
           text = "Blocked";
         } else if (normalizedStatus === "deleted") {
-          color = "text-red-500"; // Màu đỏ cho trạng thái Deleted
+          color = "text-red-500";
           text = "Deleted";
         } else {
-          color = "text-gray-500"; // Màu xám cho các trạng thái khác
+          color = "text-gray-500";
           text = status || "N/A";
         }
 
@@ -79,7 +80,7 @@ function Referees({ accounts = [], isLoading }) {
     },
   ];
 
-  // Transform API data to match table structure
+  // Chuyển đổi dữ liệu API thành định dạng phù hợp với bảng
   const refereeData = accounts.map((account, index) => ({
     key: account.id || index.toString(),
     fullName: account.fullName || account.name || "N/A",

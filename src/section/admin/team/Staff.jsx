@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Form, Input, Spin } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import useAccountTeam from "../../../hooks/useAccountTeam";
 
-function Staff({ accounts = [], isLoading }) {
+function Staff({ accounts = [], isLoading, role }) {
+  const { fetchAccountTeam } = useAccountTeam();
   const [isModalVisible, setIsModalVisible] = useState(false);
 
   const showModal = () => {
@@ -63,7 +65,7 @@ function Staff({ accounts = [], isLoading }) {
     },
   ];
 
-  // Transform API data to match table structure
+  // Chuyển đổi dữ liệu API thành định dạng phù hợp với bảng
   const staffData = accounts.map((account, index) => ({
     key: account.id || index.toString(),
     fullName: account.fullName || account.name || "N/A",

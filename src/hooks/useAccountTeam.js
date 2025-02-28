@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { accountTeam, createAccount, updateAccount, updateStatus } from "../api/accountManage";
+import {
+  accountTeam,
+  createAccount,
+  updateAccount,
+  updateStatus,
+} from "../api/accountManage";
 
 const useAccountTeam = create((set, get) => ({
   accountManage: {
@@ -15,16 +20,16 @@ const useAccountTeam = create((set, get) => ({
   totalItems: 0,
   totalPages: 1,
 
-  fetchAccountTeam: async (page = 1, size = 10) => {
+  fetchAccountTeam: async (page = 1, size = 10, role = "") => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
     try {
-      const res = await accountTeam(page, size);
+      // Gọi API với role, page, size
+      const res = await accountTeam(page, size, role);
 
       if (res && res.status === 200) {
         console.log("API Response:", res.data);
 
-        // Kiểm tra cấu trúc dữ liệu và lấy mảng items
         let accounts = [];
         let total = 0;
         let totalPages = 1;
@@ -35,7 +40,6 @@ const useAccountTeam = create((set, get) => ({
           res.data.data.items &&
           Array.isArray(res.data.data.items)
         ) {
-          // Cấu trúc: res.data.data.items
           accounts = res.data.data.items;
           total = res.data.data.total || accounts.length;
           totalPages = res.data.data.totalPages || 1;
@@ -44,12 +48,10 @@ const useAccountTeam = create((set, get) => ({
           res.data.items &&
           Array.isArray(res.data.items)
         ) {
-          // Cấu trúc: res.data.items
           accounts = res.data.items;
           total = res.data.total || accounts.length;
           totalPages = res.data.totalPages || 1;
         } else if (res.data && Array.isArray(res.data)) {
-          // Cấu trúc: res.data là mảng
           accounts = res.data;
           total = accounts.length;
         } else {
@@ -60,26 +62,24 @@ const useAccountTeam = create((set, get) => ({
           accounts = [];
         }
 
-        console.log("Accounts array:", accounts);
-
         // Phân loại tài khoản theo vai trò
-        const managers = accounts.filter(
-          (account) => account.role === "MANAGER" || account.role === "Manager"
-        );
-
-        const staff = accounts.filter(
-          (account) => account.role === "STAFF" || account.role === "Staff"
-        );
-
-        const referees = accounts.filter(
-          (account) => account.role === "REFEREE" || account.role === "Referee"
-        );
+        const filteredAccounts = role
+          ? accounts.filter(
+              (account) => account.role.toLowerCase() === role.toLowerCase()
+            )
+          : accounts;
 
         set({
           accountManage: {
-            managers,
-            staff,
-            referees,
+            managers: filteredAccounts.filter(
+              (account) => account.role === "Manager"
+            ),
+            staff: filteredAccounts.filter(
+              (account) => account.role === "Staff"
+            ),
+            referees: filteredAccounts.filter(
+              (account) => account.role === "Referee"
+            ),
             allAccounts: accounts,
           },
           totalItems: total,
@@ -94,26 +94,11 @@ const useAccountTeam = create((set, get) => ({
       set({ error: err.message || "Đã xảy ra lỗi", isLoading: false });
     }
   },
-  getAccountsByRole: (role) => {
-    const { accountManage } = get();
-
-    switch (role.toLowerCase()) {
-      case "manager":
-        return accountManage.managers;
-      case "staff":
-        return accountManage.staff;
-      case "referee":
-        return accountManage.referees;
-      default:
-        return accountManage.allAccounts;
-    }
-  },
 
   createAccount: async (accountData) => {
     set({ isLoading: true, error: null });
 
     try {
-      // Prepare the data object with all required fields
       const data = {
         email: accountData.email,
         hashedPassword: accountData.hashedPassword || accountData.password,
@@ -128,21 +113,15 @@ const useAccountTeam = create((set, get) => ({
 
       if (res && res.status === 201) {
         console.log("Account created successfully:", res.data);
-
-        // Refresh the account list after creation
         await get().fetchAccountTeam(get().currentPage, get().pageSize);
-
         return { success: true, data: res.data };
       } else {
-        const errorMsg = "Failed to create account";
-        set({ error: errorMsg, isLoading: false });
-        return { success: false, error: errorMsg };
+        set({ error: "Failed to create account", isLoading: false });
+        return { success: false, error: "Failed to create account" };
       }
     } catch (err) {
-      console.error("Error creating account:", err);
-      const errorMsg = err.message || "An error occurred";
-      set({ error: errorMsg, isLoading: false });
-      return { success: false, error: errorMsg };
+      set({ error: err.message || "An error occurred", isLoading: false });
+      return { success: false, error: err.message || "An error occurred" };
     } finally {
       set({ isLoading: false });
     }
@@ -151,26 +130,19 @@ const useAccountTeam = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      console.log(`Updating account ${accountId} status to ${status}`);
       const res = await updateStatus(accountId, status);
 
       if (res && res.status === 200) {
         console.log("Account status updated successfully:", res.data);
-
-        // Refresh the account list after update
         await get().fetchAccountTeam(get().currentPage, get().pageSize);
-
         return { success: true, data: res.data };
       } else {
-        const errorMsg = "Failed to update account status";
-        set({ error: errorMsg, isLoading: false });
-        return { success: false, error: errorMsg };
+        set({ error: "Failed to update account status", isLoading: false });
+        return { success: false, error: "Failed to update account status" };
       }
     } catch (err) {
-      console.error("Error updating account status:", err);
-      const errorMsg = err.message || "An error occurred";
-      set({ error: errorMsg, isLoading: false });
-      return { success: false, error: errorMsg };
+      set({ error: err.message || "An error occurred", isLoading: false });
+      return { success: false, error: err.message || "An error occurred" };
     } finally {
       set({ isLoading: false });
     }
@@ -179,25 +151,19 @@ const useAccountTeam = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      console.log(`Updating account ${accountId} with data:`, accountData);
       const res = await updateAccount(accountId, accountData);
 
       if (res && res.status === 200) {
         console.log("Account updated successfully:", res.data);
-
         await get().fetchAccountTeam(get().currentPage, get().pageSize);
-
         return { success: true, data: res.data };
       } else {
-        const errorMsg = "Failed to update account";
-        set({ error: errorMsg, isLoading: false });
-        return { success: false, error: errorMsg };
+        set({ error: "Failed to update account", isLoading: false });
+        return { success: false, error: "Failed to update account" };
       }
     } catch (err) {
-      console.error("Error updating account:", err);
-      const errorMsg = err.message || "An error occurred";
-      set({ error: errorMsg, isLoading: false });
-      return { success: false, error: errorMsg };
+      set({ error: err.message || "An error occurred", isLoading: false });
+      return { success: false, error: err.message || "An error occurred" };
     } finally {
       set({ isLoading: false });
     }

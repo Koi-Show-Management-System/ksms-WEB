@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Button,
@@ -8,22 +8,33 @@ import {
   Spin,
   Select,
   notification,
+  Upload,
+  message,
 } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  UploadOutlined,
+  LoadingOutlined,
+  PlusOutlined,
+} from "@ant-design/icons";
 import useAccountTeam from "../../../hooks/useAccountTeam";
 import { updateStatus } from "../../../api/accountManage";
 
-function Manager({ accounts = [], isLoading }) {
+function Manager({ accounts = [], isLoading, role }) {
   const { updateStatusAccount, fetchAccountTeam, updateAccountTeam } =
     useAccountTeam();
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentAccount, setCurrentAccount] = useState(null);
+  const [avatar, setAvatar] = useState(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [form] = Form.useForm();
+  const [fileList, setFileList] = useState([]);
+  const [previewImage, setPreviewImage] = useState("");
 
   const handleStatusChange = async (accountId, newStatus) => {
     try {
       console.log(`Changing status for account ${accountId} to ${newStatus}`);
 
-      // Gọi API để cập nhật trạng thái
       const res = await updateStatus(accountId, newStatus);
 
       if (res && res.status === 200) {
@@ -33,14 +44,7 @@ function Manager({ accounts = [], isLoading }) {
           placement: "topRight",
         });
 
-        // Refresh danh sách tài khoản
-        fetchAccountTeam();
-      } else {
-        notification.error({
-          message: "Lỗi",
-          description: "Không thể cập nhật trạng thái tài khoản",
-          placement: "topRight",
-        });
+        fetchAccountTeam(1, 10, role);
       }
     } catch (error) {
       console.error("Error in handleStatusChange:", error);
@@ -52,38 +56,110 @@ function Manager({ accounts = [], isLoading }) {
     }
   };
 
+  const enableEditing = () => {
+    setIsEditing(true);
+  };
+
   const handleEdit = (account) => {
     setCurrentAccount(account);
+    setAvatar(account.avatar);
+    setIsEditing(false);
     setIsModalVisible(true);
+
+    if (account.avatar) {
+      setPreviewImage(account.avatar);
+      setFileList([
+        {
+          uid: "-1",
+          name: "current-avatar.jpg",
+          status: "done",
+          url: account.avatar,
+        },
+      ]);
+    } else {
+      setPreviewImage("");
+      setFileList([]);
+    }
+
+    form.setFieldsValue({
+      fullName: account.fullName,
+      username: account.username,
+      phone: account.phone,
+    });
+  };
+
+  const handleUploadChange = ({ fileList }) => {
+    setFileList(fileList);
+    if (fileList.length > 0) {
+      setPreviewImage(URL.createObjectURL(fileList[0].originFileObj));
+    } else {
+      setPreviewImage(avatar); 
+    }
+  };
+  const urlToBlob = async (url) => {
+    try {
+      console.log("🔄 Fetching avatar URL:", url);
+
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error("Không thể tải ảnh từ URL!");
+      }
+
+      const blob = await response.blob();
+      return new File([blob], "avatar.jpg", { type: blob.type });
+    } catch (error) {
+      console.error("🚨 Lỗi khi convert URL thành file:", error);
+      return null;
+    }
   };
 
   const handleUpdate = async (values) => {
-    try {
-      const res = await updateAccountTeam(currentAccount.key, values);
+    const formData = new FormData();
+    formData.append("FullName", values.fullName);
+    formData.append("Username", values.username);
+    formData.append("Phone", values.phone);
 
-      if (res.success) {
-        notification.success({
-          message: "Thành công",
-          description: "Cập nhật tài khoản thành công!",
-          placement: "topRight",
-        });
+    let avatarFile = null;
 
-        fetchAccountTeam();
-        setIsModalVisible(false);
-      } else {
-        notification.error({
-          message: "Lỗi",
-          description: res.error || "Không thể cập nhật tài khoản.",
-          placement: "topRight",
-        });
-      }
-    } catch (error) {
+    if (fileList.length > 0 && fileList[0].originFileObj) {
+      avatarFile = fileList[0].originFileObj; 
+    } else if (avatar) {
+      avatarFile = await urlToBlob(avatar);
+    }
+
+    if (avatarFile) {
+      formData.append("AvatarUrl", avatarFile);
+    }
+
+    console.log("🔥 Dữ liệu gửi lên:");
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
+    const res = await updateAccountTeam(currentAccount.key, formData);
+
+    if (res.success) {
+      notification.success({
+        message: "Thành công",
+        description: "Cập nhật tài khoản thành công!",
+        placement: "topRight",
+      });
+
+      fetchAccountTeam(1, 10, role);
+      setIsModalVisible(false);
+      setIsEditing(false);
+    } else {
       notification.error({
         message: "Lỗi",
-        description: "Đã xảy ra lỗi khi cập nhật tài khoản",
+        description: res.error || "Không thể cập nhật tài khoản.",
         placement: "topRight",
       });
     }
+  };
+
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setIsEditing(false);
   };
 
   const columns = [
@@ -137,7 +213,7 @@ function Manager({ accounts = [], isLoading }) {
       title: "Vai trò",
       dataIndex: "role",
       key: "role",
-      render: (role) => role || "Quản lý",
+      render: () => "Quản lý",
     },
     {
       title: "Hành động",
@@ -153,7 +229,6 @@ function Manager({ accounts = [], isLoading }) {
     },
   ];
 
-  // Transform API data to match table structure
   const managerData = accounts.map((account, index) => ({
     key: account.id || index.toString(),
     fullName: account.fullName || account.name || "N/A",
@@ -161,6 +236,8 @@ function Manager({ accounts = [], isLoading }) {
     phone: account.phone || "N/A",
     status: account.status || "inactive",
     role: account.role || "MANAGER",
+    username: account.username || "",
+    avatar: account.avatar || "",
   }));
 
   return (
@@ -183,19 +260,31 @@ function Manager({ accounts = [], isLoading }) {
         />
       )}
       <Modal
-        title="Chỉnh sửa tài khoản"
+        title="Thông tin tài khoản"
         open={isModalVisible}
-        onCancel={() => setIsModalVisible(false)}
-        footer={null}
+        onCancel={handleCancel}
+        footer={
+          isEditing
+            ? [
+                <Button key="back" onClick={handleCancel}>
+                  Hủy
+                </Button>,
+                <Button key="submit" type="primary" onClick={form.submit}>
+                  Cập nhật
+                </Button>,
+              ]
+            : [
+                <Button key="back" onClick={handleCancel}>
+                  Đóng
+                </Button>,
+                <Button key="edit" type="primary" onClick={enableEditing}>
+                  Chỉnh sửa
+                </Button>,
+              ]
+        }
       >
         <Form
-          initialValues={{
-            fullName: currentAccount?.fullName,
-            userName: currentAccount?.userName,
-            phone: currentAccount?.phone,
-            avatar: currentAccount?.avatar,
-            role: currentAccount?.role,
-          }}
+          form={form}
           onFinish={handleUpdate}
           labelAlign="left"
           layout="vertical"
@@ -205,17 +294,17 @@ function Manager({ accounts = [], isLoading }) {
             name="fullName"
             rules={[{ required: true, message: "Vui lòng nhập tên đầy đủ!" }]}
           >
-            <Input />
+            {isEditing ? <Input /> : <Input disabled />}
           </Form.Item>
 
           <Form.Item
-            label="Tên"
-            name="userName"
+            label="Tên đăng nhập"
+            name="username"
             rules={[
               { required: true, message: "Vui lòng nhập tên đăng nhập!" },
             ]}
           >
-            <Input />
+            {isEditing ? <Input /> : <Input disabled />}
           </Form.Item>
 
           <Form.Item
@@ -225,17 +314,34 @@ function Manager({ accounts = [], isLoading }) {
               { required: true, message: "Vui lòng nhập số điện thoại!" },
             ]}
           >
-            <Input />
+            {isEditing ? <Input /> : <Input disabled />}
           </Form.Item>
 
-          <Form.Item label="Ảnh đại diện" name="avatar">
-            <Input />
-          </Form.Item>
-
-          <Form.Item>
-            <Button type="primary" htmlType="submit">
-              Cập nhật
-            </Button>
+          <Form.Item label="Ảnh đại diện">
+            {isEditing && (
+              <Upload
+                listType="picture-card"
+                fileList={fileList}
+                beforeUpload={() => false}
+                onChange={handleUploadChange}
+              >
+                {fileList.length > 0 ? null : <PlusOutlined />}
+              </Upload>
+            )}
+            {previewImage ? (
+              <img
+                src={previewImage}
+                alt="avatar"
+                style={{
+                  width: "100px",
+                  height: "100px",
+                  objectFit: "cover",
+                  borderRadius: "4px",
+                }}
+              />
+            ) : (
+              <div>Không có hình đại diện</div>
+            )}
           </Form.Item>
         </Form>
       </Modal>
