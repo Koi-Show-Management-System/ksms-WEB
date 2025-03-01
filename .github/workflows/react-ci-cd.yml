@@ -23,37 +23,14 @@ jobs:
         node-version: '18'
         cache: 'npm'
         
-    - name: Debug - List Files
-      run: ls -la
-      
     - name: Install dependencies
       run: npm ci
       
-    - name: Check package.json for build output directory
-      id: check-config
-      run: |
-        # Kiểm tra xem output có được cấu hình trong package.json không
-        if grep -q "\"build\":" package.json; then
-          echo "Tìm thấy cấu hình build trong package.json"
-        fi
-        # Liệt kê các script trong package.json để debug
-        echo "Script trong package.json:"
-        cat package.json | grep -A 10 "\"scripts\""
-        
     - name: Build project
       run: npm run build
       env:
         CI: false # Ngăn CI dừng khi có warnings
         REACT_APP_API_BASE_URL: https://api.ksms.news
-        
-    - name: Debug - List Directories After Build
-      run: |
-        echo "Thư mục gốc:"
-        ls -la
-        echo "Kiểm tra các thư mục build có thể có:"
-        ls -la ./build 2>/dev/null || echo "Không tìm thấy thư mục ./build"
-        ls -la ./dist 2>/dev/null || echo "Không tìm thấy thư mục ./dist"
-        ls -la ./out 2>/dev/null || echo "Không tìm thấy thư mục ./out"
         
     - name: Determine Build Output Directory
       id: build-dir
@@ -104,14 +81,9 @@ jobs:
         name: frontend-build
         path: ./frontend-build/
         
-    - name: Debug - Verify Downloaded Files
-      run: |
-        echo "Kiểm tra files đã download:"
-        ls -la ./frontend-build/
-        
     - name: Create deploy script
       run: |
-        cat > deploy-frontend.sh << 'EOL'
+        cat > deploy-frontend.sh << 'DEPLOYEOF'
         #!/bin/bash
         
         # Thiết lập các biến môi trường
@@ -141,8 +113,8 @@ jobs:
         # Cấu hình quyền
         chown -R www-data:www-data $RELEASE_PATH
         
-        # Tạo hoặc cập nhật file cấu hình Nginx cho frontend - KHÔNG đụng đến api.ksms.news
-        cat > /etc/nginx/sites-available/$APP_NAME << EOF
+        # Tạo hoặc cập nhật file cấu hình Nginx cho frontend
+        cat > /etc/nginx/sites-available/$APP_NAME << NGINXEOF
         # Server block cho website chính (ksms.news và www.ksms.news)
         server {
             listen 80;
@@ -174,7 +146,7 @@ jobs:
             gzip_types text/plain text/css application/javascript application/json image/svg+xml;
             gzip_min_length 1000;
         }
-        EOF
+        NGINXEOF
         
         # Kích hoạt site nếu chưa có
         if [ ! -f /etc/nginx/sites-enabled/$APP_NAME ]; then
@@ -184,54 +156,52 @@ jobs:
         # Kiểm tra cấu hình Nginx
         nginx -t
         
-        # Kiểm tra xem có file Cloudflare Real IP chưa
+        # Tạo file cấu hình Cloudflare Real IP (sửa cú pháp EOF)
         if [ ! -f /etc/nginx/conf.d/cloudflare-real-ip.conf ]; then
-          # Tạo cấu hình Cloudflare Real IP nếu chưa có
-          cat > /etc/nginx/conf.d/cloudflare-real-ip.conf << 'EOF'
-          # Cloudflare IP ranges
-          # IPv4
-          set_real_ip_from 173.245.48.0/20;
-          set_real_ip_from 103.21.244.0/22;
-          set_real_ip_from 103.22.200.0/22;
-          set_real_ip_from 103.31.4.0/22;
-          set_real_ip_from 141.101.64.0/18;
-          set_real_ip_from 108.162.192.0/18;
-          set_real_ip_from 190.93.240.0/20;
-          set_real_ip_from 188.114.96.0/20;
-          set_real_ip_from 197.234.240.0/22;
-          set_real_ip_from 198.41.128.0/17;
-          set_real_ip_from 162.158.0.0/15;
-          set_real_ip_from 104.16.0.0/13;
-          set_real_ip_from 104.24.0.0/14;
-          set_real_ip_from 172.64.0.0/13;
-          set_real_ip_from 131.0.72.0/22;
-
-          # IPv6
-          set_real_ip_from 2400:cb00::/32;
-          set_real_ip_from 2606:4700::/32;
-          set_real_ip_from 2803:f800::/32;
-          set_real_ip_from 2405:b500::/32;
-          set_real_ip_from 2405:8100::/32;
-          set_real_ip_from 2a06:98c0::/29;
-          set_real_ip_from 2c0f:f248::/32;
-
-          real_ip_header CF-Connecting-IP;
-          EOF
+            # Tạo file bằng cách viết từng dòng thay vì dùng heredoc
+            echo '# Cloudflare IP ranges' > /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo '# IPv4' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 173.245.48.0/20;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 103.21.244.0/22;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 103.22.200.0/22;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 103.31.4.0/22;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 141.101.64.0/18;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 108.162.192.0/18;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 190.93.240.0/20;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 188.114.96.0/20;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 197.234.240.0/22;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 198.41.128.0/17;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 162.158.0.0/15;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 104.16.0.0/13;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 104.24.0.0/14;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 172.64.0.0/13;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 131.0.72.0/22;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo '' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo '# IPv6' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2400:cb00::/32;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2606:4700::/32;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2803:f800::/32;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2405:b500::/32;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2405:8100::/32;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2a06:98c0::/29;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'set_real_ip_from 2c0f:f248::/32;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo '' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
+            echo 'real_ip_header CF-Connecting-IP;' >> /etc/nginx/conf.d/cloudflare-real-ip.conf
         fi
         
-        # Khởi động lại Nginx - không ảnh hưởng đến Backend
+        # Khởi động lại Nginx
         systemctl reload nginx
         
         # Xóa các bản release cũ (giữ lại 3 bản gần nhất)
         cd $APP_PATH/releases && ls -t | tail -n +4 | xargs -I {} rm -rf {}
         
         echo "Frontend deployment completed successfully with Cloudflare config!"
-        EOL
+        DEPLOYEOF
         chmod +x deploy-frontend.sh
 
     - name: Create setup script
       run: |
-        cat > setup-frontend.sh << 'EOL'
+        cat > setup-frontend.sh << 'SETUPEOF'
         #!/bin/bash
         
         # Tạo cấu trúc thư mục cho ứng dụng frontend
@@ -243,7 +213,7 @@ jobs:
         # Đặt quyền cho thư mục
         chown -R www-data:www-data $APP_PATH
         
-        # Đảm bảo Nginx đã được cài đặt (Backend đã cài đặt)
+        # Đảm bảo Nginx đã được cài đặt
         if ! command -v nginx &> /dev/null; then
             apt-get update
             apt-get install -y nginx
@@ -251,7 +221,7 @@ jobs:
         fi
         
         echo "Frontend environment setup completed!"
-        EOL
+        SETUPEOF
         chmod +x setup-frontend.sh
 
     - name: Setup SSH Config
@@ -264,6 +234,10 @@ jobs:
         
     - name: Deploy frontend to VPS
       run: |
+        # Kiểm tra kết nối SSH
+        echo "Kiểm tra kết nối SSH..."
+        ssh -o BatchMode=yes ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "echo 'Kết nối SSH thành công'"
+        
         # Tạo thư mục tạm trên VPS và sao chép các tệp
         ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /tmp/frontend-build"
         scp -r ./frontend-build/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend-build/
