@@ -1,33 +1,210 @@
-name: React CI/CD
+name: CI/CD Pipeline - ReactJS Frontend with Cloudflare
 
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   pull_request:
-    branches: [main]
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
+    name: Build Frontend
     runs-on: ubuntu-latest
-
+    
     steps:
-      - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      env:
+        CI: false # Ngăn CI dừng khi có warnings
+        REACT_APP_API_BASE_URL: https://api.ksms.news
+        
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: frontend-build
+        path: ./build/
+        
+  deploy:
+    name: Deploy Frontend
+    needs: build
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    
+    steps:
+    - name: Download build artifacts
+      uses: actions/download-artifact@v4
+      with:
+        name: frontend-build
+        path: ./build/
+        
+    - name: Create deploy script
+      run: |
+        cat > deploy-frontend.sh << 'EOL'
+        #!/bin/bash
+        
+        # Thiết lập các biến môi trường
+        APP_NAME="ksms-frontend"
+        APP_PATH="/var/www/$APP_NAME"
+        TIMESTAMP=$(date +%Y%m%d%H%M%S)
+        RELEASE_PATH="$APP_PATH/releases/$TIMESTAMP"
+        
+        # Tạo thư mục release mới
+        mkdir -p $RELEASE_PATH
+        
+        # Cài đặt thư mục release mới
+        cp -R /tmp/frontend-build/* $RELEASE_PATH/
+        
+        # Cập nhật symbolic link
+        ln -sfn $RELEASE_PATH $APP_PATH/current
+        
+        # Cấu hình quyền
+        chown -R www-data:www-data $RELEASE_PATH
+        
+        # Tạo hoặc cập nhật file cấu hình Nginx cho frontend - KHÔNG đụng đến api.ksms.news
+        cat > /etc/nginx/sites-available/$APP_NAME << EOF
+        # Server block cho website chính (ksms.news và www.ksms.news)
+        server {
+            listen 80;
+            server_name ksms.news www.ksms.news;
+            root $APP_PATH/current;
+            index index.html index.htm;
+            
+            # Cache static assets
+            location ~* \.(jpg|jpeg|png|gif|ico|css|js|svg)$ {
+                expires 30d;
+                add_header Cache-Control "public, no-transform";
+            }
+            
+            # Serve SPA - route everything back to index.html
+            location / {
+                try_files \$uri \$uri/ /index.html;
+            }
+            
+            # Bảo vệ các file nhạy cảm
+            location ~ /\.(?!well-known) {
+                deny all;
+            }
+            
+            # Các thiết lập thêm để tăng hiệu suất
+            gzip on;
+            gzip_types text/plain text/css application/javascript application/json image/svg+xml;
+            gzip_min_length 1000;
+        }
+        EOF
+        
+        # Kích hoạt site nếu chưa có
+        if [ ! -f /etc/nginx/sites-enabled/$APP_NAME ]; then
+            ln -s /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
+        fi
+        
+        # Kiểm tra cấu hình Nginx
+        nginx -t
+        
+        # Kiểm tra xem có file Cloudflare Real IP chưa
+        if [ ! -f /etc/nginx/conf.d/cloudflare-real-ip.conf ]; then
+          # Tạo cấu hình Cloudflare Real IP nếu chưa có
+          cat > /etc/nginx/conf.d/cloudflare-real-ip.conf << 'EOF'
+          # Cloudflare IP ranges
+          # IPv4
+          set_real_ip_from 173.245.48.0/20;
+          set_real_ip_from 103.21.244.0/22;
+          set_real_ip_from 103.22.200.0/22;
+          set_real_ip_from 103.31.4.0/22;
+          set_real_ip_from 141.101.64.0/18;
+          set_real_ip_from 108.162.192.0/18;
+          set_real_ip_from 190.93.240.0/20;
+          set_real_ip_from 188.114.96.0/20;
+          set_real_ip_from 197.234.240.0/22;
+          set_real_ip_from 198.41.128.0/17;
+          set_real_ip_from 162.158.0.0/15;
+          set_real_ip_from 104.16.0.0/13;
+          set_real_ip_from 104.24.0.0/14;
+          set_real_ip_from 172.64.0.0/13;
+          set_real_ip_from 131.0.72.0/22;
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v2
-        with:
-          node-version: "18" # Nâng cấp lên Node.js 18
+          # IPv6
+          set_real_ip_from 2400:cb00::/32;
+          set_real_ip_from 2606:4700::/32;
+          set_real_ip_from 2803:f800::/32;
+          set_real_ip_from 2405:b500::/32;
+          set_real_ip_from 2405:8100::/32;
+          set_real_ip_from 2a06:98c0::/29;
+          set_real_ip_from 2c0f:f248::/32;
 
-      - name: Install dependencies
-        run: npm ci
+          real_ip_header CF-Connecting-IP;
+          EOF
+        fi
+        
+        # Khởi động lại Nginx - không ảnh hưởng đến Backend
+        systemctl reload nginx
+        
+        # Xóa các bản release cũ (giữ lại 3 bản gần nhất)
+        cd $APP_PATH/releases && ls -t | tail -n +4 | xargs -I {} rm -rf {}
+        
+        echo "Frontend deployment completed successfully with Cloudflare config!"
+        EOL
+        chmod +x deploy-frontend.sh
 
-      - name: Build
-        run: npm run build
+    - name: Create setup script
+      run: |
+        cat > setup-frontend.sh << 'EOL'
+        #!/bin/bash
+        
+        # Tạo cấu trúc thư mục cho ứng dụng frontend
+        APP_NAME="ksms-frontend"
+        APP_PATH="/var/www/$APP_NAME"
+        mkdir -p $APP_PATH/releases
+        mkdir -p $APP_PATH/shared
+        
+        # Đặt quyền cho thư mục
+        chown -R www-data:www-data $APP_PATH
+        
+        # Đảm bảo Nginx đã được cài đặt (Backend đã cài đặt)
+        if ! command -v nginx &> /dev/null; then
+            apt-get update
+            apt-get install -y nginx
+            systemctl enable nginx
+        fi
+        
+        echo "Frontend environment setup completed!"
+        EOL
+        chmod +x setup-frontend.sh
 
-      - name: Notify success
-        if: success()
-        run: echo "✅ Build successful"
-
-      - name: Notify failure
-        if: failure()
-        run: echo "❌ Build failed"
+    - name: Setup SSH Config
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+        chmod 644 ~/.ssh/known_hosts
+        
+    - name: Deploy frontend to VPS
+      run: |
+        # Tạo thư mục tạm trên VPS và sao chép các tệp
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p /tmp/frontend-build"
+        scp -r ./build/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/frontend-build/
+        scp setup-frontend.sh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
+        scp deploy-frontend.sh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/tmp/
+        
+        # Chạy script thiết lập môi trường
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo bash /tmp/setup-frontend.sh"
+        
+        # Chạy script triển khai ứng dụng
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo bash /tmp/deploy-frontend.sh"
+        
+        # Dọn dẹp
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "rm -rf /tmp/frontend-build /tmp/setup-frontend.sh /tmp/deploy-frontend.sh"
