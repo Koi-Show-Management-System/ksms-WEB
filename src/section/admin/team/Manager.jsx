@@ -252,7 +252,7 @@ function Manager({ accounts = [], isLoading, role }) {
           dataSource={managerData}
           pagination={{
             total: managerData.length,
-            pageSize: 6,
+            pageSize: 10,
             showSizeChanger: true,
             showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,

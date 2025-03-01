@@ -21,11 +21,22 @@ function CreateShow() {
     maxParticipants: "",
     location: "",
     imgUrl: "",
+    registrationFee: 0,
+    registrationDeadline: {
+      year: 0,
+      month: 0,
+      day: 0,
+      dayOfWeek: "Sunday",
+    },
+    status: "PENDING",
     hasGrandChampion: false,
     hasBestInShow: false,
+    assignStaffRequests: [],
+    assignManagerRequests: [],
     createSponsorRequests: [],
     createTicketTypeRequests: [],
     createCategorieShowRequests: [],
+    createShowRuleRequests: [],
   });
 
   // Cập nhật dữ liệu từ các bước

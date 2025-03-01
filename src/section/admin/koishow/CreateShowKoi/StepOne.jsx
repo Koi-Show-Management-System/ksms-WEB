@@ -18,6 +18,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { Cloudinary } from "@cloudinary/url-gen";
+import useAccountTeam from "../../../../hooks/useAccountTeam";
 
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -28,32 +29,32 @@ const cloudinary = new Cloudinary({
   },
 });
 
-function StepOne({ updateFormData }) {
-  const [data, setData] = useState({
-    name: "",
-    description: "",
-    startDate: null,
-    endDate: null,
-    startExhibitionDate: null,
-    endExhibitionDate: null,
-    minParticipants: "",
-    maxParticipants: "",
-    location: "",
-    imgUrl: "",
-    hasGrandChampion: false,
-    hasBestInShow: false,
-    createSponsorRequests: [],
-    createTicketTypeRequests: [],
-  });
+function StepOne({ updateFormData, initialData }) {
+  const [data, setData] = useState(initialData);
 
-  // Track uploaded images separately for UI display
   const [uploadedImages, setUploadedImages] = useState([]);
+  const { accountManage, fetchAccountTeam } = useAccountTeam();
+  const staff = accountManage.staff || [];
+  const managers = accountManage.managers || [];
 
   useEffect(() => {
-    updateFormData(data);
-    console.log("Current formData:", data);
+    if (JSON.stringify(data) !== JSON.stringify(initialData)) {
+      setData(initialData);
+    }
+  }, [initialData]);
+
+  // Chỉ cập nhật `updateFormData(data)` nếu `data` thay đổi thực sự
+  useEffect(() => {
+    if (JSON.stringify(data) !== JSON.stringify(initialData)) {
+      updateFormData(data);
+      console.log("Current formData:", data);
+    }
   }, [data]);
 
+  // Fetch danh sách Staff/Managers khi component mount
+  useEffect(() => {
+    fetchAccountTeam(1, 100);
+  }, []);
   const handleImageUpload = async ({ fileList }) => {
     try {
       const uploadedImages = await Promise.all(
@@ -211,9 +212,9 @@ function StepOne({ updateFormData }) {
 
       {/* Form thông tin chương trình */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <h3 className="block text-sm font-medium text-gray-700 mb-1">
           Tên chương trình
-        </label>
+        </h3>
         <Input
           placeholder="Nhập tên chương trình"
           value={data.name}
@@ -317,20 +318,35 @@ function StepOne({ updateFormData }) {
           />
         </div>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Địa điểm
-        </label>
-        <Input
-          placeholder="Nhập địa điểm tổ chức"
-          value={data.location}
-          onChange={(e) => setData({ ...data, location: e.target.value })}
-        />
+      <div className="flex space-x-4">
+        <div className="flex-1 ">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Địa điểm
+          </label>
+          <Input
+            placeholder="Nhập địa điểm tổ chức"
+            value={data.location}
+            onChange={(e) => setData({ ...data, location: e.target.value })}
+          />
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Phí đăng ký (VND)
+          </label>
+          <Input
+            type="number"
+            placeholder="Nhập phí đăng ký"
+            value={data.registrationFee}
+            onChange={(e) =>
+              setData({ ...data, registrationFee: Number(e.target.value) })
+            }
+          />
+        </div>
       </div>
 
       {/* Tải lên Hình ảnh */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Hình ảnh (Tải lên)
         </label>
         <Upload
@@ -360,13 +376,13 @@ function StepOne({ updateFormData }) {
       </div>
 
       {/* Phần Sponsor Requests */}
-      <label className="block text-sm font-bold text-gray-700 mb-1">
+      <label className="block text-sm font-bold text-gray-700 ">
         Quản lý nhà tài trợ{" "}
       </label>
       <Button onClick={handleAddSponsor} icon={<PlusOutlined />}>
         Thêm Sponsor
       </Button>
-      <Collapse className="mt-4">
+      <Collapse className="">
         {data.createSponsorRequests.map((sponsor, index) => (
           <Panel
             header={`Sponsor ${index + 1}`}
@@ -453,8 +469,8 @@ function StepOne({ updateFormData }) {
         ))}
       </Collapse>
 
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Giải thưởng lớn
         </label>
         <Checkbox
@@ -549,6 +565,51 @@ function StepOne({ updateFormData }) {
           </Panel>
         ))}
       </Collapse>
+      <div className="flex space-x-4">
+        {/* Select Manager */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Chọn Manager
+          </label>
+          <Select
+            mode="multiple"
+            className="w-full"
+            placeholder="Chọn Manager"
+            value={data.assignManagerRequests}
+            onChange={(value) =>
+              setData({ ...data, assignManagerRequests: value })
+            }
+          >
+            {managers.map((manager) => (
+              <Option key={manager.id} value={manager.id}>
+                {manager.fullName} {/* Hiển thị tên nhưng lưu ID */}
+              </Option>
+            ))}
+          </Select>
+        </div>
+
+        {/* Select Staff */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Chọn Staff
+          </label>
+          <Select
+            mode="multiple"
+            className="w-full"
+            placeholder="Chọn Staff"
+            value={data.assignStaffRequests}
+            onChange={(value) =>
+              setData({ ...data, assignStaffRequests: value })
+            }
+          >
+            {staff.map((s) => (
+              <Option key={s.id} value={s.id}>
+                {s.fullName}
+              </Option>
+            ))}
+          </Select>
+        </div>
+      </div>
     </div>
   );
 }
