@@ -31,23 +31,23 @@ function StepThree({ updateFormData, initialData }) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
-  const [showStatusList, setShowStatusList] = useState([]);
+  const [showStatusList, setShowStatusList] = useState(
+    initialData.createShowStatusRequests || []
+  );
   const [newShowStatus, setNewShowStatus] = useState({
     statusName: "",
     description: "",
     startDate: null,
     endDate: null,
   });
-
-  // Cập nhật formData khi danh sách quy tắc thay đổi
+  
   useEffect(() => {
-    updateFormData({ createShowRuleRequests: rules });
-    setFilteredRules(rules); // Cập nhật danh sách hiển thị khi thay đổi
-  }, [rules]);
-
-  useEffect(() => {
-    updateFormData({ createShowStatusRequests: showStatusList });
-  }, [showStatusList]);
+    updateFormData({
+      createShowRuleRequests: rules,
+      createShowStatusRequests: showStatusList,
+    });
+    setFilteredRules(rules);
+  }, [rules, showStatusList]);
 
   // Lọc danh sách theo search
   useEffect(() => {

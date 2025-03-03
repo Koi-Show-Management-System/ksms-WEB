@@ -29,11 +29,15 @@ function StepTwo({ updateFormData, initialData }) {
     fetchCriteria(1, 100);
   }, []);
   const mainRounds = [
-    { value: "Vòng Sơ Khảo", label: "Vòng Sơ Khảo" },
-    { value: "Vòng Đánh Giá Chính", label: "Vòng Đánh Giá Chính" },
-    { value: "Vòng Chung Kết", label: "Vòng Chung Kết" },
+    { value: "Preliminary", label: "Vòng Sơ Khảo" },
+    { value: "Evaluation", label: "Vòng Đánh Giá Chính" },
+    { value: "Final", label: "Vòng Chung Kết" },
   ];
-
+  const roundLabelMap = {
+    Preliminary: "Vòng Sơ Khảo",
+    Evaluation: "Vòng Đánh Giá Chính",
+    Final: "Vòng Chung Kết",
+  };
   const [categories, setCategories] = useState(
     initialData?.createCategorieShowRequests?.length > 0
       ? initialData.createCategorieShowRequests
@@ -46,7 +50,7 @@ function StepTwo({ updateFormData, initialData }) {
             startTime: null,
             endTime: null,
             maxEntries: 0,
-            status: "PENDING",
+            status: "pending",
             createAwardCateShowRequests: [],
             createCompetionCategoryVarieties: [],
             createRoundRequests: [],
@@ -87,22 +91,6 @@ function StepTwo({ updateFormData, initialData }) {
     );
   };
 
-  const handleAwardChange = (categoryIndex, awardIndex, field, value) => {
-    setCategories((prevCategories) =>
-      prevCategories.map((category, i) =>
-        i === categoryIndex
-          ? {
-              ...category,
-              createAwardCateShowRequests:
-                category.createAwardCateShowRequests.map((award, j) =>
-                  j === awardIndex ? { ...award, [field]: value } : award
-                ),
-            }
-          : category
-      )
-    );
-  };
-
   const handleRemoveAward = (categoryIndex, awardIndex) => {
     setCategories((prevCategories) =>
       prevCategories.map((category, i) =>
@@ -112,6 +100,22 @@ function StepTwo({ updateFormData, initialData }) {
               createAwardCateShowRequests:
                 category.createAwardCateShowRequests.filter(
                   (_, j) => j !== awardIndex
+                ),
+            }
+          : category
+      )
+    );
+  };
+
+  const handleAwardChange = (categoryIndex, awardIndex, field, value) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) =>
+        i === categoryIndex
+          ? {
+              ...category,
+              createAwardCateShowRequests:
+                category.createAwardCateShowRequests.map((award, j) =>
+                  j === awardIndex ? { ...award, [field]: value } : award
                 ),
             }
           : category
@@ -139,7 +143,7 @@ function StepTwo({ updateFormData, initialData }) {
           createRefereeAssignmentRequests: selectedReferees.map(
             (refereeId) => ({
               refereeAccountId: refereeId,
-              roundType: [], // Mỗi trọng tài có danh sách vòng riêng
+              roundTypes: [], // Mỗi trọng tài có danh sách vòng riêng
             })
           ),
         };
@@ -161,7 +165,7 @@ function StepTwo({ updateFormData, initialData }) {
           createRefereeAssignmentRequests:
             category.createRefereeAssignmentRequests.map((assignment) =>
               assignment.refereeAccountId === refereeId
-                ? { ...assignment, roundType: selectedRounds }
+                ? { ...assignment, roundTypes: selectedRounds }
                 : assignment
             ),
         };
@@ -216,7 +220,7 @@ function StepTwo({ updateFormData, initialData }) {
       description: "",
       startTime: dayjs().format(),
       endTime: dayjs().add(1, "day").format(),
-      status: "PENDING",
+      status: "pending",
       createAwardCateShowRequests: [],
       createCompetionCategoryVarieties: [],
       createRoundRequests: [],
@@ -280,13 +284,13 @@ function StepTwo({ updateFormData, initialData }) {
       ].createRoundRequests.filter((round) => round.roundType === mainRound);
 
       const newRound = {
-        name: `Vòng Nhỏ ${existingSubRounds.length + 1} - ${mainRound}`,
+        name: `Vòng Nhỏ ${existingSubRounds.length + 1} - ${roundLabelMap[mainRound]}`,
         roundOrder: existingSubRounds.length + 1, // Đánh số theo thứ tự trong vòng chính
         roundType: mainRound,
         startTime: dayjs().format(),
         endTime: dayjs().add(1, "day").format(),
         minScoreToAdvance: 100,
-        status: "Ongoing",
+        status: "pending",
       };
 
       // Thêm vào danh sách vòng thi của hạng mục hiện tại
@@ -605,13 +609,13 @@ function StepTwo({ updateFormData, initialData }) {
                                         });
                                       }}
                                     >
-                                      <Option value="Ongoing">
+                                      <Option value="ongoing">
                                         Đang diễn ra
                                       </Option>
-                                      <Option value="Completed">
+                                      <Option value="completed">
                                         Hoàn thành
                                       </Option>
-                                      <Option value="Pending">Chờ duyệt</Option>
+                                      <Option value="pending">Chờ duyệt</Option>
                                     </Select>
                                   </div>
                                 </Space>
@@ -721,7 +725,6 @@ function StepTwo({ updateFormData, initialData }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Giải thưởng{" "}
                 </label>
-                {/* Nút thêm giải thưởng */}
                 <Button
                   onClick={() => handleAddAward(index)}
                   icon={<PlusOutlined />}
@@ -729,104 +732,107 @@ function StepTwo({ updateFormData, initialData }) {
                   Thêm Giải Thưởng
                 </Button>
 
-                {/* Danh sách giải thưởng */}
-                <Collapse className="mt-3">
-                  {category.createAwardCateShowRequests.map(
-                    (award, awardIndex) => (
-                      <Collapse.Panel
-                        header={`Giải thưởng ${awardIndex + 1}`}
-                        key={awardIndex}
-                        extra={
-                          <Button
-                            type="text"
-                            icon={<DeleteOutlined />}
-                            danger
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleRemoveAward(index, awardIndex);
-                            }}
-                          />
-                        }
-                      >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Tên Giải Thưởng
-                            </label>
-                            <Input
-                              placeholder="Nhập tên giải thưởng"
-                              value={award.name}
-                              onChange={(e) =>
-                                handleAwardChange(
-                                  index,
-                                  awardIndex,
-                                  "name",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
+                {category.createAwardCateShowRequests.length > 0 && (
+                  <Collapse className="mt-3">
+                    {category.createAwardCateShowRequests.map(
+                      (award, awardIndex) => (
+                        <Panel
+                          header={`Giải thưởng ${awardIndex + 1}`}
+                          key={awardIndex}
+                          extra={
+                            <Button
+                              type="text"
+                              icon={<DeleteOutlined />}
+                              danger
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRemoveAward(index, awardIndex);
+                              }}
+                            >
+                              Xóa
+                            </Button>
+                          }
+                        >
+                          <Space direction="vertical" style={{ width: "100%" }}>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Tên Giải Thưởng
+                              </label>
+                              <Input
+                                placeholder="Nhập tên giải thưởng"
+                                value={award.name}
+                                onChange={(e) =>
+                                  handleAwardChange(
+                                    index,
+                                    awardIndex,
+                                    "name",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Loại Giải Thưởng
-                            </label>
-                            <Input
-                              placeholder="Nhập loại giải thưởng"
-                              value={award.awardType}
-                              onChange={(e) =>
-                                handleAwardChange(
-                                  index,
-                                  awardIndex,
-                                  "awardType",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Loại Giải Thưởng
+                              </label>
+                              <Input
+                                placeholder="Nhập loại giải thưởng"
+                                value={award.awardType}
+                                onChange={(e) =>
+                                  handleAwardChange(
+                                    index,
+                                    awardIndex,
+                                    "awardType",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Giá Trị Giải Thưởng
-                            </label>
-                            <Input
-                              type="number"
-                              placeholder="Nhập giá trị (VND)"
-                              value={award.prizeValue}
-                              onChange={(e) =>
-                                handleAwardChange(
-                                  index,
-                                  awardIndex,
-                                  "prizeValue",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Giá Trị Giải Thưởng
+                              </label>
+                              <Input
+                                type="number"
+                                placeholder="Nhập giá trị (VND)"
+                                value={award.prizeValue}
+                                onChange={(e) =>
+                                  handleAwardChange(
+                                    index,
+                                    awardIndex,
+                                    "prizeValue",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </div>
 
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Mô Tả Giải Thưởng
-                            </label>
-                            <Input.TextArea
-                              rows={2}
-                              placeholder="Nhập mô tả giải thưởng"
-                              value={award.description}
-                              onChange={(e) =>
-                                handleAwardChange(
-                                  index,
-                                  awardIndex,
-                                  "description",
-                                  e.target.value
-                                )
-                              }
-                            />
-                          </div>
-                        </Space>
-                      </Collapse.Panel>
-                    )
-                  )}
-                </Collapse>
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700">
+                                Mô Tả Giải Thưởng
+                              </label>
+                              <Input.TextArea
+                                rows={2}
+                                placeholder="Nhập mô tả giải thưởng"
+                                value={award.description}
+                                onChange={(e) =>
+                                  handleAwardChange(
+                                    index,
+                                    awardIndex,
+                                    "description",
+                                    e.target.value
+                                  )
+                                }
+                              />
+                            </div>
+                          </Space>
+                        </Panel>
+                      )
+                    )}
+                  </Collapse>
+                )}
 
                 {/* Chọn trọng tài */}
                 <div className="mb-4">
@@ -879,7 +885,7 @@ function StepTwo({ updateFormData, initialData }) {
                         <Select
                           mode="multiple"
                           className="w-full"
-                          value={assignment.roundType}
+                          value={assignment.roundTypes}
                           onChange={(value) =>
                             handleRefereeRoundChange(
                               index,

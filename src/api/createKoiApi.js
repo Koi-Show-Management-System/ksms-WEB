@@ -1,50 +1,6 @@
 import axiosClient from "../config/axiosClient";
 
-const createKoi = ({
-  name,
-  startDate,
-  endDate,
-  startExhibitionDate,
-  endExhibitionDate,
-  location,
-  description,
-  registrationDeadline,
-  minParticipants,
-  maxParticipants,
-  hasGrandChampion,
-  hasBestInShow,
-  imgUrl,
-  registrationFee,
-  status,
-  createCategorieShowRequests = [],
-  createShowStaffRequests = [],
-  createShowRuleRequests = [],
-  createShowStatusRequests = [],
-  createSponsorRequests = [],
-  createTicketTypeRequests = [],
-}) =>
-  axiosClient.post("/koi-show/create", {
-    name,
-    startDate,
-    endDate,
-    startExhibitionDate,
-    endExhibitionDate,
-    location,
-    description,
-    registrationDeadline,
-    minParticipants,
-    maxParticipants,
-    hasGrandChampion,
-    hasBestInShow,
-    imgUrl,
-    registrationFee,
-    status,
-    createCategorieShowRequests,
-    createShowStaffRequests,
-    createShowRuleRequests,
-    createShowStatusRequests,
-    createSponsorRequests,
-    createTicketTypeRequests,
-  });
-
+const createKoi = (formData) => {
+  return axiosClient.post("/koi-show/create", formData);
+};
 export { createKoi };
