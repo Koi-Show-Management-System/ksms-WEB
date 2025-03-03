@@ -17,35 +17,13 @@ dayjs.extend(utc);
 dayjs.extend(timezone);
 
 function StepTwo({ updateFormData, initialData }) {
-  // States
-  const [selectedCriteria, setSelectedCriteria] = useState([]);
-  const [selectedCriteriaList, setSelectedCriteriaList] = useState([]);
-  const [criteriaDetails, setCriteriaDetails] = useState({});
-  const [criteriaPercentages, setCriteriaPercentages] = useState({});
-  const [totalPercentage, setTotalPercentage] = useState(0);
-  const [subRounds, setSubRounds] = useState([]);
   const { variety, fetchVariety, isLoading } = useVariety();
-  const [selectedRoundType, setSelectedRoundType] = useState("");
   const { accountManage, fetchAccountTeam } = useAccountTeam();
   const { criteria, fetchCriteria } = useCriteria();
-  const [selectedMainRound, setSelectedMainRound] = useState("");
 
   const referee = accountManage.referees || [];
   // const adminId =
   //   accountManage.admin.length > 0 ? accountManage.admin[0].id : null;
-  // Constants
-  const criteriaOptions = [
-    { value: "color", label: "Màu sắc" },
-    { value: "bodyShape", label: "Hình dáng cơ thể" },
-    { value: "pattern", label: "Họa tiết" },
-    { value: "size", label: "Kích thước" },
-    { value: "quality", label: "Chất lượng" },
-    { value: "health", label: "Sức khỏe" },
-    { value: "swimming", label: "Bơi lội" },
-    { value: "markings", label: "Đặc điểm phân biệt" },
-    { value: "balance", label: "Cân bằng" },
-    { value: "elegance", label: "Sự thanh lịch" },
-  ];
 
   useEffect(() => {
     fetchCriteria(1, 100);
@@ -54,69 +32,6 @@ function StepTwo({ updateFormData, initialData }) {
     { value: "Vòng Sơ Khảo", label: "Vòng Sơ Khảo" },
     { value: "Vòng Đánh Giá Chính", label: "Vòng Đánh Giá Chính" },
     { value: "Vòng Chung Kết", label: "Vòng Chung Kết" },
-  ];
-
-  const handleRoundChange = (index, field, value) => {
-    const updatedRounds = [...categories[0].createRoundRequests];
-    updatedRounds[index][field] = value;
-    setCategories([{ ...categories[0], createRoundRequests: updatedRounds }]);
-  };
-
-  const handlePercentageChange = (criteria, value) => {
-    const numValue = Number(value);
-    const otherCriteriaTotal = Object.entries(criteriaPercentages).reduce(
-      (sum, [key, val]) => (key !== criteria ? sum + Number(val) : sum),
-      0
-    );
-
-    if (otherCriteriaTotal + numValue <= 100) {
-      setCriteriaPercentages((prev) => ({
-        ...prev,
-        [criteria]: numValue,
-      }));
-      setTotalPercentage(otherCriteriaTotal + numValue);
-    }
-  };
-
-  const getRemainingPercentage = () => {
-    return (
-      100 -
-      Object.values(criteriaPercentages).reduce(
-        (sum, val) => sum + Number(val),
-        0
-      )
-    );
-  };
-
-  const isValidTotal = () => totalPercentage === 100;
-  const defaultRounds = [
-    {
-      name: "Vòng Sơ Khảo",
-      roundOrder: 1,
-      roundType: "Vòng Sơ Khảo",
-      startTime: "2025-03-01T08:05:06.190Z",
-      endTime: "2025-03-01T08:05:06.190Z",
-      minScoreToAdvance: 100,
-      status: "Ongoing",
-    },
-    {
-      name: "Vòng Đánh Giá Chính",
-      roundOrder: 2,
-      roundType: "Vòng Đánh Giá Chính",
-      startTime: "2025-03-01T08:05:06.190Z",
-      endTime: "2025-03-01T08:05:06.190Z",
-      minScoreToAdvance: 100,
-      status: "Ongoing",
-    },
-    {
-      name: "Vòng Chung Kết",
-      roundOrder: 3,
-      roundType: "Vòng Chung Kết",
-      startTime: "2025-03-01T08:05:06.190Z",
-      endTime: "2025-03-01T08:05:06.190Z",
-      minScoreToAdvance: 100,
-      status: "Ongoing",
-    },
   ];
 
   const [categories, setCategories] = useState(
@@ -128,13 +43,13 @@ function StepTwo({ updateFormData, initialData }) {
             sizeMin: "",
             sizeMax: "",
             description: "",
-            startTime: "2025-03-01T08:05:06.190Z",
-            endTime: "2025-03-01T08:05:06.190Z",
+            startTime: null,
+            endTime: null,
             maxEntries: 0,
             status: "PENDING",
             createAwardCateShowRequests: [],
             createCompetionCategoryVarieties: [],
-            createRoundRequests: [], // Xóa defaultRounds
+            createRoundRequests: [],
             createRefereeAssignmentRequests: [],
             createCriteriaCompetitionCategoryRequests: [],
           },
@@ -157,9 +72,16 @@ function StepTwo({ updateFormData, initialData }) {
   };
 
   const handleCategoryChange = (index, field, value) => {
-    const updatedCategories = [...categories];
-    updatedCategories[index][field] = value;
-    setCategories(updatedCategories);
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) =>
+        i === index
+          ? {
+              ...category,
+              [field]: value ? value.tz("Asia/Ho_Chi_Minh").format() : null,
+            }
+          : category
+      )
+    );
   };
 
   const handleAddAward = () => {
@@ -191,114 +113,105 @@ function StepTwo({ updateFormData, initialData }) {
     ]);
   };
 
-  const handleVarietyChange = (varietyId) => {
-    const selectedVariety = variety.find((item) => item.id === varietyId);
-
-    if (selectedVariety) {
-      setCategories([
-        {
-          ...categories[0],
-          createCompetionCategoryVarieties: [selectedVariety.id],
-        },
-      ]);
-    }
+  const handleVarietyChange = (categoryIndex, varietyId) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) =>
+        i === categoryIndex
+          ? { ...category, createCompetionCategoryVarieties: [varietyId] }
+          : category
+      )
+    );
   };
 
-  const handleRefereeChange = (selectedReferees) => {
-    setCategories((prevCategories) => {
-      const updatedCategories = [...prevCategories];
+  const handleRefereeChange = (categoryIndex, selectedReferees) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) => {
+        if (i !== categoryIndex) return category; // Chỉ cập nhật đúng hạng mục đang chọn
 
-      const newAssignments = selectedReferees.map((refereeId) => {
-        const existingAssignment =
-          updatedCategories[0].createRefereeAssignmentRequests.find(
-            (assignment) => assignment.refereeAccountId === refereeId
-          );
-
-        return existingAssignment
-          ? existingAssignment
-          : {
+        return {
+          ...category,
+          createRefereeAssignmentRequests: selectedReferees.map(
+            (refereeId) => ({
               refereeAccountId: refereeId,
-              // assignedAt: new Date().toISOString(),
-              roundType: [],
-              // assignedBy: adminId,
-            };
-      });
-
-      updatedCategories[0].createRefereeAssignmentRequests = newAssignments;
-      return updatedCategories;
-    });
+              roundType: [], // Mỗi trọng tài có danh sách vòng riêng
+            })
+          ),
+        };
+      })
+    );
   };
 
-  const handleRefereeRoundChange = (refereeId, selectedRounds) => {
-    setCategories((prevCategories) => {
-      const updatedCategories = [...prevCategories];
-      const assignments =
-        updatedCategories[0].createRefereeAssignmentRequests.map(
-          (assignment) =>
-            assignment.refereeAccountId === refereeId
-              ? { ...assignment, roundType: selectedRounds }
-              : assignment
-        );
+  const handleRefereeRoundChange = (
+    categoryIndex,
+    refereeId,
+    selectedRounds
+  ) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) => {
+        if (i !== categoryIndex) return category; // Chỉ cập nhật đúng hạng mục
 
-      updatedCategories[0].createRefereeAssignmentRequests = assignments;
-      return updatedCategories;
-    });
+        return {
+          ...category,
+          createRefereeAssignmentRequests:
+            category.createRefereeAssignmentRequests.map((assignment) =>
+              assignment.refereeAccountId === refereeId
+                ? { ...assignment, roundType: selectedRounds }
+                : assignment
+            ),
+        };
+      })
+    );
   };
 
-  const handleWeightChange = (categoryIndex, criteriaId, value) => {
-    const weightValue = Number(value) / 100; // Chuyển 30 thành 0.3
+  const handleWeightChange = (categoryIndex, criteriaId, roundType, value) => {
+    const weightValue = Number(value) / 100; // Chuyển từ 30 thành 0.3
 
-    setCategories((prev) => {
-      const updatedCategories = [...prev];
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) => {
+        if (i !== categoryIndex) return category; // Chỉ cập nhật đúng hạng mục đang chọn
 
-      updatedCategories[
-        categoryIndex
-      ].createCriteriaCompetitionCategoryRequests = updatedCategories[
-        categoryIndex
-      ].createCriteriaCompetitionCategoryRequests.map((criteria) =>
-        criteria.criteriaId === criteriaId
-          ? { ...criteria, weight: weightValue }
-          : criteria
-      );
-
-      return updatedCategories;
-    });
+        return {
+          ...category,
+          createCriteriaCompetitionCategoryRequests:
+            category.createCriteriaCompetitionCategoryRequests.map(
+              (criteria) =>
+                criteria.criteriaId === criteriaId &&
+                criteria.roundType === roundType
+                  ? { ...criteria, weight: weightValue }
+                  : criteria
+            ),
+        };
+      })
+    );
   };
 
   const handleCriteriaSelection = (categoryIndex, values) => {
     setCategories((prev) => {
       const updatedCategories = [...prev];
+      const category = updatedCategories[categoryIndex];
 
-      updatedCategories[categoryIndex] = {
-        ...updatedCategories[categoryIndex],
-        createCriteriaCompetitionCategoryRequests: values.map((id, index) => ({
-          criteriaId: id,
-          roundType: updatedCategories[categoryIndex].selectedMainRound || "",
-          weight: 0,
-          order: index + 1,
-        })),
-      };
+      if (!category) return updatedCategories;
+
+      category.tempSelectedCriteria = values.map((id) => ({
+        criteriaId: id,
+        weight: 0,
+        order: 0,
+      }));
 
       return updatedCategories;
     });
   };
 
-  const handleRoundTypeChangeCriteria = (criteriaId, value) => {
-    setCriteriaDetails((prev) => ({
-      ...prev,
-      [criteriaId]: { ...prev[criteriaId], roundType: value },
-    }));
-
+  const handleRemoveCriteria = (categoryIndex, criteriaId, roundType) => {
     setCategories((prev) => {
-      const updatedCategories = prev.map((category) => ({
-        ...category,
-        createCriteriaCompetitionCategoryRequests:
-          category.createCriteriaCompetitionCategoryRequests.map((criteria) =>
-            criteria.criteriaId === criteriaId
-              ? { ...criteria, roundType: value } // Cập nhật roundType
-              : criteria
-          ),
-      }));
+      const updatedCategories = [...prev];
+      const category = updatedCategories[categoryIndex];
+
+      // Lọc bỏ tiêu chí cần xóa
+      category.createCriteriaCompetitionCategoryRequests =
+        category.createCriteriaCompetitionCategoryRequests.filter(
+          (c) => !(c.criteriaId === criteriaId && c.roundType === roundType)
+        );
 
       return updatedCategories;
     });
@@ -331,15 +244,39 @@ function StepTwo({ updateFormData, initialData }) {
   const handleMainRoundChange = (categoryIndex, value) => {
     setCategories((prev) => {
       const updatedCategories = [...prev];
+      const category = updatedCategories[categoryIndex];
 
-      updatedCategories[categoryIndex] = {
-        ...updatedCategories[categoryIndex],
-        selectedMainRound: value,
-        createCriteriaCompetitionCategoryRequests: [], // Reset tiêu chí khi đổi vòng chính
-      };
+      if (
+        !category.tempSelectedCriteria ||
+        category.tempSelectedCriteria.length === 0
+      ) {
+        return updatedCategories;
+      }
+
+      const newCriteriaList = category.tempSelectedCriteria.map(
+        (criteria, index) => ({
+          ...criteria,
+          roundType: value,
+          order:
+            category.createCriteriaCompetitionCategoryRequests.length +
+            index +
+            1,
+        })
+      );
+
+      category.createCriteriaCompetitionCategoryRequests = [
+        ...category.createCriteriaCompetitionCategoryRequests,
+        ...newCriteriaList,
+      ];
+
+      delete category.tempSelectedCriteria;
 
       return updatedCategories;
     });
+  };
+
+  const getFinalJson = () => {
+    return categories.map(({ tempSelectedCriteria, ...category }) => category);
   };
 
   const handleAddSubRound = (categoryIndex, mainRound) => {
@@ -429,21 +366,17 @@ function StepTwo({ updateFormData, initialData }) {
                     </label>
                     <DatePicker
                       className="w-full"
-                      showTime
+                      showTime={{ format: "HH:mm:ss" }} // Hiển thị cả giờ, phút, giây
                       value={
-                        categories[0]?.startTime
-                          ? dayjs(categories[0]?.startTime).tz(
-                              "Asia/Ho_Chi_Minh"
-                            )
+                        category.startTime
+                          ? dayjs(category.startTime).tz("Asia/Ho_Chi_Minh")
                           : null
                       }
                       onChange={(date) =>
-                        handleCategoryChange(
-                          "startTime",
-                          date ? date.tz("Asia/Ho_Chi_Minh").format() : ""
-                        )
+                        handleCategoryChange(index, "startTime", date)
                       }
-                      format="YYYY-MM-DD HH:mm"
+                      format="YYYY-MM-DD HH:mm:ss"
+                      placeholder="Chọn thời gian bắt đầu"
                     />
                   </div>
                   <div className="flex-1">
@@ -452,19 +385,17 @@ function StepTwo({ updateFormData, initialData }) {
                     </label>
                     <DatePicker
                       className="w-full"
-                      showTime
+                      showTime={{ format: "HH:mm:ss" }} // Hiển thị cả giờ, phút, giây
                       value={
-                        categories[0]?.endTime
-                          ? dayjs(categories[0]?.endTime).tz("Asia/Ho_Chi_Minh")
+                        category.endTime
+                          ? dayjs(category.endTime).tz("Asia/Ho_Chi_Minh")
                           : null
                       }
                       onChange={(date) =>
-                        handleCategoryChange(
-                          "endTime",
-                          date ? date.tz("Asia/Ho_Chi_Minh").format() : ""
-                        )
+                        handleCategoryChange(index, "endTime", date)
                       }
-                      format="YYYY-MM-DD HH:mm"
+                      format="YYYY-MM-DD HH:mm:ss"
+                      placeholder="Chọn thời gian kết thúc"
                     />
                   </div>
                 </div>
@@ -477,9 +408,9 @@ function StepTwo({ updateFormData, initialData }) {
                     <Input
                       type="number"
                       placeholder="Nhập kích thước tối thiểu"
-                      value={categories[0]?.sizeMin || ""}
+                      value={category.sizeMin || ""}
                       onChange={(e) =>
-                        handleCategoryChange("sizeMin", e.target.value)
+                        handleCategoryChange(index, "sizeMin", e.target.value)
                       }
                     />
                   </div>
@@ -490,9 +421,9 @@ function StepTwo({ updateFormData, initialData }) {
                     <Input
                       type="number"
                       placeholder="Nhập kích thước tối đa"
-                      value={categories[0]?.sizeMax || ""}
+                      value={category.sizeMax || ""}
                       onChange={(e) =>
-                        handleCategoryChange("sizeMax", e.target.value)
+                        handleCategoryChange(index, "sizeMax", e.target.value)
                       }
                     />
                   </div>
@@ -502,9 +433,13 @@ function StepTwo({ updateFormData, initialData }) {
                     </label>
                     <Input
                       placeholder="Nhập mô tả thể loại"
-                      value={categories[0]?.description || ""}
+                      value={category.description || ""}
                       onChange={(e) =>
-                        handleCategoryChange("description", e.target.value)
+                        handleCategoryChange(
+                          index,
+                          "description",
+                          e.target.value
+                        )
                       }
                     />{" "}
                   </div>
@@ -523,13 +458,11 @@ function StepTwo({ updateFormData, initialData }) {
                         placeholder="Chọn giống"
                         className="w-full"
                         value={
-                          categories[0]?.createCompetionCategoryVarieties
-                            ?.length > 0
-                            ? categories[0].createCompetionCategoryVarieties[0]
-                                .varietyId
+                          category.createCompetionCategoryVarieties.length > 0
+                            ? category.createCompetionCategoryVarieties[0]
                             : ""
                         }
-                        onChange={handleVarietyChange}
+                        onChange={(value) => handleVarietyChange(index, value)}
                       >
                         {variety.map((item) => (
                           <Option key={item.id} value={item.id}>
@@ -691,96 +624,97 @@ function StepTwo({ updateFormData, initialData }) {
 
                 {/* Chọn vòng trước khi chọn tiêu chí */}
                 <div>
+                  {/* Chọn tiêu chí */}
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Chọn vòng chính để thêm tiêu chí
+                    Chọn tiêu chí
                   </label>
                   <Select
+                    mode="multiple"
+                    placeholder="Chọn tiêu chí"
                     className="w-full mb-2"
-                    placeholder="Chọn vòng chính"
-                    value={category.selectedMainRound || ""}
-                    onChange={(value) => handleMainRoundChange(index, value)} // Sửa lại để truyền index
+                    value={
+                      category.tempSelectedCriteria?.map((c) => c.criteriaId) ||
+                      []
+                    }
+                    onChange={(values) =>
+                      handleCriteriaSelection(index, values)
+                    }
                   >
-                    {mainRounds.map((round) => (
-                      <Option key={round.value} value={round.value}>
-                        {round.label}
+                    {criteria.map((item) => (
+                      <Option key={item.id} value={item.id}>
+                        {item.name}
                       </Option>
                     ))}
                   </Select>
+
+                  {/* Chỉ hiển thị chọn vòng khi đã chọn ít nhất một tiêu chí */}
+                  {category.tempSelectedCriteria?.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Chọn vòng chính để gán tiêu chí đã chọn
+                      </label>
+                      <Select
+                        className="w-full mb-2"
+                        placeholder="Chọn vòng chính"
+                        onChange={(value) =>
+                          handleMainRoundChange(index, value)
+                        }
+                      >
+                        {mainRounds.map((round) => (
+                          <Option key={round.value} value={round.value}>
+                            {round.label}
+                          </Option>
+                        ))}
+                      </Select>
+                    </div>
+                  )}
                 </div>
+                <Collapse>
+                  {mainRounds.map((round) => {
+                    const criteriaInRound =
+                      category.createCriteriaCompetitionCategoryRequests.filter(
+                        (c) => c.roundType === round.value
+                      );
 
-                {/* Chọn tiêu chí */}
-                {category.selectedMainRound && (
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Chọn tiêu chí
-                    </label>
-                    <Select
-                      mode="multiple"
-                      placeholder="Chọn tiêu chí"
-                      className="w-full mb-2"
-                      value={category.createCriteriaCompetitionCategoryRequests.map(
-                        (c) => c.criteriaId
-                      )}
-                      onChange={(values) =>
-                        handleCriteriaSelection(index, values)
-                      }
-                      maxTagCount={3}
-                    >
-                      {criteria.map((item) => (
-                        <Option key={item.id} value={item.id}>
-                          {item.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </div>
-                )}
+                    return criteriaInRound.length > 0 ? (
+                      <Collapse.Panel
+                        key={round.value}
+                        header={`Tiêu chí - ${round.label}`}
+                      >
+                        {criteriaInRound.map((criteriaItem) => (
+                          <div
+                            key={criteriaItem.criteriaId}
+                            className="flex items-center space-x-4 mb-2"
+                          >
+                            {/* Hiển thị tên tiêu chí */}
+                            <span className="text-sm font-medium flex-1">
+                              {criteria.find(
+                                (c) => c.id === criteriaItem.criteriaId
+                              )?.name || "Tiêu chí không xác định"}
+                            </span>
 
-                {/* Chỉ hiển thị nếu đã chọn tiêu chí */}
-                {/* Chỉ hiển thị nếu đã chọn tiêu chí */}
-                {category.createCriteriaCompetitionCategoryRequests.length >
-                  0 && (
-                  <div className="mt-4">
-                    {category.createCriteriaCompetitionCategoryRequests.map(
-                      (criteriaItem) => (
-                        <div
-                          key={criteriaItem.criteriaId}
-                          className="flex items-center space-x-4 mb-2"
-                        >
-                          {/* Tên tiêu chí */}
-                          <span className="text-sm font-medium flex-1">
-                            {criteria.find(
-                              (c) => c.id === criteriaItem.criteriaId
-                            )?.name || "Tiêu chí không xác định"}
-                          </span>
-
-                          {/* Ô nhập % */}
-                          <Input
-                            type="number"
-                            suffix="%"
-                            placeholder="Nhập trọng số"
-                            value={criteriaItem.weight * 100} // Chuyển 0.3 thành 30
-                            onChange={(e) =>
-                              handleWeightChange(
-                                index,
-                                criteriaItem.criteriaId,
-                                e.target.value
-                              )
-                            }
-                            className="w-1/4"
-                          />
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
-
-                {/* Number of Koi */}
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Số lượng Koi
-                  </label>
-                  <Input placeholder="Nhập số lượng koi" type="number" />
-                </div>
+                            {/* Ô nhập trọng số */}
+                            <Input
+                              type="number"
+                              suffix="%"
+                              placeholder="Nhập trọng số"
+                              value={criteriaItem.weight * 100} // Hiển thị đúng trọng số của vòng đó
+                              onChange={(e) =>
+                                handleWeightChange(
+                                  index,
+                                  criteriaItem.criteriaId,
+                                  criteriaItem.roundType,
+                                  e.target.value
+                                )
+                              }
+                              className="w-1/4"
+                            />
+                          </div>
+                        ))}
+                      </Collapse.Panel>
+                    ) : null;
+                  })}
+                </Collapse>
 
                 {/* Giải thưởng */}
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -890,115 +824,70 @@ function StepTwo({ updateFormData, initialData }) {
                 {/* Chọn trọng tài */}
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Chọn trọng tài{" "}
+                    Chọn trọng tài
                   </label>
                   <Select
                     mode="multiple"
                     placeholder="Chọn trọng tài"
                     className="w-full"
-                    onChange={handleRefereeChange}
+                    value={category.createRefereeAssignmentRequests.map(
+                      (r) => r.refereeAccountId
+                    )}
+                    onChange={(values) => handleRefereeChange(index, values)}
                   >
-                    {referee.map((referee) => (
-                      <Option key={referee.id} value={referee.id}>
-                        {referee.fullName}
+                    {referee.map((r) => (
+                      <Option key={r.id} value={r.id}>
+                        {r.fullName}
                       </Option>
                     ))}
                   </Select>
                 </div>
 
-                {/* Hiển thị danh sách trọng tài đã chọn */}
+                {/* Danh sách trọng tài đã chọn */}
                 <Collapse className="mt-4">
-                  {categories[0]?.createRefereeAssignmentRequests?.map(
-                    (assignment, index) => (
-                      <Panel
-                        header={`Trọng tài ${index + 1}`}
-                        key={index}
+                  {category.createRefereeAssignmentRequests.map(
+                    (assignment, idx) => (
+                      <Collapse.Panel
+                        key={assignment.refereeAccountId}
+                        header={`Trọng tài: ${referee.find((r) => r.id === assignment.refereeAccountId)?.fullName || "Không xác định"}`}
                         extra={
                           <Button
                             type="text"
                             icon={<DeleteOutlined />}
                             danger
-                            onClick={() => {
-                              const updatedAssignments =
-                                categories[0].createRefereeAssignmentRequests.filter(
-                                  (_, i) => i !== index
-                                );
-                              setCategories([
-                                {
-                                  ...categories[0],
-                                  createRefereeAssignmentRequests:
-                                    updatedAssignments,
-                                },
-                              ]);
-                            }}
-                          >
-                            Xóa
-                          </Button>
+                            onClick={() =>
+                              handleRefereeChange(
+                                index,
+                                category.createRefereeAssignmentRequests
+                                  .filter((_, i) => i !== idx)
+                                  .map((r) => r.refereeAccountId)
+                              )
+                            }
+                          />
                         }
                       >
-                        <Space direction="vertical" style={{ width: "100%" }}>
-                          <div>
-                            <label className="block text-sm font-medium text-gray-700">
-                              Trọng tài
-                            </label>
-                            <Input
-                              value={
-                                referee.find(
-                                  (r) => r.id === assignment.refereeAccountId
-                                )?.fullName || "Không xác định"
-                              }
-                              disabled
-                            />
-                          </div>
-
-                          {/* <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Thời gian phân công
-                </label>
-                <Input
-                  value={new Date(assignment.assignedAt).toLocaleString()}
-                  disabled
-                />
-              </div> */}
-
-                          <div>
-                            <label>Chọn vòng chính</label>
-                            <Select
-                              mode="multiple"
-                              placeholder="Chọn vòng chính"
-                              className="w-full"
-                              value={assignment.roundType || []}
-                              onChange={(value) =>
-                                handleRefereeRoundChange(
-                                  assignment.refereeAccountId,
-                                  value
-                                )
-                              }
-                            >
-                              {mainRounds.map((round) => (
-                                <Option key={round.value} value={round.value}>
-                                  {round.label}
-                                </Option>
-                              ))}
-                            </Select>
-                          </div>
-
-                          {/* <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Phân công bởi
-                </label>
-                <Input
-                  value={
-                    adminId
-                      ? referee.find((r) => r.id === adminId)?.fullName ||
-                        "Admin"
-                      : "Không có Admin"
-                  }
-                  disabled
-                />
-              </div> */}
-                        </Space>
-                      </Panel>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Chọn vòng chính cho trọng tài này
+                        </label>
+                        <Select
+                          mode="multiple"
+                          className="w-full"
+                          value={assignment.roundType}
+                          onChange={(value) =>
+                            handleRefereeRoundChange(
+                              index,
+                              assignment.refereeAccountId,
+                              value
+                            )
+                          }
+                        >
+                          {mainRounds.map((round) => (
+                            <Option key={round.value} value={round.value}>
+                              {round.label}
+                            </Option>
+                          ))}
+                        </Select>
+                      </Collapse.Panel>
                     )
                   )}
                 </Collapse>

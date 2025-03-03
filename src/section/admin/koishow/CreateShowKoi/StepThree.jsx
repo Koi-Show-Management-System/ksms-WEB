@@ -124,8 +124,8 @@ function StepThree({ updateFormData, initialData }) {
       <List
         dataSource={filteredRules}
         renderItem={(rule, index) => (
-          <List.Item className="hover:bg-gray-100 transition-all rounded-lg p-3">
-            <div className="w-full flex items-center justify-between">
+          <List.Item className="hover:bg-gray-100 transition-all rounded-lg ">
+            <div className="w-full flex items-center justify-between p-3 mb-5">
               {editingIndex === index ? (
                 <Space direction="vertical" className="w-full">
                   <Input

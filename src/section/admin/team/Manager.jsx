@@ -93,7 +93,7 @@ function Manager({ accounts = [], isLoading, role }) {
     if (fileList.length > 0) {
       setPreviewImage(URL.createObjectURL(fileList[0].originFileObj));
     } else {
-      setPreviewImage(avatar); 
+      setPreviewImage(avatar);
     }
   };
   const urlToBlob = async (url) => {
@@ -122,7 +122,7 @@ function Manager({ accounts = [], isLoading, role }) {
     let avatarFile = null;
 
     if (fileList.length > 0 && fileList[0].originFileObj) {
-      avatarFile = fileList[0].originFileObj; 
+      avatarFile = fileList[0].originFileObj;
     } else if (avatar) {
       avatarFile = await urlToBlob(avatar);
     }
@@ -318,30 +318,37 @@ function Manager({ accounts = [], isLoading, role }) {
           </Form.Item>
 
           <Form.Item label="Ảnh đại diện">
-            {isEditing && (
-              <Upload
-                listType="picture-card"
-                fileList={fileList}
-                beforeUpload={() => false}
-                onChange={handleUploadChange}
-              >
-                {fileList.length > 0 ? null : <PlusOutlined />}
-              </Upload>
-            )}
-            {previewImage ? (
-              <img
-                src={previewImage}
-                alt="avatar"
-                style={{
-                  width: "100px",
-                  height: "100px",
-                  objectFit: "cover",
-                  borderRadius: "4px",
-                }}
-              />
-            ) : (
-              <div>Không có hình đại diện</div>
-            )}
+            <div className="flex items-center ">
+              <div>
+                {isEditing && (
+                  <Upload
+                    listType="picture-card"
+                    fileList={fileList}
+                    beforeUpload={() => false}
+                    onChange={handleUploadChange}
+                  >
+                    {fileList.length > 0 ? null : <PlusOutlined />}
+                  </Upload>
+                )}
+              </div>
+
+              <div>
+                {previewImage ? (
+                  <img
+                    src={previewImage}
+                    alt="avatar"
+                    style={{
+                      width: "100px",
+                      height: "100px",
+                      objectFit: "cover",
+                      borderRadius: "4px",
+                    }}
+                  />
+                ) : (
+                  <div>Không có hình đại diện</div>
+                )}
+              </div>
+            </div>
           </Form.Item>
         </Form>
       </Modal>

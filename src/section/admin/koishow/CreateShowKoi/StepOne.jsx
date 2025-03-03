@@ -366,13 +366,13 @@ function StepOne({ updateFormData, initialData }) {
             <div className="mt-2">Upload</div>
           </div>
         </Upload>
-        {data.imgUrl && (
+        {/* {data.imgUrl && (
           <div className="mt-2">
             <p className="text-sm text-gray-500">
               Selected image URL: {data.imgUrl}
             </p>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Phần Sponsor Requests */}
@@ -442,13 +442,13 @@ function StepOne({ updateFormData, initialData }) {
                     <div className="mt-2">Upload Logo</div>
                   </div>
                 </Upload>
-                {sponsor.logoUrl && (
+                {/* {sponsor.logoUrl && (
                   <div className="mt-2">
                     <p className="text-sm text-gray-500">
                       Logo URL: {sponsor.logoUrl}
                     </p>
                   </div>
-                )}
+                )} */}
               </div>
 
               <div>
