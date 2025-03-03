@@ -65,52 +65,58 @@ function StepTwo({ updateFormData, initialData }) {
     fetchAccountTeam(1, 100);
   }, []);
 
-  const handleCategoryNameChange = (index, e) => {
+  const handleCategoryChange = (index, field, value) => {
     const updatedCategories = [...categories];
-    updatedCategories[index].name = e.target.value;
+    updatedCategories[index][field] = value;
     setCategories(updatedCategories);
   };
 
-  const handleCategoryChange = (index, field, value) => {
+  const handleAddAward = (categoryIndex) => {
     setCategories((prevCategories) =>
       prevCategories.map((category, i) =>
-        i === index
+        i === categoryIndex
           ? {
               ...category,
-              [field]: value ? value.tz("Asia/Ho_Chi_Minh").format() : null,
+              createAwardCateShowRequests: [
+                ...(category.createAwardCateShowRequests || []),
+                { name: "", awardType: "", prizeValue: "", description: "" },
+              ],
             }
           : category
       )
     );
   };
 
-  const handleAddAward = () => {
-    setCategories([
-      {
-        ...categories[0],
-        createAwardCateShowRequests: [
-          ...(categories[0]?.createAwardCateShowRequests || []),
-          { name: "", awardType: "", prizeValue: "", description: "" },
-        ],
-      },
-    ]);
-  };
-
-  const handleAwardChange = (index, field, value) => {
-    const updatedAwards = [...categories[0].createAwardCateShowRequests];
-    updatedAwards[index][field] = value;
-    setCategories([
-      { ...categories[0], createAwardCateShowRequests: updatedAwards },
-    ]);
-  };
-
-  const handleRemoveAward = (index) => {
-    const updatedAwards = categories[0].createAwardCateShowRequests.filter(
-      (_, i) => i !== index
+  const handleAwardChange = (categoryIndex, awardIndex, field, value) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) =>
+        i === categoryIndex
+          ? {
+              ...category,
+              createAwardCateShowRequests:
+                category.createAwardCateShowRequests.map((award, j) =>
+                  j === awardIndex ? { ...award, [field]: value } : award
+                ),
+            }
+          : category
+      )
     );
-    setCategories([
-      { ...categories[0], createAwardCateShowRequests: updatedAwards },
-    ]);
+  };
+
+  const handleRemoveAward = (categoryIndex, awardIndex) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) =>
+        i === categoryIndex
+          ? {
+              ...category,
+              createAwardCateShowRequests:
+                category.createAwardCateShowRequests.filter(
+                  (_, j) => j !== awardIndex
+                ),
+            }
+          : category
+      )
+    );
   };
 
   const handleVarietyChange = (categoryIndex, varietyId) => {
@@ -197,21 +203,6 @@ function StepTwo({ updateFormData, initialData }) {
         weight: 0,
         order: 0,
       }));
-
-      return updatedCategories;
-    });
-  };
-
-  const handleRemoveCriteria = (categoryIndex, criteriaId, roundType) => {
-    setCategories((prev) => {
-      const updatedCategories = [...prev];
-      const category = updatedCategories[categoryIndex];
-
-      // Lọc bỏ tiêu chí cần xóa
-      category.createCriteriaCompetitionCategoryRequests =
-        category.createCriteriaCompetitionCategoryRequests.filter(
-          (c) => !(c.criteriaId === criteriaId && c.roundType === roundType)
-        );
 
       return updatedCategories;
     });
@@ -320,6 +311,14 @@ function StepTwo({ updateFormData, initialData }) {
     });
   };
 
+  const handleCategoryNameChange = (index, value) => {
+    setCategories((prevCategories) =>
+      prevCategories.map((category, i) =>
+        i === index ? { ...category, name: value } : category
+      )
+    );
+  };
+
   return (
     <>
       <h2 className="text-2xl font-semibold mb-6">
@@ -356,7 +355,9 @@ function StepTwo({ updateFormData, initialData }) {
                   <Input
                     placeholder="Nhập tên hạng mục"
                     value={category.name || ""}
-                    onChange={(e) => handleCategoryNameChange(index, e)}
+                    onChange={(e) =>
+                      handleCategoryNameChange(index, e.target.value)
+                    }
                   />
                 </div>
                 <div className="flex space-x-4">
@@ -366,7 +367,7 @@ function StepTwo({ updateFormData, initialData }) {
                     </label>
                     <DatePicker
                       className="w-full"
-                      showTime={{ format: "HH:mm:ss" }} // Hiển thị cả giờ, phút, giây
+                      showTime={{ format: "HH:mm:ss" }}
                       value={
                         category.startTime
                           ? dayjs(category.startTime).tz("Asia/Ho_Chi_Minh")
@@ -385,7 +386,7 @@ function StepTwo({ updateFormData, initialData }) {
                     </label>
                     <DatePicker
                       className="w-full"
-                      showTime={{ format: "HH:mm:ss" }} // Hiển thị cả giờ, phút, giây
+                      showTime={{ format: "HH:mm:ss" }}
                       value={
                         category.endTime
                           ? dayjs(category.endTime).tz("Asia/Ho_Chi_Minh")
@@ -720,105 +721,111 @@ function StepTwo({ updateFormData, initialData }) {
                 <label className="block text-sm font-medium text-gray-700 mb-1">
                   Giải thưởng{" "}
                 </label>
-                <Button onClick={handleAddAward} icon={<PlusOutlined />}>
+                {/* Nút thêm giải thưởng */}
+                <Button
+                  onClick={() => handleAddAward(index)}
+                  icon={<PlusOutlined />}
+                >
                   Thêm Giải Thưởng
                 </Button>
 
+                {/* Danh sách giải thưởng */}
                 <Collapse className="mt-3">
-                  {Array.isArray(categories[0]?.createAwardCateShowRequests) &&
-                    categories[0].createAwardCateShowRequests.map(
-                      (award, index) => (
-                        <Panel
-                          header={`Giải thưởng ${index + 1}`}
-                          key={index}
-                          extra={
-                            <Button
-                              type="text"
-                              icon={<DeleteOutlined />}
-                              danger
-                              onClick={(e) => {
-                                e.stopPropagation(); // Ngăn mở panel khi xóa
-                                handleRemoveAward(index);
-                              }}
-                            >
-                              Xóa
-                            </Button>
-                          }
-                        >
-                          <Space direction="vertical" style={{ width: "100%" }}>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Tên Giải Thưởng
-                              </label>
-                              <Input
-                                placeholder="Nhập tên giải thưởng"
-                                value={award.name}
-                                onChange={(e) =>
-                                  handleAwardChange(
-                                    index,
-                                    "name",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </div>
+                  {category.createAwardCateShowRequests.map(
+                    (award, awardIndex) => (
+                      <Collapse.Panel
+                        header={`Giải thưởng ${awardIndex + 1}`}
+                        key={awardIndex}
+                        extra={
+                          <Button
+                            type="text"
+                            icon={<DeleteOutlined />}
+                            danger
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveAward(index, awardIndex);
+                            }}
+                          />
+                        }
+                      >
+                        <Space direction="vertical" style={{ width: "100%" }}>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Tên Giải Thưởng
+                            </label>
+                            <Input
+                              placeholder="Nhập tên giải thưởng"
+                              value={award.name}
+                              onChange={(e) =>
+                                handleAwardChange(
+                                  index,
+                                  awardIndex,
+                                  "name",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
 
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Loại Giải Thưởng
-                              </label>
-                              <Input
-                                placeholder="Nhập loại giải thưởng"
-                                value={award.awardType}
-                                onChange={(e) =>
-                                  handleAwardChange(
-                                    index,
-                                    "awardType",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Loại Giải Thưởng
+                            </label>
+                            <Input
+                              placeholder="Nhập loại giải thưởng"
+                              value={award.awardType}
+                              onChange={(e) =>
+                                handleAwardChange(
+                                  index,
+                                  awardIndex,
+                                  "awardType",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
 
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Giá Trị Giải Thưởng
-                              </label>
-                              <Input
-                                type="number"
-                                placeholder="Nhập giá trị (VND)"
-                                value={award.prizeValue}
-                                onChange={(e) =>
-                                  handleAwardChange(
-                                    index,
-                                    "prizeValue",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </div>
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Giá Trị Giải Thưởng
+                            </label>
+                            <Input
+                              type="number"
+                              placeholder="Nhập giá trị (VND)"
+                              value={award.prizeValue}
+                              onChange={(e) =>
+                                handleAwardChange(
+                                  index,
+                                  awardIndex,
+                                  "prizeValue",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
 
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Mô Tả Giải Thưởng
-                              </label>
-                              <Input.TextArea
-                                rows={2}
-                                placeholder="Nhập mô tả giải thưởng"
-                                value={award.description}
-                                onChange={(e) =>
-                                  handleAwardChange(
-                                    index,
-                                    "description",
-                                    e.target.value
-                                  )
-                                }
-                              />
-                            </div>
-                          </Space>
-                        </Panel>
-                      )
-                    )}
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700">
+                              Mô Tả Giải Thưởng
+                            </label>
+                            <Input.TextArea
+                              rows={2}
+                              placeholder="Nhập mô tả giải thưởng"
+                              value={award.description}
+                              onChange={(e) =>
+                                handleAwardChange(
+                                  index,
+                                  awardIndex,
+                                  "description",
+                                  e.target.value
+                                )
+                              }
+                            />
+                          </div>
+                        </Space>
+                      </Collapse.Panel>
+                    )
+                  )}
                 </Collapse>
 
                 {/* Chọn trọng tài */}
@@ -844,7 +851,7 @@ function StepTwo({ updateFormData, initialData }) {
                 </div>
 
                 {/* Danh sách trọng tài đã chọn */}
-                <Collapse className="mt-4">
+                <Collapse className="mb-4">
                   {category.createRefereeAssignmentRequests.map(
                     (assignment, idx) => (
                       <Collapse.Panel
@@ -867,7 +874,7 @@ function StepTwo({ updateFormData, initialData }) {
                         }
                       >
                         <label className="block text-sm font-medium text-gray-700">
-                          Chọn vòng chính cho trọng tài này
+                          Chọn vòng chấm điểm cho trọng tài này
                         </label>
                         <Select
                           mode="multiple"

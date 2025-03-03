@@ -9,6 +9,7 @@ import {
   Divider,
   DatePicker,
   Select,
+  Collapse,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -30,12 +31,12 @@ function StepThree({ updateFormData, initialData }) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
-  const [showStatus, setShowStatus] = useState({
+  const [showStatusList, setShowStatusList] = useState([]);
+  const [newShowStatus, setNewShowStatus] = useState({
     statusName: "",
     description: "",
     startDate: null,
     endDate: null,
-    isActive: true,
   });
 
   // Cập nhật formData khi danh sách quy tắc thay đổi
@@ -43,9 +44,10 @@ function StepThree({ updateFormData, initialData }) {
     updateFormData({ createShowRuleRequests: rules });
     setFilteredRules(rules); // Cập nhật danh sách hiển thị khi thay đổi
   }, [rules]);
+
   useEffect(() => {
-    updateFormData({ createShowStatusRequests: [showStatus] });
-  }, [showStatus]);
+    updateFormData({ createShowStatusRequests: showStatusList });
+  }, [showStatusList]);
 
   // Lọc danh sách theo search
   useEffect(() => {
@@ -60,7 +62,33 @@ function StepThree({ updateFormData, initialData }) {
     }
   }, [searchText, rules]);
 
-  // Thêm quy tắc mới từ modal
+  const statusOptions = [
+    {
+      value: "Chờ duyệt",
+      description: "Chương trình đang chờ duyệt từ ban tổ chức.",
+    },
+    {
+      value: "Đang diễn ra",
+      description: "Chương trình đang được tổ chức và diễn ra bình thường.",
+    },
+    {
+      value: "Đã kết thúc",
+      description: "Chương trình đã hoàn thành và kết thúc.",
+    },
+  ];
+
+  const handleStatusChange = (value) => {
+    const selectedStatus = statusOptions.find(
+      (status) => status.value === value
+    );
+
+    setNewShowStatus((prev) => ({
+      ...prev,
+      statusName: value,
+      description: selectedStatus ? selectedStatus.description : "",
+    }));
+  };
+
   const addRule = () => {
     if (newRule.title.trim() && newRule.content.trim()) {
       setRules([...rules, newRule]);
@@ -93,6 +121,34 @@ function StepThree({ updateFormData, initialData }) {
     const updatedRules = [...rules];
     updatedRules[index][field] = value;
     setRules(updatedRules);
+  };
+
+  const handleAddStatus = () => {
+    if (
+      !newShowStatus.statusName ||
+      !newShowStatus.startDate ||
+      !newShowStatus.endDate
+    ) {
+      Modal.error({
+        title: "Lỗi",
+        content: "Vui lòng chọn trạng thái và nhập thời gian hợp lệ!",
+      });
+      return;
+    }
+
+    setShowStatusList((prev) => [...prev, { ...newShowStatus }]);
+
+    // Reset form nhập trạng thái mới
+    setNewShowStatus({
+      statusName: "",
+      description: "",
+      startDate: null,
+      endDate: null,
+    });
+  };
+
+  const handleRemoveStatus = (index) => {
+    setShowStatusList((prev) => prev.filter((_, i) => i !== index));
   };
 
   return (
@@ -220,39 +276,39 @@ function StepThree({ updateFormData, initialData }) {
         <Divider />
 
         <Space direction="vertical" className="w-full">
+          {/* Chọn trạng thái */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Tên trạng thái
             </label>
-            <Input
-              placeholder="Nhập tên trạng thái"
-              value={showStatus.statusName}
-              onChange={(e) =>
-                setShowStatus((prev) => ({
-                  ...prev,
-                  statusName: e.target.value,
-                }))
-              }
-            />
+            <Select
+              placeholder="Chọn trạng thái"
+              className="w-full"
+              value={newShowStatus.statusName || null}
+              onChange={handleStatusChange}
+            >
+              {statusOptions.map((status) => (
+                <Select.Option key={status.value} value={status.value}>
+                  {status.value}
+                </Select.Option>
+              ))}
+            </Select>
           </div>
 
+          {/* Mô tả trạng thái */}
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Mô tả trạng thái
             </label>
             <Input.TextArea
               rows={2}
-              placeholder="Nhập mô tả"
-              value={showStatus.description}
-              onChange={(e) =>
-                setShowStatus((prev) => ({
-                  ...prev,
-                  description: e.target.value,
-                }))
-              }
+              placeholder="Mô tả trạng thái"
+              value={newShowStatus.description}
+              disabled
             />
           </div>
 
+          {/* Người dùng chọn thời gian */}
           <div className="flex space-x-4">
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">
@@ -262,13 +318,18 @@ function StepThree({ updateFormData, initialData }) {
                 showTime
                 className="w-full"
                 value={
-                  showStatus.startDate ? dayjs(showStatus.startDate) : null
+                  newShowStatus.startDate
+                    ? dayjs(newShowStatus.startDate)
+                    : null
                 }
                 onChange={(value) =>
-                  setShowStatus((prev) => ({ ...prev, startDate: value }))
+                  setNewShowStatus((prev) => ({ ...prev, startDate: value }))
                 }
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="Chọn ngày bắt đầu"
               />
             </div>
+
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700">
                 Ngày kết thúc
@@ -276,30 +337,60 @@ function StepThree({ updateFormData, initialData }) {
               <DatePicker
                 showTime
                 className="w-full"
-                value={showStatus.endDate ? dayjs(showStatus.endDate) : null}
-                onChange={(value) =>
-                  setShowStatus((prev) => ({ ...prev, endDate: value }))
+                value={
+                  newShowStatus.endDate ? dayjs(newShowStatus.endDate) : null
                 }
+                onChange={(value) =>
+                  setNewShowStatus((prev) => ({ ...prev, endDate: value }))
+                }
+                format="YYYY-MM-DD HH:mm:ss"
+                placeholder="Chọn ngày kết thúc"
               />
             </div>
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Trạng thái hoạt động
-            </label>
-            <Select
-              value={showStatus.isActive}
-              onChange={(value) =>
-                setShowStatus((prev) => ({ ...prev, isActive: value }))
-              }
-              className="w-full"
-            >
-              <Select.Option value={true}>Hoạt động</Select.Option>
-              <Select.Option value={false}>Không hoạt động</Select.Option>
-            </Select>
-          </div>
+          {/* Nút Thêm Trạng Thái */}
+          <Button
+            type="primary"
+            onClick={handleAddStatus}
+            icon={<PlusOutlined />}
+          >
+            Thêm Trạng Thái
+          </Button>
         </Space>
+
+        {/* Danh sách Trạng Thái */}
+        <Collapse className="mt-4">
+          {showStatusList.map((status, index) => (
+            <Collapse.Panel
+              key={index}
+              header={`${status.statusName} (${dayjs(status.startDate).format("DD/MM/YYYY HH:mm")} - ${dayjs(status.endDate).format("DD/MM/YYYY HH:mm")})`}
+              extra={
+                <Button
+                  type="text"
+                  icon={<DeleteOutlined />}
+                  danger
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleRemoveStatus(index);
+                  }}
+                />
+              }
+            >
+              <p>
+                <strong>Mô tả:</strong> {status.description}
+              </p>
+              <p>
+                <strong>Ngày bắt đầu:</strong>{" "}
+                {dayjs(status.startDate).format("YYYY-MM-DD HH:mm:ss")}
+              </p>
+              <p>
+                <strong>Ngày kết thúc:</strong>{" "}
+                {dayjs(status.endDate).format("YYYY-MM-DD HH:mm:ss")}
+              </p>
+            </Collapse.Panel>
+          ))}
+        </Collapse>
       </div>
     </div>
   );
