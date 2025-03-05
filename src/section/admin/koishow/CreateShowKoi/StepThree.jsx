@@ -21,7 +21,7 @@ import {
 
 const { Title, Text } = Typography;
 
-function StepThree({ updateFormData, initialData }) {
+function StepThree({ updateFormData, initialData, showErrors }) {
   // Lấy danh sách quy tắc từ initialData
   const [rules, setRules] = useState(initialData.createShowRuleRequests || []);
   const [filteredRules, setFilteredRules] = useState(rules);
@@ -31,6 +31,7 @@ function StepThree({ updateFormData, initialData }) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
+  const [timeErrors, setTimeErrors] = useState({ startDate: "", endDate: "" });
   const [showStatusList, setShowStatusList] = useState(
     initialData.createShowStatusRequests || []
   );
@@ -40,7 +41,7 @@ function StepThree({ updateFormData, initialData }) {
     startDate: null,
     endDate: null,
   });
-  
+
   useEffect(() => {
     updateFormData({
       createShowRuleRequests: rules,
@@ -62,31 +63,70 @@ function StepThree({ updateFormData, initialData }) {
     }
   }, [searchText, rules]);
 
-  const statusOptions = [
-    {
-      value: "Chờ duyệt",
-      description: "Chương trình đang chờ duyệt từ ban tổ chức.",
+  const statusMapping = {
+    "Mở đăng ký": {
+      key: "RegistrationOpen",
+      description: "Cho phép người tham gia đăng ký sự kiện.",
     },
-    {
-      value: "Đang diễn ra",
-      description: "Chương trình đang được tổ chức và diễn ra bình thường.",
+    "Đóng đăng ký": {
+      key: "RegistrationClosed",
+      description: "Không còn cho phép đăng ký tham gia.",
     },
-    {
-      value: "Đã kết thúc",
-      description: "Chương trình đã hoàn thành và kết thúc.",
+    "Điểm danh": {
+      key: "CheckIn",
+      description: "Người tham gia thực hiện điểm danh trước sự kiện.",
     },
-  ];
+    "Sơ loại": {
+      key: "Preliminary",
+      description: "Vòng sơ tuyển để lọc ra các ứng viên phù hợp.",
+    },
+    "Đánh giá": {
+      key: "Evaluation",
+      description: "Ban giám khảo tiến hành chấm điểm.",
+    },
+    "Vòng chung kết": {
+      key: "Final",
+      description: "Vòng thi cuối cùng để tìm ra người chiến thắng.",
+    },
+    "Quán quân": {
+      key: "GrandChampion",
+      description: "Xác định người chiến thắng chung cuộc.",
+    },
+    "Hoàn thành": {
+      key: "Completed",
+      description: "Sự kiện đã kết thúc thành công.",
+    },
+    "Triển lãm": {
+      key: "Exhibition",
+      description: "Trưng bày hoặc giới thiệu sản phẩm, dịch vụ.",
+    },
+    "Kết thúc": {
+      key: "Finished",
+      description: "Sự kiện đã kết thúc hoàn toàn.",
+    },
+  };
+
+  const statusOptions = Object.entries(statusMapping).map(
+    ([label, { key, description }]) => ({
+      label, 
+      value: key, 
+      description, 
+    })
+  );
 
   const handleStatusChange = (value) => {
     const selectedStatus = statusOptions.find(
       (status) => status.value === value
     );
 
-    setNewShowStatus((prev) => ({
-      ...prev,
-      statusName: value,
-      description: selectedStatus ? selectedStatus.description : "",
-    }));
+    if (selectedStatus) {
+      setNewShowStatus({
+        statusName: selectedStatus.value, 
+        description: selectedStatus.description, 
+        startDate: null,
+        endDate: null,
+      });
+    }
   };
 
   const addRule = () => {
@@ -124,27 +164,43 @@ function StepThree({ updateFormData, initialData }) {
   };
 
   const handleAddStatus = () => {
-    if (
-      !newShowStatus.statusName ||
-      !newShowStatus.startDate ||
-      !newShowStatus.endDate
+    let errors = { startDate: "", endDate: "" };
+
+    if (!newShowStatus.startDate) {
+      errors.startDate = "Vui lòng chọn ngày bắt đầu.";
+    }
+    if (!newShowStatus.endDate) {
+      errors.endDate = "Vui lòng chọn ngày kết thúc.";
+    } else if (
+      newShowStatus.startDate &&
+      newShowStatus.endDate.isBefore(newShowStatus.startDate)
     ) {
-      Modal.error({
-        title: "Lỗi",
-        content: "Vui lòng chọn trạng thái và nhập thời gian hợp lệ!",
-      });
-      return;
+      errors.endDate = "Ngày kết thúc phải sau ngày bắt đầu.";
     }
 
-    setShowStatusList((prev) => [...prev, { ...newShowStatus }]);
+    setTimeErrors(errors);
 
-    // Reset form nhập trạng thái mới
-    setNewShowStatus({
-      statusName: "",
-      description: "",
-      startDate: null,
-      endDate: null,
-    });
+    if (!errors.startDate && !errors.endDate) {
+      const startDateVN = dayjs(newShowStatus.startDate)
+        .tz("Asia/Ho_Chi_Minh")
+        .format();
+      const endDateVN = dayjs(newShowStatus.endDate)
+        .tz("Asia/Ho_Chi_Minh")
+        .format();
+
+      setShowStatusList((prev) => [
+        ...prev,
+        { ...newShowStatus, startDate: startDateVN, endDate: endDateVN },
+      ]);
+
+      setNewShowStatus({
+        statusName: "",
+        description: "",
+        startDate: null,
+        endDate: null,
+      });
+      setTimeErrors({ startDate: "", endDate: "" }); // Reset lỗi sau khi thêm thành công
+    }
   };
 
   const handleRemoveStatus = (index) => {
@@ -175,13 +231,17 @@ function StepThree({ updateFormData, initialData }) {
           Thêm Quy Tắc
         </Button>
       </div>
-
+      {showErrors && rules.length < 3 && (
+        <p className="text-red-500 text-xs mt-1">
+          Cần có ít nhất 3 quy tắc cho chương trình.
+        </p>
+      )}
       {/* Danh sách quy tắc */}
       <List
         dataSource={filteredRules}
         renderItem={(rule, index) => (
-          <List.Item className="hover:bg-gray-100 transition-all rounded-lg ">
-            <div className="w-full flex items-center justify-between p-3 mb-5">
+          <List.Item className="bg-white shadow-sm rounded-lg p-3 mb-3 border border-gray-200 flex justify-between items-center hover:shadow-md transition-all">
+            <div className="w-full mx-4">
               {editingIndex === index ? (
                 <Space direction="vertical" className="w-full">
                   <Input
@@ -189,42 +249,47 @@ function StepThree({ updateFormData, initialData }) {
                     onChange={(e) =>
                       handleEditRule(index, "title", e.target.value)
                     }
-                    className="mb-2"
+                    className="mb-2 text-sm"
                   />
                   <Input.TextArea
                     value={rule.content}
                     onChange={(e) =>
                       handleEditRule(index, "content", e.target.value)
                     }
-                    className="mb-2"
-                    autoSize={{ minRows: 2, maxRows: 5 }}
+                    className="mb-2 text-sm"
+                    autoSize={{ minRows: 1, maxRows: 3 }}
                   />
                   <Button
-                    type="default"
+                    type="primary"
                     onClick={() => setEditingIndex(null)}
-                    className="bg-green-500 text-white"
+                    className="px-3 py-1 text-xs"
                   >
                     Lưu
                   </Button>
                 </Space>
               ) : (
                 <div className="w-full">
-                  <Title level={5}>{rule.title}</Title>
-                  <Text type="secondary">{rule.content}</Text>
+                  <p className="font-semibold text-gray-800 text-sm">
+                    {rule.title}
+                  </p>
+                  <p className="text-gray-600 text-xs">{rule.content}</p>
                 </div>
               )}
             </div>
-            <Space>
+
+            <Space size="middle">
               <Button
                 type="text"
                 icon={<EditOutlined />}
                 onClick={() => setEditingIndex(index)}
+                className="text-gray-500 hover:text-blue-500"
               />
               <Button
                 type="text"
                 icon={<DeleteOutlined />}
                 onClick={() => showDeleteConfirm(index)}
                 danger
+                className="hover:text-red-500"
               />
             </Space>
           </List.Item>
@@ -269,102 +334,137 @@ function StepThree({ updateFormData, initialData }) {
       >
         <p>Bạn có chắc chắn muốn xóa quy tắc này không?</p>
       </Modal>
-      <div>
-        <Title level={3} className="text-blue-500">
-          Trạng Thái Chương Trình
-        </Title>
-        <Divider />
 
-        <Space direction="vertical" className="w-full">
-          {/* Chọn trạng thái */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Tên trạng thái
-            </label>
-            <Select
-              placeholder="Chọn trạng thái"
-              className="w-full"
-              value={newShowStatus.statusName || null}
-              onChange={handleStatusChange}
-            >
-              {statusOptions.map((status) => (
-                <Select.Option key={status.value} value={status.value}>
-                  {status.value}
-                </Select.Option>
-              ))}
-            </Select>
-          </div>
+      {/* Tiêu đề */}
+      <Title level={3} className="text-blue-500">
+        Trạng Thái Chương Trình
+      </Title>
+      <Divider />
 
-          {/* Mô tả trạng thái */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Mô tả trạng thái
-            </label>
-            <Input.TextArea
-              rows={2}
-              placeholder="Mô tả trạng thái"
-              value={newShowStatus.description}
-              disabled
-            />
-          </div>
-
-          {/* Người dùng chọn thời gian */}
-          <div className="flex space-x-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Ngày bắt đầu
-              </label>
-              <DatePicker
-                showTime
-                className="w-full"
-                value={
-                  newShowStatus.startDate
-                    ? dayjs(newShowStatus.startDate)
-                    : null
-                }
-                onChange={(value) =>
-                  setNewShowStatus((prev) => ({ ...prev, startDate: value }))
-                }
-                format="YYYY-MM-DD HH:mm:ss"
-                placeholder="Chọn ngày bắt đầu"
-              />
-            </div>
-
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700">
-                Ngày kết thúc
-              </label>
-              <DatePicker
-                showTime
-                className="w-full"
-                value={
-                  newShowStatus.endDate ? dayjs(newShowStatus.endDate) : null
-                }
-                onChange={(value) =>
-                  setNewShowStatus((prev) => ({ ...prev, endDate: value }))
-                }
-                format="YYYY-MM-DD HH:mm:ss"
-                placeholder="Chọn ngày kết thúc"
-              />
-            </div>
-          </div>
-
-          {/* Nút Thêm Trạng Thái */}
-          <Button
-            type="primary"
-            onClick={handleAddStatus}
-            icon={<PlusOutlined />}
+      <Space direction="vertical" className="w-full">
+        {/* Chọn trạng thái */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Tên trạng thái
+          </label>
+          <Select
+            placeholder="Chọn trạng thái"
+            className="w-full"
+            value={
+              statusOptions.find(
+                (option) => option.value === newShowStatus.statusName
+              )?.label || null
+            }
+            onChange={(value) => {
+              const selectedStatus = statusOptions.find(
+                (status) => status.value === value
+              );
+              if (selectedStatus) {
+                setNewShowStatus({
+                  statusName: selectedStatus.value, // Lưu giá trị tiếng Anh
+                  description: selectedStatus.description, // Lưu mô tả trạng thái
+                  startDate: null,
+                  endDate: null,
+                });
+              }
+            }}
           >
-            Thêm Trạng Thái
-          </Button>
-        </Space>
+            {statusOptions.map((status) => (
+              <Select.Option key={status.value} value={status.value}>
+                {status.label} {/* Hiển thị tiếng Việt */}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
 
-        {/* Danh sách Trạng Thái */}
-        <Collapse className="mt-4">
-          {showStatusList.map((status, index) => (
+        {/* Mô tả trạng thái */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700">
+            Mô tả trạng thái
+          </label>
+          <Input.TextArea
+            rows={2}
+            placeholder="Mô tả trạng thái"
+            value={newShowStatus.description}
+            disabled
+          />
+        </div>
+
+        {/* Ngày bắt đầu và kết thúc */}
+        <div className="flex space-x-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Ngày bắt đầu
+            </label>
+            <DatePicker
+              showTime
+              className="w-full"
+              value={
+                newShowStatus.startDate ? dayjs(newShowStatus.startDate) : null
+              }
+              onChange={(value) =>
+                setNewShowStatus((prev) => ({ ...prev, startDate: value }))
+              }
+              format="YYYY-MM-DD HH:mm:ss"
+              placeholder="Chọn ngày bắt đầu"
+            />
+            {timeErrors.startDate && (
+              <p className="text-red-500 text-xs mt-1">
+                {timeErrors.startDate}
+              </p>
+            )}
+          </div>
+
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700">
+              Ngày kết thúc
+            </label>
+            <DatePicker
+              showTime
+              className="w-full"
+              value={
+                newShowStatus.endDate ? dayjs(newShowStatus.endDate) : null
+              }
+              onChange={(value) =>
+                setNewShowStatus((prev) => ({ ...prev, endDate: value }))
+              }
+              format="YYYY-MM-DD HH:mm:ss"
+              placeholder="Chọn ngày kết thúc"
+            />
+            {timeErrors.endDate && (
+              <p className="text-red-500 text-xs mt-1">{timeErrors.endDate}</p>
+            )}
+          </div>
+        </div>
+
+        {/* Nút Thêm Trạng Thái */}
+        <Button
+          type="primary"
+          onClick={handleAddStatus}
+          icon={<PlusOutlined />}
+        >
+          Thêm Trạng Thái
+        </Button>
+      </Space>
+
+      {/* Hiển thị lỗi nếu chưa có ít nhất 3 trạng thái */}
+      {showErrors && showStatusList.length < 3 && (
+        <p className="text-red-500 text-xs mt-2">
+          Cần chọn ít nhất 3 trạng thái cho chương trình.
+        </p>
+      )}
+
+      {/* Danh sách Trạng Thái */}
+      <Collapse className="mt-4">
+        {showStatusList.map((status, index) => {
+          const statusInVietnamese = Object.keys(statusMapping).find(
+            (key) => statusMapping[key].key === status.statusName
+          );
+
+          return (
             <Collapse.Panel
               key={index}
-              header={`${status.statusName} (${dayjs(status.startDate).format("DD/MM/YYYY HH:mm")} - ${dayjs(status.endDate).format("DD/MM/YYYY HH:mm")})`}
+              header={`${statusInVietnamese || status.statusName} (${status.startDate ? dayjs(status.startDate).format("DD/MM/YYYY HH:mm") : "Chưa có"} - ${status.endDate ? dayjs(status.endDate).format("DD/MM/YYYY HH:mm") : "Chưa có"})`}
               extra={
                 <Button
                   type="text"
@@ -389,9 +489,9 @@ function StepThree({ updateFormData, initialData }) {
                 {dayjs(status.endDate).format("YYYY-MM-DD HH:mm:ss")}
               </p>
             </Collapse.Panel>
-          ))}
-        </Collapse>
-      </div>
+          );
+        })}
+      </Collapse>
     </div>
   );
 }

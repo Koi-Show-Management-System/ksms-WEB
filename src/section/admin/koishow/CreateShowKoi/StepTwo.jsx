@@ -16,7 +16,7 @@ const { Panel } = Collapse;
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
-function StepTwo({ updateFormData, initialData }) {
+function StepTwo({ updateFormData, initialData, showErrors }) {
   const { variety, fetchVariety, isLoading } = useVariety();
   const { accountManage, fetchAccountTeam } = useAccountTeam();
   const { criteria, fetchCriteria } = useCriteria();
@@ -123,11 +123,11 @@ function StepTwo({ updateFormData, initialData }) {
     );
   };
 
-  const handleVarietyChange = (categoryIndex, varietyId) => {
+  const handleVarietyChange = (categoryIndex, selectedVarieties) => {
     setCategories((prevCategories) =>
       prevCategories.map((category, i) =>
         i === categoryIndex
-          ? { ...category, createCompetionCategoryVarieties: [varietyId] }
+          ? { ...category, createCompetionCategoryVarieties: selectedVarieties }
           : category
       )
     );
@@ -218,8 +218,8 @@ function StepTwo({ updateFormData, initialData }) {
       sizeMin: "",
       sizeMax: "",
       description: "",
-      startTime: dayjs().format(),
-      endTime: dayjs().add(1, "day").format(),
+      startTime: null,
+      endTime: null,
       status: "pending",
       createAwardCateShowRequests: [],
       createCompetionCategoryVarieties: [],
@@ -322,6 +322,21 @@ function StepTwo({ updateFormData, initialData }) {
       )
     );
   };
+  const handleRemoveCriteria = (categoryIndex, criteriaId) => {
+    setCategories((prev) => {
+      const updatedCategories = [...prev];
+
+      updatedCategories[
+        categoryIndex
+      ].createCriteriaCompetitionCategoryRequests = updatedCategories[
+        categoryIndex
+      ].createCriteriaCompetitionCategoryRequests.filter(
+        (criteria) => criteria.criteriaId !== criteriaId
+      );
+
+      return updatedCategories;
+    });
+  };
 
   return (
     <>
@@ -363,8 +378,14 @@ function StepTwo({ updateFormData, initialData }) {
                       handleCategoryNameChange(index, e.target.value)
                     }
                   />
+                  {showErrors && !category.name && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Địa điểm tổ chức là bắt buộc.{" "}
+                    </p>
+                  )}
                 </div>
-                <div className="flex space-x-4">
+
+                {/* <div className="flex space-x-4">
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Thời gian bắt đầu
@@ -383,6 +404,11 @@ function StepTwo({ updateFormData, initialData }) {
                       format="YYYY-MM-DD HH:mm:ss"
                       placeholder="Chọn thời gian bắt đầu"
                     />
+                    {showErrors && !category.startTime && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Thời gian bắt đầu là bắt buộc.{" "}
+                      </p>
+                    )}
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -402,8 +428,13 @@ function StepTwo({ updateFormData, initialData }) {
                       format="YYYY-MM-DD HH:mm:ss"
                       placeholder="Chọn thời gian kết thúc"
                     />
+                    {showErrors && !category.startTime && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Thời gian kết thúc là bắt buộc.{" "}
+                      </p>
+                    )}
                   </div>
-                </div>
+                </div> */}
 
                 <div className="flex space-x-4">
                   <div className="flex-1">
@@ -418,6 +449,11 @@ function StepTwo({ updateFormData, initialData }) {
                         handleCategoryChange(index, "sizeMin", e.target.value)
                       }
                     />
+                    {showErrors && !category.sizeMin && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Kích thước tối thiểu là bắt buộc.{" "}
+                      </p>
+                    )}
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -431,6 +467,11 @@ function StepTwo({ updateFormData, initialData }) {
                         handleCategoryChange(index, "sizeMax", e.target.value)
                       }
                     />
+                    {showErrors && !category.sizeMax && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Kích thước tối đa là bắt buộc.{" "}
+                      </p>
+                    )}
                   </div>
                   <div className="flex-1">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -447,6 +488,11 @@ function StepTwo({ updateFormData, initialData }) {
                         )
                       }
                     />{" "}
+                    {showErrors && !category.description && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Mô tả là bắt buộc.{" "}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -460,14 +506,13 @@ function StepTwo({ updateFormData, initialData }) {
                       <Spin size="small" />
                     ) : (
                       <Select
-                        placeholder="Chọn giống"
+                        mode="multiple"
+                        placeholder="Chọn giống cá koi"
                         className="w-full"
-                        value={
-                          category.createCompetionCategoryVarieties.length > 0
-                            ? category.createCompetionCategoryVarieties[0]
-                            : ""
+                        value={category.createCompetionCategoryVarieties}
+                        onChange={(values) =>
+                          handleVarietyChange(index, values)
                         }
-                        onChange={(value) => handleVarietyChange(index, value)}
                       >
                         {variety.map((item) => (
                           <Option key={item.id} value={item.id}>
@@ -476,6 +521,14 @@ function StepTwo({ updateFormData, initialData }) {
                         ))}
                       </Select>
                     )}
+                    {showErrors &&
+                      (!category.createCompetionCategoryVarieties ||
+                        category.createCompetionCategoryVarieties.length ===
+                          0) && (
+                        <p className="text-red-500 text-xs mt-1">
+                          Chọn ít nhất một giống.
+                        </p>
+                      )}
                   </div>
                   <div className="flex-1">
                     <div className="mx-3">
@@ -495,13 +548,18 @@ function StepTwo({ updateFormData, initialData }) {
                           )
                         }
                       />
+                      {showErrors && !category.description && (
+                        <p className="text-red-500 text-xs mt-1">
+                          Số lượng tham gia tối đa là bắt buộc.{" "}
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
 
                 <div className="mb-4">
                   <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Danh sách vòng thi và vòng nhỏ
+                    Các loại vòng thi
                   </label>
                   {mainRounds.map((round) => (
                     <div key={round.value} className="mb-4">
@@ -625,6 +683,11 @@ function StepTwo({ updateFormData, initialData }) {
                       )}
                     </div>
                   ))}
+                  {showErrors && category.createRoundRequests.length === 0 && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Cần chọn ít nhất một vòng thi.
+                    </p>
+                  )}
                 </div>
 
                 {/* Chọn vòng trước khi chọn tiêu chí */}
@@ -681,43 +744,69 @@ function StepTwo({ updateFormData, initialData }) {
                         (c) => c.roundType === round.value
                       );
 
-                    return criteriaInRound.length > 0 ? (
+                    return (
                       <Collapse.Panel
                         key={round.value}
                         header={`Tiêu chí - ${round.label}`}
                       >
-                        {criteriaInRound.map((criteriaItem) => (
-                          <div
-                            key={criteriaItem.criteriaId}
-                            className="flex items-center space-x-4 mb-2"
-                          >
-                            {/* Hiển thị tên tiêu chí */}
-                            <span className="text-sm font-medium flex-1">
-                              {criteria.find(
-                                (c) => c.id === criteriaItem.criteriaId
-                              )?.name || "Tiêu chí không xác định"}
-                            </span>
+                        {criteriaInRound.length > 0 ? (
+                          criteriaInRound.map((criteriaItem) => (
+                            <div
+                              key={criteriaItem.criteriaId}
+                              className="flex items-center space-x-4 mb-2"
+                            >
+                              {/* Hiển thị tên tiêu chí */}
+                              <span className="text-sm font-medium flex-1">
+                                {criteria.find(
+                                  (c) => c.id === criteriaItem.criteriaId
+                                )?.name || "Tiêu chí không xác định"}
+                              </span>
 
-                            {/* Ô nhập trọng số */}
-                            <Input
-                              type="number"
-                              suffix="%"
-                              placeholder="Nhập trọng số"
-                              value={criteriaItem.weight * 100} // Hiển thị đúng trọng số của vòng đó
-                              onChange={(e) =>
-                                handleWeightChange(
-                                  index,
-                                  criteriaItem.criteriaId,
-                                  criteriaItem.roundType,
-                                  e.target.value
-                                )
-                              }
-                              className="w-1/4"
-                            />
-                          </div>
-                        ))}
+                              {/* Ô nhập trọng số */}
+                              <Input
+                                type="number"
+                                suffix="%"
+                                placeholder="Nhập trọng số"
+                                value={criteriaItem.weight * 100} // Hiển thị đúng trọng số của vòng đó
+                                onChange={(e) =>
+                                  handleWeightChange(
+                                    index,
+                                    criteriaItem.criteriaId,
+                                    criteriaItem.roundType,
+                                    e.target.value
+                                  )
+                                }
+                                className="w-1/4"
+                              />
+
+                              {/* Nút xóa tiêu chí */}
+                              <span
+                                className="text-red-500 cursor-pointer hover:text-red-700"
+                                onClick={() =>
+                                  handleRemoveCriteria(
+                                    index,
+                                    criteriaItem.criteriaId
+                                  )
+                                }
+                              >
+                                <DeleteOutlined />
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-gray-500 text-sm">
+                            Chưa có tiêu chí nào.
+                          </p>
+                        )}
+
+                        {/* Hiển thị lỗi nếu vòng có ít hơn 3 tiêu chí */}
+                        {showErrors && criteriaInRound.length < 3 && (
+                          <p className="text-red-500 text-xs mt-2">
+                            Cần chọn ít nhất 3 tiêu chí cho {round.label}.
+                          </p>
+                        )}
                       </Collapse.Panel>
-                    ) : null;
+                    );
                   })}
                 </Collapse>
 
@@ -731,6 +820,14 @@ function StepTwo({ updateFormData, initialData }) {
                 >
                   Thêm Giải Thưởng
                 </Button>
+
+                {/* Hiển thị lỗi nếu không có giải thưởng nào */}
+                {showErrors &&
+                  category.createAwardCateShowRequests.length === 0 && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Cần thêm ít nhất một giải thưởng.
+                    </p>
+                  )}
 
                 {category.createAwardCateShowRequests.length > 0 && (
                   <Collapse className="mt-3">
@@ -770,6 +867,11 @@ function StepTwo({ updateFormData, initialData }) {
                                   )
                                 }
                               />
+                              {showErrors && !award.name && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Tên giải thưởng là bắt buộc.
+                                </p>
+                              )}
                             </div>
 
                             <div>
@@ -788,6 +890,11 @@ function StepTwo({ updateFormData, initialData }) {
                                   )
                                 }
                               />
+                              {showErrors && !award.awardType && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Loại giải thưởng là bắt buộc.
+                                </p>
+                              )}
                             </div>
 
                             <div>
@@ -807,6 +914,13 @@ function StepTwo({ updateFormData, initialData }) {
                                   )
                                 }
                               />
+                              {showErrors &&
+                                (!award.prizeValue ||
+                                  award.prizeValue <= 0) && (
+                                  <p className="text-red-500 text-xs mt-1">
+                                    Giá trị giải thưởng phải lớn hơn 0.
+                                  </p>
+                                )}
                             </div>
 
                             <div>
@@ -826,6 +940,11 @@ function StepTwo({ updateFormData, initialData }) {
                                   )
                                 }
                               />
+                              {showErrors && !award.description && (
+                                <p className="text-red-500 text-xs mt-1">
+                                  Mô tả giải thưởng là bắt buộc.
+                                </p>
+                              )}
                             </div>
                           </Space>
                         </Panel>
@@ -854,56 +973,78 @@ function StepTwo({ updateFormData, initialData }) {
                       </Option>
                     ))}
                   </Select>
+
+                  {/* Hiển thị lỗi nếu không có trọng tài nào */}
+                  {showErrors &&
+                    category.createRefereeAssignmentRequests.length === 0 && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Cần chọn ít nhất một trọng tài.
+                      </p>
+                    )}
                 </div>
 
                 {/* Danh sách trọng tài đã chọn */}
-                <Collapse className="mb-4">
-                  {category.createRefereeAssignmentRequests.map(
-                    (assignment, idx) => (
-                      <Collapse.Panel
-                        key={assignment.refereeAccountId}
-                        header={`Trọng tài: ${referee.find((r) => r.id === assignment.refereeAccountId)?.fullName || "Không xác định"}`}
-                        extra={
-                          <Button
-                            type="text"
-                            icon={<DeleteOutlined />}
-                            danger
-                            onClick={() =>
-                              handleRefereeChange(
-                                index,
-                                category.createRefereeAssignmentRequests
-                                  .filter((_, i) => i !== idx)
-                                  .map((r) => r.refereeAccountId)
-                              )
-                            }
-                          />
-                        }
-                      >
-                        <label className="block text-sm font-medium text-gray-700">
-                          Chọn vòng chấm điểm cho trọng tài này
-                        </label>
-                        <Select
-                          mode="multiple"
-                          className="w-full"
-                          value={assignment.roundTypes}
-                          onChange={(value) =>
-                            handleRefereeRoundChange(
-                              index,
-                              assignment.refereeAccountId,
-                              value
-                            )
+                {category.createRefereeAssignmentRequests.length > 0 && (
+                  <Collapse className="mb-4">
+                    {category.createRefereeAssignmentRequests.map(
+                      (assignment, idx) => (
+                        <Collapse.Panel
+                          key={assignment.refereeAccountId}
+                          header={`Trọng tài: ${
+                            referee.find(
+                              (r) => r.id === assignment.refereeAccountId
+                            )?.fullName || "Không xác định"
+                          }`}
+                          extra={
+                            <Button
+                              type="text"
+                              icon={<DeleteOutlined />}
+                              danger
+                              onClick={() =>
+                                handleRefereeChange(
+                                  index,
+                                  category.createRefereeAssignmentRequests
+                                    .filter((_, i) => i !== idx)
+                                    .map((r) => r.refereeAccountId)
+                                )
+                              }
+                            />
                           }
                         >
-                          {mainRounds.map((round) => (
-                            <Option key={round.value} value={round.value}>
-                              {round.label}
-                            </Option>
-                          ))}
-                        </Select>
-                      </Collapse.Panel>
-                    )
-                  )}
-                </Collapse>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Chọn vòng chấm điểm cho trọng tài này
+                          </label>
+                          <Select
+                            mode="multiple"
+                            className="w-full"
+                            value={assignment.roundTypes}
+                            onChange={(value) =>
+                              handleRefereeRoundChange(
+                                index,
+                                assignment.refereeAccountId,
+                                value
+                              )
+                            }
+                          >
+                            {mainRounds.map((round) => (
+                              <Option key={round.value} value={round.value}>
+                                {round.label}
+                              </Option>
+                            ))}
+                          </Select>
+
+                          {/* Hiển thị lỗi nếu trọng tài chưa có vòng chấm điểm */}
+                          {showErrors && assignment.roundTypes.length === 0 && (
+                            <p className="text-red-500 text-xs mt-1">
+                              Cần chọn ít nhất một vòng chấm điểm cho trọng tài
+                              này.
+                            </p>
+                          )}
+                        </Collapse.Panel>
+                      )
+                    )}
+                  </Collapse>
+                )}
               </div>
             </Card>
           </Collapse.Panel>

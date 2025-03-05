@@ -10,6 +10,7 @@ function CreateShow() {
   const navigate = useNavigate();
   const [form] = Form.useForm();
   const [currentStep, setCurrentStep] = useState(1);
+  const [showErrors, setShowErrors] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const { fetchCreateKoi, isLoading } = useCreateKoi();
   const [formData, setFormData] = useState({
@@ -33,6 +34,7 @@ function CreateShow() {
     createTicketTypeRequests: [],
     createCategorieShowRequests: [],
     createShowRuleRequests: [],
+    createShowStatusRequests: [],
   });
 
   const updateFormData = (newData) => {
@@ -40,29 +42,120 @@ function CreateShow() {
   };
 
   const validateStep = () => {
-    if (currentStep === 1 && (!formData.name || !formData.description)) {
-      message.error("Vui lòng điền đầy đủ tên và mô tả chương trình.");
+    let hasError = false; // Biến để kiểm tra xem có lỗi không
+
+    if (currentStep === 1) {
+      if (
+        !formData.name ||
+        !formData.description ||
+        !formData.startDate ||
+        !formData.endDate ||
+        !formData.startExhibitionDate ||
+        !formData.endExhibitionDate ||
+        !formData.minParticipants ||
+        !formData.maxParticipants ||
+        !formData.location ||
+        !formData.registrationFee ||
+        !formData.imgUrl
+      ) {
+        hasError = true;
+      }
+
+      // Kiểm tra danh sách nhà tài trợ
+      formData.createSponsorRequests.forEach((sponsor) => {
+        if (!sponsor.name || !sponsor.logoUrl || !sponsor.investMoney) {
+          hasError = true;
+        }
+      });
+
+      // Kiểm tra danh sách loại vé
+      formData.createTicketTypeRequests.forEach((ticket) => {
+        if (!ticket.name || !ticket.price || !ticket.availableQuantity) {
+          hasError = true;
+        }
+      });
+    }
+
+    if (currentStep === 2) {
+      if (formData.createCategorieShowRequests.length === 0) {
+        hasError = true;
+      } else {
+        formData.createCategorieShowRequests.forEach((category) => {
+          if (
+            !category.name ||
+            !category.sizeMin ||
+            !category.sizeMax ||
+            !category.description ||
+            // !category.startTime ||
+            // !category.endTime ||
+            !category.maxEntries ||
+            category.createCompetionCategoryVarieties.length === 0
+          ) {
+            hasError = true;
+          }
+        });
+      }
+    }
+
+    if (currentStep === 3) {
+      let hasError = false;
+
+      if (formData.createShowRuleRequests.length < 3) {
+        hasError = true;
+      }
+
+      if (formData.createShowStatusRequests.length < 3) {
+        hasError = true;
+      }
+
+      const invalidStatuses = formData.createShowStatusRequests.some(
+        (status) => !status.startDate || !status.endDate
+      );
+
+      if (invalidStatuses) {
+        hasError = true;
+      }
+
+      return !hasError;
+    }
+
+    if (hasError) {
+      notification.error({
+        message: "Lỗi nhập liệu",
+        description: "Vui lòng điền đầy đủ thông tin trước khi tiếp tục.",
+        placement: "topRight",
+      });
       return false;
     }
-    if (
-      currentStep === 2 &&
-      formData.createCategorieShowRequests.length === 0
-    ) {
-      message.error("Vui lòng nhập ít nhất một thể loại.");
-      return false;
-    }
+
     return true;
   };
 
   const handleNext = () => {
+    setShowErrors(false); // Reset lỗi trước khi kiểm tra
+
     if (validateStep()) {
+      setShowErrors(false);
+
       if (currentStep === 3) {
-        setIsConfirmModalOpen(true);
+        setIsConfirmModalOpen(true); // Mở modal xác nhận
       } else {
         setCurrentStep((prev) => prev + 1);
       }
+    } else {
+      setShowErrors(true);
     }
   };
+
+  // const handleNext = () => {
+  //   setShowErrors(true);
+
+  //   if (currentStep === 3) {
+  //     setIsConfirmModalOpen(true);
+  //   } else {
+  //     setCurrentStep((prev) => prev + 1);
+  //   }
+  // };
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
@@ -108,13 +201,25 @@ function CreateShow() {
 
       <Form layout="vertical" form={form}>
         {currentStep === 1 && (
-          <StepOne updateFormData={updateFormData} initialData={formData} />
+          <StepOne
+            updateFormData={updateFormData}
+            initialData={formData}
+            showErrors={showErrors}
+          />
         )}
         {currentStep === 2 && (
-          <StepTwo updateFormData={updateFormData} initialData={formData} />
+          <StepTwo
+            updateFormData={updateFormData}
+            initialData={formData}
+            showErrors={showErrors}
+          />
         )}
         {currentStep === 3 && (
-          <StepThree updateFormData={updateFormData} initialData={formData} />
+          <StepThree
+            updateFormData={updateFormData}
+            initialData={formData}
+            showErrors={showErrors}
+          />
         )}
       </Form>
 
