@@ -1,25 +1,12 @@
+import { useEffect } from "react";
 import { Table, Space, Button } from "antd";
-import {
-  EditOutlined,
-  DeleteOutlined,
-  EyeOutlined,
-  EyeInvisibleOutlined,
-} from "@ant-design/icons"; 
-import axios from "axios";
-import qs from "qs";
-import { useEffect, useState } from "react";
+import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import useAccountTeam from "../../../hooks/useAccountTeam";
 
 const columns = [
   {
-    title: "ID",
-    dataIndex: "ID",
-    width: "10%",
-  },
-  {
     title: "Họ và Tên",
-    dataIndex: "name",
-    sorter: true,
-    render: (name) => `${name.first} ${name.last}`,
+    dataIndex: "fullName",
     width: "20%",
   },
   {
@@ -28,30 +15,24 @@ const columns = [
     width: "25%",
   },
   {
-    title: "Mật khẩu",
-    dataIndex: "login",
-    width: "15%",
-    render: (login, record) => (
-      <Space>
-        {record.showPassword ? login.password : "••••••••"}
-        <Button
-          type="text"
-          icon={record.showPassword ? <EyeInvisibleOutlined /> : <EyeOutlined />}
-          onClick={() => handleTogglePassword(record)}
-        />
-      </Space>
-    ),
+    title: "Số điện thoại",
+    dataIndex: "phone",
+    width: "20%",
   },
   {
     title: "Trạng thái",
     dataIndex: "status",
-    render: () => "Hoạt động",
     width: "15%",
+  },
+  {
+    title: "Vai trò",
+    dataIndex: "role",
+    width: "10%",
   },
   {
     title: "Hành động",
     key: "action",
-    width: "15%",
+    width: "10%",
     render: (_, record) => (
       <Space size="middle">
         <Button
@@ -70,92 +51,58 @@ const columns = [
   },
 ];
 
-const handleEdit = (record) => {
-  console.log("Chỉnh sửa bản ghi:", record);
-};
-
-const handleDelete = (record) => {
-  console.log("Xóa bản ghi:", record);
-};
-
-const handleTogglePassword = (record) => {
-  setData((prevData) =>
-    prevData.map((item) =>
-      item.login.uuid === record.login.uuid
-        ? { ...item, showPassword: !item.showPassword }
-        : item
-    )
-  );
-};
-
-const getRandomuserParams = (params) => ({
-  results: params.pagination?.pageSize,
-  page: params.pagination?.current,
-  ...params,
-});
-
 const User = () => {
-  const [data, setData] = useState();
-  const [loading, setLoading] = useState(false);
-  const [tableParams, setTableParams] = useState({
-    pagination: {
-      current: 1,
-      pageSize: 10,
-    },
-  });
-
-  const fetchData = async () => {
-    setLoading(true);
-    try {
-      const response = await axios.get(
-        `https://randomuser.me/api?${qs.stringify(
-          getRandomuserParams(tableParams)
-        )}`
-      );
-      const { results } = response.data;
-      // Add showPassword property to each record
-      const resultsWithPasswordVisibility = results.map((item) => ({
-        ...item,
-        showPassword: false,
-      }));
-      setData(resultsWithPasswordVisibility);
-      setLoading(false);
-      setTableParams({
-        ...tableParams,
-        pagination: {
-          ...tableParams.pagination,
-          total: 200,
-        },
-      });
-    } catch (error) {
-      console.error("Lỗi khi lấy dữ liệu:", error);
-      setLoading(false);
-    }
-  };
+  const {
+    accountManage,
+    fetchAccountTeam,
+    isLoading,
+    currentPage,
+    pageSize,
+    totalItems,
+  } = useAccountTeam();
 
   useEffect(() => {
-    fetchData();
-  }, [JSON.stringify(tableParams)]);
+    fetchAccountTeam(currentPage, pageSize, "Member");
+  }, [currentPage, pageSize]);
 
-  const handleTableChange = (pagination, filters, sorter) => {
-    setTableParams({
-      pagination,
-      filters,
-      ...sorter,
-    });
+  const handleTableChange = (pagination) => {
+    fetchAccountTeam(pagination.current, pagination.pageSize, "Member");
   };
+
+  const data =
+    accountManage.member?.map((account) => ({
+      key: account.id,
+      fullName: account.fullName,
+      email: account.email,
+      phone: account.phone || "0384499305",
+      status: account.status || "Hoạt động",
+      role: account.role,
+    })) || [];
 
   return (
     <Table
       columns={columns}
-      rowKey={(record) => record.login.uuid}
       dataSource={data}
-      pagination={tableParams.pagination}
-      loading={loading}
+      loading={isLoading}
+      pagination={{
+        current: currentPage,
+        pageSize: pageSize,
+        total: totalItems,
+        showSizeChanger: true,
+        showQuickJumper: true,
+      }}
       onChange={handleTableChange}
       className="w-full"
     />
   );
+};
+
+const handleEdit = (record) => {
+  console.log("Edit account:", record);
+};
+
+const handleDelete = (record) => {
+  console.log("Delete account:", record);
 };
 
 export default User;
