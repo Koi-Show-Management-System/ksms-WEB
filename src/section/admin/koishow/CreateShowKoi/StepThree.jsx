@@ -64,43 +64,43 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   }, [searchText, rules]);
 
   const statusMapping = {
-    "Mở đăng ký": {
+    "Mở Đăng Ký": {
       key: "RegistrationOpen",
       description: "Cho phép người tham gia đăng ký sự kiện.",
     },
-    "Đóng đăng ký": {
+    "Đóng Đăng Ký": {
       key: "RegistrationClosed",
       description: "Không còn cho phép đăng ký tham gia.",
     },
-    "Điểm danh": {
+    "Điểm Danh": {
       key: "CheckIn",
       description: "Người tham gia thực hiện điểm danh trước sự kiện.",
     },
-    "Sơ loại": {
+    "Vòng Sơ Loại": {
       key: "Preliminary",
       description: "Vòng sơ tuyển để lọc ra các ứng viên phù hợp.",
     },
-    "Đánh giá": {
+    "Vòng Đánh Giá": {
       key: "Evaluation",
       description: "Ban giám khảo tiến hành chấm điểm.",
     },
-    "Vòng chung kết": {
+    "Vòng Chung Kết": {
       key: "Final",
       description: "Vòng thi cuối cùng để tìm ra người chiến thắng.",
     },
-    "Quán quân": {
+    "Grand Champion": {
       key: "GrandChampion",
       description: "Xác định người chiến thắng chung cuộc.",
     },
-    "Hoàn thành": {
+    "Hoàn Thành": {
       key: "Completed",
       description: "Sự kiện đã kết thúc thành công.",
     },
-    "Triển lãm": {
+    "Triển Lãm": {
       key: "Exhibition",
       description: "Trưng bày hoặc giới thiệu sản phẩm, dịch vụ.",
     },
-    "Kết thúc": {
+    "Kết Thúc": {
       key: "Finished",
       description: "Sự kiện đã kết thúc hoàn toàn.",
     },
@@ -108,9 +108,9 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
   const statusOptions = Object.entries(statusMapping).map(
     ([label, { key, description }]) => ({
-      label, 
-      value: key, 
-      description, 
+      label,
+      value: key,
+      description,
     })
   );
 
@@ -121,8 +121,8 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
     if (selectedStatus) {
       setNewShowStatus({
-        statusName: selectedStatus.value, 
-        description: selectedStatus.description, 
+        statusName: selectedStatus.value,
+        description: selectedStatus.description,
         startDate: null,
         endDate: null,
       });

@@ -1,8 +1,16 @@
-import React from "react";
-import { Collapse, Timeline, Card, Image, Tabs } from "antd";
+import React, { useEffect } from "react";
+import {
+  Collapse,
+  Timeline,
+  Card,
+  Image,
+  Tabs,
+  Spin,
+  notification,
+} from "antd";
+import dayjs from "dayjs";
 import koiFishImage from "../../../../assets/koiFishImage.png";
 import sponsorLogo1 from "../../../../assets/sponsorLogo1.png";
-import sponsorLogo2 from "../../../../assets/sponsorLogo2.png";
 import Category from "./Category";
 import KoiList from "./KoiList";
 import ManageShow from "./ManageShow";
@@ -12,11 +20,42 @@ import Rules from "./Rules";
 import Sponsor from "./Sponsor";
 import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
+import useKoiShow from "../../../../hooks/useKoiShow";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
   const { id } = useParams();
-  console.log(id);
+  const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow(); // ✅ Lấy dữ liệu từ store
+  const statusMapping = {
+    RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
+    RegistrationClosed: { label: "Đóng Đăng Ký", color: "red" },
+    CheckIn: { label: "Điểm danh", color: "cyan" },
+    Preliminary: { label: "Vòng Sơ Loại", color: "green" },
+    Evaluation: { label: "Vòng Đánh Giá", color: "purple" },
+    Final: { label: "Vòng Chung Kết", color: "orange" },
+    GrandChampion: { label: "Grand Champion", color: "yellow" },
+    Completed: { label: "Hoàn Thành ", color: "gray" },
+    Exhibition: { lablel: "Triễn Lãm ", color: "teal" },
+    Finished: { lablel: "Kết Thúc", color: "brown" },
+  };
+
+  const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
+  const formatTime = (date) => dayjs(date).format("hh:mm A");
+
+  useEffect(() => {
+    fetchKoiShowDetail(id);
+  }, [id]);
+
+  if (isLoading)
+    return <Spin size="large" className="flex justify-center mt-10" />;
+
+  if (!koiShowDetail) {
+    console.log("Lỗi dữ liệu");
+
+    return (
+      <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>
+    );
+  }
   const items = [
     {
       key: "category",
@@ -63,19 +102,14 @@ function KoiShowDetail() {
   return (
     <div className="max-w-8xl mx-auto p-3">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Triển Lãm Cá Koi 2025</h1>
-        <p className="text-gray-600">
-          Chào mừng bạn đến với Triển Lãm Cá Koi hàng năm, nơi những người đam
-          mê tụ tập để trưng bày những con cá Koi quý giá và thi đấu để giành
-          danh hiệu cao nhất. Tham gia cùng chúng tôi để kỷ niệm vẻ đẹp và sự đa
-          dạng của cá Koi.
-        </p>
+        <h1 className="text-3xl font-bold mb-4">{koiShowDetail.data.name}</h1>
+        <p className="text-gray-600">{koiShowDetail.data.description}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-2">
           <Image
-            src={koiFishImage}
+            src={koiShowDetail.data.imgUrl || koiFishImage}
             alt="Cá Koi"
             className="w-full rounded-lg"
           />
@@ -86,19 +120,39 @@ function KoiShowDetail() {
                 <Panel header="Lịch Trình Sự Kiện" key="1">
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span>07/01/2025 - Mở Đăng Ký</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.startDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Mở Đăng Ký
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>10/01/2025 - Đóng Đăng Ký</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.endDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Đóng Đăng Ký
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>12/01/2025 - Ngày Triển Lãm</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.startExhibitionDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Ngày Bắt Đầu Giải Đấu & Triển Lãm
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>12/01/2025 - Ngày Khai Mạc Giải Đấu</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.endExhibitionDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Ngày Kết Thúc Giải Đấu & Triễn Lãm
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>12/01/2025 - Ngày Kết Thúc Giải Đấu</span>
+                      <span>Địa điểm: {koiShowDetail.data.location}</span>
                     </div>
                   </div>
                 </Panel>
@@ -109,11 +163,31 @@ function KoiShowDetail() {
               <Collapse defaultActiveKey={["2"]}>
                 <Panel header="Vé" key="2">
                   <div className="space-y-2">
-                    <div>Vé Đăng kí - Phí tham gia - $5</div>
-                    <div>Vé Xem - Vé Cơ Bản - $45</div>
-                    <div>Vé Thi đấu - Vé VIP - $75</div>
-                    <div>Vé Triển Lãm - Vé Triển Lãm - $15</div>
-                    <div>Số lượng tối thiểu: 100 - Số lượng tối đa: 200</div>
+                    <div>
+                      Phí Đăng Ký -{" "}
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(koiShowDetail.data.registrationFee)}
+                    </div>
+
+                    {koiShowDetail.data.ticketTypes.map((ticket) => (
+                      <div key={ticket.id}>
+                        <div>
+                          {ticket.name} -{" "}
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(ticket.price)}{" "}
+                          || Số lượng : {ticket.availableQuantity} vé
+                        </div>
+                      </div>
+                    ))}
+
+                    <div>
+                      Tham gia tối thiểu: {koiShowDetail.data.minParticipants} -
+                      Tham gia tối đa: {koiShowDetail.data.maxParticipants}
+                    </div>
                   </div>
                 </Panel>
               </Collapse>
@@ -124,84 +198,45 @@ function KoiShowDetail() {
             <div className="bg-black/[0.02] p-4 rounded-lg">
               <h3 className="font-bold mb-4 text-lg">Tài Trợ</h3>
               <div className="grid grid-cols-2 gap-4">
-                <Image
-                  src={sponsorLogo1}
-                  alt="Tài Trợ 1"
-                  className="rounded-xl"
-                />
-                <Image
-                  src={sponsorLogo2}
-                  alt="Tài Trợ 2"
-                  className="rounded-xl"
-                />
+                {koiShowDetail?.data?.sponsors?.map((sponsor, index) => (
+                  <Image
+                    key={sponsor.id}
+                    src={sponsor.logoUrl || sponsorLogo1}
+                    alt={`Tài Trợ ${index + 1}`}
+                    className="rounded-xl"
+                  />
+                ))}
               </div>
             </div>
             <div className="bg-black/[0.02] p-4 rounded-lg">
-              <h3 className="font-bold mb-4 text-lg">Tiêu Chí Đánh Giá</h3>
-              <div className="grid grid-cols-2 ">
+              <h3 className="font-bold mb-4 text-lg">Tiêu Chí Đánh Giá </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Cột 1: Chứa 5 phần tử đầu tiên */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      1
-                    </span>
-                    <span>Màu sắc</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      2
-                    </span>
-                    <span>Hình dáng cơ thể</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      3
-                    </span>
-                    <span>Họa tiết</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      4
-                    </span>
-                    <span>Kích thước</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      5
-                    </span>
-                    <span>Chất lượng da</span>
-                  </div>
+                  {koiShowDetail.data.criteria
+                    .slice(0, 5)
+                    .map((criteriaList, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                          {index + 1}
+                        </span>
+                        <span>{criteriaList}</span>
+                      </div>
+                    ))}
                 </div>
+
+                {/* Cột 2: Chứa các phần tử còn lại */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      6
-                    </span>
-                    <span>Sức khỏe</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      7
-                    </span>
-                    <span>Bơi lội</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      8
-                    </span>
-                    <span>Đặc điểm phân biệt</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      9
-                    </span>
-                    <span>Cân bằng</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      10
-                    </span>
-                    <span>Sự thanh lịch</span>
-                  </div>
+                  {koiShowDetail.data.criteria
+                    .slice(5)
+                    .map((criteriaList, index) => (
+                      <div key={index + 5} className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                          {index + 6}
+                        </span>
+                        <span>{criteriaList}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
@@ -209,90 +244,29 @@ function KoiShowDetail() {
         </div>
         <div>
           <Card title="Trạng Thái" className="mb-4">
-            <Timeline
-              items={[
-                {
-                  color: "gold",
-                  children: (
-                    <>
-                      <div className="text-yellow-500 font-medium">
-                        Chưa Đăng Ký
-                      </div>
-                      <div className="text-sm">22/08/2023- 15/08/2023</div>
-                      <div className="text-sm">16:08 PM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "blue",
-                  children: (
-                    <>
-                      <div className="text-blue-500 font-medium">
-                        Có Thể Đăng Ký
-                      </div>
-                      <div className="text-sm">15/08/2023- 19/08/2023</div>
-                      <div className="text-sm">00:08 AM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "orange",
-                  children: (
-                    <>
-                      <div className="text-orange-500 font-medium">
-                        Đăng Ký Kết Thúc
-                      </div>
-                      <div className="text-sm">19/08/2023- 20/08/2023</div>
-                      <div className="text-sm">00:08 AM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "green",
-                  children: (
-                    <>
-                      <div className="text-green-500 font-medium">
-                        Đánh Giá Đơn Ứng Dụng Kết Thúc
-                      </div>
-                      <div className="text-sm">20/08/2023- 21/08/2023</div>
-                      <div className="text-sm">00:08 AM- 22:08 PM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "purple",
-                  children: (
-                    <>
-                      <div className="text-purple-500 font-medium">
-                        Có Thể Tham Gia
-                      </div>
-                      <div className="text-sm">21/08/2023- 22/08/2023</div>
-                      <div className="text-sm">22:08 PM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "cyan",
-                  children: (
-                    <>
-                      <div className="text-cyan-500 font-medium">Bắt Đầu</div>
-                      <div className="text-sm">22/08/2023- 22/08/2023</div>
-                      <div className="text-sm">00:08 AM- 09:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "red",
-                  children: (
-                    <>
-                      <div className="text-red-500 font-medium">Kết Thúc</div>
-                      <div className="text-sm">22/08/2023</div>
-                      <div className="text-sm">09:08 AM</div>
-                    </>
-                  ),
-                },
-              ]}
-            />
+            <Timeline>
+              {koiShowDetail.data.showStatuses.map((status) => {
+                const { label, color } = statusMapping[status.statusName] || {
+                  label: status.statusName,
+                  color: "gray",
+                };
+                return (
+                  <Timeline.Item key={status.id} color={color}>
+                    <div className={`text-${color}-500 font-medium`}>
+                      {label}
+                    </div>
+                    <div className="text-sm">
+                      {formatDate(status.startDate)} -{" "}
+                      {formatDate(status.endDate)}
+                    </div>
+                    <div className="text-sm">
+                      {formatTime(status.startDate)} -{" "}
+                      {formatTime(status.endDate)}
+                    </div>
+                  </Timeline.Item>
+                );
+              })}
+            </Timeline>
           </Card>
         </div>
       </div>
