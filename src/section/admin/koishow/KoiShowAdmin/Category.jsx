@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Table,
   Input,
@@ -8,44 +8,32 @@ import {
   Typography,
   Form,
   Modal,
+  message,
 } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import useCategory from "../../../../hooks/useCategory";
 
 const { Search } = Input;
 const { Option } = Select;
 
-function Category() {
+function Category({ showId }) {
   const [searchText, setSearchText] = useState("");
   const [filterVariety, setFilterVariety] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [form] = Form.useForm();
 
-  const [data, setData] = useState([
-    {
-      key: "1",
-      categoryName: "Mini Kohaku",
-      sizeCategory: "Dưới 20 cm",
-      variety: "Kohaku",
-      participatingKoi: 120,
-      status: "Hoạt động",
-    },
-    {
-      key: "2",
-      categoryName: "Standard Showa",
-      sizeCategory: "20-30 cm",
-      variety: "Showa",
-      participatingKoi: 80,
-      status: "Không hoạt động",
-    },
-    {
-      key: "3",
-      categoryName: "Premium Taisho Sanke",
-      sizeCategory: "30-50 cm",
-      variety: "Sanke",
-      participatingKoi: 50,
-      status: "Hoạt động",
-    },
-  ]);
+  const { categories, isLoading, error, fetchCategories } = useCategory();
+
+  useEffect(() => {
+    fetchCategories(showId, 1, 10);
+  }, [showId]);
+
+  useEffect(() => {
+    if (error) {
+      message.error("Failed to load categories");
+      console.error("Error fetching categories:", error);
+    }
+  }, [error]);
 
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
@@ -66,20 +54,21 @@ function Category() {
 
   const handleCreate = (values) => {
     const newCategory = {
-      key: String(data.length + 1),
+      key: String(categories.length + 1),
       ...values,
       participatingKoi: 0,
     };
-    setData([...data, newCategory]);
     setIsModalVisible(false);
     form.resetFields();
+    message.success("Category created successfully");
   };
 
-  const filteredData = data.filter((item) => {
+  // Filter the categories from the API
+  const filteredData = categories.filter((item) => {
     const matchesSearch =
-      item.categoryName.toLowerCase().includes(searchText) ||
-      item.sizeCategory.toLowerCase().includes(searchText) ||
-      item.variety.toLowerCase().includes(searchText);
+      (item.categoryName?.toLowerCase() || "").includes(searchText) ||
+      (item.sizeCategory?.toLowerCase() || "").includes(searchText) ||
+      (item.variety?.toLowerCase() || "").includes(searchText);
     const matchesVariety = filterVariety
       ? item.variety === filterVariety
       : true;
@@ -89,15 +78,27 @@ function Category() {
   const columns = [
     {
       title: "Tên Danh Mục",
-      dataIndex: "categoryName",
-      key: "categoryName",
-      sorter: (a, b) => a.categoryName.localeCompare(b.categoryName),
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) =>
+        (a.categoryName || "").localeCompare(b.categoryName || ""),
     },
     {
       title: "Danh Mục Kích Thước",
       dataIndex: "sizeCategory",
       key: "sizeCategory",
-      sorter: (a, b) => a.sizeCategory.localeCompare(b.sizeCategory),
+      sorter: (a, b) => {
+        return a.sizeMin - b.sizeMin;
+      },
+      render: (text, record) => (
+        <span>
+          {text}{" "}
+          <Typography.Text className="flex justify-center">
+            ({record.sizeMin}-{record.sizeMax} cm)
+          </Typography.Text>
+        </span>
+      ),
+      width: 200,
     },
     {
       title: "Giống",
@@ -111,10 +112,10 @@ function Category() {
       onFilter: (value, record) => record.variety === value,
     },
     {
-      title: "Số Cá Koi Tham Gia",
-      dataIndex: "participatingKoi",
-      key: "participatingKoi",
-      sorter: (a, b) => a.participatingKoi - b.participatingKoi,
+      title: "SL Koi tối đa",
+      dataIndex: "maxEntries",
+      key: "maxEntries",
+      sorter: (a, b) => (a.participatingKoi || 0) - (b.participatingKoi || 0),
     },
     {
       title: "Trạng Thái",
@@ -122,10 +123,23 @@ function Category() {
       key: "status",
       render: (status) => (
         <Tag
-          color={status === "Hoạt động" ? "green" : "red"}
-          className="rounded-full px-3 py-1"
+          color={
+            status === "pending"
+              ? "orange"
+              : status === "approved"
+                ? "green"
+                : status === "upcoming"
+                  ? "blue"
+                  : "default"
+          }
         >
-          {status}
+          {status === "pending"
+            ? "Chờ duyệt"
+            : status === "approved"
+              ? "Đã duyệt"
+              : status === "upcoming"
+                ? "Sắp diễn ra"
+                : "Trạng thái khác"}
         </Tag>
       ),
       filters: [
@@ -182,6 +196,8 @@ function Category() {
         dataSource={filteredData}
         pagination={{ pageSize: 5 }}
         className="bg-white rounded-lg"
+        loading={isLoading}
+        rowKey={(record) => record.id || record.key}
       />
 
       <Modal
@@ -250,4 +266,5 @@ function Category() {
     </div>
   );
 }
+
 export default Category;

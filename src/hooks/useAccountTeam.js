@@ -72,6 +72,9 @@ const useAccountTeam = create((set, get) => ({
 
         set({
           accountManage: {
+            member: filteredAccounts.filter(
+              (account) => account.role === "Member"
+            ),
             admin: filteredAccounts.filter(
               (account) => account.role === "Admin"
             ),

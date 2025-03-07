@@ -1,26 +1,34 @@
-import React, { useState } from "react";
-import { Table, Input, Button, Modal, Form } from "antd";
+import React, { useEffect } from "react";
+import {
+  Table,
+  Input,
+  Button,
+  Modal,
+  Form,
+  Pagination,
+  notification,
+} from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-
+import useCriteria from "../../../hooks/useCriteria";
 const Criteria = () => {
-  const [criteriaData, setCriteriaData] = useState([
-    {
-      key: 1,
-      name: "Màu sắc",
-      description: "Đánh giá chất lượng màu sắc của cá",
-    },
-    {
-      key: 2,
-      name: "Hình dáng cơ thể",
-      description: "Đánh giá hình dáng tổng thể của cá",
-    },
-    { key: 3, name: "Hoa văn", description: "Đánh giá hoa văn trên thân cá" },
-    { key: 4, name: "Kích thước", description: "Đánh giá kích thước của cá" },
-  ]);
+  const {
+    criteria,
+    fetchCriteria,
+    createCriteria,
+    currentPage,
+    totalItems,
+    pageSize,
+    totalPages,
+    isLoading,
+  } = useCriteria();
 
-  const [isModalVisible, setIsModalVisible] = useState(false);
-  const [currentCriteria, setCurrentCriteria] = useState(null);
+  const [isModalVisible, setIsModalVisible] = React.useState(false);
+  const [currentCriteria, setCurrentCriteria] = React.useState(null);
   const [form] = Form.useForm();
+
+  useEffect(() => {
+    fetchCriteria(currentPage, pageSize);
+  }, [currentPage, pageSize]);
 
   const showModal = (criteria = null) => {
     if (criteria) {
@@ -28,6 +36,7 @@ const Criteria = () => {
       form.setFieldsValue(criteria);
     } else {
       setCurrentCriteria(null);
+      form.resetFields();
     }
     setIsModalVisible(true);
   };
@@ -37,23 +46,36 @@ const Criteria = () => {
     form.resetFields();
   };
 
-  const handleSave = (values) => {
-    if (currentCriteria) {
-      const updatedData = criteriaData.map((item) =>
-        item.key === currentCriteria.key ? { ...item, ...values } : item
-      );
-      setCriteriaData(updatedData);
+  const handleSave = async (values) => {
+    const newOrder =
+      criteria.length > 0
+        ? Math.max(...criteria.map((c) => c.order || 0)) + 1
+        : 1;
+    const newCriteria = { ...values, order: newOrder };
+
+    const result = await createCriteria(newCriteria);
+
+    console.log("API Response:", result);
+
+    if (result) {
+      notification.success({
+        message: "Thêm tiêu chí thành công",
+        description: "Tiêu chí đã được thêm thành công.",
+        placement: "topRight",
+      });
+
+      await fetchCriteria(1, pageSize);
     } else {
-      const newKey = criteriaData.length + 1;
-      setCriteriaData([...criteriaData, { key: newKey, ...values }]);
+      notification.error({
+        message: "Thêm tiêu chí thất bại",
+        description:
+          result?.message || "Không thể thêm tiêu chí. Vui lòng thử lại!",
+        placement: "topRight",
+      });
     }
+
     setIsModalVisible(false);
     form.resetFields();
-  };
-
-  const handleDelete = (key) => {
-    const updatedData = criteriaData.filter((item) => item.key !== key);
-    setCriteriaData(updatedData);
   };
 
   const columns = [
@@ -61,7 +83,7 @@ const Criteria = () => {
       title: "Tên Tiêu Chí",
       dataIndex: "name",
       key: "name",
-      sorter: (a, b) => a.name.localeCompare(b.name), // Thêm chức năng sắp xếp
+      sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
       title: "Mô Tả",
@@ -73,18 +95,15 @@ const Criteria = () => {
       key: "action",
       render: (_, record) => (
         <div className="flex items-center space-x-2">
-          {/* Nút Sửa */}
           <Button
             type="text"
             icon={<EditOutlined />}
             onClick={() => showModal(record)}
             className="text-gray-500 hover:text-blue-500"
           />
-          {/* Nút Xóa */}
           <Button
             type="text"
             icon={<DeleteOutlined />}
-            onClick={() => handleDelete(record.key)}
             className="text-gray-500 hover:text-red-500"
             danger
           />
@@ -96,7 +115,11 @@ const Criteria = () => {
   return (
     <div>
       <div className=" flex justify-end relative top-[-40px] right-0">
-        <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
+        <Button
+          type="primary"
+          onClick={() => showModal()}
+          icon={<PlusOutlined />}
+        >
           Thêm mới
         </Button>
       </div>
@@ -104,10 +127,22 @@ const Criteria = () => {
       <div className="p-4 bg-white rounded-lg shadow-md">
         <Table
           columns={columns}
-          dataSource={criteriaData}
-          pagination={{ pageSize: 5 }}
-          rowKey="key"
+          dataSource={criteria}
+          pagination={false}
+          loading={isLoading}
+          rowKey="id"
         />
+
+        <div className="flex justify-end items-center mt-4">
+          <span>{`${(currentPage - 1) * pageSize + 1}-${Math.min(currentPage * pageSize, totalItems)} của ${totalItems}`}</span>
+          <Pagination
+            current={currentPage}
+            total={totalItems}
+            pageSize={pageSize}
+            showSizeChanger
+            onChange={(page, size) => fetchCriteria(page, size)}
+          />
+        </div>
 
         <Modal
           title={currentCriteria ? "Cập Nhật Tiêu Chí" : "Thêm Tiêu Chí"}
@@ -115,12 +150,7 @@ const Criteria = () => {
           onCancel={handleCancel}
           footer={null}
         >
-          <Form
-            form={form}
-            layout="vertical"
-            onFinish={handleSave}
-            initialValues={{}}
-          >
+          <Form form={form} layout="vertical" onFinish={handleSave}>
             <Form.Item
               name="name"
               label="Tên Tiêu Chí"

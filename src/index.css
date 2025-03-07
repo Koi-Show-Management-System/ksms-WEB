@@ -83,3 +83,14 @@
 .ant-form-item-control-wrapper {
   margin-top: 5px; /* Khoảng cách giữa các input */
 }
+.ant-collapse > .ant-collapse-item > .ant-collapse-header {
+  border-bottom: none !important;
+}
+.ant-collapse {
+  border: none !important;
+  /* background: transparent !important;  */
+}
+.ant-collapse-content {
+  border-top: none !important;
+  border-bottom: none !important;
+}

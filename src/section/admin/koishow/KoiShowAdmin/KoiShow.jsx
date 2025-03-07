@@ -1,78 +1,76 @@
-import React, { useState } from "react";
-import { Button, Table, Input, DatePicker, Tag } from "antd";
-import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
+import React, { useEffect, useState } from "react";
+import {
+  Button,
+  Table,
+  Tag,
+  Spin,
+  message,
+  Pagination,
+  Input,
+  DatePicker,
+} from "antd";
+import { EditOutlined } from "@ant-design/icons";
 import NoKoiShow from "../../../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
+import useKoiShow from "../../../../hooks/useKoiShow";
+import dayjs from "dayjs";
 
 function KoiShow() {
+  const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
-  const navigate = useNavigate();
+  const [filteredData, setFilteredData] = useState([]);
+  const {
+    koiShows,
+    isLoading,
+    error,
+    fetchKoiShowList,
+    currentPage,
+    pageSize,
+    totalItems,
+  } = useKoiShow();
 
-  const [data, setData] = useState([
-    {
-      key: "1",
-      id: "1",
-      showName: "Triển lãm Cá Koi 2025",
-      date: "29/05/2025",
-      participants: "684/1000",
-      status: "Đang diễn ra",
-    },
-    {
-      key: "2",
-      id: "2",
-      showName: "Triển lãm Cá Koi 2024",
-      date: "29/05/2024",
-      participants: "680/1000",
-      status: "Hoàn thành",
-    },
-  ]);
+  useEffect(() => {
+    fetchKoiShowList(currentPage, pageSize);
+  }, []);
 
-  const handleStatusChange = (record) => {
-    const newData = data.map((item) => {
-      if (item.key === record.key) {
-        return {
-          ...item,
-          status: item.status === "Hoàn thành" ? "Đang diễn ra" : "Hoàn thành",
-        };
-      }
-      return item;
-    });
-    setData(newData);
-  };
-
-  const getFilteredData = () => {
-    return data.filter((item) => {
-      const matchName = item.showName
-        .toLowerCase()
-        .includes(searchText.toLowerCase());
-      const matchDate = selectedDate
-        ? item.date === selectedDate.format("DD/MM/YYYY")
-        : true;
-      return matchName && matchDate;
-    });
-  };
+  useEffect(() => {
+    handleSearch();
+  }, [searchText, selectedDate, koiShows]);
 
   const handleSearch = () => {
-    console.log(
-      "Tìm kiếm với:",
-      searchText,
-      selectedDate?.format("DD/MM/YYYY")
-    );
+    const filtered = koiShows.filter((item) => {
+      const matchName = item.name
+        .toLowerCase()
+        .includes(searchText.toLowerCase());
+
+      const matchDate = selectedDate
+        ? dayjs(item.startExhibitionDate).format("DD/MM/YYYY") ===
+          selectedDate.format("DD/MM/YYYY")
+        : true;
+
+      return matchName && matchDate;
+    });
+    setFilteredData(filtered);
   };
+
+  const handlePageChange = (page, size) => {
+    fetchKoiShowList(page, size);
+  };
+
+  if (isLoading)
+    return <Spin size="large" className="flex justify-center mt-10" />;
+  if (error) {
+    message.error("Lỗi tải dữ liệu!");
+    return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
+  }
 
   const columns = [
     {
-      title: "ID",
-      dataIndex: "id",
-      key: "id",
-      sorter: (a, b) => a.id.localeCompare(b.id),
-    },
-    {
-      title: "Tên Triển Lãm",
-      dataIndex: "showName",
-      key: "showName",
-      sorter: (a, b) => a.showName.localeCompare(b.showName),
+      title: "Tên Sự Kiện",
+      dataIndex: "name",
+      key: "name",
+      sorter: (a, b) => a.name.localeCompare(b.name),
       render: (text, record) => (
         <span
           className="text-blue-600 cursor-pointer hover:underline"
@@ -83,55 +81,61 @@ function KoiShow() {
       ),
     },
     {
-      title: "Ngày",
-      dataIndex: "date",
-      key: "date",
-      sorter: (a, b) => new Date(a.date) - new Date(b.date),
+      title: "Ngày Bắt Đầu",
+      dataIndex: "startExhibitionDate",
+      key: "startExhibitionDate",
+      sorter: (a, b) =>
+        new Date(a.startExhibitionDate) - new Date(b.startExhibitionDate),
+      render: (date) => new Date(date).toLocaleDateString("vi-VN"), // Hiển thị dạng DD/MM/YYYY
     },
     {
-      title: "Số Người Tham Gia",
-      dataIndex: "participants",
-      key: "participants",
-      sorter: (a, b) => {
-        const [aCount] = a.participants.split("/");
-        const [bCount] = b.participants.split("/");
-        return parseInt(aCount) - parseInt(bCount);
-      },
+      title: "Phí Đăng Kí",
+      dataIndex: "registrationFee",
+      key: "registrationFee",
+      sorter: (a, b) => a.registrationFee - b.registrationFee,
+      render: (fee) =>
+        fee
+          ? fee.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+          : "Miễn phí",
+    },
+
+    {
+      title: "Địa Điểm",
+      dataIndex: "location",
+      key: "location",
     },
     {
       title: "Trạng Thái",
       dataIndex: "status",
       key: "status",
       sorter: (a, b) => a.status.localeCompare(b.status),
-      render: (status, record) => (
+      render: (status) => (
         <Tag
-          color={status === "Hoàn thành" ? "success" : "processing"}
-          className="rounded-full px-3 py-1 cursor-pointer"
-          onClick={() => handleStatusChange(record)}
+          color={
+            status === "pending"
+              ? "orange"
+              : status === "approved"
+                ? "green"
+                : status === "upcoming"
+                  ? "blue"
+                  : "default"
+          }
         >
-          {status}
+          {status === "pending"
+            ? "Chờ duyệt"
+            : status === "approved"
+              ? "Đã duyệt"
+              : status === "upcoming"
+                ? "Sắp diễn ra"
+                : "Trạng thái khác"}
         </Tag>
       ),
     },
     {
-      title: "Hành Động",
-      key: "action",
-      render: () => (
-        <div className="flex items-center space-x-2">
-          {/* Edit Button */}
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            className="text-gray-500 hover:text-blue-500"
-          />
-          {/* Delete Button */}
-          <Button
-            type="text"
-            icon={<DeleteOutlined />}
-            className="text-gray-500 hover:text-red-500"
-            danger
-          />
-        </div>
+      title: "Chỉnh Sửa",
+      key: "edit",
+      render: (_, record) => (
+        <Button type="text" icon={<EditOutlined style={{ color: "red" }} />} />
       ),
     },
   ];
@@ -168,17 +172,23 @@ function KoiShow() {
           </div>
         </div>
       </div>
-
       <Table
         columns={columns}
-        dataSource={getFilteredData()}
+        dataSource={filteredData.map((item) => ({
+          key: item.id,
+          id: item.id,
+          name: item.name,
+          startExhibitionDate: item.startExhibitionDate,
+          registrationFee: item.registrationFee,
+          location: item.location,
+          status: item.status,
+        }))}
+        pagination={false}
         className="bg-white rounded-lg shadow-sm"
         locale={{
           emptyText: (
             <div className="flex flex-col items-center justify-center py-12">
-              <h3 className="text-xl font-bold">
-                Không có triển lãm nào hôm nay
-              </h3>
+              <h3 className="text-xl font-bold">Không có triển lãm nào</h3>
               <img
                 src={NoKoiShow}
                 alt="No shows"
@@ -188,6 +198,17 @@ function KoiShow() {
           ),
         }}
       />
+
+      <div className="flex justify-end items-center mt-4">
+        <span>{`1-${koiShows.length} của ${totalItems}`}</span>
+        <Pagination
+          current={currentPage}
+          total={totalItems}
+          pageSize={pageSize}
+          showSizeChanger
+          onChange={handlePageChange}
+        />
+      </div>
     </div>
   );
 }

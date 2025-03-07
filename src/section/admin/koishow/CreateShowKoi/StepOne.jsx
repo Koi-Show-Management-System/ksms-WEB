@@ -18,6 +18,7 @@ import {
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { Cloudinary } from "@cloudinary/url-gen";
+import useAccountTeam from "../../../../hooks/useAccountTeam";
 
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -28,31 +29,35 @@ const cloudinary = new Cloudinary({
   },
 });
 
-function StepOne({ updateFormData }) {
-  const [data, setData] = useState({
-    name: "",
-    description: "",
-    startDate: null,
-    endDate: null,
-    startExhibitionDate: null,
-    endExhibitionDate: null,
-    minParticipants: "",
-    maxParticipants: "",
-    location: "",
-    imgUrl: "",
-    hasGrandChampion: false,
-    hasBestInShow: false,
-    createSponsorRequests: [],
-    createTicketTypeRequests: [],
+function StepOne({ updateFormData, initialData, showErrors }) {
+  const [data, setData] = useState(initialData);
+  const [uploadedImages, setUploadedImages] = useState([]);
+  const { accountManage, fetchAccountTeam } = useAccountTeam();
+  const staff = accountManage.staff || [];
+  const managers = accountManage.managers || [];
+  const [timeErrors, setTimeErrors] = useState({
+    startDate: "",
+    endDate: "",
+    startExhibitionDate: "",
+    endExhibitionDate: "",
   });
 
-  // Track uploaded images separately for UI display
-  const [uploadedImages, setUploadedImages] = useState([]);
+  useEffect(() => {
+    if (JSON.stringify(data) !== JSON.stringify(initialData)) {
+      setData(initialData);
+    }
+  }, [initialData]);
 
   useEffect(() => {
-    updateFormData(data);
-    console.log("Current formData:", data);
+    if (JSON.stringify(data) !== JSON.stringify(initialData)) {
+      updateFormData(data);
+      console.log("Current formData:", data);
+    }
   }, [data]);
+
+  useEffect(() => {
+    fetchAccountTeam(1, 100);
+  }, []);
 
   const handleImageUpload = async ({ fileList }) => {
     try {
@@ -203,22 +208,51 @@ function StepOne({ updateFormData }) {
     setData({ ...data, createTicketTypeRequests: newTicketTypes });
   };
 
+  const handleDateChange = (field, value) => {
+    const newTimeErrors = { ...timeErrors };
+
+    if (!value) {
+      newTimeErrors[field] = "Vui lòng chọn ngày.";
+    } else if (
+      field === "endDate" &&
+      data.startDate &&
+      value.isBefore(data.startDate)
+    ) {
+      newTimeErrors[field] = "Ngày kết thúc phải sau ngày bắt đầu.";
+    } else if (
+      field === "endExhibitionDate" &&
+      data.startExhibitionDate &&
+      value.isBefore(data.startExhibitionDate)
+    ) {
+      newTimeErrors[field] = "Ngày kết thúc sự kiện phải sau ngày bắt đầu.";
+    } else {
+      newTimeErrors[field] = "";
+    }
+
+    setTimeErrors(newTimeErrors);
+    setData({ ...data, [field]: value.tz("Asia/Ho_Chi_Minh").format() });
+  };
+
   return (
     <div className="space-y-4">
       <h2 className="text-2xl font-semibold mb-6">
         Bước 1: Thông tin và Chi tiết
       </h2>
 
-      {/* Form thông tin chương trình */}
       <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+        <h3 className="block text-sm font-medium text-gray-700 mb-1">
           Tên chương trình
-        </label>
+        </h3>
         <Input
           placeholder="Nhập tên chương trình"
           value={data.name}
           onChange={(e) => setData({ ...data, name: e.target.value })}
         />
+        {showErrors && !data.name && (
+          <p className="text-red-500 text-xs mt-1">
+            Tên chương trình là bắt buộc
+          </p>
+        )}
       </div>
 
       <div className="mb-4">
@@ -231,60 +265,100 @@ function StepOne({ updateFormData }) {
           value={data.description}
           onChange={(e) => setData({ ...data, description: e.target.value })}
         />
+        {showErrors && !data.description && (
+          <p className="text-red-500 text-xs mt-1">
+            Mô tả chương trình là bắt buộc.{" "}
+          </p>
+        )}
       </div>
 
       <div className="flex space-x-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700">
             Ngày bắt đầu đăng ký
           </label>
           <DatePicker
             showTime
             className="w-full"
-            value={data.startDate ? dayjs(data.startDate) : null}
-            onChange={(value) => setData({ ...data, startDate: value })}
+            value={
+              data.startDate
+                ? dayjs(data.startDate).tz("Asia/Ho_Chi_Minh")
+                : null
+            }
+            onChange={(value) => handleDateChange("startDate", value)}
+            format="YYYY-MM-DD HH:mm:ss"
+            placeholder="Chọn ngày bắt đầu"
           />
+          {timeErrors.startDate && (
+            <p className="text-red-500 text-xs mt-1">{timeErrors.startDate}</p>
+          )}
         </div>
+
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
+          <label className="block text-sm font-medium text-gray-700">
             Ngày kết thúc đăng ký
           </label>
           <DatePicker
             showTime
             className="w-full"
-            value={data.endDate ? dayjs(data.endDate) : null}
-            onChange={(value) => setData({ ...data, endDate: value })}
+            value={
+              data.endDate ? dayjs(data.endDate).tz("Asia/Ho_Chi_Minh") : null
+            }
+            onChange={(value) => handleDateChange("endDate", value)}
+            format="YYYY-MM-DD HH:mm:ss"
+            placeholder="Chọn ngày kết thúc"
           />
+          {timeErrors.endDate && (
+            <p className="text-red-500 text-xs mt-1">{timeErrors.endDate}</p>
+          )}
         </div>
       </div>
+
       <div className="flex space-x-4">
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ngày bắt đầu sự kiện và triễn lãm
+          <label className="block text-sm font-medium text-gray-700">
+            Ngày bắt đầu sự kiện
           </label>
           <DatePicker
             showTime
             className="w-full"
             value={
-              data.startExhibitionDate ? dayjs(data.startExhibitionDate) : null
+              data.startExhibitionDate
+                ? dayjs(data.startExhibitionDate).tz("Asia/Ho_Chi_Minh")
+                : null
             }
-            onChange={(value) =>
-              setData({ ...data, startExhibitionDate: value })
-            }
+            onChange={(value) => handleDateChange("startExhibitionDate", value)}
+            format="YYYY-MM-DD HH:mm:ss"
+            placeholder="Chọn ngày bắt đầu sự kiện"
           />
+          {timeErrors.startExhibitionDate && (
+            <p className="text-red-500 text-xs mt-1">
+              {timeErrors.startExhibitionDate}
+            </p>
+          )}
         </div>
+
         <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ngày kết thúc sự kiện và triễn lãm
+          <label className="block text-sm font-medium text-gray-700">
+            Ngày kết thúc sự kiện
           </label>
           <DatePicker
             showTime
             className="w-full"
             value={
-              data.endExhibitionDate ? dayjs(data.endExhibitionDate) : null
+              data.endExhibitionDate
+                ? dayjs(data.endExhibitionDate).tz("Asia/Ho_Chi_Minh")
+                : null
             }
-            onChange={(value) => setData({ ...data, endExhibitionDate: value })}
+            onChange={(value) => handleDateChange("endExhibitionDate", value)}
+            format="YYYY-MM-DD HH:mm:ss"
+            placeholder="Chọn ngày kết thúc sự kiện"
           />
+          {timeErrors.endExhibitionDate && (
+            <p className="text-red-500 text-xs mt-1">
+              {timeErrors.endExhibitionDate}
+            </p>
+          )}
         </div>
       </div>
 
@@ -301,6 +375,11 @@ function StepOne({ updateFormData }) {
               setData({ ...data, minParticipants: e.target.value })
             }
           />
+          {showErrors && !data.minParticipants && (
+            <p className="text-red-500 text-xs mt-1">
+              Số lượng tối thiểu là bắt buộc.{" "}
+            </p>
+          )}
         </div>
 
         <div className="flex-1">
@@ -315,22 +394,52 @@ function StepOne({ updateFormData }) {
               setData({ ...data, maxParticipants: e.target.value })
             }
           />
+          {showErrors && !data.maxParticipants && (
+            <p className="text-red-500 text-xs mt-1">
+              Số lượng tối đa là bắt buộc.{" "}
+            </p>
+          )}
         </div>
       </div>
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
-          Địa điểm
-        </label>
-        <Input
-          placeholder="Nhập địa điểm tổ chức"
-          value={data.location}
-          onChange={(e) => setData({ ...data, location: e.target.value })}
-        />
+      <div className="flex space-x-4">
+        <div className="flex-1 ">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Địa điểm
+          </label>
+          <Input
+            placeholder="Nhập địa điểm tổ chức"
+            value={data.location}
+            onChange={(e) => setData({ ...data, location: e.target.value })}
+          />
+          {showErrors && !data.location && (
+            <p className="text-red-500 text-xs mt-1">
+              Địa điểm tổ chức là bắt buộc.{" "}
+            </p>
+          )}
+        </div>
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Phí đăng ký (VND)
+          </label>
+          <Input
+            type="number"
+            placeholder="Nhập phí đăng ký"
+            value={data.registrationFee}
+            onChange={(e) =>
+              setData({ ...data, registrationFee: Number(e.target.value) })
+            }
+          />
+          {showErrors && !data.location && (
+            <p className="text-red-500 text-xs mt-1">
+              Phí đăng ký là bắt buộc.{" "}
+            </p>
+          )}
+        </div>
       </div>
 
       {/* Tải lên Hình ảnh */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div className="">
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Hình ảnh (Tải lên)
         </label>
         <Upload
@@ -350,23 +459,37 @@ function StepOne({ updateFormData }) {
             <div className="mt-2">Upload</div>
           </div>
         </Upload>
-        {data.imgUrl && (
+        {showErrors && !data.imgUrl && (
+          <p className="text-red-500 text-xs mt-1">
+            Hình ảnh chương trình là bắt buộc.{" "}
+          </p>
+        )}
+        {/* {data.imgUrl && (
           <div className="mt-2">
             <p className="text-sm text-gray-500">
               Selected image URL: {data.imgUrl}
             </p>
           </div>
-        )}
+        )} */}
       </div>
 
       {/* Phần Sponsor Requests */}
-      <label className="block text-sm font-bold text-gray-700 mb-1">
-        Quản lý nhà tài trợ{" "}
+      {/* Quản lý nhà tài trợ */}
+      <label className="block text-sm font-bold text-gray-700 ">
+        Quản lý nhà tài trợ
       </label>
       <Button onClick={handleAddSponsor} icon={<PlusOutlined />}>
         Thêm Sponsor
       </Button>
-      <Collapse className="mt-4">
+
+      {/* Hiển thị lỗi nếu chưa có nhà tài trợ nào */}
+      {showErrors && data.createSponsorRequests.length === 0 && (
+        <p className="text-red-500 text-xs mt-1">
+          Cần có ít nhất một nhà tài trợ.
+        </p>
+      )}
+
+      <Collapse>
         {data.createSponsorRequests.map((sponsor, index) => (
           <Panel
             header={`Sponsor ${index + 1}`}
@@ -386,6 +509,7 @@ function StepOne({ updateFormData }) {
             }
           >
             <Space direction="vertical" style={{ width: "100%" }}>
+              {/* Tên Sponsor */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Tên Sponsor
@@ -397,8 +521,14 @@ function StepOne({ updateFormData }) {
                   }
                   placeholder="Nhập tên sponsor"
                 />
+                {showErrors && !sponsor.name && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Tên nhà tài trợ là bắt buộc.
+                  </p>
+                )}
               </div>
 
+              {/* Logo Sponsor */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Logo Sponsor
@@ -426,15 +556,14 @@ function StepOne({ updateFormData }) {
                     <div className="mt-2">Upload Logo</div>
                   </div>
                 </Upload>
-                {sponsor.logoUrl && (
-                  <div className="mt-2">
-                    <p className="text-sm text-gray-500">
-                      Logo URL: {sponsor.logoUrl}
-                    </p>
-                  </div>
+                {showErrors && !sponsor.logoUrl && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Logo nhà tài trợ là bắt buộc.
+                  </p>
                 )}
               </div>
 
+              {/* Số Tiền Đầu Tư */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Số Tiền Đầu Tư
@@ -447,14 +576,20 @@ function StepOne({ updateFormData }) {
                   }
                   placeholder="Nhập số tiền tài trợ"
                 />
+                {showErrors &&
+                  (!sponsor.investMoney || sponsor.investMoney <= 0) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Số tiền tài trợ phải lớn hơn 0.
+                    </p>
+                  )}
               </div>
             </Space>
           </Panel>
         ))}
       </Collapse>
 
-      <div className="mt-4">
-        <label className="block text-sm font-medium text-gray-700 mb-1">
+      <div>
+        <label className="block text-sm font-medium text-gray-700 mb-3">
           Giải thưởng lớn
         </label>
         <Checkbox
@@ -471,15 +606,19 @@ function StepOne({ updateFormData }) {
             setData({ ...data, hasBestInShow: e.target.checked })
           }
         >
-          Include Best in Show Award
+          Giải GrandChampion
         </Checkbox>
       </div>
-      {/* Phần Loại Vé */}
-      <h3 className="text-sm font-bold mb-4">Quản lý vé</h3>
-
+      {/* Quản lý vé */}
+      <h3 className="text-sm font-bold mb-4 text-gray-700">Quản lý vé</h3>
       <Button onClick={handleAddTicketType} icon={<PlusOutlined />}>
         Thêm Loại Vé
       </Button>
+
+      {/* Hiển thị lỗi nếu chưa có loại vé nào */}
+      {showErrors && data.createTicketTypeRequests.length === 0 && (
+        <p className="text-red-500 text-xs mt-1">Cần có ít nhất một loại vé.</p>
+      )}
 
       <Collapse className="mt-4">
         {data.createTicketTypeRequests.map((ticket, index) => (
@@ -501,6 +640,7 @@ function StepOne({ updateFormData }) {
             }
           >
             <Space direction="vertical" style={{ width: "100%" }}>
+              {/* Tên Loại Vé */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Tên Loại Vé
@@ -512,8 +652,14 @@ function StepOne({ updateFormData }) {
                   }
                   placeholder="Nhập tên loại vé"
                 />
+                {showErrors && !ticket.name && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Tên loại vé là bắt buộc.
+                  </p>
+                )}
               </div>
 
+              {/* Giá Vé */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Giá Vé
@@ -525,9 +671,16 @@ function StepOne({ updateFormData }) {
                     handleTicketTypeChange(index, "price", e.target.value)
                   }
                   placeholder="Nhập giá vé"
+                  min={1}
                 />
+                {showErrors && (!ticket.price || ticket.price <= 0) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Giá vé phải lớn hơn 0.
+                  </p>
+                )}
               </div>
 
+              {/* Số Lượng Vé */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
                   Số Lượng Vé
@@ -543,12 +696,78 @@ function StepOne({ updateFormData }) {
                     )
                   }
                   placeholder="Nhập số lượng vé"
+                  min={1}
                 />
+                {showErrors &&
+                  (!ticket.availableQuantity ||
+                    ticket.availableQuantity <= 0) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Số lượng vé phải lớn hơn 0.
+                    </p>
+                  )}
               </div>
             </Space>
           </Panel>
         ))}
       </Collapse>
+
+      <div className="flex space-x-4">
+        {/* Select Manager */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Chọn Manager
+          </label>
+          <Select
+            mode="multiple"
+            className="w-full"
+            placeholder="Chọn Manager"
+            value={data.assignManagerRequests}
+            onChange={(value) =>
+              setData({ ...data, assignManagerRequests: value })
+            }
+          >
+            {managers.map((manager) => (
+              <Option key={manager.id} value={manager.id}>
+                {manager.fullName}
+              </Option>
+            ))}
+          </Select>
+          {/* Hiển thị lỗi nếu chưa chọn Manager */}
+          {showErrors && data.assignManagerRequests.length === 0 && (
+            <p className="text-red-500 text-xs mt-1">
+              Bạn phải chọn ít nhất một Manager.
+            </p>
+          )}
+        </div>
+
+        {/* Select Staff */}
+        <div className="flex-1">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Chọn Staff
+          </label>
+          <Select
+            mode="multiple"
+            className="w-full"
+            placeholder="Chọn Staff"
+            value={data.assignStaffRequests}
+            onChange={(value) =>
+              setData({ ...data, assignStaffRequests: value })
+            }
+          >
+            {staff.map((s) => (
+              <Option key={s.id} value={s.id}>
+                {s.fullName}
+              </Option>
+            ))}
+          </Select>
+          {/* Hiển thị lỗi nếu chưa chọn Staff */}
+          {showErrors && data.assignStaffRequests.length === 0 && (
+            <p className="text-red-500 text-xs mt-1">
+              Bạn phải chọn ít nhất một Staff.
+            </p>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
