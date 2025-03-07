@@ -53,7 +53,7 @@ jobs:
         TIMESTAMP=$(date +%Y%m%d%H%M%S)
         RELEASE_PATH="/var/www/ksms-frontend/releases/$TIMESTAMP"
         
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p $RELEASE_PATH"
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo mkdir -p $RELEASE_PATH"
         
         # Copy files
         scp -r ./dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:$RELEASE_PATH/
@@ -64,5 +64,5 @@ jobs:
         # Nginx config đã được cấu hình để phục vụ từ thư mục current
         ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "sudo nginx -t && sudo systemctl reload nginx"
         
-        # Cleanup old releases (keep last 3)
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/ksms-frontend/releases && ls -t | tail -n +4 | xargs -I {} rm -rf {}"
+        # Cleanup old releases (keep last 1)
+        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "cd /var/www/ksms-frontend/releases && ls -t | tail -n +2 | xargs -I {} rm -rf {}"
