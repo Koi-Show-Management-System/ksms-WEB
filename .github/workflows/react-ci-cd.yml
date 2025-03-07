@@ -3,11 +3,6 @@ name: Frontend CI/CD Pipeline
 on:
   push:
     branches: [ main ]
-    paths:
-      - 'src/**'
-      - 'public/**'
-      - 'package.json'
-      - 'vite.config.js'
   pull_request:
     branches: [ main ]
   workflow_dispatch:
