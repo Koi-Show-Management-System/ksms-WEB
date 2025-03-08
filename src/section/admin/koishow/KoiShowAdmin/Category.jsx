@@ -27,6 +27,7 @@ import {
   FieldTimeOutlined,
 } from "@ant-design/icons";
 import useCategory from "../../../../hooks/useCategory";
+import CreateCategory from "./CreateCategory";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -60,6 +61,10 @@ function Category({ showId }) {
 
   const handleFilterVariety = (value) => {
     setFilterVariety(value);
+  };
+  const handleCategoryCreated = () => {
+    // Refresh the categories list after a new category is created
+    fetchCategories(showId, 1, 10);
   };
 
   const showModal = () => {
@@ -118,54 +123,53 @@ function Category({ showId }) {
       sorter: (a, b) => (a.name || "").localeCompare(b.name || ""),
     },
     {
-      title: "Danh Mục Kích Thước",
+      title: "Kích Thước",
       key: "sizeCategory",
       sorter: (a, b) => {
         return a.sizeMin - b.sizeMin;
       },
       render: (_, record) => (
         <span>
-          <Typography.Text className="flex justify-center">
+          <Typography.Text>
             {record.sizeMin}-{record.sizeMax} cm
           </Typography.Text>
         </span>
       ),
-      width: 200,
     },
-    {
-      title: "Giống",
-      key: "variety",
-      render: (_, record) => {
-        // Check if varieties exists and has items
-        if (
-          !record.varieties ||
-          !Array.isArray(record.varieties) ||
-          record.varieties.length === 0
-        ) {
-          return <span>N/A</span>;
-        }
+    // {
+    //   title: "Giống",
+    //   key: "variety",
+    //   render: (_, record) => {
+    //     // Check if varieties exists and has items
+    //     if (
+    //       !record.varieties ||
+    //       !Array.isArray(record.varieties) ||
+    //       record.varieties.length === 0
+    //     ) {
+    //       return <span>N/A</span>;
+    //     }
 
-        // Join all variety names
-        return <span>{record.varieties.join(", ")}</span>;
-      },
-      filters: [
-        { text: "Kohaku", value: "Kohaku" },
-        { text: "Showa", value: "Showa" },
-        { text: "Sanke", value: "Sanke" },
-        { text: "Showa Sanshoku", value: "Showa Sanshoku" },
-      ],
-      onFilter: (value, record) => {
-        if (
-          !record.varieties ||
-          !Array.isArray(record.varieties) ||
-          record.varieties.length === 0
-        ) {
-          return false;
-        }
+    //     // Join all variety names
+    //     return <span>{record.varieties.join(", ")}</span>;
+    //   },
+    //   filters: [
+    //     { text: "Kohaku", value: "Kohaku" },
+    //     { text: "Showa", value: "Showa" },
+    //     { text: "Sanke", value: "Sanke" },
+    //     { text: "Showa Sanshoku", value: "Showa Sanshoku" },
+    //   ],
+    //   onFilter: (value, record) => {
+    //     if (
+    //       !record.varieties ||
+    //       !Array.isArray(record.varieties) ||
+    //       record.varieties.length === 0
+    //     ) {
+    //       return false;
+    //     }
 
-        return record.varieties.some((variety) => variety === value);
-      },
-    },
+    //     return record.varieties.some((variety) => variety === value);
+    //   },
+    // },
     {
       title: "SL Koi tối đa",
       dataIndex: "maxEntries",
@@ -231,14 +235,11 @@ function Category({ showId }) {
           />
         </div>
 
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={showModal}
-          className="bg-blue-500 hover:bg-blue-600"
-        >
-          Tạo mới
-        </Button>
+        {/* Create Category Modal */}
+        <CreateCategory
+          showId={showId}
+          onCategoryCreated={handleCategoryCreated}
+        />
       </div>
 
       <Table
@@ -254,71 +255,6 @@ function Category({ showId }) {
         loading={isLoading}
         rowKey={(record) => record.id || record.key}
       />
-
-      {/* Create Category Modal */}
-      <Modal
-        title="Tạo Danh Mục Mới"
-        open={isModalVisible}
-        onCancel={handleCancel}
-        footer={null}
-      >
-        <Form form={form} layout="vertical" onFinish={handleCreate}>
-          <Form.Item
-            name="categoryName"
-            label="Tên Danh Mục"
-            rules={[{ required: true, message: "Vui lòng nhập tên danh mục!" }]}
-          >
-            <Input placeholder="Nhập tên danh mục" />
-          </Form.Item>
-
-          <Form.Item
-            name="sizeCategory"
-            label="Danh Mục Kích Thước"
-            rules={[
-              { required: true, message: "Vui lòng chọn danh mục kích thước!" },
-            ]}
-          >
-            <Select placeholder="Chọn danh mục kích thước">
-              <Option value="Dưới 20 cm">Dưới 20 cm</Option>
-              <Option value="20-30 cm">20-30 cm</Option>
-              <Option value="30-50 cm">30-50 cm</Option>
-              <Option value="Trên 50 cm">Trên 50 cm</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="variety"
-            label="Giống"
-            rules={[{ required: true, message: "Vui lòng chọn giống!" }]}
-          >
-            <Select placeholder="Chọn giống">
-              <Option value="Kohaku">Kohaku</Option>
-              <Option value="Showa">Showa</Option>
-              <Option value="Sanke">Sanke</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="status"
-            label="Trạng Thái"
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái!" }]}
-          >
-            <Select placeholder="Chọn trạng thái">
-              <Option value="Hoạt động">Hoạt động</Option>
-              <Option value="Không hoạt động">Không hoạt động</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item className="flex justify-end mb-0">
-            <Button onClick={handleCancel} className="mr-2">
-              Hủy
-            </Button>
-            <Button type="primary" htmlType="submit" className="bg-blue-500">
-              Tạo mới
-            </Button>
-          </Form.Item>
-        </Form>
-      </Modal>
 
       {/* Category Detail Drawer */}
       <Drawer
@@ -584,6 +520,7 @@ function Category({ showId }) {
           </Tabs>
         )}
       </Drawer>
+
     </div>
   );
 }

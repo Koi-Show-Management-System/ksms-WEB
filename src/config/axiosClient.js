@@ -2,8 +2,8 @@ import axios from "axios";
 import Cookies from "js-cookie";
 
 const axiosClient = axios.create({
-  // baseURL: "http://localhost:5250/api/v1",
-  baseURL: "https://api.ksms.news/api/v1",
+  baseURL: "http://localhost:5250/api/v1",
+  // baseURL: "https://api.ksms.news/api/v1",
 });
 
 axiosClient.interceptors.request.use(async (config) => {

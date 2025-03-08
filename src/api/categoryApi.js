@@ -13,5 +13,7 @@ const getCategory = (id, page, size) => {
 const getDetail = (id) => {
   return axiosClient.get(`/competition-category/${id}`);
 };
-
-export { getCategory, getDetail };
+const createCategory = (categoryData) => {
+  return axiosClient.post("competition-category/create", categoryData);
+};
+export { getCategory, getDetail, createCategory };

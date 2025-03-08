@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { getRegistration } from "../api/registrationApi";
+import {
+  getRegistration,
+  updateStatusRegistration,
+} from "../api/registrationApi";
 
 const useRegistration = create((set, get) => ({
   registration: [],
@@ -10,8 +13,6 @@ const useRegistration = create((set, get) => ({
   error: null,
   totalPages: 1,
   showIds: [], // Thêm state mới
-
-  setShowIds: (ids) => set({ showIds }), // Thêm hàm để cập nhật showIds
 
   fetchRegistration: async (page = 1, size = 10, showIds) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
@@ -63,6 +64,22 @@ const useRegistration = create((set, get) => ({
     } catch (error) {
       console.error("API Error:", error);
       set({ error: error, isLoading: false });
+    }
+  },
+  updateStatus: async (id, status) => {
+    try {
+      const response = await updateStatusRegistration(id, status);
+      if (response && response.status === 200) {
+        // Refresh the registration list after successful update
+        const { currentPage, pageSize, showIds } = get();
+        get().fetchRegistration(currentPage, pageSize, showIds);
+        return { success: true, data: response.data };
+      } else {
+        return { success: false, error: response };
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      return { success: false, error };
     }
   },
 }));

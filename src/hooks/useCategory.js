@@ -1,8 +1,6 @@
 import { create } from "zustand";
-import {
-  getCategory,
-  getDetail,
-} from "../api/categoryApi";
+import { createCategory, getCategory, getDetail } from "../api/categoryApi";
+import { notification } from "antd";
 
 const useCategory = create((set, get) => ({
   categories: [],
@@ -113,6 +111,78 @@ const useCategory = create((set, get) => ({
   // Reset current category
   resetCurrentCategory: () => {
     set({ currentCategory: null });
+  },
+
+  createCategory: async (categoryData) => {
+    set({ isLoading: true, error: null, createSuccess: false });
+
+    try {
+      const res = await createCategory(categoryData);
+
+      if (res?.data?.statusCode === 201) {
+        console.log("Category created successfully:", res.data);
+
+        // Optionally refresh the categories list
+        const currentShowId =
+          get().categories.length > 0 ? get().categories[0].showId : null;
+        if (currentShowId) {
+          await get().fetchCategories(
+            currentShowId,
+            get().currentPage,
+            get().pageSize
+          );
+        }
+
+        set({
+          isLoading: false,
+          createSuccess: true,
+        });
+
+        notification.success({
+          message: "Thành công",
+          description: res.data.message || "Danh mục đã được tạo thành công!",
+          placement: "topRight",
+        });
+
+        return res.data;
+      } else {
+        console.error("API Error when creating category:", res);
+        set({
+          error: res?.data?.message || "Không thể tạo danh mục.",
+          isLoading: false,
+          createSuccess: false,
+        });
+
+        notification.error({
+          message: "Lỗi",
+          description:
+            res?.data?.message || "Không thể tạo danh mục. Vui lòng thử lại.",
+          placement: "topRight",
+        });
+
+        return res.data;
+      }
+    } catch (error) {
+      console.error("API Error when creating category:", error);
+      set({
+        error: error.message || "Đã xảy ra lỗi khi tạo danh mục.",
+        isLoading: false,
+        createSuccess: false,
+      });
+
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Đã xảy ra lỗi khi tạo danh mục.",
+        placement: "topRight",
+      });
+
+      return null;
+    }
+  },
+
+  // Reset create status
+  resetCreateStatus: () => {
+    set({ createSuccess: false, error: null });
   },
 }));
 
