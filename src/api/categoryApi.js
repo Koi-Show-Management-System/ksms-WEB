@@ -10,4 +10,8 @@ const getCategory = (id, page, size) => {
   });
 };
 
-export { getCategory };
+const getDetail = (id) => {
+  return axiosClient.get(`/competition-category/${id}`);
+};
+
+export { getCategory, getDetail };

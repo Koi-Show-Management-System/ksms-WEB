@@ -1,26 +1,77 @@
-import React, { useState } from "react";
-import { Table, Button, Modal, Form, Input } from "antd";
+// Staff.jsx
+import React, { useState, useEffect } from "react";
+import { Table, Button, Modal, Form, Input, message, Tag } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import useShowStaff from "../../../../hooks/useShowStaff";
 
-function Staff() {
+function Staff({ showId }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [form] = Form.useForm();
+
+  // Get the staff data and functions from the custom hook
+  const {
+    staffData: {
+      items: staff,
+      isLoading,
+      error,
+      currentPage,
+      pageSize,
+      totalItems,
+    },
+    fetchShowStaff,
+  } = useShowStaff();
+
+  // Fetch staff data when component mounts or when pagination changes
+  useEffect(() => {
+    // If showId is not provided, you won't be able to fetch staff data
+    if (!showId) {
+      message.error("Show ID is required to fetch staff data");
+      return;
+    }
+
+    // Pass the showId parameter to the fetchShowStaff function
+    fetchShowStaff(currentPage, pageSize, "Staff", showId);
+  }, [currentPage, pageSize, showId, fetchShowStaff]);
+
+  // Show error message if API call fails
+  useEffect(() => {
+    if (error) {
+      message.error(error);
+    }
+  }, [error]);
+
   const showModal = () => {
     setIsModalVisible(true);
   };
 
   const handleOk = () => {
-    setIsModalVisible(false);
+    form
+      .validateFields()
+      .then((values) => {
+        // Here you would typically call an API to add a new staff member
+        console.log("Form values:", values);
+        form.resetFields();
+        setIsModalVisible(false);
+      })
+      .catch((info) => {
+        console.log("Validate Failed:", info);
+      });
   };
 
   const handleCancel = () => {
+    form.resetFields();
     setIsModalVisible(false);
+  };
+
+  const handleTableChange = (pagination) => {
+    fetchShowStaff(pagination.current, pagination.pageSize, "Staff", showId);
   };
 
   const columns = [
     {
       title: "Tên",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "fullName",
+      key: "fullName",
     },
     {
       title: "Email",
@@ -28,19 +79,16 @@ function Staff() {
       key: "email",
     },
     {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      key: "phone",
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <span
-          className={status === "Hoạt động" ? "text-green-500" : "text-red-500"}
+          className={status === "Active" ? "text-green-500" : "text-red-500"}
         >
-          {status}
+          <Tag color={status === "active" ? "green" : "red"}>
+            {status === "active" ? "Hoạt động" : "Không hoạt động"}
+          </Tag>{" "}
         </span>
       ),
     },
@@ -48,11 +96,12 @@ function Staff() {
       title: "Vai trò",
       dataIndex: "role",
       key: "role",
+      render: (role) => <span>{role === "Staff" ? "Nhân viên" : role}</span>,
     },
     {
       title: "Hành động",
       key: "action",
-      render: () => (
+      render: (_, record) => (
         <div className="flex gap-3">
           <EditOutlined className="cursor-pointer" />
           <DeleteOutlined className="cursor-pointer" />
@@ -61,74 +110,21 @@ function Staff() {
     },
   ];
 
-  const staffData = [
-    {
-      key: "1",
-      name: "John Smith",
-      email: "john@example.com",
-      phone: "123-456-789",
-      status: "Hoạt động",
-      role: "Nhân viên",
-    },
-    {
-      key: "2",
-      name: "Leo",
-      email: "leo@example.com",
-      phone: "987-654-321",
-      status: "Hoạt động",
-      role: "Nhân viên",
-    },
-  ];
-
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
-          Thêm mới
-        </Button>
-      </div>
-      <Modal
-        title="Thêm Nhân Viên"
-        open={isModalVisible}
-        onOk={handleOk}
-        onCancel={handleCancel}
-      >
-        <Form layout="vertical" className="space-y-4">
-          <Form.Item
-            label="Tên"
-            name="name"
-            rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label="Email"
-            name="email"
-            rules={[
-              { required: true, message: "Vui lòng nhập email!" },
-            ]}
-          >
-            <Input />
-          </Form.Item>
-          <Form.Item
-            label="Số điện thoại"
-            name="phone"
-            rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
-          >
-            <Input />
-          </Form.Item>
-        </Form>
-      </Modal>
       <Table
         columns={columns}
-        dataSource={staffData}
+        dataSource={staff.map((item) => ({ ...item, key: item.id }))}
+        loading={isLoading}
         pagination={{
-          total: staffData.length,
-          pageSize: 6,
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
         }}
+        onChange={handleTableChange}
       />
     </div>
   );

@@ -1,31 +1,36 @@
 import React from "react";
-import { Tabs } from "antd";
+import { Button, Form, Input, Modal, Tabs } from "antd";
 import Manager from "./Manager";
 import Staff from "./Staff";
-import Referees from "./Referees";
+import { PlusOutlined } from "@ant-design/icons";
 
-function ManageShow() {
+function ManageShow({ showId }) {
   const items = [
     {
       key: "manager",
       label: <span className="text-lg">Quản lý</span>,
-      children: <Manager />,
+      children: <Manager showId={showId} />,
     },
     {
       key: "staff",
       label: <span className="text-lg">Nhân viên</span>,
-      children: <Staff />,
-    },
-    {
-      key: "referees",
-      label: <span className="text-lg">Trọng tài</span>,
-      children: <Referees />,
+      children: <Staff showId={showId} />,
     },
   ];
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      <Tabs defaultActiveKey="manager" items={items} />
+      <Tabs
+        defaultActiveKey="manager"
+        items={items}
+        tabBarExtraContent={{
+          right: (
+            <Button type="primary" icon={<PlusOutlined />}>
+              Thêm mới
+            </Button>
+          ),
+        }}
+      />
     </div>
   );
 }

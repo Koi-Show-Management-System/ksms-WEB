@@ -4,12 +4,12 @@ import useAccountTeam from "../../../hooks/useAccountTeam";
 
 function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }) {
   const [form] = Form.useForm();
-  const { createAccount, isLoading } = useAccountTeam();
+  const { createAccount, isLoading, fetchAccountTeam } = useAccountTeam();
 
   const handleSubmit = async (values) => {
     const accountData = {
       email: values.email,
-      hashedPassword: values.password,
+      password: values.password,
       fullName: values.fullName,
       userName: values.userName,
       phone: values.phone,
@@ -17,6 +17,7 @@ function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }
     };
 
     const result = await createAccount(accountData);
+    fetchAccountTeam(1, 10, role);
 
     if (result.success) {
       notification.success({

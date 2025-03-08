@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { getCategory } from "../api/categoryApi";
+import {
+  getCategory,
+  getDetail,
+} from "../api/categoryApi";
 
 const useCategory = create((set, get) => ({
   categories: [],
@@ -9,6 +12,7 @@ const useCategory = create((set, get) => ({
   isLoading: false,
   error: null,
   totalPages: 1,
+  currentCategory: null,
 
   fetchCategories: async (id, page = 1, size = 10) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
@@ -61,6 +65,54 @@ const useCategory = create((set, get) => ({
       console.error("API Error:", error);
       set({ error: error, isLoading: false });
     }
+  },
+
+  getCategoryDetail: async (categoryId) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await getDetail(categoryId);
+
+      if (res && res.status === 200) {
+        console.log("Category detail response:", res.data);
+
+        let categoryDetail = null;
+
+        if (res.data && res.data.data) {
+          categoryDetail = res.data.data;
+        } else if (res.data) {
+          categoryDetail = res.data;
+        }
+
+        set({
+          currentCategory: categoryDetail,
+          isLoading: false,
+        });
+
+        return categoryDetail;
+      } else {
+        console.error("API Error when fetching category detail:", res);
+        set({
+          error: res,
+          isLoading: false,
+          currentCategory: null,
+        });
+        return null;
+      }
+    } catch (error) {
+      console.error("API Error when fetching category detail:", error);
+      set({
+        error: error,
+        isLoading: false,
+        currentCategory: null,
+      });
+      return null;
+    }
+  },
+
+  // Reset current category
+  resetCurrentCategory: () => {
+    set({ currentCategory: null });
   },
 }));
 

@@ -1,26 +1,47 @@
-import React, { useState } from "react";
-import { Table, Button, Modal, Form, Input } from "antd";
+import React, { useState, useEffect } from "react";
+import { Table, Button, Modal, Form, Input, message } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import useShowStaff from "../../../../hooks/useShowStaff";
 
-function Referees() {
+function Referees({ showId }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
+  const [form] = Form.useForm();
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(6);
 
-  const handleOk = () => {
-    setIsModalVisible(false);
-  };
+  // Get the referees data and functions from the custom hook
+  const {
+    accountManage: { referees },
+    isLoading,
+    error,
+    totalItems,
+    totalPages,
+    fetchShowStaff,
+  } = useShowStaff();
 
-  const handleCancel = () => {
-    setIsModalVisible(false);
+  useEffect(() => {
+ fetchShowStaff(currentPage, pageSize, "Referee", showId);
+  }, [currentPage, pageSize, showId, fetchShowStaff]);
+
+  // Show error message if API call fails
+  useEffect(() => {
+    if (error) {
+      message.error(error);
+    }
+  }, [error]);
+
+
+
+  const handleTableChange = (pagination) => {
+    setCurrentPage(pagination.current);
+    setPageSize(pagination.pageSize);
   };
 
   const columns = [
     {
       title: "Tên",
-      dataIndex: "name",
-      key: "name",
+      dataIndex: "fullName",
+      key: "fullName",
     },
     {
       title: "Email",
@@ -28,19 +49,14 @@ function Referees() {
       key: "email",
     },
     {
-      title: "Số điện thoại",
-      dataIndex: "phone",
-      key: "phone",
-    },
-    {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => (
         <span
-          className={status === "Hoạt động" ? "text-green-500" : "text-red-500"}
+          className={status === "Active" ? "text-green-500" : "text-red-500"}
         >
-          {status}
+          {status === "Active" ? "Hoạt động" : "Không hoạt động"}
         </span>
       ),
     },
@@ -48,27 +64,17 @@ function Referees() {
       title: "Vai trò",
       dataIndex: "role",
       key: "role",
+      render: (role) => <span>{role === "Referee" ? "Trọng tài" : role}</span>,
     },
     {
       title: "Hành động",
       key: "action",
-      render: () => (
+      render: (_, record) => (
         <div className="flex gap-3">
           <EditOutlined className="cursor-pointer" />
           <DeleteOutlined className="cursor-pointer" />
         </div>
       ),
-    },
-  ];
-
-  const refereeData = [
-    {
-      key: "1",
-      name: "Mike Referee",
-      email: "referee@example.com",
-      phone: "123-456-789",
-      status: "Hoạt động",
-      role: "Trọng tài",
     },
   ];
 
@@ -85,10 +91,10 @@ function Referees() {
         onOk={handleOk}
         onCancel={handleCancel}
       >
-        <Form layout="vertical" className="space-y-4">
+        <Form form={form} layout="vertical" className="space-y-4">
           <Form.Item
             label="Tên"
-            name="name"
+            name="fullName"
             rules={[{ required: true, message: "Vui lòng nhập tên!" }]}
           >
             <Input />
@@ -98,6 +104,7 @@ function Referees() {
             name="email"
             rules={[
               { required: true, message: "Vui lòng nhập email!" },
+              { type: "email", message: "Email không hợp lệ!" },
             ]}
           >
             <Input />
@@ -105,7 +112,9 @@ function Referees() {
           <Form.Item
             label="Số điện thoại"
             name="phone"
-            rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
+            rules={[
+              { required: true, message: "Vui lòng nhập số điện thoại!" },
+            ]}
           >
             <Input />
           </Form.Item>
@@ -113,14 +122,17 @@ function Referees() {
       </Modal>
       <Table
         columns={columns}
-        dataSource={refereeData}
+        dataSource={referees.map((item) => ({ ...item, key: item.id }))}
+        loading={isLoading}
         pagination={{
-          total: refereeData.length,
-          pageSize: 6,
+          current: currentPage,
+          pageSize: pageSize,
+          total: totalItems,
           showSizeChanger: true,
           showQuickJumper: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
         }}
+        onChange={handleTableChange}
       />
     </div>
   );

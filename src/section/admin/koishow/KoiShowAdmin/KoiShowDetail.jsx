@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Collapse,
   Timeline,
@@ -7,6 +7,7 @@ import {
   Tabs,
   Spin,
   notification,
+  Modal,
 } from "antd";
 import dayjs from "dayjs";
 import koiFishImage from "../../../../assets/koiFishImage.png";
@@ -15,7 +16,6 @@ import Category from "./Category";
 import KoiList from "./KoiList";
 import ManageShow from "./ManageShow";
 import Votes from "./Votes";
-import Awards from "./Awards";
 import Rules from "./Rules";
 import Sponsor from "./Sponsor";
 import CompetitionRound from "./CompetitionRound";
@@ -25,7 +25,15 @@ import useKoiShow from "../../../../hooks/useKoiShow";
 function KoiShowDetail() {
   const { Panel } = Collapse;
   const { id } = useParams();
-  const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow(); // ✅ Lấy dữ liệu từ store
+  const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
+
+  const [showAll, setShowAll] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const sponsors = koiShowDetail?.data?.sponsors || [];
+  const displaySponsors = showAll ? sponsors : sponsors.slice(0, 2);
+  const extraCount = sponsors.length - 2;
+  const showRule = koiShowDetail?.data?.showRules;
+
   const statusMapping = {
     RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
     RegistrationClosed: { label: "Đóng Đăng Ký", color: "red" },
@@ -65,12 +73,12 @@ function KoiShowDetail() {
     {
       key: "koiList",
       label: "Đơn Đăng Ký",
-      children: <KoiList />,
+      children: <KoiList showId={id} />,
     },
     {
       key: "manageShow",
       label: "Quản Lý Triển Lãm",
-      children: <ManageShow />,
+      children: <ManageShow showId={id} />,
     },
     {
       key: "competitionRound",
@@ -82,15 +90,11 @@ function KoiShowDetail() {
       label: "Bình Chọn",
       children: <Votes />,
     },
-    {
-      key: "awards",
-      label: "Giải Thưởng",
-      children: <Awards />,
-    },
+
     {
       key: "rules",
       label: "Quy Tắc",
-      children: <Rules />,
+      children: <Rules showId={id} showRule={showRule} />,
     },
     {
       key: "sponsor",
@@ -111,7 +115,7 @@ function KoiShowDetail() {
           <Image
             src={koiShowDetail.data.imgUrl || koiFishImage}
             alt="Cá Koi"
-            className="w-full rounded-lg"
+            className="w-[300px] h-[200px] object-cover rounded-lg"
           />
 
           <div className="grid grid-cols-2 gap-4">
@@ -197,17 +201,51 @@ function KoiShowDetail() {
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="bg-black/[0.02] p-4 rounded-lg">
               <h3 className="font-bold mb-4 text-lg">Tài Trợ</h3>
-              <div className="grid grid-cols-2 gap-4">
-                {koiShowDetail?.data?.sponsors?.map((sponsor, index) => (
-                  <Image
-                    key={sponsor.id}
-                    src={sponsor.logoUrl || sponsorLogo1}
-                    alt={`Tài Trợ ${index + 1}`}
-                    className="rounded-xl"
-                  />
+              <div className="grid grid-cols-2 gap-4 relative">
+                {displaySponsors.map((sponsor, index) => (
+                  <div key={sponsor.id} className="relative">
+                    <Image
+                      src={sponsor.logoUrl || sponsorLogo1}
+                      alt={`Tài Trợ ${index + 1}`}
+                      className="rounded-xl"
+                      width={150}
+                      height={150}
+                    />
+                    {index === 1 && extraCount > 0 && (
+                      <div
+                        onClick={() => setIsModalOpen(true)}
+                        className="absolute inset-0 bg-black bg-opacity-50 rounded-xl flex items-center justify-center cursor-pointer"
+                      >
+                        <span className="text-white font-semibold">
+                          +{extraCount}
+                        </span>
+                      </div>
+                    )}
+                  </div>
                 ))}
               </div>
+
+              <Modal
+                title="Tất cả nhà tài trợ"
+                open={isModalOpen}
+                onCancel={() => setIsModalOpen(false)}
+                footer={null}
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {sponsors.map((sponsor) => (
+                    <Image
+                      key={sponsor.id}
+                      src={sponsor.logoUrl || sponsorLogo1}
+                      alt="Tài trợ"
+                      className="rounded-xl"
+                      width={150}
+                      height={150}
+                    />
+                  ))}
+                </div>
+              </Modal>
             </div>
+
             <div className="bg-black/[0.02] p-4 rounded-lg">
               <h3 className="font-bold mb-4 text-lg">Tiêu Chí Đánh Giá </h3>
               <div className="grid grid-cols-2 gap-4">
@@ -244,29 +282,33 @@ function KoiShowDetail() {
         </div>
         <div>
           <Card title="Trạng Thái" className="mb-4">
-            <Timeline>
-              {koiShowDetail.data.showStatuses.map((status) => {
+            <Timeline
+              items={koiShowDetail.data.showStatuses.map((status) => {
                 const { label, color } = statusMapping[status.statusName] || {
                   label: status.statusName,
                   color: "gray",
                 };
-                return (
-                  <Timeline.Item key={status.id} color={color}>
-                    <div className={`text-${color}-500 font-medium`}>
-                      {label}
-                    </div>
-                    <div className="text-sm">
-                      {formatDate(status.startDate)} -{" "}
-                      {formatDate(status.endDate)}
-                    </div>
-                    <div className="text-sm">
-                      {formatTime(status.startDate)} -{" "}
-                      {formatTime(status.endDate)}
-                    </div>
-                  </Timeline.Item>
-                );
+                return {
+                  key: status.id,
+                  color: color,
+                  children: (
+                    <>
+                      <div className={`text-${color}-500 font-medium`}>
+                        {label}
+                      </div>
+                      <div className="text-sm">
+                        {formatDate(status.startDate)} -{" "}
+                        {formatDate(status.endDate)}
+                      </div>
+                      <div className="text-sm">
+                        {formatTime(status.startDate)} -{" "}
+                        {formatTime(status.endDate)}
+                      </div>
+                    </>
+                  ),
+                };
               })}
-            </Timeline>
+            />
           </Card>
         </div>
       </div>
