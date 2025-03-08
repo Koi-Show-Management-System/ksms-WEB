@@ -15,9 +15,16 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Create SSH Key File
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+      shell: bash
+
     - name: Copy files to VPS using rsync
       run: |
-        rsync -avz -e "ssh -p ${{ secrets.SSH_PORT }} -i ${{ secrets.SSH_PRIVATE_KEY }} -o StrictHostKeyChecking=no" \
+        rsync -avz -e "ssh -p ${{ secrets.SSH_PORT }} -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
           ./frontend/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/ksms/frontend/
 
     - name: Deploy to VPS
@@ -25,7 +32,7 @@ jobs:
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }} 
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
         script: |
           # Go to the frontend directory on the VPS
