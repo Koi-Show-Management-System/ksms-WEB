@@ -1,4 +1,4 @@
-name: Frontend CI/CD Pipeline
+name: Deploy Frontend (Build on VPS)
 
 on:
   push:
@@ -8,91 +8,43 @@ on:
   workflow_dispatch:
 
 jobs:
-  build-and-deploy:
-    name: Build and Deploy Frontend
+  deploy:
+    name: Deploy Frontend
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v3
-      with:
-        fetch-depth: 0
-        
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: '18'
-        cache: 'npm'
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Build project
-      run: npm run build
-      env:
-        CI: false
-        VITE_API_BASE_URL: https://api.ksms.news
-        
-    - name: Setup SSH
-      uses: webfactory/ssh-agent@v0.8.0
-      with:
-        ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-    - name: Add host to known hosts
-      run: |
-        mkdir -p ~/.ssh
-        ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
-        
     - name: Deploy to VPS
-      run: |
-        # Tạo script triển khai trên VPS
-        cat > deploy.sh << 'EOF'
-        #!/bin/bash
-        set -e
-        
-        # Tạo thư mục tạm thời trong home directory
-        TEMP_DIR="$HOME/frontend-temp"
-        mkdir -p "$TEMP_DIR"
-        
-        # Tạo thư mục release
-        TIMESTAMP=$(date +%Y%m%d%H%M%S)
-        RELEASE_PATH="/var/www/ksms-frontend/releases/$TIMESTAMP"
-        sudo mkdir -p "$RELEASE_PATH"
-        
-        # Cấp quyền cho thư mục release để người dùng hiện tại có thể ghi
-        sudo chown $USER:$USER "$RELEASE_PATH"
-        
-        # Di chuyển các tệp từ thư mục tạm thời vào thư mục release
-        cp -r "$TEMP_DIR"/* "$RELEASE_PATH"/
-        
-        # Đặt quyền sở hữu đúng
-        sudo chown -R www-data:www-data "$RELEASE_PATH"
-        
-        # Cập nhật symlink
-        sudo ln -sfn "$RELEASE_PATH" /var/www/ksms-frontend/current
-        
-        # Kiểm tra và tải lại Nginx
-        sudo nginx -t && sudo systemctl reload nginx
-        
-        # Dọn dẹp các bản release cũ (giữ lại 1 bản gần nhất)
-        cd /var/www/ksms-frontend/releases && ls -t | tail -n +2 | xargs -I {} sudo rm -rf {}
-        
-        # Dọn dẹp thư mục tạm thời
-        rm -rf "$TEMP_DIR"
-        
-        echo "Deployment completed successfully!"
-        EOF
-        
-        # Tải script lên VPS
-        scp deploy.sh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/deploy.sh
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "chmod +x ~/deploy.sh"
-        
-        # Tạo thư mục tạm thời trên VPS
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "mkdir -p ~/frontend-temp"
-        
-        # Tải các tệp xây dựng lên VPS
-        echo "Uploading build files to temporary directory..."
-        scp -r ./dist/* ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:~/frontend-temp/
-        
-        # Chạy script triển khai
-        echo "Running deployment script..."
-        ssh ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }} "~/deploy.sh"
+      uses: appleboy/ssh-action@v1.0.0
+      with:
+        host: ${{ secrets.SSH_HOST }}
+        username: ${{ secrets.SSH_USER }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        script: |
+          # Go to the frontend directory on the VPS
+          cd /opt/ksms/frontend
+
+          # --- Build Steps (on the VPS) ---
+          # 1. Install Node.js dependencies
+          npm ci
+
+          # 2. Build the React application
+          npm run build
+
+          # --- Deployment Steps ---
+          # Go to the main deployment directory
+          cd /opt/ksms
+
+          # Stop and remove the existing frontend container (if any)
+          docker compose stop ksms-frontend || true
+          docker compose rm -f ksms-frontend || true
+
+          # Start the frontend service (using the pre-built artifacts)
+          docker compose up -d --no-deps frontend
+
+          # Health Check
+          sleep 5
+          curl -s --head http://localhost || echo "Frontend Health check failed"
+
+          echo "✅ Frontend Deployment completed successfully!"
