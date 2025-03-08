@@ -15,12 +15,18 @@ jobs:
     steps:
     - uses: actions/checkout@v3
 
+    - name: Copy files to VPS using rsync
+      run: |
+        rsync -avz -e "ssh -p ${{ secrets.SSH_PORT }} -i ${{ secrets.SSH_PRIVATE_KEY }} -o StrictHostKeyChecking=no" \
+          ./frontend/ ${{ secrets.SSH_USER }}@${{ secrets.SSH_HOST }}:/opt/ksms/frontend/
+
     - name: Deploy to VPS
       uses: appleboy/ssh-action@v1.0.0
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
+        key: ${{ secrets.SSH_PRIVATE_KEY }} 
+        port: ${{ secrets.SSH_PORT }}
         script: |
           # Go to the frontend directory on the VPS
           cd /opt/ksms/frontend
@@ -43,8 +49,8 @@ jobs:
           # Start the frontend service (using the pre-built artifacts)
           docker compose up -d --no-deps frontend
 
-          # Health Check
+          # Health Check (use HTTPS if appropriate)
           sleep 5
-          curl -s --head http://localhost || echo "Frontend Health check failed"
+          curl -s --head https://localhost || echo "Frontend Health check failed"
 
           echo "✅ Frontend Deployment completed successfully!"
