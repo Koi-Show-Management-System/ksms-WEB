@@ -1,63 +1,42 @@
-name: Deploy Frontend (Build on VPS)
+name: Deploy Frontend
 
 on:
   push:
-    branches: [ main ]
-  pull_request:
-    branches: [ main ]
-  workflow_dispatch:
+    branches:
+      - main  # Chạy khi có commit push lên nhánh main
+  workflow_dispatch:  # Cho phép trigger thủ công
 
 jobs:
   deploy:
-    name: Deploy Frontend
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
+    - name: Checkout code
+      uses: actions/checkout@v2
 
-    - name: Create SSH Key File
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-      shell: bash
-
-    - name: Copy files to VPS using rsync
-      run: |
-        rsync -avz -e "ssh -p ${{ secrets.VPS_PORT }} -i ~/.ssh/id_rsa -o StrictHostKeyChecking=no" \
-          frontend/ ${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:/opt/ksms/frontend/
-
-    - name: Deploy to VPS
-      uses: appleboy/ssh-action@v1.0.0
+    - name: Deploy to VPS (SSH)
+      uses: appleboy/ssh-action@v0.1.5
       with:
         host: ${{ secrets.SSH_HOST }}
         username: ${{ secrets.SSH_USER }}
         key: ${{ secrets.SSH_PRIVATE_KEY }}
         port: ${{ secrets.SSH_PORT }}
         script: |
-          # Go to the frontend directory on the VPS
+          # Chuyển đến thư mục frontend
           cd /opt/ksms/frontend
 
-          # --- Build Steps (on the VPS) ---
-          # 1. Install Node.js dependencies
-          npm ci
+          # Kéo mã nguồn mới nhất từ Git
+          git pull origin main
 
-          # 2. Build the React application
+          # Cài đặt dependencies
+          npm install
+
+          # Build frontend
           npm run build
 
-          # --- Deployment Steps ---
-          # Go to the main deployment directory
-          cd /opt/ksms
-
-          # Stop and remove the existing frontend container (if any)
-          docker compose stop ksms-frontend || true
-          docker compose rm -f ksms-frontend || true
-
-          # Start the frontend service (using the pre-built artifacts)
-          docker compose up -d --no-deps frontend
-
-          # Health Check (use HTTPS if appropriate)
-          sleep 5
-          curl -s --head https://localhost || echo "Frontend Health check failed"
-
-          echo "✅ Frontend Deployment completed successfully!"
+          # Kiểm tra và khởi động lại dịch vụ hoặc ứng dụng (ví dụ: pm2 cho ứng dụng React)
+          if [ -f /opt/ksms/nginx/nginx.conf ]; then
+              pm2 restart all || pm2 start npm --name "frontend" -- run start
+          else
+              echo "nginx.conf không tìm thấy, không thể khởi động lại Nginx"
+          fi
