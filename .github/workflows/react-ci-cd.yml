@@ -1,42 +1,120 @@
-name: Deploy Frontend
+name: Frontend CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main  # Chạy khi có commit push lên nhánh main
-  workflow_dispatch:  # Cho phép trigger thủ công
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
+    name: Build and Deploy Frontend
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
+    
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
-
-    - name: Deploy to VPS (SSH)
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: ${{ secrets.SSH_PORT }}
-        script: |
-          # Chuyển đến thư mục frontend
-          cd /opt/ksms/frontend
-
-          # Kéo mã nguồn mới nhất từ Git
-          git pull origin main
-
-          # Cài đặt dependencies
-          npm install
-
-          # Build frontend
-          npm run build
-
-          # Kiểm tra và khởi động lại dịch vụ hoặc ứng dụng (ví dụ: pm2 cho ứng dụng React)
-          if [ -f /opt/ksms/nginx/nginx.conf ]; then
-              pm2 restart all || pm2 start npm --name "frontend" -- run start
-          else
-              echo "nginx.conf không tìm thấy, không thể khởi động lại Nginx"
-          fi
+      - name: Checkout code
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+      
+      - name: Login to Docker Hub
+        uses: docker/login-action@v2
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}
+      
+      - name: Create Nginx config
+        run: |
+          cat > nginx.conf << 'EOL'
+          server {
+            listen 80;
+            server_name localhost;
+            root /usr/share/nginx/html;
+            index index.html;
+            
+            # Gzip configuration
+            gzip on;
+            gzip_vary on;
+            gzip_min_length 10240;
+            gzip_proxied expired no-cache no-store private auth;
+            gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml;
+            gzip_disable "MSIE [1-6]\.";
+            
+            location / {
+              try_files $uri $uri/ /index.html;
+            }
+            
+            # Cache configuration for static files
+            location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg)$ {
+              expires 30d;
+              add_header Cache-Control "public, no-transform";
+            }
+          }
+          EOL
+      
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/ksms-frontend:${{ github.sha }},${{ secrets.DOCKER_HUB_USERNAME }}/ksms-frontend:latest
+          cache-from: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/ksms-frontend:buildcache
+          cache-to: type=registry,ref=${{ secrets.DOCKER_HUB_USERNAME }}/ksms-frontend:buildcache,mode=max
+      
+      - name: Deploy to VPS
+        uses: appleboy/ssh-action@v0.1.10
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            # Login to Docker Hub
+            echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u ${{ secrets.DOCKER_HUB_USERNAME }} --password-stdin
+            
+            # Pull the latest image
+            docker pull ${{ secrets.DOCKER_HUB_USERNAME }}/ksms-frontend:${{ github.sha }}
+            
+            # Navigate to the frontend directory
+            cd /opt/ksms/frontend
+            
+            # Update docker-compose.yml to use the pre-built image
+            cat > docker-compose.yml << EOL
+            version: '3.8'
+            services:
+              frontend:
+                image: ${{ secrets.DOCKER_HUB_USERNAME }}/ksms-frontend:${{ github.sha }}
+                container_name: ksms-frontend
+                ports:
+                  - "3000:80"
+                restart: unless-stopped
+                networks:
+                  - ksms-network
+            
+            networks:
+              ksms-network:
+                external: true
+            EOL
+            
+            # Restart the container with the new image
+            docker-compose down
+            docker-compose up -d
+            
+            # Cleanup old images
+            docker image prune -f
