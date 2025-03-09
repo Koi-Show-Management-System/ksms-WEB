@@ -1,15 +1,18 @@
-name: Deploy Frontend
+name: Frontend CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main  # Chạy khi có commit push lên nhánh main
-  workflow_dispatch:  # Cho phép trigger thủ công
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-and-deploy:
+    name: Build and Deploy Frontend
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v2

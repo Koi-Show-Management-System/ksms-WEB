@@ -1,6 +1,23 @@
 import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Image, Col, Row, Card, Space, Tag } from "antd";
-import { EyeOutlined, DeleteOutlined } from "@ant-design/icons";
+import {
+  Table,
+  Button,
+  Modal,
+  Image,
+  Col,
+  Row,
+  Card,
+  Space,
+  Tag,
+  notification,
+} from "antd";
+import {
+  EyeOutlined,
+  DeleteOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
+  ExclamationCircleOutlined,
+} from "@ant-design/icons";
 import useRegistration from "../../../../hooks/useRegistration";
 
 function KoiList({ showId }) {
@@ -11,12 +28,14 @@ function KoiList({ showId }) {
     pageSize,
     totalItems,
     totalPages,
+    updateStatus,
     fetchRegistration,
   } = useRegistration();
 
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentKoi, setCurrentKoi] = useState(null);
-
+  const [updatedStatus, setUpdatedStatus] = useState(null);
+  const { confirm } = Modal;
   // Gọi API khi component được mount
   useEffect(() => {
     fetchRegistration(1, 10, showId);
@@ -29,18 +48,67 @@ function KoiList({ showId }) {
 
   const handleViewDetails = (record) => {
     setCurrentKoi(record);
+    setUpdatedStatus(null);
     setIsModalVisible(true);
   };
 
   const handleCancel = () => {
     setIsModalVisible(false);
+    setUpdatedStatus(null);
     setCurrentKoi(null);
   };
 
-  const handleApproveReject = (status) => {
-    // Xử lý logic phê duyệt/từ chối ở đây
-    console.log(`Changing status to ${status} for koi:`, currentKoi.id);
-    setIsModalVisible(false);
+  const showConfirmModal = (id, status) => {
+    const action = status === "confirmed" ? "phê duyệt" : "từ chối";
+    const title =
+      status === "confirmed" ? "Phê Duyệt Đăng Ký" : "Từ Chối Đăng Ký";
+
+    confirm({
+      title: title,
+      icon: <ExclamationCircleOutlined />,
+      content: `Bạn có chắc chắn muốn ${action} đăng ký này không?`,
+      okText: "Đồng ý",
+      okType: status === "confirmed" ? "primary" : "danger",
+      cancelText: "Hủy",
+      onOk() {
+        return handleUpdateStatus(id, status);
+      },
+    });
+  };
+
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      const result = await updateStatus(id, status);
+      if (result.success) {
+        notification.success({
+          message: "Thành công",
+          description: `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thành công`,
+          placement: "topRight",
+        });
+
+        // Cập nhật status trong currentKoi và set updatedStatus
+        if (currentKoi) {
+          setCurrentKoi({
+            ...currentKoi,
+            status: status,
+          });
+          setUpdatedStatus(status);
+        }
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thất bại`,
+          placement: "topRight",
+        });
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: "Đã xảy ra lỗi khi cập nhật trạng thái",
+        placement: "topRight",
+      });
+      console.error(error);
+    }
   };
 
   // Hàm lấy URL hình ảnh đầu tiên từ koiMedia
@@ -67,23 +135,23 @@ function KoiList({ showId }) {
       render: (_, __, index) => index + 1 + (currentPage - 1) * pageSize,
     },
     {
-      title: "Name",
+      title: "Tên người đăng ký",
       dataIndex: "registerName",
       key: "registerName",
     },
     {
-      title: "Koi Name",
+      title: "Tên Koi",
       key: "koiName",
       render: (_, record) => record.koiProfile?.name || "N/A",
     },
     {
-      title: "Category",
+      title: "Hạng mục",
       dataIndex: "competitionCategory",
       key: "category",
       render: (category) => category?.name || "N/A",
     },
     {
-      title: "Image",
+      title: "Hình ảnh",
       key: "image",
       render: (_, record) => {
         const imageUrl = getFirstImageUrl(record);
@@ -111,13 +179,13 @@ function KoiList({ showId }) {
               borderRadius: "4px",
             }}
           >
-            No image
+            Không có ảnh
           </div>
         );
       },
     },
     {
-      title: "Status",
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: (status) => {
@@ -166,7 +234,7 @@ function KoiList({ showId }) {
       },
     },
     {
-      title: "Actions",
+      title: "Thao tác",
       key: "actions",
       render: (_, record) => (
         <Space size="middle">
@@ -175,12 +243,6 @@ function KoiList({ showId }) {
             icon={<EyeOutlined />}
             onClick={() => handleViewDetails(record)}
             style={{ color: "#4B5563" }}
-          />
-          <Button
-            type="text"
-            icon={<DeleteOutlined />}
-            style={{ color: "#EF4444" }}
-            // Thêm xử lý xóa nếu cần
           />
         </Space>
       ),
@@ -349,12 +411,17 @@ function KoiList({ showId }) {
             </Row>
 
             {/* Nút Approve/Reject */}
-            {/* <div className="mt-4 text-center space-x-3">
+            <div className="mt-4 text-center space-x-3">
               <Button
                 type="primary"
-                onClick={() => handleApproveReject("confirmed")}
+                icon={<CheckCircleOutlined />}
+                onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
                 className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
-                disabled={currentKoi.status === "confirmed"}
+                disabled={
+                  currentKoi.status === "confirmed" ||
+                  updatedStatus === "confirmed" ||
+                  updatedStatus === "rejected"
+                }
               >
                 Approve
               </Button>
@@ -362,13 +429,18 @@ function KoiList({ showId }) {
               <Button
                 type="primary"
                 danger
-                onClick={() => handleApproveReject("rejected")}
+                icon={<CloseCircleOutlined />}
+                onClick={() => showConfirmModal(currentKoi.id, "rejected")}
                 className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
-                disabled={currentKoi.status === "rejected"}
+                disabled={
+                  currentKoi.status === "rejected" ||
+                  updatedStatus === "confirmed" ||
+                  updatedStatus === "rejected"
+                }
               >
                 Reject
               </Button>
-            </div> */}
+            </div>
           </div>
         )}
       </Modal>
