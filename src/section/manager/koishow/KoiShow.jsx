@@ -74,7 +74,7 @@ function KoiShow() {
       render: (text, record) => (
         <span
           className="text-blue-600 cursor-pointer hover:underline"
-          onClick={() => navigate(`/admin/koiShow/detail/${record.id}`)}
+          onClick={() => navigate(`/manager/koiShow/detail/${record.id}`)}
         >
           {text}
         </span>

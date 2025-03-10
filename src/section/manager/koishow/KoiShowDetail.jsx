@@ -10,17 +10,10 @@ import {
   Modal,
 } from "antd";
 import dayjs from "dayjs";
-import koiFishImage from "../../../../assets/koiFishImage.png";
-import sponsorLogo1 from "../../../../assets/sponsorLogo1.png";
-import Category from "./Category";
-import KoiList from "./KoiList";
-import ManageShow from "./ManageShow";
-import Votes from "./Votes";
-import Rules from "./Rules";
-import Sponsor from "./Sponsor";
-import CompetitionRound from "./CompetitionRound";
+import koiFishImage from "../../../assets/koiFishImage.png";
+import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
 import { useParams } from "react-router-dom";
-import useKoiShow from "../../../../hooks/useKoiShow";
+import useKoiShow from "../../../hooks/useKoiShow";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -65,42 +58,41 @@ function KoiShowDetail() {
     );
   }
   const items = [
-    {
-      key: "category",
-      label: "Danh Mục",
-      children: <Category showId={id} />,
-    },
-    {
-      key: "koiList",
-      label: "Đơn Đăng Ký",
-      children: <KoiList showId={id} />,
-    },
-    {
-      key: "manageShow",
-      label: "Quản Lý Triển Lãm",
-      children: <ManageShow showId={id} />,
-    },
-    {
-      key: "competitionRound",
-      label: "Vòng Thi",
-      children: <CompetitionRound />,
-    },
-    {
-      key: "votes",
-      label: "Bình Chọn",
-      children: <Votes />,
-    },
-
-    {
-      key: "rules",
-      label: "Quy Tắc",
-      children: <Rules showId={id} showRule={showRule} />,
-    },
-    {
-      key: "sponsor",
-      label: "Tài Trợ",
-      children: <Sponsor />,
-    },
+    // {
+    //   key: "category",
+    //   label: "Danh Mục",
+    //   children: <Category showId={id} />,
+    // },
+    // {
+    //   key: "koiList",
+    //   label: "Đơn Đăng Ký",
+    //   children: <KoiList showId={id} />,
+    // },
+    // {
+    //   key: "manageShow",
+    //   label: "Quản Lý Triển Lãm",
+    //   children: <ManageShow showId={id} />,
+    // },
+    // {
+    //   key: "competitionRound",
+    //   label: "Vòng Thi",
+    //   children: <CompetitionRound />,
+    // },
+    // {
+    //   key: "votes",
+    //   label: "Bình Chọn",
+    //   children: <Votes />,
+    // },
+    // {
+    //   key: "rules",
+    //   label: "Quy Tắc",
+    //   children: <Rules showId={id} showRule={showRule} />,
+    // },
+    // {
+    //   key: "sponsor",
+    //   label: "Tài Trợ",
+    //   children: <Sponsor />,
+    // },
   ];
 
   return (
