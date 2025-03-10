@@ -38,11 +38,6 @@ function AuthenView() {
             <Text type="secondary">Vui lòng đăng nhập để tiếp tục</Text>
           </div>
           <Authen />
-          <div className="text-center mt-4">
-            <Text type="secondary">
-              © {new Date().getFullYear()} Koi Exhibition System
-            </Text>
-          </div>
         </div>
         <div className="hidden md:block">
           <Carousel />
