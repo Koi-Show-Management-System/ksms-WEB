@@ -11,4 +11,7 @@ const getCriterias = (page, size) => {
 const postCriteria = (data) => {
   return axiosClient.post("/criteria/create", data);
 };
-export { getCriterias, postCriteria };
+const updateCriteria = (id, data) => {
+  return axiosClient.put(`/criteria/${id}`, data);
+};
+export { getCriterias, postCriteria, updateCriteria };

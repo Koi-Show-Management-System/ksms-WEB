@@ -424,47 +424,92 @@ function Category({ showId }) {
             </TabPane>
 
             <TabPane tab="Giám khảo" key="5" icon={<UserOutlined />}>
-              <List
-                dataSource={selectedCategory.refereeAssignments || []}
-                renderItem={(item) => (
-                  <List.Item>
-                    <div className="w-full">
-                      <div className="flex justify-between items-center mb-2">
-                        <div className="font-medium">
-                          {item.refereeAccount?.fullName}
+              {(() => {
+                const refereeMap = {};
+
+                (selectedCategory.refereeAssignments || []).forEach((item) => {
+                  const email = item.refereeAccount?.email;
+                  if (!refereeMap[email]) {
+                    refereeMap[email] = {
+                      referee: item.refereeAccount,
+                      assignedBy: item.assignedByNavigation,
+                      roundTypes: [item.roundType],
+                      assignedAt: item.assignedAt,
+                    };
+                  } else {
+                    if (
+                      !refereeMap[email].roundTypes.includes(item.roundType)
+                    ) {
+                      refereeMap[email].roundTypes.push(item.roundType);
+                    }
+                  }
+                });
+
+                const groupedReferees = Object.values(refereeMap);
+
+                const translateRoundType = (type) => {
+                  switch (type) {
+                    case "Preliminary":
+                      return "Vòng Sơ loại";
+                    case "Evaluation":
+                      return "Vòng Đánh giá";
+                    case "Final":
+                      return "Vòng Chung kết";
+                    default:
+                      return type;
+                  }
+                };
+
+                return (
+                  <List
+                    dataSource={groupedReferees}
+                    renderItem={(item) => (
+                      <List.Item>
+                        <div className="w-full">
+                          <div className="flex justify-between items-center mb-2">
+                            <div className="font-medium">
+                              {item.referee?.fullName}
+                            </div>
+                            <div>
+                              {item.roundTypes.map((type) => (
+                                <Tag
+                                  key={type}
+                                  color={
+                                    type === "Preliminary"
+                                      ? "orange"
+                                      : type === "Evaluation"
+                                        ? "blue"
+                                        : type === "Final"
+                                          ? "green"
+                                          : "default"
+                                  }
+                                  className="ml-1"
+                                >
+                                  {translateRoundType(type)}
+                                </Tag>
+                              ))}
+                            </div>
+                          </div>
+                          <p>
+                            <strong>Email:</strong> {item.referee?.email}
+                          </p>
+                          <p>
+                            <strong>Vai trò:</strong> {item.referee?.role}
+                          </p>
+                          <p>
+                            <strong>Được phân công bởi:</strong>{" "}
+                            {item.assignedBy?.fullName}
+                          </p>
+                          <p>
+                            <strong>Thời gian phân công:</strong>{" "}
+                            {new Date(item.assignedAt).toLocaleString()}
+                          </p>
                         </div>
-                        <Tag
-                          color={
-                            item.roundType === "Preliminary"
-                              ? "orange"
-                              : item.roundType === "Evaluation"
-                                ? "blue"
-                                : item.roundType === "Final"
-                                  ? "green"
-                                  : "default"
-                          }
-                        >
-                          {item.roundType}
-                        </Tag>
-                      </div>
-                      <p>
-                        <strong>Email:</strong> {item.refereeAccount?.email}
-                      </p>
-                      <p>
-                        <strong>Vai trò:</strong> {item.refereeAccount?.role}
-                      </p>
-                      <p>
-                        <strong>Được phân công bởi:</strong>{" "}
-                        {item.assignedByNavigation?.fullName}
-                      </p>
-                      <p>
-                        <strong>Thời gian phân công:</strong>{" "}
-                        {new Date(item.assignedAt).toLocaleString()}
-                      </p>
-                    </div>
-                  </List.Item>
-                )}
-              />
+                      </List.Item>
+                    )}
+                  />
+                );
+              })()}
             </TabPane>
 
             <TabPane tab="Vòng thi" key="6" icon={<FieldTimeOutlined />}>
@@ -520,7 +565,6 @@ function Category({ showId }) {
           </Tabs>
         )}
       </Drawer>
-
     </div>
   );
 }

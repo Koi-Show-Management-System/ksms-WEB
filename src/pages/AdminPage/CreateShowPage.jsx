@@ -6,7 +6,7 @@ function CreateShowPage() {
   return (
     <>
       <Helmet>
-        <title>KSMS | Create Show</title>
+        <title>KSMS | Tạo Show</title>
       </Helmet>
       <CreateShowView />
     </>

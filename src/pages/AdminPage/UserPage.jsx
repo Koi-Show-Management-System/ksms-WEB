@@ -6,7 +6,7 @@ function UserPage() {
   return (
     <>
       <Helmet>
-        <title> KSMS | User </title>
+        <title> KSMS | Thành Viên </title>
       </Helmet>
       <UserView />
     </>

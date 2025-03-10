@@ -5,9 +5,9 @@ function Authentication() {
   return (
     <>
       <Helmet>
-        <title> KSMS | Login </title>
+        <title> KSMS | Đăng Nhập </title>
       </Helmet>
-      <AuthenView/>
+      <AuthenView />
     </>
   );
 }

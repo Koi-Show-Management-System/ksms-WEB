@@ -105,7 +105,6 @@ const AdminDashboard = ({ children }) => {
           className="select-none"
         >
           {renderMenuItems(items)}{" "}
-          {/* renderMenuItems should now use `items` */}
         </Menu>
       </Sider>
 

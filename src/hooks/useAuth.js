@@ -12,6 +12,14 @@ const useAuth = create((set) => ({
       }
     } catch (err) {
       console.error("Error fetching userInfo", err);
+      // Nếu lỗi 401 (Unauthorized), đăng xuất người dùng
+      if (err.response && err.response.status === 401) {
+        set({ isAuthenticated: false });
+        Cookies.remove("__token");
+        Cookies.remove("__role");
+        Cookies.remove("__id");
+        sessionStorage.removeItem("keys");
+      }
     }
   },
 
@@ -25,6 +33,11 @@ const useAuth = create((set) => ({
     Cookies.remove("__id");
     sessionStorage.removeItem("keys");
     set({ isAuthenticated: false });
+  },
+
+  checkRole: (requiredRole) => {
+    const userRole = Cookies.get("__role");
+    return userRole?.toLowerCase() === requiredRole?.toLowerCase();
   },
 }));
 

@@ -1,53 +1,138 @@
-import React from "react";
-import { Collapse, Timeline, Card, Image } from "antd";
-import koiFishImage from "../../../assets/koiFishImage.png";
+import React, { useEffect, useState } from "react";
+import {
+  Collapse,
+  Timeline,
+  Card,
+  Image,
+  Tabs,
+  Spin,
+  notification,
+  Modal,
+} from "antd";
+import dayjs from "dayjs";
 import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
-import sponsorLogo2 from "../../../assets/sponsorLogo2.png";
-import koiMouthImage from "../../../assets/koiMouthImage.png";
+import Category from "./Category";
+import Rules from "./Rules";
+import koiFishImage from "../../../assets/koiFishImage.png";
+import CompetitionRound from "./CompetitionRound";
+import { useParams } from "react-router-dom";
+import { Loading } from "../../../components";
+import useKoiShow from "../../../hooks/useKoiShow";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
+  const { id } = useParams();
+  const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
+
+  const [showAll, setShowAll] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const sponsors = koiShowDetail?.data?.sponsors || [];
+  const displaySponsors = showAll ? sponsors : sponsors.slice(0, 2);
+  const extraCount = sponsors.length - 2;
+  const showRule = koiShowDetail?.data?.showRules;
+
+  const statusMapping = {
+    RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
+    RegistrationClosed: { label: "Đóng Đăng Ký", color: "red" },
+    CheckIn: { label: "Điểm danh", color: "cyan" },
+    Preliminary: { label: "Vòng Sơ Loại", color: "green" },
+    Evaluation: { label: "Vòng Đánh Giá", color: "purple" },
+    Final: { label: "Vòng Chung Kết", color: "orange" },
+    GrandChampion: { label: "Grand Champion", color: "yellow" },
+    Completed: { label: "Hoàn Thành ", color: "gray" },
+    Exhibition: { lablel: "Triễn Lãm ", color: "teal" },
+    Finished: { lablel: "Kết Thúc", color: "brown" },
+  };
+
+  const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
+  const formatTime = (date) => dayjs(date).format("hh:mm A");
+
+  useEffect(() => {
+    fetchKoiShowDetail(id);
+  }, [id]);
+
+  if (isLoading) return <Loading />;
+
+  if (!koiShowDetail) {
+    console.log("Lỗi dữ liệu");
+
+    return (
+      <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>
+    );
+  }
+  const items = [
+    {
+      key: "category",
+      label: "Danh Mục",
+      children: <Category showId={id} />,
+    },
+    {
+      key: "competitionRound",
+      label: "Vòng Thi",
+      children: <CompetitionRound />,
+    },
+
+    {
+      key: "rules",
+      label: "Quy Tắc",
+      children: <Rules showId={id} showRule={showRule} />,
+    },
+  ];
 
   return (
-    <div className="max-w-7xl mx-auto p-3">
-      {/* Header Section */}
+    <div className="max-w-8xl mx-auto p-3">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-4">Koi Fish Show 2025</h1>
-        <p className="text-gray-600">
-          Welcome to the annual Koi Fish Show, where enthusiasts gather to
-          showcase their prized Koi and compete for top honors. Join us in
-          celebrating the beauty and diversity of Koi fish.
-        </p>
+        <h1 className="text-3xl font-bold mb-4">{koiShowDetail.data.name}</h1>
+        <p className="text-gray-600">{koiShowDetail.data.description}</p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        {/* Left Section - Image */}
         <div className="md:col-span-2">
           <Image
-            src={koiFishImage}
-            alt="Koi Fish"
-            className="w-full rounded-lg"
+            src={koiShowDetail.data.imgUrl || koiFishImage}
+            alt="Cá Koi"
+            className="w-[300px] h-[200px] object-cover rounded-lg"
           />
 
           <div className="grid grid-cols-2 gap-4">
             <div className="mt-4">
               <Collapse defaultActiveKey={["1"]}>
-                <Panel header="Event Schedule" key="1">
+                <Panel header="Lịch Trình Sự Kiện" key="1">
                   <div className="space-y-2">
                     <div className="flex justify-between">
-                      <span>07/01/2025 - Registration Opens</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.startDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Mở Đăng Ký
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>10/01/2025 - Registration Closes</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.endDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Đóng Đăng Ký
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>12/01/2025 - Exhibition Day</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.startExhibitionDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Ngày Bắt Đầu Giải Đấu & Triển Lãm
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>12/01/2025 - Tournament Opening Date</span>
+                      <span>
+                        {new Date(
+                          koiShowDetail.data.endExhibitionDate
+                        ).toLocaleDateString("vi-VN")}{" "}
+                        - Ngày Kết Thúc Giải Đấu & Triễn Lãm
+                      </span>
                     </div>
                     <div className="flex justify-between">
-                      <span>12/01/2025 - Tournament End Date</span>
+                      <span>Địa điểm: {koiShowDetail.data.location}</span>
                     </div>
                   </div>
                 </Panel>
@@ -56,13 +141,33 @@ function KoiShowDetail() {
 
             <div className="mt-4">
               <Collapse defaultActiveKey={["2"]}>
-                <Panel header="Ticket" key="2">
+                <Panel header="Vé" key="2">
                   <div className="space-y-2">
-                    <div>Competition Registration- Competition Entry - $5</div>
-                    <div>Viewing Ticket - Basic Pass - $45</div>
-                    <div>Competition Ticket - Vip Pass - $75</div>
-                    <div>Exhibition Ticket - Exhibition Pass - $15</div>
-                    <div>Minimum quantity: 100 - Maximum quantity: 200</div>
+                    <div>
+                      Phí Đăng Ký -{" "}
+                      {new Intl.NumberFormat("vi-VN", {
+                        style: "currency",
+                        currency: "VND",
+                      }).format(koiShowDetail.data.registrationFee)}
+                    </div>
+
+                    {koiShowDetail.data.ticketTypes.map((ticket) => (
+                      <div key={ticket.id}>
+                        <div>
+                          {ticket.name} -{" "}
+                          {new Intl.NumberFormat("vi-VN", {
+                            style: "currency",
+                            currency: "VND",
+                          }).format(ticket.price)}{" "}
+                          || Số lượng : {ticket.availableQuantity} vé
+                        </div>
+                      </div>
+                    ))}
+
+                    <div>
+                      Tham gia tối thiểu: {koiShowDetail.data.minParticipants} -
+                      Tham gia tối đa: {koiShowDetail.data.maxParticipants}
+                    </div>
                   </div>
                 </Panel>
               </Collapse>
@@ -71,205 +176,123 @@ function KoiShowDetail() {
 
           <div className="mt-4 grid grid-cols-2 gap-4">
             <div className="bg-black/[0.02] p-4 rounded-lg">
-              <h3 className="font-bold mb-4 text-lg">Sponsor</h3>
-              <div className="grid grid-cols-2 gap-4">
-                <Image
-                  src={sponsorLogo1}
-                  alt="Sponsor 1"
-                  className="rounded-xl"
-                />
-                <Image
-                  src={sponsorLogo2}
-                  alt="Sponsor 2"
-                  className="rounded-xl"
-                />
+              <h3 className="font-bold mb-4 text-lg">Tài Trợ</h3>
+              <div className="grid grid-cols-2 gap-4 relative">
+                {displaySponsors.map((sponsor, index) => (
+                  <div key={sponsor.id} className="relative">
+                    <Image
+                      src={sponsor.logoUrl || sponsorLogo1}
+                      alt={`Tài Trợ ${index + 1}`}
+                      className="rounded-xl"
+                      width={150}
+                      height={150}
+                    />
+                    {index === 1 && extraCount > 0 && (
+                      <div
+                        onClick={() => setIsModalOpen(true)}
+                        className="absolute inset-0 bg-black bg-opacity-50 rounded-xl flex items-center justify-center cursor-pointer"
+                      >
+                        <span className="text-white font-semibold">
+                          +{extraCount}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
-            </div>
-            <div className="bg-black/[0.02] p-4 rounded-lg">
-              <h3 className="font-bold mb-4 text-lg">Judging Criteria</h3>
-              <div className="grid grid-cols-2 gap-10">
-                {/* Column 1 */}
-                <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      1
-                    </span>
-                    <span>Color Quality</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      2
-                    </span>
-                    <span>Body and shape</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      3
-                    </span>
-                    <span>Pattern Balance</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      4
-                    </span>
-                    <span>Size & Growth</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      5
-                    </span>
-                    <span>Skin Quality</span>
-                  </div>
+
+              <Modal
+                title="Tất cả nhà tài trợ"
+                open={isModalOpen}
+                onCancel={() => setIsModalOpen(false)}
+                footer={null}
+              >
+                <div className="grid grid-cols-2 gap-4">
+                  {sponsors.map((sponsor) => (
+                    <Image
+                      key={sponsor.id}
+                      src={sponsor.logoUrl || sponsorLogo1}
+                      alt="Tài trợ"
+                      className="rounded-xl"
+                      width={150}
+                      height={150}
+                    />
+                  ))}
                 </div>
-                {/* Column 2 */}
+              </Modal>
+            </div>
+
+            <div className="bg-black/[0.02] p-4 rounded-lg">
+              <h3 className="font-bold mb-4 text-lg">Tiêu Chí Đánh Giá </h3>
+              <div className="grid grid-cols-2 gap-4">
+                {/* Cột 1: Chứa 5 phần tử đầu tiên */}
                 <div className="space-y-4">
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      6
-                    </span>
-                    <span>Overall Health</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      7
-                    </span>
-                    <span>Finnage Quality</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      8
-                    </span>
-                    <span>Swimming Form</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      9
-                    </span>
-                    <span>Elegance</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
-                      10
-                    </span>
-                    <span>Uniqueness</span>
-                  </div>
+                  {koiShowDetail.data.criteria
+                    .slice(0, 5)
+                    .map((criteriaList, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                          {index + 1}
+                        </span>
+                        <span>{criteriaList}</span>
+                      </div>
+                    ))}
+                </div>
+
+                {/* Cột 2: Chứa các phần tử còn lại */}
+                <div className="space-y-4">
+                  {koiShowDetail.data.criteria
+                    .slice(5)
+                    .map((criteriaList, index) => (
+                      <div key={index + 5} className="flex items-center gap-2">
+                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                          {index + 6}
+                        </span>
+                        <span>{criteriaList}</span>
+                      </div>
+                    ))}
                 </div>
               </div>
             </div>
           </div>
         </div>
-
-        {/* Right Section - Status */}
         <div>
-          <Card title="Status" className="mb-4">
+          <Card title="Trạng Thái" className="mb-4">
             <Timeline
-              items={[
-                {
-                  color: "gold",
+              items={koiShowDetail.data.showStatuses.map((status) => {
+                const { label, color } = statusMapping[status.statusName] || {
+                  label: status.statusName,
+                  color: "gray",
+                };
+                return {
+                  key: status.id,
+                  color: color,
                   children: (
                     <>
-                      <div className="text-yellow-500 font-medium">
-                        Not Registered
+                      <div className={`text-${color}-500 font-medium`}>
+                        {label}
                       </div>
-                      <div className="text-sm">22/08/2023- 15/08/2023</div>
-                      <div className="text-sm">16:08 PM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "blue",
-                  children: (
-                    <>
-                      <div className="text-blue-500 font-medium">
-                        Can Register
+                      <div className="text-sm">
+                        {formatDate(status.startDate)} -{" "}
+                        {formatDate(status.endDate)}
                       </div>
-                      <div className="text-sm">15/08/2023- 19/08/2023</div>
-                      <div className="text-sm">00:08 AM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "orange",
-                  children: (
-                    <>
-                      <div className="text-orange-500 font-medium">
-                        Registration Ended
+                      <div className="text-sm">
+                        {formatTime(status.startDate)} -{" "}
+                        {formatTime(status.endDate)}
                       </div>
-                      <div className="text-sm">19/08/2023- 20/08/2023</div>
-                      <div className="text-sm">00:08 AM- 00:08 AM</div>
                     </>
                   ),
-                },
-                {
-                  color: "green",
-                  children: (
-                    <>
-                      <div className="text-green-500 font-medium">
-                        Application Review Ended
-                      </div>
-                      <div className="text-sm">20/08/2023- 21/08/2023</div>
-                      <div className="text-sm">00:08 AM- 22:08 PM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "purple",
-                  children: (
-                    <>
-                      <div className="text-purple-500 font-medium">
-                        Attendance Possible
-                      </div>
-                      <div className="text-sm">21/08/2023- 22/08/2023</div>
-                      <div className="text-sm">22:08 PM- 00:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "cyan",
-                  children: (
-                    <>
-                      <div className="text-cyan-500 font-medium">Started</div>
-                      <div className="text-sm">22/08/2023- 22/08/2023</div>
-                      <div className="text-sm">00:08 AM- 09:08 AM</div>
-                    </>
-                  ),
-                },
-                {
-                  color: "red",
-                  children: (
-                    <>
-                      <div className="text-red-500 font-medium">Ended</div>
-                      <div className="text-sm">22/08/2023</div>
-                      <div className="text-sm">09:08 AM</div>
-                    </>
-                  ),
-                },
-              ]}
+                };
+              })}
             />
           </Card>
         </div>
       </div>
 
-      {/* Navigation Footer */}
-      <div className="mt-8 flex gap-4 border-t pt-4">
-        {[
-          "Category",
-          "Koi List",
-          "Manage Show",
-          "Exhibitor",
-          "Competition Rounds",
-          "Votes",
-          "Awards",
-          "Rules",
-          "Sponsor",
-        ].map((item) => (
-          <span
-            key={item}
-            className="text-gray-600 cursor-pointer hover:text-blue-600"
-          >
-            {item}
-          </span>
-        ))}
+      <div className="flex items-center justify-between mx-2">
+        <div className="flex-1">
+          <Tabs defaultActiveKey="category" items={items} />
+        </div>
       </div>
     </div>
   );

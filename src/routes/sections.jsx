@@ -6,6 +6,7 @@ import AdminDashboard from "../layout/admin";
 import ManagerDashboard from "../layout/manager";
 import RefereeDashboard from "../layout/referee";
 import Cookies from "js-cookie";
+import StaffDashboard from "../layout/staff";
 
 export const KoiShowPageAdmin = lazy(
   () => import("../pages/AdminPage/KoiShowPage")
@@ -38,21 +39,45 @@ export const NewsPage = lazy(() => import("../pages/AdminPage/NewsPage"));
 export const CriteriaPage = lazy(
   () => import("../pages/AdminPage/CriteriaPage")
 );
+export const MyShowRefereePage = lazy(
+  () => import("../pages/RefereePage/MyShowPage")
+);
+
+export const MyShowManagerPage = lazy(
+  () => import("../pages/ManagerPage/MyShowPage")
+);
+export const TeamManagerPage = lazy(
+  () => import("../pages/ManagerPage/TeamPage")
+);
+
+export const NewManagerPage = lazy(
+  () => import("../pages/ManagerPage/NewPage")
+);
+export const KoiShowStaffPage = lazy(
+  () => import("../pages/StaffPage/KoiShowPage")
+);
+export const KoiShowDetailStaffPage = lazy(
+  () => import("../pages/StaffPage/KoiShowDetailPage")
+);
+export const MyShowStaffPage = lazy(
+  () => import("../pages/StaffPage/MyShowPage")
+);
+export const NewStaffPage = lazy(() => import("../pages/StaffPage/NewPage"));
 
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
-  if (userRole !== allowedRole) {
+  if (userRole?.toLowerCase() !== allowedRole?.toLowerCase()) {
     return <Navigate to="/" replace />;
   }
   return children;
 };
 
 export const Router = () => {
-  const userRole = Cookies.get("__role") || "guest"; 
+  const userRole = Cookies.get("__role") || "guest";
 
   const routes = useRoutes([
     {
       path: "/",
-      element: <Authentication />, 
+      element: <Authentication />,
     },
     {
       element: (
@@ -91,15 +116,38 @@ export const Router = () => {
       ),
       path: "/manager",
       children: [
-        { element: <KoiShowPageManager />, path: "koiShow" },
+        { element: <KoiShowPageManager />, path: "showList" },
+        { element: <MyShowManagerPage />, path: "myShow" },
+        { element: <TeamManagerPage />, path: "teams" },
+        { element: <NewManagerPage />, path: "news" },
         { element: <KoiShowDetailManager />, path: "koiShow/detail/:id" },
-        { element: <Navigate to="/manager/koiShow" replace />, index: true },
+        { element: <Navigate to="/manager/showList" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],
     },
     {
       element: (
-        <ProtectedRoute allowedRole="referee" userRole={userRole}>
+        <ProtectedRoute allowedRole="Staff" userRole={userRole}>
+          <StaffDashboard>
+            <Suspense fallback={<Loading />}>
+              <Outlet />
+            </Suspense>
+          </StaffDashboard>
+        </ProtectedRoute>
+      ),
+      path: "/staff",
+      children: [
+        { element: <KoiShowStaffPage />, path: "showList" },
+        { element: <MyShowStaffPage />, path: "myShow" },
+        { element: <NewStaffPage />, path: "news" },
+        { element: <KoiShowDetailStaffPage />, path: "koiShow/detail/:id" },
+        { element: <Navigate to="/staff/showList" replace />, index: true },
+        { element: <Error404 />, path: "*" },
+      ],
+    },
+    {
+      element: (
+        <ProtectedRoute allowedRole="Referee" userRole={userRole}>
           <RefereeDashboard>
             <Suspense fallback={<Loading />}>
               <Outlet />
@@ -109,14 +157,15 @@ export const Router = () => {
       ),
       path: "/referee",
       children: [
-        { element: <KoiShowPageReferee />, path: "koiShow" },
+        { element: <KoiShowPageReferee />, path: "showList" },
+        { element: <MyShowRefereePage />, path: "myShow" },
         { element: <KoiShowDetailReferee />, path: "koiShow/detail/:id" },
-        { element: <Navigate to="/referee/koiShow" replace />, index: true },
+        { element: <Navigate to="/referee/showList" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],
     },
     {
-      path: "*", 
+      path: "*",
       element: <Error404 />,
     },
   ]);
