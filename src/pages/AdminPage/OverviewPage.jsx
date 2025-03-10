@@ -6,7 +6,7 @@ function OverviewPage() {
   return (
     <>
       <Helmet>
-        <title>KSMS | Overview</title>
+        <title>KSMS | Tổng Quan</title>
       </Helmet>
       <OverviewView />
     </>

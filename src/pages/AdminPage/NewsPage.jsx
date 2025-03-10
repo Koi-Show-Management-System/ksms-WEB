@@ -6,7 +6,7 @@ function NewsPage() {
   return (
     <>
       <Helmet>
-        <title>KSMS | News</title>
+        <title>KSMS | Tin Tức</title>
       </Helmet>
       <NewsView />
     </>

@@ -6,7 +6,7 @@ function MyShowPage() {
   return (
     <>
       <Helmet>
-        <title> KSMS | MyShow </title>
+        <title> KSMS | MyShow</title>
       </Helmet>
       <MyShowView />
     </>

@@ -5,9 +5,9 @@ function KoiShowDetailPage() {
   return (
     <>
       <Helmet>
-        <title> KSMS | KoiShow Detail </title>
+        <title> KSMS | Chi Tiết Show </title>
       </Helmet>
-      <KoiShowDetail/>
+      <KoiShowDetail />
     </>
   );
 }

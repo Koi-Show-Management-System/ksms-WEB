@@ -20,7 +20,7 @@ const useKoiShow = create((set) => ({
         const items = res.data?.data?.items || [];
         const total = res.data?.data?.total || items.length;
         const totalPages = res.data?.data?.totalPages || 1;
-
+        // console.log("koi list", res);
         set({
           koiShows: items,
           totalItems: total,

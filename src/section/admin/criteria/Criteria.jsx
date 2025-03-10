@@ -10,11 +10,13 @@ import {
 } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import useCriteria from "../../../hooks/useCriteria";
+
 const Criteria = () => {
   const {
     criteria,
     fetchCriteria,
     createCriteria,
+    updateCriteria,
     currentPage,
     totalItems,
     pageSize,
@@ -47,31 +49,48 @@ const Criteria = () => {
   };
 
   const handleSave = async (values) => {
-    const newOrder =
-      criteria.length > 0
-        ? Math.max(...criteria.map((c) => c.order || 0)) + 1
-        : 1;
-    const newCriteria = { ...values, order: newOrder };
+    if (currentCriteria) {
+      // Update existing criteria
+      const result = await updateCriteria(currentCriteria.id, values);
 
-    const result = await createCriteria(newCriteria);
-
-    console.log("API Response:", result);
-
-    if (result) {
-      notification.success({
-        message: "Thêm tiêu chí thành công",
-        description: "Tiêu chí đã được thêm thành công.",
-        placement: "topRight",
-      });
-
-      await fetchCriteria(1, pageSize);
+      if (result) {
+        notification.success({
+          message: "Cập nhật tiêu chí thành công",
+          description: "Tiêu chí đã được cập nhật thành công.",
+          placement: "topRight",
+        });
+      } else {
+        notification.error({
+          message: "Cập nhật tiêu chí thất bại",
+          description: "Không thể cập nhật tiêu chí. Vui lòng thử lại!",
+          placement: "topRight",
+        });
+      }
     } else {
-      notification.error({
-        message: "Thêm tiêu chí thất bại",
-        description:
-          result?.message || "Không thể thêm tiêu chí. Vui lòng thử lại!",
-        placement: "topRight",
-      });
+      // Create new criteria
+      const newOrder =
+        criteria.length > 0
+          ? Math.max(...criteria.map((c) => c.order || 0)) + 1
+          : 1;
+      const newCriteria = { ...values, order: newOrder };
+
+      const result = await createCriteria(newCriteria);
+
+      if (result) {
+        notification.success({
+          message: "Thêm tiêu chí thành công",
+          description: "Tiêu chí đã được thêm thành công.",
+          placement: "topRight",
+        });
+
+        await fetchCriteria(1, pageSize);
+      } else {
+        notification.error({
+          message: "Thêm tiêu chí thất bại",
+          description: "Không thể thêm tiêu chí. Vui lòng thử lại!",
+          placement: "topRight",
+        });
+      }
     }
 
     setIsModalVisible(false);
@@ -114,7 +133,7 @@ const Criteria = () => {
 
   return (
     <div>
-      <div className=" flex justify-end relative top-[-40px] right-0">
+      <div className="flex justify-end relative top-[-40px] right-0">
         <Button
           type="primary"
           onClick={() => showModal()}

@@ -6,7 +6,7 @@ function CriteriaPage() {
   return (
     <>
       <Helmet>
-        <title>KSMS | Criteria Page</title>
+        <title>KSMS | Tiêu Chí</title>
       </Helmet>
       <CriteriaView />
     </>

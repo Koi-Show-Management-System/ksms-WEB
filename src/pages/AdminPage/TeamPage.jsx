@@ -6,7 +6,7 @@ function TeamPage() {
   return (
     <>
       <Helmet>
-        <title>KSMS | Team Management</title>
+        <title>KSMS | Quản Lý </title>
       </Helmet>
       <TeamView />
     </>

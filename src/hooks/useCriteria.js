@@ -1,7 +1,11 @@
 import { create } from "zustand";
-import { getCriterias, postCriteria } from "../api/criteriaApi";
+import {
+  getCriterias,
+  postCriteria,
+  updateCriteria as updateCriteriaApi,
+} from "../api/criteriaApi";
 
-const useCriteria = create((set) => ({
+const useCriteria = create((set, get) => ({
   criteria: [],
   currentPage: 1,
   pageSize: 10,
@@ -65,10 +69,9 @@ const useCriteria = create((set) => ({
   createCriteria: async (data) => {
     try {
       const res = await postCriteria(data);
-      console.log("API Response when creating criteria:", res); // Debug API
+      console.log("API Response when creating criteria:", res);
 
       if (res && res.status === 201) {
-        // Kiểm tra res.status thay vì res.statusCode
         return res.data || { message: "Criterion created successfully" };
       } else {
         console.error("API Error:", res);
@@ -79,5 +82,24 @@ const useCriteria = create((set) => ({
       return null;
     }
   },
+  updateCriteria: async (id, data) => {
+    try {
+      const res = await updateCriteriaApi(id, data);
+      console.log("API Response when updating criteria:", res);
+
+      if (res && (res.status === 200 || res.status === 204)) {
+        // Refresh data after update
+        await get().fetchCriteria(get().currentPage, get().pageSize);
+        return res.data || { message: "Criterion updated successfully" };
+      } else {
+        console.error("API Error:", res);
+        return null;
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      return null;
+    }
+  },
 }));
+
 export default useCriteria;

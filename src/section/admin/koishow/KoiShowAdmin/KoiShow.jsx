@@ -14,6 +14,7 @@ import NoKoiShow from "../../../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
 import dayjs from "dayjs";
+import { Loading } from "../../../../components";
 
 function KoiShow() {
   const navigate = useNavigate();
@@ -58,8 +59,7 @@ function KoiShow() {
     fetchKoiShowList(page, size);
   };
 
-  if (isLoading)
-    return <Spin size="large" className="flex justify-center mt-10" />;
+  if (isLoading) return <Loading />;
   if (error) {
     message.error("Lỗi tải dữ liệu!");
     return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
@@ -118,7 +118,9 @@ function KoiShow() {
                 ? "green"
                 : status === "upcoming"
                   ? "blue"
-                  : "default"
+                  : status === "in progress"
+                    ? "yellow"
+                    : "default"
           }
         >
           {status === "pending"
@@ -127,7 +129,9 @@ function KoiShow() {
               ? "Đã duyệt"
               : status === "upcoming"
                 ? "Sắp diễn ra"
-                : "Trạng thái khác"}
+                : status === "in progress"
+                  ? "Đang diễn ra"
+                  : "Hết hạn"}
         </Tag>
       ),
     },
