@@ -1,42 +1,51 @@
-name: Deploy Frontend
+name: Frontend CI/CD Pipeline
 
 on:
   push:
-    branches:
-      - main  # Chạy khi có commit push lên nhánh main
-  workflow_dispatch:  # Cho phép trigger thủ công
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
-  deploy:
+  build-client:
+    name: Build Client
     runs-on: ubuntu-latest
-
+    timeout-minutes: 15
+    env:
+      REGISTRY_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      BASE_URL: ${{ secrets.BASE_URL }}
+      GIT_COMMIT_SHA: ${{ github.sha }}
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v2
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: DockerHub Login
+        uses: docker/login-action@v3.1.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}  
+      - name: Build and Push Docker Image
+        run: |
+          docker compose -f docker-compose.build.yaml build ksms-client
+          docker compose -f docker-compose.build.yaml push ksms-client
 
-    - name: Deploy to VPS (SSH)
-      uses: appleboy/ssh-action@v0.1.5
-      with:
-        host: ${{ secrets.SSH_HOST }}
-        username: ${{ secrets.SSH_USER }}
-        key: ${{ secrets.SSH_PRIVATE_KEY }}
-        port: ${{ secrets.SSH_PORT }}
-        script: |
-          # Chuyển đến thư mục frontend
-          cd /opt/ksms/frontend
-
-          # Kéo mã nguồn mới nhất từ Git
-          git pull origin main
-
-          # Cài đặt dependencies
-          npm install
-
-          # Build frontend
-          npm run build
-
-          # Kiểm tra và khởi động lại dịch vụ hoặc ứng dụng (ví dụ: pm2 cho ứng dụng React)
-          if [ -f /opt/ksms/nginx/nginx.conf ]; then
-              pm2 restart all || pm2 start npm --name "frontend" -- run start
-          else
-              echo "nginx.conf không tìm thấy, không thể khởi động lại Nginx"
-          fi
+  deploy-client:
+    name: Deploy Client
+    runs-on: self-hosted
+    timeout-minutes: 15
+    needs: build-client
+    env:
+      REGISTRY_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}
+      ROOT_DOMAIN: ${{ secrets.ROOT_DOMAIN }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: DockerHub Login
+        uses: docker/login-action@v3.1.0
+        with:
+          username: ${{ secrets.DOCKER_HUB_USERNAME }}
+          password: ${{ secrets.DOCKER_HUB_TOKEN }}  
+      - name: Drop Old Container
+        run: docker compose -p ksms-application down ksms-client --rmi all -v
+      - name: Start new container
+        run: docker compose -p ksms-application up ksms-client -d --force-recreate
