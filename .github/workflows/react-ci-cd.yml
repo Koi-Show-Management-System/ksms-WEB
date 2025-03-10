@@ -15,6 +15,7 @@ jobs:
     env:
       REGISTRY_NAME: ${{ secrets.DOCKER_HUB_USERNAME }}
       BASE_URL: ${{ secrets.BASE_URL }}
+      GIT_COMMIT_SHA: ${{ github.sha }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
