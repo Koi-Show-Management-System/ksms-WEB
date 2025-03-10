@@ -1,10 +1,8 @@
 services:
   ksms-client:
+    image: ${REGISTRY_NAME}/ksms-frontend:latest
     build:
       context: .
       dockerfile: Dockerfile
-      tags:
-        - ${REGISTRY_NAME}/ksms-frontend:latest
-        - ${REGISTRY_NAME}/ksms-frontend:${GIT_COMMIT_SHA}
       args:
         BASE_URL: ${BASE_URL}
