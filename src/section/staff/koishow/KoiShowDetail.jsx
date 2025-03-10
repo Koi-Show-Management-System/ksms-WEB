@@ -5,8 +5,7 @@ import {
   Card,
   Image,
   Tabs,
-  Spin,
-  notification,
+
   Modal,
 } from "antd";
 import dayjs from "dayjs";
@@ -18,6 +17,7 @@ import { useParams } from "react-router-dom";
 import { Loading } from "../../../components";
 import useKoiShow from "../../../hooks/useKoiShow";
 import Rules from "./Rules";
+import Tank from "./Tank";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -71,11 +71,15 @@ function KoiShowDetail() {
       label: "Vòng Thi",
       children: <CompetitionRound />,
     },
-
+    {
+      key: "tank",
+      label: "Quản Lý Bể",
+      children: <Tank showId={id} />,
+    },
     {
       key: "rules",
       label: "Quy Tắc",
-      children: <Rules showId={id} showRule={showRule}/>,
+      children: <Rules showId={id} showRule={showRule} />,
     },
   ];
 

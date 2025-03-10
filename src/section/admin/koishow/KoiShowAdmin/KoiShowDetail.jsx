@@ -21,6 +21,8 @@ import Sponsor from "./Sponsor";
 import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
+import { Loading } from "../../../../components";
+import Tank from "../../../staff/koishow/Tank";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -54,8 +56,7 @@ function KoiShowDetail() {
     fetchKoiShowDetail(id);
   }, [id]);
 
-  if (isLoading)
-    return <Spin size="large" className="flex justify-center mt-10" />;
+  if (isLoading) return <Loading />;
 
   if (!koiShowDetail) {
     console.log("Lỗi dữ liệu");
@@ -80,6 +81,7 @@ function KoiShowDetail() {
       label: "Quản Lý Triển Lãm",
       children: <ManageShow showId={id} />,
     },
+
     {
       key: "competitionRound",
       label: "Vòng Thi",

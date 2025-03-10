@@ -15,6 +15,7 @@ import {
   List,
   Card,
   Tabs,
+  Collapse,
 } from "antd";
 import {
   EditOutlined,
@@ -513,54 +514,112 @@ function Category({ showId }) {
             </TabPane>
 
             <TabPane tab="Vòng thi" key="6" icon={<FieldTimeOutlined />}>
-              <List
-                dataSource={selectedCategory.rounds || []}
-                renderItem={(round) => (
-                  <List.Item>
-                    <Card
-                      title={round.name}
-                      extra={
-                        <Tag
-                          color={
-                            round.status === "pending"
-                              ? "orange"
-                              : round.status === "active"
-                                ? "green"
-                                : round.status === "completed"
-                                  ? "blue"
-                                  : "default"
-                          }
-                        >
-                          {round.status}
-                        </Tag>
-                      }
-                    >
-                      <p>
-                        <strong>Loại vòng:</strong> {round.roundType}
-                      </p>
-                      <p>
-                        <strong>Thứ tự:</strong> {round.roundOrder}
-                      </p>
-                      <p>
-                        <strong>Thời gian bắt đầu:</strong>{" "}
-                        {round.startTime
-                          ? new Date(round.startTime).toLocaleString()
-                          : "Chưa xác định"}
-                      </p>
-                      <p>
-                        <strong>Thời gian kết thúc:</strong>{" "}
-                        {round.endTime
-                          ? new Date(round.endTime).toLocaleString()
-                          : "Chưa xác định"}
-                      </p>
-                      <p>
-                        <strong>Điểm tối thiểu để vào vòng sau:</strong>{" "}
-                        {round.minScoreToAdvance}
-                      </p>
-                    </Card>
-                  </List.Item>
-                )}
-              />
+              {(() => {
+                // Group rounds by roundType
+                const roundsByType = {};
+
+                // Process and group rounds
+                (selectedCategory.rounds || []).forEach((round) => {
+                  const type = round.roundType;
+                  if (!roundsByType[type]) {
+                    roundsByType[type] = [];
+                  }
+                  roundsByType[type].push(round);
+                });
+
+                // Translate roundType to Vietnamese
+                const translateRoundType = (type) => {
+                  switch (type) {
+                    case "Preliminary":
+                      return "Vòng Sơ Loại";
+                    case "Evaluation":
+                      return "Vòng Đánh Giá";
+                    case "Final":
+                      return "Vòng Chung Kết";
+                    default:
+                      return type;
+                  }
+                };
+
+                // Convert to array for rendering
+                const groupedRounds = Object.entries(roundsByType).map(
+                  ([type, rounds]) => ({
+                    type,
+                    translatedType: translateRoundType(type),
+                    rounds: rounds.sort((a, b) => a.roundOrder - b.roundOrder),
+                  })
+                );
+
+                return (
+                  <div>
+                    {groupedRounds.map((group) => (
+                      <div key={group.type} className="mb-6">
+                        <h3 className="text-lg font-medium mb-3">
+                          {group.translatedType}
+                        </h3>
+                        <Collapse>
+                          {group.rounds.map((round) => (
+                            <Collapse.Panel
+                              key={round.id}
+                              header={
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    Vòng Nhỏ {round.roundOrder} -{" "}
+                                    {group.translatedType}
+                                  </span>
+                                  <Tag
+                                    color={
+                                      round.status === "pending"
+                                        ? "orange"
+                                        : round.status === "active"
+                                          ? "green"
+                                          : round.status === "completed"
+                                            ? "blue"
+                                            : "default"
+                                    }
+                                  >
+                                    {round.status === "pending"
+                                      ? "Chờ xử lý"
+                                      : round.status === "active"
+                                        ? "Đang diễn ra"
+                                        : round.status === "completed"
+                                          ? "Đã hoàn thành"
+                                          : round.status}
+                                  </Tag>
+                                </div>
+                              }
+                            >
+                              <div className="p-3">
+                                <p>
+                                  <strong>Thứ tự:</strong> {round.roundOrder}
+                                </p>
+                                <p>
+                                  <strong>Thời gian bắt đầu:</strong>{" "}
+                                  {round.startTime
+                                    ? new Date(round.startTime).toLocaleString()
+                                    : "Chưa xác định"}
+                                </p>
+                                <p>
+                                  <strong>Thời gian kết thúc:</strong>{" "}
+                                  {round.endTime
+                                    ? new Date(round.endTime).toLocaleString()
+                                    : "Chưa xác định"}
+                                </p>
+                                <p>
+                                  <strong>
+                                    Điểm tối thiểu để vào vòng sau:
+                                  </strong>{" "}
+                                  {round.minScoreToAdvance}
+                                </p>
+                              </div>
+                            </Collapse.Panel>
+                          ))}
+                        </Collapse>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </TabPane>
           </Tabs>
         )}
