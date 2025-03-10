@@ -1,0 +1,20 @@
+version: "3.8"
+services:
+  ksms-client:
+    container_name: ksms-frontend
+    restart: always
+    image: ${REGISTRY_NAME}/ksms-frontend:latest
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ksms-frontend.rule=Host(`${ROOT_DOMAIN}`)"
+      - "traefik.docker.network=ksms-network"
+      - "traefik.constraint=proxy-public"
+      - "traefik.http.routers.ksms-frontend.entrypoints=web"
+      - "traefik.http.services.ksms-frontend.loadbalancer.server.port=80"
+    networks:
+      - ksms-network
+
+networks:
+  ksms-network:
+    name: ksms-network
+    external: true
