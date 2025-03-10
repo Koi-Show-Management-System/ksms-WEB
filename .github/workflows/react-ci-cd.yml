@@ -26,8 +26,8 @@ jobs:
           password: ${{ secrets.DOCKER_HUB_TOKEN }}  
       - name: Build and Push Docker Image
         run: |
-          docker-compose -f docker-compose.build.yaml build ksms-client
-          docker-compose -f docker-compose.build.yaml push ksms-client
+          docker compose -f docker-compose.build.yaml build ksms-client
+          docker compose -f docker-compose.build.yaml push ksms-client
 
   deploy-client:
     name: Deploy Client
