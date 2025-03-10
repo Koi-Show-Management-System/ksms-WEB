@@ -106,7 +106,7 @@ function MyShow() {
               <div
                 key={show.id}
                 className="bg-white rounded-lg shadow-md overflow-hidden"
-                onClick={() => navigate(`/admin/koiShow/detail/${show.id}`)}
+                onClick={() => navigate(`/manager/koiShow/detail/${show.id}`)}
               >
                 <img
                   src={show.imgUrl}
@@ -162,7 +162,7 @@ function MyShow() {
                       {(show.registrationFee || 0).toLocaleString()} VND
                     </p>
                   </div>
-                  <Link to={`/admin/koiShow/detail/${show.id}`}>
+                  <Link to={`/manager/koiShow/detail/${show.id}`}>
                     <Button className="mt-3 w-full bg-blue-500" type="primary">
                       Xem chi tiết
                     </Button>
