@@ -4,15 +4,23 @@ import {
   Input,
   Button,
   Tag,
+  Select,
   Typography,
+  Form,
+  Modal,
   message,
   Drawer,
   Descriptions,
+  Divider,
   List,
   Card,
   Tabs,
+  Collapse,
 } from "antd";
 import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
   EyeOutlined,
   UserOutlined,
   TrophyOutlined,
@@ -22,13 +30,16 @@ import {
 import useCategory from "../../../hooks/useCategory";
 
 const { Search } = Input;
+const { Option } = Select;
 const { TabPane } = Tabs;
 
 function Category({ showId }) {
   const [searchText, setSearchText] = useState("");
   const [filterVariety, setFilterVariety] = useState("");
+  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [form] = Form.useForm();
 
   const { categories, isLoading, error, fetchCategories, getCategoryDetail } =
     useCategory();
@@ -46,6 +57,34 @@ function Category({ showId }) {
 
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
+  };
+
+  const handleFilterVariety = (value) => {
+    setFilterVariety(value);
+  };
+  const handleCategoryCreated = () => {
+    // Refresh the categories list after a new category is created
+    fetchCategories(showId, 1, 10);
+  };
+
+  const showModal = () => {
+    setIsModalVisible(true);
+  };
+
+  const handleCancel = () => {
+    form.resetFields();
+    setIsModalVisible(false);
+  };
+
+  const handleCreate = (values) => {
+    const newCategory = {
+      key: String(categories.length + 1),
+      ...values,
+      participatingKoi: 0,
+    };
+    setIsModalVisible(false);
+    form.resetFields();
+    message.success("Category created successfully");
   };
 
   const showCategoryDetail = async (categoryId) => {
@@ -97,7 +136,40 @@ function Category({ showId }) {
         </span>
       ),
     },
+    // {
+    //   title: "Giống",
+    //   key: "variety",
+    //   render: (_, record) => {
+    //     // Check if varieties exists and has items
+    //     if (
+    //       !record.varieties ||
+    //       !Array.isArray(record.varieties) ||
+    //       record.varieties.length === 0
+    //     ) {
+    //       return <span>N/A</span>;
+    //     }
 
+    //     // Join all variety names
+    //     return <span>{record.varieties.join(", ")}</span>;
+    //   },
+    //   filters: [
+    //     { text: "Kohaku", value: "Kohaku" },
+    //     { text: "Showa", value: "Showa" },
+    //     { text: "Sanke", value: "Sanke" },
+    //     { text: "Showa Sanshoku", value: "Showa Sanshoku" },
+    //   ],
+    //   onFilter: (value, record) => {
+    //     if (
+    //       !record.varieties ||
+    //       !Array.isArray(record.varieties) ||
+    //       record.varieties.length === 0
+    //     ) {
+    //       return false;
+    //     }
+
+    //     return record.varieties.some((variety) => variety === value);
+    //   },
+    // },
     {
       title: "SL Koi tối đa",
       dataIndex: "maxEntries",
@@ -435,54 +507,112 @@ function Category({ showId }) {
             </TabPane>
 
             <TabPane tab="Vòng thi" key="6" icon={<FieldTimeOutlined />}>
-              <List
-                dataSource={selectedCategory.rounds || []}
-                renderItem={(round) => (
-                  <List.Item>
-                    <Card
-                      title={round.name}
-                      extra={
-                        <Tag
-                          color={
-                            round.status === "pending"
-                              ? "orange"
-                              : round.status === "active"
-                                ? "green"
-                                : round.status === "completed"
-                                  ? "blue"
-                                  : "default"
-                          }
-                        >
-                          {round.status}
-                        </Tag>
-                      }
-                    >
-                      <p>
-                        <strong>Loại vòng:</strong> {round.roundType}
-                      </p>
-                      <p>
-                        <strong>Thứ tự:</strong> {round.roundOrder}
-                      </p>
-                      <p>
-                        <strong>Thời gian bắt đầu:</strong>{" "}
-                        {round.startTime
-                          ? new Date(round.startTime).toLocaleString()
-                          : "Chưa xác định"}
-                      </p>
-                      <p>
-                        <strong>Thời gian kết thúc:</strong>{" "}
-                        {round.endTime
-                          ? new Date(round.endTime).toLocaleString()
-                          : "Chưa xác định"}
-                      </p>
-                      <p>
-                        <strong>Điểm tối thiểu để vào vòng sau:</strong>{" "}
-                        {round.minScoreToAdvance}
-                      </p>
-                    </Card>
-                  </List.Item>
-                )}
-              />
+              {(() => {
+                // Group rounds by roundType
+                const roundsByType = {};
+
+                // Process and group rounds
+                (selectedCategory.rounds || []).forEach((round) => {
+                  const type = round.roundType;
+                  if (!roundsByType[type]) {
+                    roundsByType[type] = [];
+                  }
+                  roundsByType[type].push(round);
+                });
+
+                // Translate roundType to Vietnamese
+                const translateRoundType = (type) => {
+                  switch (type) {
+                    case "Preliminary":
+                      return "Vòng Sơ Loại";
+                    case "Evaluation":
+                      return "Vòng Đánh Giá";
+                    case "Final":
+                      return "Vòng Chung Kết";
+                    default:
+                      return type;
+                  }
+                };
+
+                // Convert to array for rendering
+                const groupedRounds = Object.entries(roundsByType).map(
+                  ([type, rounds]) => ({
+                    type,
+                    translatedType: translateRoundType(type),
+                    rounds: rounds.sort((a, b) => a.roundOrder - b.roundOrder),
+                  })
+                );
+
+                return (
+                  <div>
+                    {groupedRounds.map((group) => (
+                      <div key={group.type} className="mb-6">
+                        <h3 className="text-lg font-medium mb-3">
+                          {group.translatedType}
+                        </h3>
+                        <Collapse>
+                          {group.rounds.map((round) => (
+                            <Collapse.Panel
+                              key={round.id}
+                              header={
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    Vòng Nhỏ {round.roundOrder} -{" "}
+                                    {group.translatedType}
+                                  </span>
+                                  <Tag
+                                    color={
+                                      round.status === "pending"
+                                        ? "orange"
+                                        : round.status === "active"
+                                          ? "green"
+                                          : round.status === "completed"
+                                            ? "blue"
+                                            : "default"
+                                    }
+                                  >
+                                    {round.status === "pending"
+                                      ? "Chờ xử lý"
+                                      : round.status === "active"
+                                        ? "Đang diễn ra"
+                                        : round.status === "completed"
+                                          ? "Đã hoàn thành"
+                                          : round.status}
+                                  </Tag>
+                                </div>
+                              }
+                            >
+                              <div className="p-3">
+                                <p>
+                                  <strong>Thứ tự:</strong> {round.roundOrder}
+                                </p>
+                                <p>
+                                  <strong>Thời gian bắt đầu:</strong>{" "}
+                                  {round.startTime
+                                    ? new Date(round.startTime).toLocaleString()
+                                    : "Chưa xác định"}
+                                </p>
+                                <p>
+                                  <strong>Thời gian kết thúc:</strong>{" "}
+                                  {round.endTime
+                                    ? new Date(round.endTime).toLocaleString()
+                                    : "Chưa xác định"}
+                                </p>
+                                <p>
+                                  <strong>
+                                    Điểm tối thiểu để vào vòng sau:
+                                  </strong>{" "}
+                                  {round.minScoreToAdvance}
+                                </p>
+                              </div>
+                            </Collapse.Panel>
+                          ))}
+                        </Collapse>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </TabPane>
           </Tabs>
         )}

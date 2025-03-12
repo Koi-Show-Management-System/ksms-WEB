@@ -1,13 +1,5 @@
 import React, { useEffect, useState } from "react";
-import {
-  Collapse,
-  Timeline,
-  Card,
-  Image,
-  Tabs,
-
-  Modal,
-} from "antd";
+import { Collapse, Timeline, Card, Image, Tabs, Modal } from "antd";
 import dayjs from "dayjs";
 import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
 import Category from "./Category";
@@ -18,6 +10,7 @@ import { Loading } from "../../../components";
 import useKoiShow from "../../../hooks/useKoiShow";
 import Rules from "./Rules";
 import Tank from "./Tank";
+import AssignTank from "./AssignTank";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -75,6 +68,11 @@ function KoiShowDetail() {
       key: "tank",
       label: "Quản Lý Bể",
       children: <Tank showId={id} />,
+    },
+    {
+      key: "assign-tank",
+      label: "Gán Vào Bể",
+      children: <AssignTank showId={id} />,
     },
     {
       key: "rules",

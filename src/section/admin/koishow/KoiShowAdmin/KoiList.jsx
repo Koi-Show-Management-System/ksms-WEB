@@ -266,7 +266,7 @@ function KoiList({ showId }) {
       />
 
       <Modal
-        title="Registration Details"
+        title="Chi Tiết Đăng Ký"
         open={isModalVisible}
         onCancel={handleCancel}
         footer={null}
@@ -278,42 +278,44 @@ function KoiList({ showId }) {
               {/* Thông tin đăng ký */}
               <Col span={24}>
                 <Card
-                  title="Registration Information"
+                  title="Thông Tin Đăng Ký"
                   bordered={false}
                   className="w-full"
                 >
                   <Row gutter={[16, 16]}>
                     <Col span={12}>
                       <p>
-                        <strong>Register Name:</strong>{" "}
+                        <strong>Tên Người Đăng Ký:</strong>{" "}
                         {currentKoi.registerName}
                       </p>
                       <p>
-                        <strong>Koi Name:</strong> {currentKoi.koiProfile.name}
+                        <strong>Tên Cá Koi:</strong>{" "}
+                        {currentKoi.koiProfile.name}
                       </p>
                       <p>
-                        <strong>Koi Size:</strong> {currentKoi.koiSize} cm
+                        <strong>Kích Thước Cá:</strong> {currentKoi.koiSize} cm
                       </p>
                       <p>
-                        <strong>Koi Age:</strong> {currentKoi.koiAge}
+                        <strong>Tuổi Cá:</strong> {currentKoi.koiAge}
                       </p>
                     </Col>
                     <Col span={12}>
                       <p>
-                        <strong>Category:</strong>{" "}
+                        <strong>Hạng Mục:</strong>{" "}
                         {currentKoi.competitionCategory?.name}
                       </p>
                       {currentKoi.koiShow && (
                         <p>
-                          <strong>Show Name:</strong> {currentKoi.koiShow.name}
+                          <strong>Tên Cuộc Thi:</strong>{" "}
+                          {currentKoi.koiShow.name}
                         </p>
                       )}
                       <p>
-                        <strong>Registration Fee:</strong>{" "}
+                        <strong>Phí Đăng Ký:</strong>{" "}
                         {currentKoi.registrationFee?.toLocaleString() || 0} VND
                       </p>
                       <p>
-                        <strong>Status:</strong>{" "}
+                        <strong>Trạng Thái:</strong>{" "}
                         {currentKoi.status && (
                           <Tag
                             color={
@@ -371,18 +373,22 @@ function KoiList({ showId }) {
               {/* Koi Media */}
               {currentKoi.koiMedia && currentKoi.koiMedia.length > 0 && (
                 <Col span={24}>
-                  <Card title="Koi Media" variant={false} className="w-full">
+                  <Card
+                    title="Hình Ảnh/Video Cá Koi"
+                    variant={false}
+                    className="w-full"
+                  >
                     <Row gutter={[16, 16]}>
                       {currentKoi.koiMedia.map((media, index) => (
                         <Col span={12} key={media.id}>
                           {media.mediaType === "Image" ? (
                             <div>
                               <p>
-                                <strong>Image:</strong>
+                                <strong>Hình Ảnh:</strong>
                               </p>
                               <Image
                                 src={media.mediaUrl}
-                                alt="Koi Image"
+                                alt="Hình Ảnh Koi"
                                 style={{
                                   width: "100%",
                                   maxHeight: "300px",
@@ -423,7 +429,7 @@ function KoiList({ showId }) {
                   updatedStatus === "rejected"
                 }
               >
-                Approve
+                Phê Duyệt
               </Button>
 
               <Button
@@ -438,7 +444,7 @@ function KoiList({ showId }) {
                   updatedStatus === "rejected"
                 }
               >
-                Reject
+                Từ Chối
               </Button>
             </div>
           </div>

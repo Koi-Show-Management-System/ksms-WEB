@@ -12,8 +12,10 @@ const getRegistration = (page, size, showIds) => {
     }
   );
 };
-
+const assignTank = (data) => {
+  return axiosClient.patch("/registration/assign-to-tank", data);
+};
 const updateStatusRegistration = (id, status) => {
   return axiosClient.put(`/registration/${id}?status=${status}`);
 };
-export { getRegistration, updateStatusRegistration };
+export { getRegistration, updateStatusRegistration, assignTank };

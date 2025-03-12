@@ -10,4 +10,7 @@ const getKoiShowDetail = (id) => {
   return axiosClient.get(`/koi-show/${id}`);
 };
 
-export { getKoiShowList, getKoiShowDetail };
+const updateShow = (id, data) => {
+  return axiosClient.put(`/koi-show/${id}`, data);
+};
+export { getKoiShowList, getKoiShowDetail, updateShow };
