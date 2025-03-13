@@ -3,8 +3,8 @@ import Cookies from "js-cookie";
 
 const apiBaseUrl = import.meta.env.VITE_BASE_URL ?? "https://api.ksms.news";
 const axiosClient = axios.create({
-  baseURL: "http://localhost:5250/api/v1",
-  // baseURL: `${apiBaseUrl}/api/v1`,
+  // baseURL: "http://localhost:5250/api/v1",
+  baseURL: `${apiBaseUrl}/api/v1`,
 });
 
 axiosClient.interceptors.request.use(async (config) => {
