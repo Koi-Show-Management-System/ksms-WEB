@@ -114,69 +114,64 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-      console.log("Form values:", values);
 
-      // Trong hàm handleSubmit, thêm dòng này trước khi tạo updatePayload
-      // console.log("Form values before submit:", form.getFieldsValue());
-      // console.log(
-      //   "Criteria data:",
-      //   form.getFieldValue("criteriaCompetitionCategories")
-      // );
+      // Lấy dữ liệu hiện tại từ form để đảm bảo không mất dữ liệu
+      const formData = form.getFieldsValue(true);
 
-      // Prepare update payload
+      // Xử lý phân công trọng tài
+      const refereeAssignments = processRefereeAssignments(
+        formData.refereeAssignments || []
+      );
+
       const updatePayload = {
+        id: categoryId,
         name: values.name,
-        koiShowId: showId || currentCategory.showId,
+        koiShowId: showId || currentCategory.koiShowId,
         sizeMin: parseFloat(values.sizeMin),
         sizeMax: parseFloat(values.sizeMax),
         description: values.description,
-        maxEntries: parseInt(values.maxEntries),
+        maxEntries: parseInt(
+          values.maxEntries || currentCategory.maxEntries || 0
+        ),
         registrationFee: parseFloat(values.registrationFee || 0),
         status: values.status,
 
-        // Map varieties to the expected format
-        createCompetionCategoryVarieties: values.categoryVarieties || [],
+        createCompetionCategoryVarieties: formData.categoryVarieties || [],
 
-        // Map awards to the expected format
-        createAwardCateShowRequests: (values.awards || []).map((award) => ({
+        createAwardCateShowRequests: (formData.awards || []).map((award) => ({
+          id: award.id,
           name: award.name,
           awardType: award.awardType || "default",
           prizeValue: parseFloat(award.prizeValue) || 0,
           description: award.description || "",
         })),
 
-        // Trong hàm handleSubmit, thêm dòng này vào đối tượng updatePayload:
         createCriteriaCompetitionCategoryRequests: (
-          form.getFieldValue("criteriaCompetitionCategories") || []
+          formData.criteriaCompetitionCategories || []
         ).map((criteria) => ({
+          id: criteria.id,
           criteriaId: criteria.criteriaId || criteria.criteria?.id,
           roundType: criteria.roundType,
           weight: parseFloat(criteria.weight) || 0,
           order: parseInt(criteria.order) || 0,
         })),
 
-        createRefereeAssignmentRequests: processRefereeAssignments(
-          values.refereeAssignments || []
-        ),
-        createRoundRequests: (values.rounds || []).map((round) => ({
+        // Chỉ thêm phân công trọng tài nếu có dữ liệu hợp lệ
+        createRefereeAssignmentRequests: refereeAssignments,
+
+        createRoundRequests: (formData.rounds || []).map((round) => ({
           id: round.id,
           name: round.name,
           roundOrder: parseInt(round.roundOrder) || 0,
           roundType: round.roundType,
-          startTime: null,
-          endTime: null,
+          startTime: round.startTime || null,
+          endTime: round.endTime || null,
           numberOfRegistrationToAdvance:
             parseInt(round.numberOfRegistrationToAdvance) || 100,
           status: round.status || "pending",
         })),
       };
 
-      // Thêm vào cuối hàm handleSubmit trước khi gọi updateCategory
-      console.log("Final update payload:", updatePayload);
-      console.log(
-        "Criteria in payload:",
-        updatePayload.createCriteriaCompetitionCategoryRequests
-      );
       await updateCategory(categoryId, updatePayload);
       onClose();
       if (onCategoryUpdated) onCategoryUpdated();
@@ -190,20 +185,21 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
     const refereeMap = {};
 
-    // Group assignments by referee
+    // Nhóm các phân công theo trọng tài
     assignments.forEach((assignment) => {
       const refereeId =
         assignment.refereeAccount?.id || assignment.refereeAccountId;
-      if (!refereeId) return; // Skip if no refereeId
+      if (!refereeId) return; // Bỏ qua nếu không có refereeId
 
       if (!refereeMap[refereeId]) {
         refereeMap[refereeId] = {
+          id: assignment.id, // Giữ ID nếu có
           refereeAccountId: refereeId,
           roundTypes: [],
         };
       }
 
-      // Add roundType if it exists and is not already in the array
+      // Thêm roundType nếu tồn tại và chưa có trong mảng
       if (
         assignment.roundType &&
         !refereeMap[refereeId].roundTypes.includes(assignment.roundType)
@@ -212,9 +208,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       }
     });
 
-    return Object.values(refereeMap);
+    // Lọc bỏ các phân công không có roundTypes
+    return Object.values(refereeMap).filter(
+      (item) => item.roundTypes.length > 0
+    );
   };
-
   // Handle adding a new award
   const handleAddAward = () => {
     const currentAwards = form.getFieldValue("awards") || [];
@@ -331,7 +329,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           criteria.criteria?.id === criteriaId) &&
         criteria.roundType === roundType
       ) {
-        // Lưu trọng số dưới dạng decimal
+        // Giữ lại tất cả thuộc tính hiện có và chỉ cập nhật weight
         return { ...criteria, weight: weightValue };
       }
       return criteria;
@@ -340,9 +338,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     form.setFieldsValue({
       criteriaCompetitionCategories: updatedCriteria,
     });
-
-    // Log để debug
-    console.log("Updated criteria after weight change:", updatedCriteria);
   };
   // Handle referee selection
   const handleRefereeChange = (selectedReferees) => {
@@ -375,23 +370,45 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const handleRefereeRoundChange = (refereeId, selectedRounds) => {
     const currentAssignments = form.getFieldValue("refereeAssignments") || [];
 
-    // Remove existing assignments for this referee
+    // Lọc ra các phân công của trọng tài khác
     const otherAssignments = currentAssignments.filter(
       (a) => (a.refereeAccount?.id || a.refereeAccountId) !== refereeId
     );
 
-    // Create new assignments for each selected round
-    const newAssignments = selectedRounds.map((round) => ({
-      refereeAccountId: refereeId,
-      refereeAccount: referee.find((r) => r.id === refereeId),
-      roundType: round,
-    }));
+    // Nếu không có vòng nào được chọn, loại bỏ trọng tài này
+    if (!selectedRounds || selectedRounds.length === 0) {
+      form.setFieldsValue({
+        refereeAssignments: otherAssignments,
+      });
+      return;
+    }
+
+    // Tạo phân công mới cho mỗi vòng được chọn
+    const newAssignments = selectedRounds.map((round) => {
+      // Tìm phân công hiện có cho vòng này (nếu có)
+      const existingAssignment = currentAssignments.find(
+        (a) =>
+          (a.refereeAccount?.id || a.refereeAccountId) === refereeId &&
+          a.roundType === round
+      );
+
+      if (existingAssignment) {
+        // Giữ lại phân công hiện có
+        return existingAssignment;
+      } else {
+        // Tạo phân công mới
+        return {
+          refereeAccountId: refereeId,
+          refereeAccount: referee.find((r) => r.id === refereeId),
+          roundType: round,
+        };
+      }
+    });
 
     form.setFieldsValue({
       refereeAssignments: [...otherAssignments, ...newAssignments],
     });
   };
-
   // Get referee's assigned rounds
   const getRefereeRounds = (refereeId) => {
     const assignments = form.getFieldValue("refereeAssignments") || [];
@@ -417,7 +434,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       name: `Vòng Nhỏ ${maxOrder + 1} - ${roundLabelMap[mainRound]}`,
       roundOrder: maxOrder + 1,
       roundType: mainRound,
-      numberOfRegistrationToAdvance: 10,
+      numberOfRegistrationToAdvance: 100, // Giá trị mặc định
       status: "pending",
     };
 
