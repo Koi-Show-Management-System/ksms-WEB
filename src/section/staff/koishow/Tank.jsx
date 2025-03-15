@@ -25,6 +25,7 @@ import {
   SearchOutlined,
 } from "@ant-design/icons";
 import useTank from "../../../hooks/useTank";
+import useCategory from "../../../hooks/useCategory";
 
 const { Option } = Select;
 const { Search } = AntInput;
@@ -57,14 +58,20 @@ function Tank({ showId }) {
   // State cho tìm kiếm
   const [searchText, setSearchText] = useState("");
   const [filteredTanks, setFilteredTanks] = useState([]);
+  const { categories, fetchCategories } = useCategory();
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+
+  useEffect(() => {
+    fetchCategories(showId);
+  }, [showId]);
 
   // Lấy danh sách bể cá khi component được tải hoặc showId thay đổi
 
   useEffect(() => {
-    if (showId) {
-      fetchTanks(showId, 1, 10);
+    if (selectedCategoryId) {
+      fetchTanks(selectedCategoryId, 1, 10);
     }
-  }, [showId, fetchTanks]);
+  }, [selectedCategoryId, fetchTanks]);
 
   // Xử lý tìm kiếm
   useEffect(() => {
@@ -91,6 +98,7 @@ function Tank({ showId }) {
       if (selectedTank) {
         setTimeout(() => {
           form.setFieldsValue({
+            competitionCategoryId: selectedTank.id,
             name: selectedTank.name,
             capacity: selectedTank.capacity,
             waterType: selectedTank.waterType,
@@ -137,6 +145,7 @@ function Tank({ showId }) {
             description: "Tạo bể cá thành công",
           });
           setModalVisible(false);
+          fetchTanks(showId, currentPage, pageSize);
         } else {
           notification.error({
             message: "Lỗi",
@@ -188,7 +197,7 @@ function Tank({ showId }) {
       sorter: (a, b) => a.name.localeCompare(b.name),
     },
     {
-      title: "Dung Tích (L)",
+      title: "Sức chứa",
       dataIndex: "capacity",
       key: "capacity",
       sorter: (a, b) => a.capacity - b.capacity,
@@ -284,13 +293,26 @@ function Tank({ showId }) {
       <Card>
         <div className="flex justify-between items-center mb-4">
           <div className="flex justify-between items-center w-full">
-            <Search
+            {/* <Search
               placeholder="Tìm kiếm bể cá"
               allowClear
               onSearch={handleSearch}
               onChange={(e) => handleSearch(e.target.value)}
               style={{ width: 250 }}
-            />
+            /> */}
+            <Select
+              placeholder="Chọn hạng mục "
+              style={{ width: 250 }}
+              allowClear
+              onChange={(value) => setSelectedCategoryId(value)}
+            >
+              {categories.map((category) => (
+                <Option key={category.id} value={category.id}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+
             <Button
               type="primary"
               icon={<PlusOutlined />}
@@ -349,6 +371,24 @@ function Tank({ showId }) {
           preserve={false}
         >
           <Form.Item
+            name="competitionCategoryId"
+            label="Hạng mục"
+            rules={[{ required: true, message: "Vui lòng chọn hạng mục!" }]}
+          >
+            <Select
+              placeholder="Chọn hạng mục"
+              onChange={(value) => setSelectedCategoryId(value)}
+              allowClear
+            >
+              {categories.map((category) => (
+                <Option key={category.id} value={category.id}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
+
+          <Form.Item
             name="name"
             label="Tên Bể Cá"
             rules={[{ required: true, message: "Vui lòng nhập tên bể cá" }]}
@@ -359,13 +399,14 @@ function Tank({ showId }) {
           <div className="grid grid-cols-2 gap-4">
             <Form.Item
               name="capacity"
-              label="Dung Tích (L)"
-              rules={[{ required: true, message: "Vui lòng nhập dung tích" }]}
+              label="Sức chứa"
+              rules={[{ required: true, message: "Vui lòng nhập sức chứa" }]}
             >
               <InputNumber
                 min={0}
+                max={14}
                 style={{ width: "100%" }}
-                placeholder="Nhập dung tích (lít)"
+                placeholder="Nhập sức chứa"
               />
             </Form.Item>
 

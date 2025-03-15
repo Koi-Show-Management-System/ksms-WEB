@@ -10,7 +10,7 @@ import { Loading } from "../../../components";
 import useKoiShow from "../../../hooks/useKoiShow";
 import Rules from "./Rules";
 import Tank from "./Tank";
-import AssignTank from "./AssignTank";
+import Registration from "./Registration";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -60,6 +60,11 @@ function KoiShowDetail() {
       children: <Category showId={id} />,
     },
     {
+      key: "registration",
+      label: "Đơn Đăng Ký",
+      children: <Registration showId={id} />,
+    },
+    {
       key: "competitionRound",
       label: "Vòng Thi",
       children: <CompetitionRound />,
@@ -69,11 +74,7 @@ function KoiShowDetail() {
       label: "Quản Lý Bể",
       children: <Tank showId={id} />,
     },
-    {
-      key: "assign-tank",
-      label: "Gán Vào Bể",
-      children: <AssignTank showId={id} />,
-    },
+
     {
       key: "rules",
       label: "Quy Tắc",

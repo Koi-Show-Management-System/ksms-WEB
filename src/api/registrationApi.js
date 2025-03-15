@@ -1,6 +1,6 @@
 import axiosClient from "../config/axiosClient";
 
-const getRegistration = (page, size, showIds) => {
+const getRegistration = (page, size, showIds, categoryIds) => {
   return axiosClient.get(
     "/registration/get-paging-registration-for-current-account",
     {
@@ -8,14 +8,25 @@ const getRegistration = (page, size, showIds) => {
         page: page,
         size: size,
         showIds: showIds,
+        categoryIds: categoryIds,
       },
     }
   );
 };
-const assignTank = (data) => {
-  return axiosClient.patch("/registration/assign-to-tank", data);
-};
+// const assignTank = (roundId, registrationIds) => {
+//   return axiosClient.patch("/registration/assign-to-tank", {
+//     roundId: roundId,
+//     registrationIds: registrationIds,
+//   });
+// };
 const updateStatusRegistration = (id, status) => {
   return axiosClient.put(`/registration/${id}?status=${status}`);
 };
-export { getRegistration, updateStatusRegistration, assignTank };
+
+const patchTank = (roundId, registrationIds) => {
+  return axiosClient.post("/registration/assign-to-tank", {
+    roundId: roundId,
+    registrationIds: registrationIds,
+  });
+};
+export { getRegistration, updateStatusRegistration, patchTank };

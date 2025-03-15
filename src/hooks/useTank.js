@@ -76,7 +76,11 @@ const useTank = create((set, get) => ({
       if (res?.data?.statusCode === 200) {
         // Refresh tank list after creation
         const showId = tankData.showId;
-        get().fetchTanks(showId, get().currentPage, get().pageSize);
+        get().fetchTanks(
+          competitionCategoryId,
+          get().currentPage,
+          get().pageSize
+        );
         set({ isModalVisible: false });
         return { success: true, data: res.data };
       } else {

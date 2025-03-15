@@ -417,24 +417,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             </p>
           )}
         </div>
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Phí đăng ký (VND)
-          </label>
-          <Input
-            type="number"
-            placeholder="Nhập phí đăng ký"
-            value={data.registrationFee}
-            onChange={(e) =>
-              setData({ ...data, registrationFee: Number(e.target.value) })
-            }
-          />
-          {showErrors && !data.location && (
-            <p className="text-red-500 text-xs mt-1">
-              Phí đăng ký là bắt buộc.{" "}
-            </p>
-          )}
-        </div>
+    
       </div>
 
       {/* Tải lên Hình ảnh */}

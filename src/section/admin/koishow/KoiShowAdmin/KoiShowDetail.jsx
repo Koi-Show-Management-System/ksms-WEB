@@ -268,7 +268,6 @@ function KoiShowDetail() {
   if (isLoading) return <Loading />;
 
   if (!koiShowDetail) {
-    console.log("Lỗi dữ liệu");
     return (
       <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>
     );
@@ -508,14 +507,6 @@ function KoiShowDetail() {
                   }
                 >
                   <div className="space-y-2">
-                    <div>
-                      Phí Đăng Ký -{" "}
-                      {new Intl.NumberFormat("vi-VN", {
-                        style: "currency",
-                        currency: "VND",
-                      }).format(koiShowDetail.data.registrationFee)}
-                    </div>
-
                     {koiShowDetail.data.ticketTypes.map((ticket) => (
                       <div key={ticket.id}>
                         <div>
@@ -530,7 +521,9 @@ function KoiShowDetail() {
                     ))}
 
                     <div>
-                      Tham gia tối thiểu: {koiShowDetail.data.minParticipants} -
+                      Tham gia tối thiểu: {koiShowDetail.data.minParticipants}
+                    </div>
+                    <div>
                       Tham gia tối đa: {koiShowDetail.data.maxParticipants}
                     </div>
                   </div>

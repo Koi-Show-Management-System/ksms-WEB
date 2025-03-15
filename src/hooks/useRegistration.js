@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
   getRegistration,
   updateStatusRegistration,
+  patchTank,
 } from "../api/registrationApi";
 
 const useRegistration = create((set, get) => ({
@@ -12,13 +13,14 @@ const useRegistration = create((set, get) => ({
   isLoading: false,
   error: null,
   totalPages: 1,
-  showIds: [], // Thêm state mới
+  showIds: [],
+  assignLoading: false,
 
-  fetchRegistration: async (page = 1, size = 10, showIds) => {
+  fetchRegistration: async (page = 1, size = 10, showIds, categoryIds) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
     try {
-      const res = await getRegistration(page, size, showIds);
+      const res = await getRegistration(page, size, showIds, categoryIds);
 
       if (res && res.status === 200) {
         console.log("Registration API Response:", res.data);
@@ -66,11 +68,11 @@ const useRegistration = create((set, get) => ({
       set({ error: error, isLoading: false });
     }
   },
+
   updateStatus: async (id, status) => {
     try {
       const response = await updateStatusRegistration(id, status);
       if (response && response.status === 200) {
-        // Refresh the registration list after successful update
         const { currentPage, pageSize, showIds } = get();
         get().fetchRegistration(currentPage, pageSize, showIds);
         return { success: true, data: response.data };
@@ -81,6 +83,47 @@ const useRegistration = create((set, get) => ({
       console.error("Error updating status:", error);
       return { success: false, error };
     }
+  },
+
+  assignToTank: async (roundId, registrationIds) => {
+    set({ assignLoading: true, error: null });
+
+    try {
+      const response = await patchTank(roundId, registrationIds);
+
+      if (response && response.status === 200) {
+        const { currentPage, pageSize, showIds } = get();
+        await get().fetchRegistration(currentPage, pageSize, showIds);
+        set({ assignLoading: false, selectedRegistrations: [] });
+        return { success: true, data: response.data };
+      } else {
+        set({ error: response, assignLoading: false });
+        return { success: false, error: response };
+      }
+    } catch (error) {
+      console.error("Error assigning to tank:", error);
+      set({ error, assignLoading: false });
+      return { success: false, error };
+    }
+  },
+
+  setSelectedRegistrations: (registrationIds) => {
+    set({ selectedRegistrations: registrationIds });
+  },
+
+  selectAllCheckedInRegistrations: () => {
+    const { registration } = get();
+    const checkedInIds = registration
+      .filter((reg) => reg.status?.toLowerCase() === "checkin")
+      .map((reg) => reg.id);
+
+    set({ selectedRegistrations: checkedInIds });
+    return checkedInIds;
+  },
+
+  // Thêm hàm để bỏ chọn tất cả
+  clearSelectedRegistrations: () => {
+    set({ selectedRegistrations: [] });
   },
 }));
 

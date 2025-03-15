@@ -14,6 +14,10 @@ const getDetail = (id) => {
   return axiosClient.get(`/competition-category/${id}`);
 };
 const createCategory = (categoryData) => {
-  return axiosClient.post("competition-category/create", categoryData);
+  return axiosClient.post("/competition-category/create", categoryData);
 };
-export { getCategory, getDetail, createCategory };
+const updateCategory = (id, data) => {
+  return axiosClient.put(`/competition-category/${id}`, data);
+};
+
+export { getCategory, getDetail, createCategory, updateCategory };

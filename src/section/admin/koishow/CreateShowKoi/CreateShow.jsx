@@ -55,7 +55,6 @@ function CreateShow() {
         !formData.minParticipants ||
         !formData.maxParticipants ||
         !formData.location ||
-        !formData.registrationFee ||
         !formData.imgUrl
       ) {
         hasError = true;
@@ -88,6 +87,7 @@ function CreateShow() {
             !category.description ||
             // !category.startTime ||
             // !category.endTime ||
+            !category.registrationFee ||
             !category.maxEntries ||
             category.createCompetionCategoryVarieties.length === 0
           ) {
@@ -131,31 +131,31 @@ function CreateShow() {
     return true;
   };
 
-  const handleNext = () => {
-    setShowErrors(false); // Reset lỗi trước khi kiểm tra
-
-    if (validateStep()) {
-      setShowErrors(false);
-
-      if (currentStep === 3) {
-        setIsConfirmModalOpen(true); // Mở modal xác nhận
-      } else {
-        setCurrentStep((prev) => prev + 1);
-      }
-    } else {
-      setShowErrors(true);
-    }
-  };
-
   // const handleNext = () => {
-  //   setShowErrors(true);
+  //   setShowErrors(false); // Reset lỗi trước khi kiểm tra
 
-  //   if (currentStep === 3) {
-  //     setIsConfirmModalOpen(true);
+  //   if (validateStep()) {
+  //     setShowErrors(false);
+
+  //     if (currentStep === 3) {
+  //       setIsConfirmModalOpen(true); // Mở modal xác nhận
+  //     } else {
+  //       setCurrentStep((prev) => prev + 1);
+  //     }
   //   } else {
-  //     setCurrentStep((prev) => prev + 1);
+  //     setShowErrors(true);
   //   }
   // };
+
+  const handleNext = () => {
+    setShowErrors(true);
+
+    if (currentStep === 3) {
+      setIsConfirmModalOpen(true);
+    } else {
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));

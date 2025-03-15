@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { createCategory, getCategory, getDetail } from "../api/categoryApi";
+import {
+  createCategory,
+  getCategory,
+  getDetail,
+  updateCategory,
+} from "../api/categoryApi";
 import { notification } from "antd";
 
 const useCategory = create((set, get) => ({
@@ -183,6 +188,48 @@ const useCategory = create((set, get) => ({
   // Reset create status
   resetCreateStatus: () => {
     set({ createSuccess: false, error: null });
+  },
+  updateCategory: async (categoryId, updateData) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await updateCategory(categoryId, updateData);
+
+      if (res?.data?.statusCode === 200) {
+        notification.success({
+          message: "Thành công",
+          description: "Danh mục đã cập nhật thành công!",
+          placement: "topRight",
+        });
+
+        // Refresh danh sách
+        const currentShowId =
+          get().categories.length > 0 ? get().categories[0].koiShowId : null;
+
+        if (currentShowId) {
+          await get().fetchCategories(
+            currentShowId,
+            get().currentPage,
+            get().pageSize
+          );
+        }
+
+        set({ isLoading: false });
+
+        return res.data;
+      } else {
+        throw new Error(res?.data?.message || "Cập nhật không thành công");
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi cập nhật",
+        description: error.message,
+        placement: "topRight",
+      });
+
+      set({ error, isLoading: false });
+      return null;
+    }
   },
 }));
 

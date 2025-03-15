@@ -50,6 +50,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
             startTime: null,
             endTime: null,
             maxEntries: 0,
+            registrationFee: "",
             status: "pending",
             createAwardCateShowRequests: [],
             createCompetionCategoryVarieties: [],
@@ -555,6 +556,30 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                       )}
                     </div>
                   </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Phí đăng ký (VND)
+                    </label>
+
+                    <Input
+                      type="number"
+                      min={1}
+                      placeholder="Nhập phí đăng ký"
+                      value={category.registrationFee || ""}
+                      onChange={(e) =>
+                        handleCategoryChange(
+                          index,
+                          "registrationFee",
+                          e.target.value
+                        )
+                      }
+                    />
+                    {showErrors && !category.registrationFee && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Phí đăng ký là bắt buộc.{" "}
+                      </p>
+                    )}
+                  </div>
                 </div>
 
                 <div className="mb-4">
@@ -681,13 +706,17 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                             ))}
                         </Collapse>
                       )}
+                      {/* Hiển thị lỗi nếu vòng chính không có vòng nhỏ nào */}
+                      {showErrors &&
+                        !category.createRoundRequests.some(
+                          (r) => r.roundType === round.value
+                        ) && (
+                          <p className="text-red-500 text-xs mt-1">
+                            Vòng {round.label} cần có ít nhất một vòng nhỏ.
+                          </p>
+                        )}
                     </div>
                   ))}
-                  {showErrors && category.createRoundRequests.length === 0 && (
-                    <p className="text-red-500 text-xs mt-1">
-                      Cần chọn ít nhất một vòng thi.
-                    </p>
-                  )}
                 </div>
 
                 {/* Chọn vòng trước khi chọn tiêu chí */}

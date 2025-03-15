@@ -289,7 +289,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
       roundType: mainRound,
       startTime: dayjs().format(),
       endTime: dayjs().add(1, "day").format(),
-      minScoreToAdvance: 100,
+      numberOfRegistrationToAdvance: 100,
       status: "pending",
     };
 
@@ -404,11 +404,11 @@ function CreateCategory({ showId, onCategoryCreated }) {
         prizeValue: parseFloat(award.prizeValue) || 0,
       }));
 
-    // Ensure round minScoreToAdvance values are numbers
+    // Ensure round numberOfRegistrationToAdvance values are numbers
     categoryData.createRoundRequests = categoryData.createRoundRequests.map(
       (round) => ({
         ...round,
-        minScoreToAdvance: parseInt(round.minScoreToAdvance) || 100,
+        numberOfRegistrationToAdvance: parseInt(round.numberOfRegistrationToAdvance) || 100,
       })
     );
 
@@ -651,7 +651,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                               </label>
                               <Input
                                 type="number"
-                                value={subRound.minScoreToAdvance}
+                                value={subRound.numberOfRegistrationToAdvance}
                                 onChange={(e) => {
                                   setCategory((prev) => {
                                     const updatedRounds = [
@@ -663,7 +663,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                                     if (roundIndex !== -1) {
                                       updatedRounds[
                                         roundIndex
-                                      ].minScoreToAdvance = e.target.value;
+                                      ].numberOfRegistrationToAdvance = e.target.value;
                                     }
                                     return {
                                       ...prev,

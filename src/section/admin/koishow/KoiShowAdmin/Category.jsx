@@ -29,6 +29,7 @@ import {
 } from "@ant-design/icons";
 import useCategory from "../../../../hooks/useCategory";
 import CreateCategory from "./CreateCategory";
+import EditCategory from "./EditCategory";
 
 const { Search } = Input;
 const { Option } = Select;
@@ -41,6 +42,18 @@ function Category({ showId }) {
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [form] = Form.useForm();
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+
+  const showEditModal = (categoryId) => {
+    setEditingCategoryId(categoryId);
+    setIsEditModalVisible(true);
+  };
+
+  const closeEditModal = () => {
+    setEditingCategoryId(null);
+    setIsEditModalVisible(false);
+  };
 
   const { categories, isLoading, error, fetchCategories, getCategoryDetail } =
     useCategory();
@@ -60,32 +73,9 @@ function Category({ showId }) {
     setSearchText(value.toLowerCase());
   };
 
-  const handleFilterVariety = (value) => {
-    setFilterVariety(value);
-  };
   const handleCategoryCreated = () => {
     // Refresh the categories list after a new category is created
     fetchCategories(showId, 1, 10);
-  };
-
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    setIsModalVisible(false);
-  };
-
-  const handleCreate = (values) => {
-    const newCategory = {
-      key: String(categories.length + 1),
-      ...values,
-      participatingKoi: 0,
-    };
-    setIsModalVisible(false);
-    form.resetFields();
-    message.success("Category created successfully");
   };
 
   const showCategoryDetail = async (categoryId) => {
@@ -219,6 +209,12 @@ function Category({ showId }) {
             icon={<EyeOutlined />}
             className="text-gray-500 hover:text-blue-500"
             onClick={() => showCategoryDetail(record.id)}
+          />
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            className="text-blue-500 hover:text-blue-700"
+            onClick={() => showEditModal(record.id)}
           />
         </div>
       ),
@@ -589,27 +585,13 @@ function Category({ showId }) {
                                 </div>
                               }
                             >
-                              <div className="p-3">
+                              <div className="p-2">
                                 <p>
                                   <strong>Thứ tự:</strong> {round.roundOrder}
                                 </p>
                                 <p>
-                                  <strong>Thời gian bắt đầu:</strong>{" "}
-                                  {round.startTime
-                                    ? new Date(round.startTime).toLocaleString()
-                                    : "Chưa xác định"}
-                                </p>
-                                <p>
-                                  <strong>Thời gian kết thúc:</strong>{" "}
-                                  {round.endTime
-                                    ? new Date(round.endTime).toLocaleString()
-                                    : "Chưa xác định"}
-                                </p>
-                                <p>
-                                  <strong>
-                                    Điểm tối thiểu để vào vòng sau:
-                                  </strong>{" "}
-                                  {round.minScoreToAdvance}
+                                  <strong>Số lượng cá qua vòng:</strong>{" "}
+                                  {round.numberOfRegistrationToAdvance}
                                 </p>
                               </div>
                             </Collapse.Panel>
@@ -624,6 +606,14 @@ function Category({ showId }) {
           </Tabs>
         )}
       </Drawer>
+      {isEditModalVisible && (
+        <EditCategory
+          categoryId={editingCategoryId}
+          onClose={closeEditModal}
+          showId={showId}
+          onCategoryUpdated={() => fetchCategories(showId, 1, 10)}
+        />
+      )}
     </div>
   );
 }

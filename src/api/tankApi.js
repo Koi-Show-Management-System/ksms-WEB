@@ -1,7 +1,7 @@
 import axiosClient from "../config/axiosClient";
 
-const getTank = (id, page, size) => {
-  return axiosClient.get(`/tank/${id}/paged`, {
+const getTank = (competitionCategoryId, page, size) => {
+  return axiosClient.get(`/tank/${competitionCategoryId}/paged`, {
     params: {
       page: page,
       size: size,
