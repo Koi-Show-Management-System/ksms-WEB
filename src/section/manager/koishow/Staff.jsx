@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from "react";
 import { Table, Button, Modal, Form, Input, message, Tag } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
-import useShowStaff from "../../../../hooks/useShowStaff";
+import useShowStaff from "../../../hooks/useShowStaff";
 
 function Staff({ showId }) {
   const [isModalVisible, setIsModalVisible] = useState(false);

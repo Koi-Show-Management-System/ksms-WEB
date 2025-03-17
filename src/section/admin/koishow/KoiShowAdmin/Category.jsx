@@ -62,12 +62,7 @@ function Category({ showId }) {
     fetchCategories(showId, 1, 10);
   }, [showId]);
 
-  useEffect(() => {
-    if (error) {
-      message.error("Failed to load categories");
-      console.error("Error fetching categories:", error);
-    }
-  }, [error]);
+
 
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());

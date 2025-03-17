@@ -5,12 +5,12 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { Select, Space } from "antd";
+import { Select, Space, Typography } from "antd";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 
 const RoundSelector = forwardRef(
-  ({ onRoundSelect, showId, categoryId }, ref) => {
+  ({ onRoundSelect, showId, categoryId, preSelectPreliminary = false }, ref) => {
     const {
       categories,
       fetchCategories,
@@ -18,12 +18,10 @@ const RoundSelector = forwardRef(
     } = useCategory();
     const { round, fetchRound, isLoading: roundLoading } = useRound();
     const [selectedCategory, setSelectedCategory] = useState(null);
-    const [selectedRoundType, setSelectedRoundType] = useState(null);
     const [selectedRound, setSelectedRound] = useState(null);
 
     useImperativeHandle(ref, () => ({
       reset: () => {
-        setSelectedRoundType(null);
         setSelectedRound(null);
         if (!categoryId) {
           setSelectedCategory(null);
@@ -39,26 +37,32 @@ const RoundSelector = forwardRef(
     useEffect(() => {
       if (categoryId) {
         setSelectedCategory(categoryId);
+        // Luôn fetch vòng sơ khảo
+        fetchRound(categoryId, "Preliminary");
       } else if (showId) {
         // Chỉ fetch categories nếu không có categoryId được truyền vào
         fetchCategories(showId);
       }
     }, [showId, categoryId]);
 
+    // Tự động chọn vòng đầu tiên khi có danh sách round
+    useEffect(() => {
+      if (round.length > 0 && !selectedRound) {
+        const firstRound = round[0];
+        setSelectedRound(firstRound.id);
+        
+        if (onRoundSelect) {
+          onRoundSelect(firstRound.id, firstRound.name);
+        }
+      }
+    }, [round, selectedRound, onRoundSelect]);
+
     const handleCategoryChange = (categoryId) => {
       setSelectedCategory(categoryId);
-      setSelectedRoundType(null);
       setSelectedRound(null);
-    };
-
-    const handleRoundTypeChange = (roundType) => {
-      setSelectedRoundType(roundType);
-      setSelectedRound(null);
-
-      // Chỉ fetch round khi đã có cả category và roundType
-      if (selectedCategory && roundType) {
-        fetchRound(selectedCategory, roundType);
-      }
+      
+      // Luôn fetch vòng sơ khảo khi thay đổi category
+      fetchRound(categoryId, "Preliminary");
     };
 
     const handleSpecificRoundSelect = (roundId) => {
@@ -72,14 +76,6 @@ const RoundSelector = forwardRef(
         onRoundSelect(roundId, roundName);
       }
     };
-
-    const roundTypeMapping = {
-      Preliminary: "Vòng sơ khảo",
-      Evaluation: "Vòng đánh giá chính",
-      Final: "Vòng chung kết",
-    };
-
-    const roundTypes = Object.keys(roundTypeMapping);
 
     return (
       <Space direction="horizontal" size="middle" className="mb-4">
@@ -100,34 +96,22 @@ const RoundSelector = forwardRef(
         )}
 
         {selectedCategory && (
-          <Select
-            placeholder="Chọn loại vòng"
-            style={{ width: 200 }}
-            onChange={handleRoundTypeChange}
-            value={selectedRoundType}
-          >
-            {roundTypes.map((type) => (
-              <Select.Option key={type} value={type}>
-                {roundTypeMapping[type]}
-              </Select.Option>
-            ))}
-          </Select>
-        )}
-
-        {selectedCategory && selectedRoundType && round.length > 0 && (
-          <Select
-            placeholder="Chọn vòng cụ thể"
-            style={{ width: 200 }}
-            onChange={handleSpecificRoundSelect}
-            value={selectedRound}
-            loading={roundLoading}
-          >
-            {round.map((r) => (
-              <Select.Option key={r.id} value={r.id}>
-                {r.name}
-              </Select.Option>
-            ))}
-          </Select>
+          <>
+            <Typography.Text strong>Vòng sơ khảo</Typography.Text>
+            <Select
+              placeholder="Chọn vòng cụ thể"
+              style={{ width: 200 }}
+              onChange={handleSpecificRoundSelect}
+              value={selectedRound}
+              loading={roundLoading}
+            >
+              {round.map((r) => (
+                <Select.Option key={r.id} value={r.id}>
+                  {r.name}
+                </Select.Option>
+              ))}
+            </Select>
+          </>
         )}
       </Space>
     );

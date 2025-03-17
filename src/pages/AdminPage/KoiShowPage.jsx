@@ -1,6 +1,6 @@
 import React from "react";
 import KoiShowView from "../../section/admin/koishow/KoiShowAdmin/view/KoiShowView";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 function KoiShowPage() {
   return (
     <>

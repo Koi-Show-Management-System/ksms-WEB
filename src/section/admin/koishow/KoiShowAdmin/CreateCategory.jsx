@@ -106,14 +106,6 @@ function CreateCategory({ showId, onCategoryCreated }) {
     }
   }, [createSuccess]);
 
-  useEffect(() => {
-    if (error) {
-      message.error(
-        "Không thể tạo danh mục: " + (error.message || "Lỗi không xác định")
-      );
-    }
-  }, [error]);
-
   const resetCategory = () => {
     setCategory({
       name: "",
@@ -408,7 +400,8 @@ function CreateCategory({ showId, onCategoryCreated }) {
     categoryData.createRoundRequests = categoryData.createRoundRequests.map(
       (round) => ({
         ...round,
-        numberOfRegistrationToAdvance: parseInt(round.numberOfRegistrationToAdvance) || 100,
+        numberOfRegistrationToAdvance:
+          parseInt(round.numberOfRegistrationToAdvance) || 100,
       })
     );
 
@@ -663,7 +656,8 @@ function CreateCategory({ showId, onCategoryCreated }) {
                                     if (roundIndex !== -1) {
                                       updatedRounds[
                                         roundIndex
-                                      ].numberOfRegistrationToAdvance = e.target.value;
+                                      ].numberOfRegistrationToAdvance =
+                                        e.target.value;
                                     }
                                     return {
                                       ...prev,

@@ -2,7 +2,7 @@ import { create } from "zustand";
 import {
   getRegistration,
   updateStatusRegistration,
-  patchTank,
+  patchRound,
 } from "../api/registrationApi";
 
 const useRegistration = create((set, get) => ({
@@ -85,11 +85,11 @@ const useRegistration = create((set, get) => ({
     }
   },
 
-  assignToTank: async (roundId, registrationIds) => {
+  assignToRound: async (roundId, registrationIds) => {
     set({ assignLoading: true, error: null });
 
     try {
-      const response = await patchTank(roundId, registrationIds);
+      const response = await patchRound(roundId, registrationIds);
 
       if (response && response.status === 200) {
         const { currentPage, pageSize, showIds } = get();

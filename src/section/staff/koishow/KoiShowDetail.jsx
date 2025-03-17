@@ -94,7 +94,7 @@ function KoiShowDetail() {
     {
       key: "competitionRound",
       label: "Vòng Thi",
-      children: <CompetitionRound />,
+      children: <CompetitionRound showId={id} />,
     },
     {
       key: "tank",

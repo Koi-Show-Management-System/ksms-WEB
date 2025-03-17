@@ -7,20 +7,17 @@ import {
   Select,
   Typography,
   Form,
-  Modal,
   message,
   Drawer,
   Descriptions,
-  Divider,
+
   List,
   Card,
   Tabs,
   Collapse,
 } from "antd";
 import {
-  EditOutlined,
-  DeleteOutlined,
-  PlusOutlined,
+
   EyeOutlined,
   UserOutlined,
   TrophyOutlined,
@@ -30,16 +27,22 @@ import {
 import useCategory from "../../../hooks/useCategory";
 
 const { Search } = Input;
-const { Option } = Select;
 const { TabPane } = Tabs;
 
 function Category({ showId }) {
   const [searchText, setSearchText] = useState("");
   const [filterVariety, setFilterVariety] = useState("");
-  const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [form] = Form.useForm();
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+
+
+
+  const closeEditModal = () => {
+    setEditingCategoryId(null);
+    setIsEditModalVisible(false);
+  };
 
   const { categories, isLoading, error, fetchCategories, getCategoryDetail } =
     useCategory();
@@ -48,39 +51,11 @@ function Category({ showId }) {
     fetchCategories(showId, 1, 10);
   }, [showId]);
 
-
-
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
   };
 
-  const handleFilterVariety = (value) => {
-    setFilterVariety(value);
-  };
-  const handleCategoryCreated = () => {
-    // Refresh the categories list after a new category is created
-    fetchCategories(showId, 1, 10);
-  };
 
-  const showModal = () => {
-    setIsModalVisible(true);
-  };
-
-  const handleCancel = () => {
-    form.resetFields();
-    setIsModalVisible(false);
-  };
-
-  const handleCreate = (values) => {
-    const newCategory = {
-      key: String(categories.length + 1),
-      ...values,
-      participatingKoi: 0,
-    };
-    setIsModalVisible(false);
-    form.resetFields();
-    message.success("Category created successfully");
-  };
 
   const showCategoryDetail = async (categoryId) => {
     try {
@@ -577,27 +552,13 @@ function Category({ showId }) {
                                 </div>
                               }
                             >
-                              <div className="p-3">
+                              <div className="p-2">
                                 <p>
                                   <strong>Thứ tự:</strong> {round.roundOrder}
                                 </p>
                                 <p>
-                                  <strong>Thời gian bắt đầu:</strong>{" "}
-                                  {round.startTime
-                                    ? new Date(round.startTime).toLocaleString()
-                                    : "Chưa xác định"}
-                                </p>
-                                <p>
-                                  <strong>Thời gian kết thúc:</strong>{" "}
-                                  {round.endTime
-                                    ? new Date(round.endTime).toLocaleString()
-                                    : "Chưa xác định"}
-                                </p>
-                                <p>
-                                  <strong>
-                                    Điểm tối thiểu để vào vòng sau:
-                                  </strong>{" "}
-                                  {round.minScoreToAdvance}
+                                  <strong>Số lượng cá qua vòng:</strong>{" "}
+                                  {round.numberOfRegistrationToAdvance}
                                 </p>
                               </div>
                             </Collapse.Panel>
@@ -612,6 +573,14 @@ function Category({ showId }) {
           </Tabs>
         )}
       </Drawer>
+      {isEditModalVisible && (
+        <EditCategory
+          categoryId={editingCategoryId}
+          onClose={closeEditModal}
+          showId={showId}
+          onCategoryUpdated={() => fetchCategories(showId, 1, 10)}
+        />
+      )}
     </div>
   );
 }

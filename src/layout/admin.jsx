@@ -15,13 +15,16 @@ import useAuth from "../hooks/useAuth";
 
 const { Sider, Content } = Layout;
 
-const getItem = (label, key, icon, items, path) => ({
-  key,
-  icon,
-  items, 
-  label,
-  path,
-});
+const getItem = (label, key, icon, children, path) => {
+  const item = {
+    key,
+    icon,
+    children,
+    label: path ? <Link to={path}>{label}</Link> : label,
+  };
+  
+  return item;
+};
 
 const AdminDashboard = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -52,7 +55,9 @@ const AdminDashboard = ({ children }) => {
   );
 
   useEffect(() => {
-    fetchUserInfo(userId);
+    if (userId) {
+      fetchUserInfo(userId);
+    }
   }, [fetchUserInfo, userId]);
 
   const handleLogout = () => {
@@ -103,9 +108,8 @@ const AdminDashboard = ({ children }) => {
           defaultSelectedKeys={["1"]}
           mode="inline"
           className="select-none"
-        >
-          {renderMenuItems(items)}{" "}
-        </Menu>
+          items={items}
+        />
       </Sider>
 
       <Layout className="overflow-y-auto md:ml-0">

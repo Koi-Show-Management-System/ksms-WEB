@@ -20,7 +20,7 @@ import {
   WarningOutlined,
   DeleteOutlined,
 } from "@ant-design/icons";
-import useShowRule from "../../../../hooks/useShowRule";
+import useShowRule from "../../../hooks/useShowRule";
 
 const { TextArea } = Input;
 const { Title, Paragraph } = Typography;

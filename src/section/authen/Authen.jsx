@@ -68,7 +68,8 @@ function Authen() {
 
       const { token, id, role } = response.data.data;
 
-      const expiresIn = rememberMe ? 7 : 1; // 7 ngày nếu remember me, 1 ngày nếu không
+      // Cài đặt cookies tự động hết hạn sau 1 giờ
+      const expiresIn = 1/24; // 1 giờ (1/24 của 1 ngày)
 
       Cookies.set("__token", token, { expires: expiresIn, secure: true });
       Cookies.set("__role", role, { expires: expiresIn, secure: true });

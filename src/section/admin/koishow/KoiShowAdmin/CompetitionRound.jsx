@@ -1,127 +1,275 @@
-import React, { useState } from "react";
-import { Table, Tag, Space, Select, Row, Col } from "antd";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
+import { Table, Tag, Select, Row, Col, Spin, Empty, Image, Card } from "antd";
+import useCategory from "../../../../hooks/useCategory";
+import useRound from "../../../../hooks/useRound";
+import useRegistrationRound from "../../../../hooks/useRegistrationRound";
 
 const { Option } = Select;
 
-const competitionData = [
-  {
-    key: "1",
-    entryNumber: "SW-001",
-    image:
-      "https://cdn.pixabay.com/photo/2021/04/04/05/43/animal-6149183_640.jpg",
-    size: "23 cm",
-    variety: "Showa",
-    result: "Pass",
-    status: "Complete",
-    tank: "Bể A",
-  },
-  {
-    key: "2",
-    entryNumber: "SW-002",
-    image:
-      "https://cdn.pixabay.com/photo/2018/08/19/18/29/carp-3617292_640.jpg",
-    size: "35 cm",
-    variety: "Showa",
-    result: "Pass",
-    status: "Complete",
-    tank: "Bể B",
-  },
-  {
-    key: "3",
-    entryNumber: "SW-003",
-    image:
-      "https://cdn.pixabay.com/photo/2018/03/28/01/12/nature-3267971_640.jpg",
-    size: "23 cm",
-    variety: "Showa",
-    result: "Pass",
-    status: "Complete",
-    tank: "Bể C",
-  },
-];
+const roundTypes = ["Preliminary", "Evaluation", "Final"];
+const roundTypeLabels = {
+  Preliminary: "Vòng Sơ Khảo",
+  Evaluation: "Vòng Đánh Giá Chính",
+  Final: "Vòng Chung Kết",
+};
 
-const categories = ["Mini Kohaku", "Standard Showa", "Premium Taisho Sanke"];
-const mainRounds = ["Vòng Sơ Khảo", "Vòng Đánh Giá Chính", "Vòng Chung Kết"];
-const subRounds = ["Vòng 1", "Vòng 2"];
+// Placeholder image for missing images
+const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
 
-function CompetitionRound() {
-  const [category, setCategory] = useState(categories[0]);
-  const [mainRound, setMainRound] = useState(mainRounds[0]);
-  const [subRound, setSubRound] = useState(subRounds[0]);
+function CompetitionRound({ showId }) {
+  const { categories, fetchCategories } = useCategory();
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedRoundType, setSelectedRoundType] = useState(null);
+  const [selectedSubRound, setSelectedSubRound] = useState(null);
+  const { round, fetchRound, isLoading: roundLoading } = useRound();
+  const {
+    registrationRound,
+    fetchRegistrationRound,
+    isLoading: registrationLoading,
+    totalItems: registrationTotalItems,
+    currentPage,
+    pageSize,
+    totalPages,
+  } = useRegistrationRound();
 
-  const handleCategoryChange = (value) => setCategory(value);
-  const handleMainRoundChange = (value) => setMainRound(value);
-  const handleSubRoundChange = (value) => setSubRound(value);
+  // Sử dụng state để theo dõi trạng thái loading của hình ảnh
+  const [loadingImages, setLoadingImages] = useState({});
 
-  const columns = [
-    {
-      title: "Top",
-      dataIndex: "key",
-      render: (text, record, index) => (
-        <span style={{ color: "blue" }}>{`#${index + 1}`}</span>
-      ),
+  // Fetch categories khi component mount
+  useEffect(() => {
+    fetchCategories(showId);
+  }, [fetchCategories, showId]);
+
+  // Xử lý dữ liệu hiển thị với useMemo để tránh tính toán lại không cần thiết
+  const displayData = useMemo(() => {
+    if (
+      !registrationLoading &&
+      selectedSubRound &&
+      registrationRound?.length > 0
+    ) {
+      return registrationRound.map((item, index) => ({
+        ...item,
+        key: item.id || `registration-${index}`,
+        index: index + 1 + (currentPage - 1) * pageSize, // Tính toán số thứ tự chính xác
+      }));
+    }
+    return [];
+  }, [
+    registrationRound,
+    registrationLoading,
+    selectedSubRound,
+    currentPage,
+    pageSize,
+  ]);
+
+  // Sử dụng useCallback để tránh tạo lại hàm xử lý sự kiện
+  const handleCategoryChange = useCallback((value) => {
+    setSelectedCategory(value);
+    setSelectedRoundType(null);
+    setSelectedSubRound(null);
+  }, []);
+
+  const handleRoundTypeChange = useCallback(
+    (value) => {
+      setSelectedRoundType(value);
+      setSelectedSubRound(null);
+
+      if (selectedCategory) {
+        fetchRound(selectedCategory, value);
+      }
     },
-    {
-      title: "Mã Đăng Ký",
-      dataIndex: "entryNumber",
-      width: 180,
+    [selectedCategory, fetchRound]
+  );
+
+  const handleSubRoundChange = useCallback(
+    (value) => {
+      setSelectedSubRound(value);
+
+      if (value) {
+        fetchRegistrationRound(value);
+      }
     },
-    {
-      title: "Hình ảnh",
-      dataIndex: "image",
-      render: (text) => (
-        <img
-          src={text}
-          alt="Entry"
-          width="50"
-          height="50"
-          className="rounded-md"
-        />
-      ),
+    [fetchRegistrationRound]
+  );
+
+  const handleTableChange = useCallback(
+    (pagination) => {
+      if (selectedSubRound) {
+        fetchRegistrationRound(
+          selectedSubRound,
+          pagination.current,
+          pagination.pageSize
+        );
+      }
     },
-    {
-      title: "Kích thước",
-      dataIndex: "size",
-    },
-    {
-      title: "Giống",
-      dataIndex: "variety",
-    },
-    {
-      title: "Kết quả",
-      dataIndex: "result",
-      render: (result) => (
-        <Tag color={result === "Pass" ? "green" : "red"}>{result}</Tag>
-      ),
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      render: (status) => (
-        <Tag color={status === "Complete" ? "green" : "red"}>{status}</Tag>
-      ),
-    },
-    {
-      title: "Bể",
-      dataIndex: "tank",
-      render: (tank) => <span>{tank}</span>,
-    },
-  ];
+    [selectedSubRound, fetchRegistrationRound]
+  );
+
+  // Xử lý sự kiện khi hình ảnh bắt đầu tải
+  const handleImageLoad = useCallback((id) => {
+    setLoadingImages((prev) => ({ ...prev, [id]: false }));
+  }, []);
+
+  // Xử lý sự kiện khi hình ảnh bắt đầu tải
+  const handleImageLoadStart = useCallback((id) => {
+    setLoadingImages((prev) => ({ ...prev, [id]: true }));
+  }, []);
+
+  // Xử lý sự kiện khi hình ảnh gặp lỗi
+  const handleImageError = useCallback((id) => {
+    setLoadingImages((prev) => ({ ...prev, [id]: false }));
+  }, []);
+
+  // Định nghĩa cột với useMemo để tránh tạo lại không cần thiết
+  const columns = useMemo(
+    () => [
+      {
+        title: "Top",
+        dataIndex: "index",
+        width: 60,
+        render: (index) => (
+          <span
+            style={{ color: "blue", fontWeight: "bold" }}
+          >{`#${index}`}</span>
+        ),
+      },
+      {
+        title: "Mã Đăng Ký",
+        dataIndex: ["registration", "registrationNumber"],
+        width: 120,
+        render: (registrationNumber, record) => {
+          return (
+            registrationNumber ||
+            record.registration?.id?.substring(0, 8) ||
+            "—"
+          );
+        },
+      },
+      {
+        title: "Hình ảnh",
+        dataIndex: ["registration", "koiMedia"],
+        width: 100,
+        render: (koiMedia, record) => {
+          const id = record.key;
+          const imageMedia =
+            koiMedia && koiMedia.length > 0
+              ? koiMedia.find((media) => media.mediaType === "Image")
+              : null;
+
+          const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
+
+          return (
+            <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
+              <Image
+                src={imageUrl}
+                alt="Hình cá"
+                width={70}
+                height={50}
+                className="object-cover"
+                preview={{
+                  src: imageMedia?.mediaUrl,
+                  mask: <div className="text-xs">Xem</div>,
+                }}
+                placeholder={
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <Spin size="small" />
+                  </div>
+                }
+                fallback={PLACEHOLDER_IMAGE}
+              />
+            </div>
+          );
+        },
+      },
+      {
+        title: "Kích thước",
+        dataIndex: ["registration", "koiSize"],
+        width: 100,
+        render: (size) => (size ? `${size} cm` : "—"),
+      },
+      {
+        title: "Giống",
+        dataIndex: ["registration", "koiProfile", "variety", "name"],
+        width: 150,
+        ellipsis: true,
+        render: (name) => name || "—",
+      },
+      {
+        title: "Kết quả",
+        dataIndex: "roundResults",
+        width: 100,
+        render: (results) => {
+          if (!results || results.length === 0)
+            return <Tag color="gray">Chưa có</Tag>;
+          const isPassed = results.some((result) => result.isPassed);
+          return (
+            <Tag color={isPassed ? "green" : "red"}>
+              {isPassed ? "Đạt" : "Không đạt"}
+            </Tag>
+          );
+        },
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        width: 120,
+        render: (status) => {
+          let color = "blue";
+          let text = status;
+
+          switch (status) {
+            case "unpublic":
+              color = "gray";
+              text = "Chưa công khai";
+              break;
+            case "public":
+              color = "green";
+              text = "Đã công khai";
+              break;
+            case "pending":
+              color = "orange";
+              text = "Đang chờ";
+              break;
+            case "assigned":
+              color = "blue";
+              text = "Đang thực hiện";
+              break;
+            default:
+              text = status || "—";
+          }
+
+          return <Tag color={color}>{text}</Tag>;
+        },
+      },
+      {
+        title: "Bể",
+        dataIndex: "tankName",
+        width: 120,
+        render: (tank) => <span>{tank || "Chưa phân bổ"}</span>,
+      },
+    ],
+    [loadingImages, handleImageLoad, handleImageLoadStart, handleImageError]
+  );
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
-      <Row gutter={16}>
+    <Card>
+      <Row gutter={16} className="mb-4">
         <Col xs={24} sm={8}>
-          <div className="mb-4">
-            <span className="block text-lg font-medium">Danh Mục:</span>
+          <div>
+            <div className="block text-lg font-medium mb-2">Hạng Mục:</div>
             <Select
-              value={category}
+              style={{ width: "100%" }}
+              placeholder="Chọn hạng mục"
               onChange={handleCategoryChange}
-              style={{ width: "100%" }}
-              className="border rounded-md"
+              allowClear
+              value={selectedCategory}
+              loading={!categories}
+              disabled={!categories || categories.length === 0}
+              className="w-full"
             >
-              {categories.map((category) => (
-                <Option key={category} value={category}>
-                  {category}
+              {categories?.map((category) => (
+                <Option key={category.id} value={category.id}>
+                  {category.name}
                 </Option>
               ))}
             </Select>
@@ -129,57 +277,71 @@ function CompetitionRound() {
         </Col>
 
         <Col xs={24} sm={8}>
-          <div className="mb-4">
-            <span className="block text-lg font-medium">Vòng Chính:</span>
+          <div>
+            <div className="block text-lg font-medium mb-2">Vòng Chính:</div>
             <Select
-              value={mainRound}
-              onChange={handleMainRoundChange}
+              value={selectedRoundType}
+              onChange={handleRoundTypeChange}
               style={{ width: "100%" }}
-              className="border rounded-md"
+              className="w-full"
+              placeholder="Chọn vòng"
+              disabled={!selectedCategory}
             >
-              {mainRounds.map((round) => (
-                <Option key={round} value={round}>
-                  {round}
+              {roundTypes.map((type) => (
+                <Option key={type} value={type}>
+                  {roundTypeLabels[type] || type}
                 </Option>
               ))}
             </Select>
           </div>
         </Col>
 
-        {mainRound === "Vòng Đánh Giá Chính" && (
-          <Col xs={24} sm={8}>
-            <div className="mb-4">
-              <span className="block text-lg font-medium">Vòng Phụ:</span>
-              <Select
-                value={subRound}
-                onChange={handleSubRoundChange}
-                style={{ width: "100%" }}
-                className="border rounded-md"
-              >
-                {subRounds.map((round) => (
-                  <Option key={round} value={round}>
-                    {round}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-          </Col>
-        )}
+        <Col xs={24} sm={8}>
+          <div>
+            <div className="block text-lg font-medium mb-2">Vòng Phụ:</div>
+            <Select
+              value={selectedSubRound}
+              onChange={handleSubRoundChange}
+              style={{ width: "100%" }}
+              className="w-full"
+              placeholder={roundLoading ? "Đang tải..." : "Chọn vòng phụ"}
+              disabled={
+                !selectedRoundType ||
+                roundLoading ||
+                !round ||
+                round.length === 0
+              }
+              loading={roundLoading}
+              notFoundContent={
+                roundLoading ? <Spin size="small" /> : "Không có vòng phụ"
+              }
+            >
+              {round?.map((item) => (
+                <Option
+                  key={item.id || item.roundId}
+                  value={item.id || item.roundId}
+                >
+                  {item.name || item.roundName || `Vòng ${item.id}`}
+                </Option>
+              ))}
+            </Select>
+          </div>
+        </Col>
       </Row>
-
       <Table
         columns={columns}
-        dataSource={competitionData}
+        dataSource={displayData}
         pagination={{
-          total: competitionData.length,
-          pageSize: 6,
+          current: currentPage,
+          pageSize: pageSize,
+          total: registrationTotalItems,
           showSizeChanger: true,
-          showQuickJumper: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+          showTotal: (total, range) =>
+            `${range[0]}-${range[1]} trong ${total} mục`,
         }}
-        className="mt-4"
+        onChange={handleTableChange}
       />
-    </div>
+    </Card>
   );
 }
 

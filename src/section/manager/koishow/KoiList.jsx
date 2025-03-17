@@ -11,17 +11,13 @@ import {
   Tag,
   notification,
   Select,
-  Empty,
 } from "antd";
 import {
   EyeOutlined,
-  DeleteOutlined,
-  CheckCircleOutlined,
-  CloseCircleOutlined,
   ExclamationCircleOutlined,
 } from "@ant-design/icons";
-import useRegistration from "../../../../hooks/useRegistration";
-import useCategory from "../../../../hooks/useCategory";
+import useRegistration from "../../../hooks/useRegistration";
+import useCategory from "../../../hooks/useCategory";
 
 function KoiList({ showId }) {
   const {
@@ -139,23 +135,6 @@ function KoiList({ showId }) {
     setCurrentKoi(null);
   };
 
-  const showConfirmModal = (id, status) => {
-    const action = status === "confirmed" ? "phê duyệt" : "từ chối";
-    const title =
-      status === "confirmed" ? "Phê Duyệt Đăng Ký" : "Từ Chối Đăng Ký";
-
-    confirm({
-      title: title,
-      icon: <ExclamationCircleOutlined />,
-      content: `Bạn có chắc chắn muốn ${action} đăng ký này không?`,
-      okText: "Đồng ý",
-      okType: status === "confirmed" ? "primary" : "danger",
-      cancelText: "Hủy",
-      onOk() {
-        return handleUpdateStatus(id, status);
-      },
-    });
-  };
 
   const handleUpdateStatus = async (id, status) => {
     try {
@@ -538,37 +517,6 @@ function KoiList({ showId }) {
               )}
             </Row>
 
-            {/* Nút Approve/Reject */}
-            <div className="mt-4 text-center space-x-3">
-              <Button
-                type="primary"
-                icon={<CheckCircleOutlined />}
-                onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
-                className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
-                disabled={
-                  currentKoi.status === "confirmed" ||
-                  updatedStatus === "confirmed" ||
-                  updatedStatus === "rejected"
-                }
-              >
-                Phê Duyệt
-              </Button>
-
-              <Button
-                type="primary"
-                danger
-                icon={<CloseCircleOutlined />}
-                onClick={() => showConfirmModal(currentKoi.id, "rejected")}
-                className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
-                disabled={
-                  currentKoi.status === "rejected" ||
-                  updatedStatus === "confirmed" ||
-                  updatedStatus === "rejected"
-                }
-              >
-                Từ Chối
-              </Button>
-            </div>
           </div>
         )}
       </Modal>

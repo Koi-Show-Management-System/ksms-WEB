@@ -230,6 +230,10 @@ function CompetitionRound({ showId }) {
               color = "orange";
               text = "Đang chờ";
               break;
+            case "assigned":
+              color = "blue";
+              text = "Đang thực hiện";
+              break;
             default:
               text = status || "—";
           }

@@ -9,10 +9,8 @@ import {
   Select,
   Space,
   Card,
-  Typography,
-  message,
+
   Tooltip,
-  Popconfirm,
   Input as AntInput,
   Tag,
   notification,
@@ -20,9 +18,7 @@ import {
 import {
   PlusOutlined,
   EditOutlined,
-  DeleteOutlined,
-  ReloadOutlined,
-  SearchOutlined,
+
 } from "@ant-design/icons";
 import useTank from "../../../hooks/useTank";
 import useCategory from "../../../hooks/useCategory";
@@ -98,7 +94,7 @@ function Tank({ showId }) {
       if (selectedTank) {
         setTimeout(() => {
           form.setFieldsValue({
-            competitionCategoryId: selectedTank.competitionCategoryId,
+            competitionCategoryId: selectedTank.id,
             name: selectedTank.name,
             capacity: selectedTank.capacity,
             waterType: selectedTank.waterType,

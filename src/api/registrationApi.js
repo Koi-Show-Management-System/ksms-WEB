@@ -13,20 +13,16 @@ const getRegistration = (page, size, showIds, categoryIds) => {
     }
   );
 };
-// const assignTank = (roundId, registrationIds) => {
-//   return axiosClient.patch("/registration/assign-to-tank", {
-//     roundId: roundId,
-//     registrationIds: registrationIds,
-//   });
-// };
+
 const updateStatusRegistration = (id, status) => {
   return axiosClient.put(`/registration/${id}?status=${status}`);
 };
 
-const patchTank = (roundId, registrationIds) => {
-  return axiosClient.post("/registration/assign-to-tank", {
+const patchRound = (roundId, registrationIds) => {
+  return axiosClient.post("/registration-round/assign-to-tank", {
     roundId: roundId,
     registrationIds: registrationIds,
   });
 };
-export { getRegistration, updateStatusRegistration, patchTank };
+
+export { getRegistration, updateStatusRegistration, patchRound };

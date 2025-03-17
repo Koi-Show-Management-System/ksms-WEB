@@ -17,8 +17,7 @@ function getItem(label, key, icon, children, path) {
     key,
     icon,
     children,
-    label,
-    path,
+    label: path ? <Link to={path}>{label}</Link> : label,
   };
 }
 
@@ -55,25 +54,6 @@ const RefereeDashboard = ({ children }) => {
     navigate("/");
   };
 
-  const renderMenuItems = (items) => {
-    return items.map((item) => {
-      if (item.children && item.children.length > 0) {
-        return (
-          <Menu.SubMenu key={item.key} icon={item.icon} title={item.label}>
-            {renderMenuItems(item.children)}
-          </Menu.SubMenu>
-        );
-      } else {
-        return (
-          <Menu.Item key={item.key} icon={item.icon}>
-            <Link to={item.path}>{item.label}</Link>
-          </Menu.Item>
-        );
-      }
-    });
-  };
-
-
   return (
     <Layout className="h-screen">
       <Sider
@@ -98,9 +78,8 @@ const RefereeDashboard = ({ children }) => {
           defaultSelectedKeys={["1"]}
           mode="inline"
           className="select-none"
-        >
-          {renderMenuItems(items)}
-        </Menu>
+          items={items}
+        />
       </Sider>
       <Layout className="overflow-y-auto md:ml-0 ">
         <header className="header mr-3 pr-4 flex justify-end gap-2 items-center fixed z-50 h-16 backdrop-blur-[5px] bg-[#f9fafba8] transition duration-200 ease-in-out">

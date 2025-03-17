@@ -24,8 +24,8 @@ import {
   ReloadOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
-import useTank from "../../../hooks/useTank";
-import useCategory from "../../../hooks/useCategory";
+import useTank from "../../../../hooks/useTank";
+import useCategory from "../../../../hooks/useCategory";
 
 const { Option } = Select;
 const { Search } = AntInput;
@@ -98,7 +98,7 @@ function Tank({ showId }) {
       if (selectedTank) {
         setTimeout(() => {
           form.setFieldsValue({
-            competitionCategoryId: selectedTank.competitionCategoryId,
+            competitionCategoryId: selectedTank.id,
             name: selectedTank.name,
             capacity: selectedTank.capacity,
             waterType: selectedTank.waterType,

@@ -38,8 +38,8 @@ import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
 import { Loading } from "../../../../components";
-import Tank from "../../../staff/koishow/Tank";
 import useTicketType from "../../../../hooks/useTicketType";
+import Tank from "./Tank";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -289,9 +289,14 @@ function KoiShowDetail() {
       children: <ManageShow showId={id} />,
     },
     {
+      key: "tank",
+      label: "Quản Lý Bể",
+      children: <Tank showId={id} />,
+    },
+    {
       key: "competitionRound",
       label: "Vòng Thi",
-      children: <CompetitionRound />,
+      children: <CompetitionRound showId={id} />,
     },
     {
       key: "votes",
@@ -444,91 +449,103 @@ function KoiShowDetail() {
 
           <div className="grid grid-cols-2 gap-4">
             <div className="mt-4">
-              <Collapse defaultActiveKey={["1"]}>
-                <Panel header="Lịch Trình Sự Kiện" key="1">
-                  <div className="space-y-2">
-                    <div className="flex justify-between">
-                      <span>
-                        {new Date(
-                          koiShowDetail.data.startDate
-                        ).toLocaleDateString("vi-VN")}{" "}
-                        - Mở Đăng Ký
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>
-                        {new Date(
-                          koiShowDetail.data.endDate
-                        ).toLocaleDateString("vi-VN")}{" "}
-                        - Đóng Đăng Ký
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>
-                        {new Date(
-                          koiShowDetail.data.startExhibitionDate
-                        ).toLocaleDateString("vi-VN")}{" "}
-                        - Ngày Bắt Đầu Giải Đấu & Triển Lãm
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>
-                        {new Date(
-                          koiShowDetail.data.endExhibitionDate
-                        ).toLocaleDateString("vi-VN")}{" "}
-                        - Ngày Kết Thúc Giải Đấu & Triễn Lãm
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Địa điểm: {koiShowDetail.data.location}</span>
-                    </div>
-                  </div>
-                </Panel>
-              </Collapse>
+              <Collapse
+                defaultActiveKey={["1"]}
+                items={[
+                  {
+                    key: "1",
+                    label: "Lịch Trình Sự Kiện",
+                    children: (
+                      <div className="space-y-2">
+                        <div className="flex justify-between">
+                          <span>
+                            {new Date(
+                              koiShowDetail.data.startDate
+                            ).toLocaleDateString("vi-VN")}{" "}
+                            - Mở Đăng Ký
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>
+                            {new Date(
+                              koiShowDetail.data.endDate
+                            ).toLocaleDateString("vi-VN")}{" "}
+                            - Đóng Đăng Ký
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>
+                            {new Date(
+                              koiShowDetail.data.startExhibitionDate
+                            ).toLocaleDateString("vi-VN")}{" "}
+                            - Ngày Bắt Đầu Giải Đấu & Triển Lãm
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>
+                            {new Date(
+                              koiShowDetail.data.endExhibitionDate
+                            ).toLocaleDateString("vi-VN")}{" "}
+                            - Ngày Kết Thúc Giải Đấu & Triễn Lãm
+                          </span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Địa điểm: {koiShowDetail.data.location}</span>
+                        </div>
+                      </div>
+                    ),
+                  },
+                ]}
+              />
             </div>
 
             <div className="mt-4">
-              <Collapse defaultActiveKey={["2"]}>
-                <Panel
-                  header="Vé"
-                  key="2"
-                  extra={
-                    <InfoCircleOutlined
-                      style={{
-                        fontSize: "16px",
-                        cursor: "pointer",
-                        color: "#1890ff",
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openTicketModal();
-                      }}
-                    />
-                  }
-                >
-                  <div className="space-y-2">
-                    {koiShowDetail.data.ticketTypes.map((ticket) => (
-                      <div key={ticket.id}>
+              <Collapse
+                defaultActiveKey={["2"]}
+                items={[
+                  {
+                    key: "2",
+                    label: "Vé",
+                    children: (
+                      <div className="space-y-2">
+                        {koiShowDetail.data.ticketTypes.map((ticket) => (
+                          <div key={ticket.id}>
+                            <div>
+                              {ticket.name} -{" "}
+                              {new Intl.NumberFormat("vi-VN", {
+                                style: "currency",
+                                currency: "VND",
+                              }).format(ticket.price)}{" "}
+                              || Số lượng : {ticket.availableQuantity} vé
+                            </div>
+                          </div>
+                        ))}
+
                         <div>
-                          {ticket.name} -{" "}
-                          {new Intl.NumberFormat("vi-VN", {
-                            style: "currency",
-                            currency: "VND",
-                          }).format(ticket.price)}{" "}
-                          || Số lượng : {ticket.availableQuantity} vé
+                          Tham gia tối thiểu:{" "}
+                          {koiShowDetail.data.minParticipants}
+                        </div>
+                        <div>
+                          Tham gia tối đa: {koiShowDetail.data.maxParticipants}
                         </div>
                       </div>
-                    ))}
-
-                    <div>
-                      Tham gia tối thiểu: {koiShowDetail.data.minParticipants}
-                    </div>
-                    <div>
-                      Tham gia tối đa: {koiShowDetail.data.maxParticipants}
-                    </div>
-                  </div>
-                </Panel>
-              </Collapse>
+                    ),
+                    extra: (
+                      <InfoCircleOutlined
+                        style={{
+                          fontSize: "16px",
+                          cursor: "pointer",
+                          color: "#1890ff",
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          openTicketModal();
+                        }}
+                      />
+                    ),
+                  },
+                ]}
+              />
             </div>
           </div>
 
@@ -655,7 +672,7 @@ function KoiShowDetail() {
       </div>
 
       <Modal
-        title="Chỉnh Sửa Koi Show"
+        title="Chỉnh Sửa"
         open={editModalVisible}
         onCancel={() => {
           setEditModalVisible(false);
@@ -701,10 +718,6 @@ function KoiShowDetail() {
             </Form.Item>
 
             <Form.Item name="maxParticipants" label="Số Người Tham Gia Tối Đa">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-
-            <Form.Item name="location" label="Địa Điểm">
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
 

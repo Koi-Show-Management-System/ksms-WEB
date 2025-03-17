@@ -221,7 +221,7 @@ const Overview = () => {
       </Row>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-lg" bodyStyle={{ padding: "20px" }}>
+        <Card className="shadow-lg" styles={{ body: { padding: "20px" } }}>
           <h3 className="text-lg font-semibold text-center mb-4">
             Biểu đồ doanh thu
           </h3>
@@ -240,7 +240,7 @@ const Overview = () => {
           </div>
         </Card>
 
-        <Card className="shadow-lg" bodyStyle={{ padding: "20px" }}>
+        <Card className="shadow-lg" styles={{ body: { padding: "20px" } }}>
           <h3 className="text-lg font-semibold text-center mb-4">
             Phân phối lợi nhuận theo cuộc thi
           </h3>

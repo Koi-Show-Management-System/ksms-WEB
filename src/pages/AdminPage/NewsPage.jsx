@@ -1,5 +1,5 @@
 import React from "react";
-import { Helmet } from "react-helmet";
+import { Helmet } from "react-helmet-async";
 import NewsView from "../../section/admin/new/view/NewsView";
 
 function NewsPage() {
