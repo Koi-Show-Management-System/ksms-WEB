@@ -4,7 +4,11 @@ import { notification } from "antd";
 class SignalRService {
   constructor() {
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5250/notificationHub")
+      .withUrl("http://localhost:5250/notificationHub", {
+        accessTokenFactory: () => {
+          return Cookies.get("__token") || "";
+        },
+      })
       .withAutomaticReconnect()
       .build();
 

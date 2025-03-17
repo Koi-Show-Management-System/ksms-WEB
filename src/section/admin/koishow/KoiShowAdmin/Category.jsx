@@ -213,7 +213,7 @@ function Category({ showId }) {
           <Button
             type="text"
             icon={<EditOutlined />}
-            className="text-blue-500 hover:text-blue-700"
+            className="text-gray-500 hover:text-blue-500"
             onClick={() => showEditModal(record.id)}
           />
         </div>

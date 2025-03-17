@@ -52,7 +52,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     fetchCriteria,
     isLoading: isLoadingCriteria,
   } = useCriteria();
-
+  const [criteriaWeights, setCriteriaWeights] = useState({});
   const [form] = Form.useForm();
   const [activeTab, setActiveTab] = useState("1");
   const [editingAwardIndex, setEditingAwardIndex] = useState(null);
@@ -85,9 +85,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
   useEffect(() => {
     if (currentCategory) {
-      // console.log("Current category:", currentCategory);
 
-      // Transform data for form
       const formData = {
         name: currentCategory.name,
         sizeMin: currentCategory.sizeMin,
@@ -115,10 +113,8 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     try {
       const values = await form.validateFields();
 
-      // Lấy dữ liệu hiện tại từ form để đảm bảo không mất dữ liệu
       const formData = form.getFieldsValue(true);
 
-      // Xử lý phân công trọng tài
       const refereeAssignments = processRefereeAssignments(
         formData.refereeAssignments || []
       );
@@ -156,7 +152,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           order: parseInt(criteria.order) || 0,
         })),
 
-        // Chỉ thêm phân công trọng tài nếu có dữ liệu hợp lệ
         createRefereeAssignmentRequests: refereeAssignments,
 
         createRoundRequests: (formData.rounds || []).map((round) => ({
@@ -185,21 +180,19 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
     const refereeMap = {};
 
-    // Nhóm các phân công theo trọng tài
     assignments.forEach((assignment) => {
       const refereeId =
         assignment.refereeAccount?.id || assignment.refereeAccountId;
-      if (!refereeId) return; // Bỏ qua nếu không có refereeId
+      if (!refereeId) return; 
 
       if (!refereeMap[refereeId]) {
         refereeMap[refereeId] = {
-          id: assignment.id, // Giữ ID nếu có
+          id: assignment.id, 
           refereeAccountId: refereeId,
           roundTypes: [],
         };
       }
 
-      // Thêm roundType nếu tồn tại và chưa có trong mảng
       if (
         assignment.roundType &&
         !refereeMap[refereeId].roundTypes.includes(assignment.roundType)
@@ -208,7 +201,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       }
     });
 
-    // Lọc bỏ các phân công không có roundTypes
     return Object.values(refereeMap).filter(
       (item) => item.roundTypes.length > 0
     );
@@ -269,9 +261,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       (c) => c.roundType === roundType
     );
 
-    // Tạo các tiêu chí mới với cấu trúc tương tự như dữ liệu từ API
     const newCriteria = tempSelectedCriteria.map((criteriaItem, index) => {
-      // Tìm thông tin chi tiết của tiêu chí
       const criteriaInfo = criteria.find(
         (c) => c.id === criteriaItem.criteriaId
       );
@@ -293,20 +283,16 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
     // Cập nhật form với các tiêu chí mới
     const updatedCriteria = [...currentCriteria, ...newCriteria];
-    // Trong hàm handleAddCriteriaToRound, kiểm tra lại dòng này
     form.setFieldsValue({
       criteriaCompetitionCategories: updatedCriteria,
     });
 
-    // Log để debug
     console.log("Updated criteria after adding new ones:", updatedCriteria);
 
-    // Cập nhật lại state để UI hiển thị đúng
     setTempSelectedCriteria([]);
     setSelectedRoundForCriteria(null);
   };
 
-  // Handle removing criteria
   const handleRemoveCriteria = (criteriaId, roundType) => {
     const currentCriteria =
       form.getFieldValue("criteriaCompetitionCategories") || [];
@@ -317,6 +303,13 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     });
   };
   const handleWeightChange = (criteriaId, roundType, value) => {
+    const key = `${criteriaId}-${roundType}`;
+
+    // Update the local state
+    setCriteriaWeights((prev) => ({
+      ...prev,
+      [key]: value,
+    }));
     // Chuyển từ phần trăm sang decimal (0-1)
     const weightValue = (parseFloat(value) || 0) / 100;
 
@@ -329,7 +322,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           criteria.criteria?.id === criteriaId) &&
         criteria.roundType === roundType
       ) {
-        // Giữ lại tất cả thuộc tính hiện có và chỉ cập nhật weight
         return { ...criteria, weight: weightValue };
       }
       return criteria;
@@ -383,9 +375,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       return;
     }
 
-    // Tạo phân công mới cho mỗi vòng được chọn
     const newAssignments = selectedRounds.map((round) => {
-      // Tìm phân công hiện có cho vòng này (nếu có)
       const existingAssignment = currentAssignments.find(
         (a) =>
           (a.refereeAccount?.id || a.refereeAccountId) === refereeId &&
@@ -393,10 +383,8 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       );
 
       if (existingAssignment) {
-        // Giữ lại phân công hiện có
         return existingAssignment;
       } else {
-        // Tạo phân công mới
         return {
           refereeAccountId: refereeId,
           refereeAccount: referee.find((r) => r.id === refereeId),
@@ -409,7 +397,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       refereeAssignments: [...otherAssignments, ...newAssignments],
     });
   };
-  // Get referee's assigned rounds
   const getRefereeRounds = (refereeId) => {
     const assignments = form.getFieldValue("refereeAssignments") || [];
     return assignments
@@ -417,11 +404,9 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       .map((a) => a.roundType);
   };
 
-  // Thêm vòng thi mới
   const handleAddSubRound = (mainRound) => {
     const currentRounds = form.getFieldValue("rounds") || [];
 
-    // Tìm số thứ tự lớn nhất trong các vòng cùng loại
     const roundsOfType = currentRounds.filter(
       (round) => round && round.roundType === mainRound
     );
@@ -921,20 +906,29 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                   return (
                     <Tabs.TabPane tab={round.label} key={round.value}>
                       {criteriaInRound.length > 0 ? (
-                        // Trong phần hiển thị danh sách tiêu chí
                         <List
                           dataSource={criteriaInRound}
                           renderItem={(item) => (
                             <List.Item
-                              key={item.criteriaId || item.criteria?.id}
+                              key={
+                                item.id ||
+                                `${item.criteriaId}-${item.roundType}`
+                              }
                               actions={[
-                                // Thay đổi InputNumber thành Input thông thường
                                 <InputNumber
                                   min={0}
                                   max={100}
                                   formatter={(value) => `${value}%`}
                                   parser={(value) => value.replace("%", "")}
-                                  value={(item.weight * 100).toFixed(0)}
+                                  value={
+                                    criteriaWeights[
+                                      `${item.criteriaId || item.criteria?.id}-${item.roundType}`
+                                    ] !== undefined
+                                      ? criteriaWeights[
+                                          `${item.criteriaId || item.criteria?.id}-${item.roundType}`
+                                        ]
+                                      : (item.weight * 100).toFixed(0) 
+                                  }
                                   onChange={(value) =>
                                     handleWeightChange(
                                       item.criteriaId || item.criteria?.id,
@@ -942,6 +936,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                       value
                                     )
                                   }
+                                  className="w-24"
                                 />,
                                 <Tooltip title="Xóa tiêu chí">
                                   <Button
