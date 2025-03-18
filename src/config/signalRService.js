@@ -1,6 +1,6 @@
 import * as signalR from "@microsoft/signalr";
 import { notification } from "antd";
-
+import Cookies from "js-cookie";
 class SignalRService {
   constructor() {
     this.connection = new signalR.HubConnectionBuilder()
@@ -53,15 +53,15 @@ class SignalRService {
       if (this.connection.state === "Disconnected") {
         console.log("Starting SignalR connection...");
         await this.connection.start();
-        console.log(
-          "SignalR Connected successfully. Connection state:",
-          this.connection.state
-        );
+        // console.log(
+        //   "SignalR Connected successfully. Connection state:",
+        //   this.connection.state
+        // );
       } else {
-        console.log(
-          "SignalR already connected. Current state:",
-          this.connection.state
-        );
+        // console.log(
+        //   "SignalR already connected. Current state:",
+        //   this.connection.state
+        // );
       }
       return Promise.resolve();
     } catch (err) {

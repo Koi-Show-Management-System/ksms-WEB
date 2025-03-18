@@ -123,9 +123,8 @@ function Tank({ showId }) {
 
   const handleEdit = (record) => {
     clearSelectedTank();
-    setTimeout(() => {
-      setSelectedTank(record);
-    }, 0);
+    setSelectedTank(record);
+    setModalVisible(true);
   };
 
   const handleCancel = () => {
@@ -135,8 +134,11 @@ function Tank({ showId }) {
 
   const handleSubmit = async (values) => {
     try {
+      let categoryIdToRefresh;
+      
       if (!selectedTank) {
         values.koiShowId = showId;
+        categoryIdToRefresh = values.competitionCategoryId;
 
         const result = await createNewTank(values);
         if (result.success) {
@@ -145,18 +147,18 @@ function Tank({ showId }) {
             description: "Tạo bể cá thành công",
           });
           setModalVisible(false);
-          fetchTanks(showId, currentPage, pageSize);
         } else {
           notification.error({
             message: "Lỗi",
             description: "Không thể tạo bể cá",
           });
+          return; // Exit early on error
         }
       } else {
-        // Thêm showId vào values để updateExistingTank có thể fetch lại danh sách
         values.showId = showId;
+        // For updates, use the category ID from selectedTank since it's not in the form
+        categoryIdToRefresh = selectedTank.competitionCategoryId;
 
-        // Sử dụng id của tank để cập nhật
         const result = await updateExistingTank(selectedTank.id, values);
 
         if (result.success) {
@@ -170,8 +172,19 @@ function Tank({ showId }) {
             message: "Lỗi",
             description: "Không thể cập nhật bể cá",
           });
+          return; // Exit early on error
         }
       }
+      
+      // After modal is closed, refresh the tank list with a slight delay
+      // to ensure the modal animation completes
+      setTimeout(() => {
+        if (categoryIdToRefresh) {
+          fetchTanks(categoryIdToRefresh, 1, pageSize);
+        } else if (selectedCategoryId) {
+          fetchTanks(selectedCategoryId, 1, pageSize);
+        }
+      }, 300);
     } catch (error) {
       console.error("Lỗi xác thực biểu mẫu:", error);
       notification.error({
@@ -180,11 +193,6 @@ function Tank({ showId }) {
       });
     }
   };
-
-  const handleSearch = (value) => {
-    setSearchText(value);
-  };
-
   const handleTableChange = (pagination) => {
     fetchTanks(showId, pagination.current, pagination.pageSize);
   };
@@ -370,23 +378,25 @@ function Tank({ showId }) {
           onFinish={handleSubmit}
           preserve={false}
         >
-          <Form.Item
-            name="competitionCategoryId"
-            label="Hạng mục"
-            rules={[{ required: true, message: "Vui lòng chọn hạng mục!" }]}
-          >
-            <Select
-              placeholder="Chọn hạng mục"
-              onChange={(value) => setSelectedCategoryId(value)}
-              allowClear
+          {!selectedTank && (
+            <Form.Item
+              name="competitionCategoryId"
+              label="Hạng mục"
+              rules={[{ required: true, message: "Vui lòng chọn hạng mục!" }]}
             >
-              {categories.map((category) => (
-                <Option key={category.id} value={category.id}>
-                  {category.name}
-                </Option>
-              ))}
-            </Select>
-          </Form.Item>
+              <Select
+                placeholder="Chọn hạng mục"
+                onChange={(value) => setSelectedCategoryId(value)}
+                allowClear
+              >
+                {categories.map((category) => (
+                  <Option key={category.id} value={category.id}>
+                    {category.name}
+                  </Option>
+                ))}
+              </Select>
+            </Form.Item>
+          )}
 
           <Form.Item
             name="name"

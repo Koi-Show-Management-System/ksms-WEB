@@ -44,30 +44,30 @@ function KoiShowDetail() {
   useEffect(() => {
     fetchKoiShowDetail(id);
 
-    console.log("Initializing SignalR in KoiShowDetail...");
+    // console.log("Initializing SignalR in KoiShowDetail...");
 
     // Khởi động kết nối SignalR
     SignalRService.start()
       .then(() => {
-        console.log("SignalR connected successfully in KoiShowDetail");
+        // console.log("SignalR connected successfully in KoiShowDetail");
         // Kiểm tra trạng thái kết nối sau 2 giây
         setTimeout(() => {
-          console.log(
-            "Current SignalR state:",
-            SignalRService.getConnectionState()
-          );
+          // console.log(
+          //   "Current SignalR state:",
+          //   SignalRService.getConnectionState()
+          // );
         }, 2000);
       })
       .catch((err) => {
-        console.error("SignalR connection error in KoiShowDetail:", err);
+        // console.error("SignalR connection error in KoiShowDetail:", err);
       });
 
     // Cleanup khi component unmount
     return () => {
-      console.log(
-        "KoiShowDetail unmounting, SignalR state:",
-        SignalRService.getConnectionState()
-      );
+      // console.log(
+      //   "KoiShowDetail unmounting, SignalR state:",
+      //   SignalRService.getConnectionState()
+      // );
     };
   }, [id]);
 

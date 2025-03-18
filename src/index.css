@@ -94,3 +94,22 @@
   border-top: none !important;
   border-bottom: none !important;
 }
+
+/* Replace -ms-high-contrast with the modern forced-colors standard */
+@media (forced-colors: active) {
+  /* Add forced color mode overrides */
+  :root {
+    forced-color-adjust: none;
+  }
+
+  /* Override Ant Design focus styles for accessibility */
+  .ant-btn:focus,
+  .ant-input:focus,
+  .ant-select-focused .ant-select-selector,
+  .ant-checkbox-wrapper:focus .ant-checkbox-inner,
+  .ant-radio-wrapper:focus .ant-radio-inner,
+  .ant-switch:focus {
+    outline: 2px solid ButtonText !important;
+    outline-offset: 2px !important;
+  }
+}

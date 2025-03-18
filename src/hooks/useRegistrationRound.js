@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { getRegistrationRound } from "../api/registrationRoundApi";
+import {
+  getRegistrationRound,
+  updateFishTank,
+} from "../api/registrationRoundApi";
 
 const useRegistrationRound = create((set, get) => ({
   registrationRound: [],
@@ -62,5 +65,28 @@ const useRegistrationRound = create((set, get) => ({
       set({ error: error, isLoading: false });
     }
   },
+
+  updateFishTankInRound: async (registrationRoundId, tankId) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await updateFishTank(registrationRoundId, tankId);
+      console.log("Update response:", res.data);
+
+      if (res && res.status === 200) {
+        // Don't auto-refetch - let the component handle this
+        set({ isLoading: false });
+        return { success: true, data: res.data };
+      } else {
+        set({ error: res, isLoading: false });
+        return { success: false, error: res };
+      }
+    } catch (error) {
+      console.error("Update Fish Tank Error:", error);
+      set({ error: error, isLoading: false });
+      return { success: false, error };
+    }
+  },
 }));
+
 export default useRegistrationRound;
