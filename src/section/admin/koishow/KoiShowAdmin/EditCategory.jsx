@@ -85,7 +85,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
   useEffect(() => {
     if (currentCategory) {
-
       const formData = {
         name: currentCategory.name,
         sizeMin: currentCategory.sizeMin,
@@ -101,6 +100,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           currentCategory.criteriaCompetitionCategories || [],
         refereeAssignments: currentCategory.refereeAssignments || [],
         rounds: currentCategory.rounds || [],
+        hasTank: currentCategory.hasTank,
       };
 
       // console.log("Setting form data:", formData);
@@ -165,6 +165,8 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
             parseInt(round.numberOfRegistrationToAdvance) || 100,
           status: round.status || "pending",
         })),
+
+        hasTank: values.hasTank,
       };
 
       await updateCategory(categoryId, updatePayload);
@@ -183,11 +185,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     assignments.forEach((assignment) => {
       const refereeId =
         assignment.refereeAccount?.id || assignment.refereeAccountId;
-      if (!refereeId) return; 
+      if (!refereeId) return;
 
       if (!refereeMap[refereeId]) {
         refereeMap[refereeId] = {
-          id: assignment.id, 
+          id: assignment.id,
           refereeAccountId: refereeId,
           roundTypes: [],
         };
@@ -463,30 +465,24 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           <Tabs activeKey={activeTab} onChange={setActiveTab}>
             <Tabs.TabPane tab="Thông tin cơ bản" key="1">
               <Row gutter={16}>
-                <Col span={12}>
+                <Col span={24}>
                   <Form.Item
                     name="name"
                     label="Tên hạng mục"
                     rules={[
-                      { required: true, message: "Vui lòng nhập tên hạng mục" },
+                      {
+                        required: true,
+                        message: "Vui lòng nhập tên hạng mục",
+                      },
                     ]}
                   >
-                    <Input placeholder="Nhập tên danh mục" />
-                  </Form.Item>
-                </Col>
-                <Col span={12}>
-                  <Form.Item name="status" label="Trạng thái">
-                    <Select>
-                      <Option value="pending">Chờ duyệt</Option>
-                      <Option value="approved">Đã duyệt</Option>
-                      <Option value="upcoming">Sắp diễn ra</Option>
-                    </Select>
+                    <Input placeholder="Nhập tên hạng mục" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item
                     name="sizeMin"
-                    label="Kích thước tối thiểu"
+                    label="Kích thước tối thiểu (cm)"
                     rules={[
                       {
                         required: true,
@@ -494,16 +490,13 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       },
                     ]}
                   >
-                    <Input
-                      type="number"
-                      placeholder="Nhập kích thước tối thiểu"
-                    />
+                    <Input type="number" placeholder="Nhập kích thước tối thiểu" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item
                     name="sizeMax"
-                    label="Kích thước tối đa"
+                    label="Kích thước tối đa (cm)"
                     rules={[
                       {
                         required: true,
@@ -524,33 +517,26 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                     <Input type="number" placeholder="Nhập phí đăng ký" />
                   </Form.Item>
                 </Col>
-                <Col span={24}>
-                  <Form.Item
-                    name="categoryVarieties"
-                    label="Giống cá Koi"
-                    rules={[
-                      {
-                        required: true,
-                        message: "Vui lòng chọn ít nhất một giống cá",
-                      },
-                    ]}
-                  >
-                    <Select mode="multiple">
-                      {(variety || []).map((item) => (
-                        <Option key={item.id} value={item.id}>
-                          {item.name}
-                        </Option>
-                      ))}
+                <Col span={12}>
+                  <Form.Item name="hasTank" label="Có bể trưng bày">
+                    <Select placeholder="Chọn có/không">
+                      <Option value={true}>Có</Option>
+                      <Option value={false}>Không</Option>
+                    </Select>
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
+                  <Form.Item name="status" label="Trạng thái">
+                    <Select>
+                      <Option value="pending">Chờ duyệt</Option>
+                      <Option value="approved">Đã duyệt</Option>
+                      <Option value="upcoming">Sắp diễn ra</Option>
                     </Select>
                   </Form.Item>
                 </Col>
                 <Col span={24}>
-                  <Form.Item
-                    name="description"
-                    label="Mô tả"
-                    rules={[{ required: true, message: "Vui lòng nhập mô tả" }]}
-                  >
-                    <TextArea placeholder="Nhập mô tả" rows={4} />
+                  <Form.Item name="description" label="Mô tả">
+                    <TextArea rows={4} placeholder="Nhập mô tả" />
                   </Form.Item>
                 </Col>
               </Row>
@@ -927,7 +913,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                       ? criteriaWeights[
                                           `${item.criteriaId || item.criteria?.id}-${item.roundType}`
                                         ]
-                                      : (item.weight * 100).toFixed(0) 
+                                      : (item.weight * 100).toFixed(0)
                                   }
                                   onChange={(value) =>
                                     handleWeightChange(

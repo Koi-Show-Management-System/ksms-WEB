@@ -5,7 +5,6 @@ import {
   Card,
   Image,
   Tabs,
-  Spin,
   notification,
   Modal,
   Button,
@@ -15,8 +14,6 @@ import {
   InputNumber,
   message,
   Upload,
-  Table,
-  Space,
   Popconfirm,
 } from "antd";
 import dayjs from "dayjs";
@@ -704,10 +701,6 @@ function KoiShowDetail() {
 
             <Form.Item name="location" label="Địa Điểm">
               <Input />
-            </Form.Item>
-
-            <Form.Item name="registrationFee" label="Phí Đăng Ký">
-              <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
 
             <Form.Item

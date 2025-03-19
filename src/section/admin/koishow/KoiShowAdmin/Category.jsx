@@ -290,6 +290,9 @@ function Category({ showId }) {
                           : selectedCategory.status}
                   </Tag>
                 </Descriptions.Item>
+                <Descriptions.Item label="Bể trưng bày">
+                  {selectedCategory.hasTank ? "Có" : "Không"}
+                </Descriptions.Item>
                 <Descriptions.Item label="Mô tả">
                   {selectedCategory.description}
                 </Descriptions.Item>

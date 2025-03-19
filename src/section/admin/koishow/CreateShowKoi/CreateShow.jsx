@@ -89,6 +89,7 @@ function CreateShow() {
             // !category.endTime ||
             !category.registrationFee ||
             !category.maxEntries ||
+            !category.hasTank ||
             category.createCompetionCategoryVarieties.length === 0
           ) {
             hasError = true;

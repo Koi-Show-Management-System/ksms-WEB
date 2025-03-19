@@ -50,6 +50,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
             startTime: null,
             endTime: null,
             maxEntries: 0,
+            hasTank: false,
             registrationFee: "",
             status: "pending",
             createAwardCateShowRequests: [],
@@ -492,6 +493,27 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                     {showErrors && !category.description && (
                       <p className="text-red-500 text-xs mt-1">
                         Mô tả là bắt buộc.{" "}
+                      </p>
+                    )}
+                  </div>
+                  <div className="">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Có bể trưng bày
+                    </label>
+                    <Select
+                      placeholder="Chọn có/không"
+                      className="w-full"
+                      value={category.hasTank}
+                      onChange={(value) =>
+                        handleCategoryChange(index, "hasTank", value)
+                      }
+                    >
+                      <Option value={true}>Có</Option>
+                      <Option value={false}>Không</Option>
+                    </Select>
+                    {showErrors && category.hasTank === undefined && (
+                      <p className="text-red-500 text-xs mt-1">
+                        Vui lòng chọn có hoặc không
                       </p>
                     )}
                   </div>

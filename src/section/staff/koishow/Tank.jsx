@@ -314,11 +314,13 @@ function Tank({ showId }) {
               allowClear
               onChange={(value) => setSelectedCategoryId(value)}
             >
-              {categories.map((category) => (
-                <Option key={category.id} value={category.id}>
-                  {category.name}
-                </Option>
-              ))}
+              {categories
+                .filter(category => category.hasTank)
+                .map((category) => (
+                  <Option key={category.id} value={category.id}>
+                    {category.name}
+                  </Option>
+                ))}
             </Select>
 
             <Button
@@ -389,11 +391,13 @@ function Tank({ showId }) {
                 onChange={(value) => setSelectedCategoryId(value)}
                 allowClear
               >
-                {categories.map((category) => (
-                  <Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Option>
-                ))}
+                {categories
+                  .filter(category => category.hasTank)
+                  .map((category) => (
+                    <Option key={category.id} value={category.id}>
+                      {category.name}
+                    </Option>
+                  ))}
               </Select>
             </Form.Item>
           )}

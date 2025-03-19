@@ -101,10 +101,10 @@ function Registration({ showId }) {
   };
 
   const showAssignModal = () => {
-    if (!selectedCategory || !selectedStatus) {
+    if (!selectedCategory) {
       notification.warning({
         message: "Chưa đủ thông tin",
-        description: "Vui lòng chọn hạng mục và trạng thái trước khi gán vòng",
+        description: "Vui lòng chọn hạng mục trước khi gán vòng",
         placement: "topRight",
       });
       return;
@@ -560,28 +560,17 @@ function Registration({ showId }) {
                 columns={columns.filter((col) => col.key !== "actions")}
                 dataSource={registration.filter(
                   (reg) =>
-                    reg.status?.toLowerCase() ===
-                      (selectedStatus || "checkin").toLowerCase() &&
+                    reg.status?.toLowerCase() === "checkin" &&
                     reg.competitionCategory?.id === selectedCategory
                 )}
                 loading={isLoading}
                 pagination={{
                   current: currentPage,
                   pageSize: pageSize,
-                  total: totalItems,
-                  showTotal: (total, range) =>
-                    `${range[0]}-${range[1]} trong ${total}`,
+                  total: registration.filter(reg => reg.status?.toLowerCase() === "checkin").length,
+                  showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,
                   pageSizeOptions: ["10", "20", "50"],
-                  onChange: (page, pageSize) => {
-                    fetchRegistration(
-                      page,
-                      pageSize,
-                      showId,
-                      selectedCategory ? [selectedCategory] : undefined,
-                      selectedStatus
-                    );
-                  },
                 }}
                 rowKey="id"
                 size="small"

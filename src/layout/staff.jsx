@@ -2,25 +2,26 @@ import { useState, useEffect, useMemo } from "react";
 import {
   HomeOutlined,
   CalendarOutlined,
-  LogoutOutlined,
   ReadOutlined,
 } from "@ant-design/icons";
-import { Layout, Menu, Dropdown, Space, notification } from "antd";
+import { Layout, Menu, notification } from "antd";
 import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import Cookies from "js-cookie";
 
-const { Content, Sider } = Layout;
+const { Sider, Content } = Layout;
 
-function getItem(label, key, icon, children, path) {
-  return {
+const getItem = (label, key, icon, children, path) => {
+  const item = {
     key,
     icon,
     children,
     label: path ? <Link to={path}>{label}</Link> : label,
   };
-}
+
+  return item;
+};
 
 const StaffDashboard = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
@@ -57,21 +58,17 @@ const StaffDashboard = ({ children }) => {
   };
 
   const renderMenuItems = (items) => {
-    return items.map((item) => {
-      if (item.children && item.children.length > 0) {
-        return (
-          <Menu.SubMenu key={item.key} icon={item.icon} title={item.label}>
-            {renderMenuItems(item.children)}
-          </Menu.SubMenu>
-        );
-      } else {
-        return (
-          <Menu.Item key={item.key} icon={item.icon}>
-            <Link to={item.path}>{item.label}</Link>
-          </Menu.Item>
-        );
-      }
-    });
+    return items.map((item) =>
+      item.items && item.items.length > 0 ? (
+        <Menu.SubMenu key={item.key} icon={item.icon} title={item.label}>
+          {renderMenuItems(item.items)}
+        </Menu.SubMenu>
+      ) : (
+        <Menu.Item key={item.key} icon={item.icon}>
+          <Link to={item.path}>{item.label}</Link>
+        </Menu.Item>
+      )
+    );
   };
 
   return (

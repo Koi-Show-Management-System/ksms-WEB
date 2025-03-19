@@ -48,8 +48,6 @@ function Category({ showId }) {
     fetchCategories(showId, 1, 10);
   }, [showId]);
 
-
-
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
   };
@@ -265,6 +263,9 @@ function Category({ showId }) {
                 </Descriptions.Item>
                 <Descriptions.Item label="Số lượng tối đa">
                   {selectedCategory.maxEntries}
+                </Descriptions.Item>
+                <Descriptions.Item label="Bể trưng bày">
+                  {selectedCategory.hasTank ? "Có" : "Không"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
                   <Tag
