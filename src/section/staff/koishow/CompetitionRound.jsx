@@ -57,7 +57,6 @@ function CompetitionRound({ showId }) {
   const { categories, fetchCategories } = useCategory();
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-
   // Round state
   const [selectedRoundType, setSelectedRoundType] = useState(null);
   const [selectedSubRound, setSelectedSubRound] = useState(null);
@@ -75,16 +74,28 @@ function CompetitionRound({ showId }) {
     totalPages,
   } = useRegistrationRound();
 
-  const { 
-    competitionRoundTanks,
-    fetchTanks 
-  } = useTank();
+  const { competitionRoundTanks, fetchTanks } = useTank();
+  const { updatePublishRound } = useRegistrationRound();
   const [loadingImages, setLoadingImages] = useState({});
   const [assigningTank, setAssigningTank] = useState({});
+  const [isPublishing, setIsPublishing] = useState(false);
 
   // Replace modal state with drawer state
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [currentRegistration, setCurrentRegistration] = useState(null);
+
+  // Add state to check if all tanks are assigned - FIX THE INFINITE LOOP
+  const allTanksAssigned = useMemo(() => {
+    if (
+      !selectedSubRound ||
+      !Array.isArray(registrationRound) ||
+      registrationRound.length === 0
+    ) {
+      return false;
+    }
+    // Check if every registration has a tankName
+    return registrationRound.every((item) => Boolean(item.tankName));
+  }, [registrationRound, selectedSubRound]);
 
   // Safe API wrappers to prevent undefined calls
   const fetchRegistrationRound = useCallback(
@@ -391,7 +402,6 @@ function CompetitionRound({ showId }) {
       {
         title: "Kết quả",
         dataIndex: "roundResults",
-        width: 100,
         render: (results) => {
           if (!results || results.length === 0)
             return <Tag color="gray">Chưa có</Tag>;
@@ -406,7 +416,6 @@ function CompetitionRound({ showId }) {
       {
         title: "Trạng thái",
         dataIndex: "status",
-        width: 120,
         render: (status) => {
           let color = "blue";
           let text = status;
@@ -441,7 +450,6 @@ function CompetitionRound({ showId }) {
       baseColumns.push({
         title: "Bể",
         dataIndex: "tankName",
-        width: 150,
         render: (tankName, record) => (
           <Select
             style={{ width: "100%" }}
@@ -468,7 +476,6 @@ function CompetitionRound({ showId }) {
     baseColumns.push({
       title: "Hành động",
       key: "actions",
-      width: 80,
       render: (_, record) => (
         <Button
           type="text"
@@ -488,14 +495,62 @@ function CompetitionRound({ showId }) {
     selectedCategory,
   ]);
 
+  // Handle publishing round - Make sure it doesn't trigger on render
+  const handlePublishRound = useCallback(async () => {
+    if (!selectedSubRound) {
+      notification.warning({
+        message: "Thông báo",
+        description: "Vui lòng chọn vòng thi trước khi công khai",
+      });
+      return;
+    }
+
+    try {
+      setIsPublishing(true);
+      const result = await updatePublishRound(selectedSubRound);
+
+      if (result?.success) {
+        notification.success({
+          message: "Thành công",
+          description: "Đã công khai vòng thi thành công",
+        });
+
+        // Refresh data - ONLY if component is still mounted
+        if (isMounted.current) {
+          fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+        }
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: `Không thể công khai vòng thi: ${result?.error?.message || "Lỗi không xác định"}`,
+        });
+      }
+    } catch (error) {
+      console.error("[PublishRound] Error:", error);
+      notification.error({
+        message: "Lỗi",
+        description: `Không thể công khai vòng thi: ${error?.message || "Lỗi không xác định"}`,
+      });
+    } finally {
+      if (isMounted.current) {
+        setIsPublishing(false);
+      }
+    }
+  }, [
+    selectedSubRound,
+    updatePublishRound,
+    fetchRegistrationRound,
+    currentPage,
+    pageSize,
+  ]);
+
   return (
     <Card>
-      <Row gutter={16} className="mb-4">
-        <Col xs={24} sm={8}>
-          <div>
-            <div className="block text-lg font-medium mb-2">Hạng Mục:</div>
+      <div className="mb-4">
+        <div className="flex flex-wrap md:flex-nowrap items-end gap-4">
+          <div className="w-full md:w-1/4">
+            <div className="text-lg font-medium mb-2">Hạng Mục:</div>
             <Select
-              style={{ width: "100%" }}
               placeholder="Chọn hạng mục"
               onChange={handleCategoryChange}
               allowClear
@@ -511,60 +566,66 @@ function CompetitionRound({ showId }) {
               ))}
             </Select>
           </div>
-        </Col>
 
-        <Col xs={24} sm={8}>
-          <div>
-            <div className="block text-lg font-medium mb-2">Vòng Chính:</div>
-            <Select
-              value={selectedRoundType}
-              onChange={handleRoundTypeChange}
-              style={{ width: "100%" }}
-              className="w-full"
-              placeholder="Chọn vòng"
-              disabled={!selectedCategory}
-            >
-              {roundTypes.map((type) => (
-                <Option key={type} value={type}>
-                  {roundTypeLabels[type] || type}
-                </Option>
-              ))}
-            </Select>
-          </div>
-        </Col>
+          {selectedCategory && (
+            <div className="w-full md:w-1/4">
+              <div className="text-lg font-medium mb-2">Vòng Chính:</div>
+              <Select
+                value={selectedRoundType}
+                onChange={handleRoundTypeChange}
+                className="w-full"
+                placeholder="Chọn vòng"
+              >
+                {roundTypes.map((type) => (
+                  <Option key={type} value={type}>
+                    {roundTypeLabels[type] || type}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          )}
 
-        <Col xs={24} sm={8}>
-          <div>
-            <div className="block text-lg font-medium mb-2">Vòng Phụ:</div>
-            <Select
-              value={selectedSubRound}
-              onChange={handleSubRoundChange}
-              style={{ width: "100%" }}
-              className="w-full"
-              placeholder={roundLoading ? "Đang tải..." : "Chọn vòng phụ"}
-              disabled={
-                !selectedRoundType ||
-                roundLoading ||
-                !round ||
-                round.length === 0
-              }
-              loading={roundLoading}
-              notFoundContent={
-                roundLoading ? <Spin size="small" /> : "Không có vòng phụ"
-              }
-            >
-              {round?.map((item) => (
-                <Option
-                  key={item.id || item.roundId}
-                  value={item.id || item.roundId}
-                >
-                  {item.name || item.roundName || `Vòng ${item.id}`}
-                </Option>
-              ))}
-            </Select>
-          </div>
-        </Col>
-      </Row>
+          {selectedRoundType && (
+            <div className="w-full md:w-1/4">
+              <div className="text-lg font-medium mb-2">Vòng Phụ:</div>
+              <Select
+                value={selectedSubRound}
+                onChange={handleSubRoundChange}
+                className="w-full"
+                placeholder={roundLoading ? "Đang tải..." : "Chọn vòng phụ"}
+                loading={roundLoading}
+                notFoundContent={
+                  roundLoading ? <Spin size="small" /> : "Không có vòng phụ"
+                }
+              >
+                {round?.map((item) => (
+                  <Option
+                    key={item.id || item.roundId}
+                    value={item.id || item.roundId}
+                  >
+                    {item.name || item.roundName || `Vòng ${item.id}`}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          )}
+
+          {selectedSubRound && (
+            <div className="w-full md:w-1/4 self-end">
+              <Button
+                type="primary"
+                className="w-full"
+                onClick={handlePublishRound}
+                loading={isPublishing}
+                icon={<TrophyOutlined />}
+                disabled={!allTanksAssigned}
+              >
+                Công khai vòng thi 
+              </Button>
+            </div>
+          )}
+        </div>
+      </div>
 
       <Table
         columns={columns}

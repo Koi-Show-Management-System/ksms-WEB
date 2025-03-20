@@ -187,7 +187,7 @@ function Registration({ showId }) {
     }
 
     confirm({
-      title: "Xác nhận gán bể",
+      title: "Xác nhận gán vòng",
       content: (
         <div>
           <p>
@@ -790,7 +790,7 @@ function Registration({ showId }) {
               <div className="mt-4 text-center space-x-3">
                 <Button
                   type="primary"
-                  icon={<CheckCircleOutlined/>}
+                  icon={<CheckCircleOutlined />}
                   onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
                   className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
                 >
@@ -800,7 +800,7 @@ function Registration({ showId }) {
                 <Button
                   type="primary"
                   danger
-                  icon={<CloseCircleOutlined/>}
+                  icon={<CloseCircleOutlined />}
                   onClick={() => showConfirmModal(currentKoi.id, "rejected")}
                   className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
                 >

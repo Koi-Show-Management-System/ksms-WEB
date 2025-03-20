@@ -18,12 +18,14 @@ import { useParams } from "react-router-dom";
 import { Loading } from "../../../components";
 import useKoiShow from "../../../hooks/useKoiShow";
 import Rules from "../../staff/koishow/Rules";
+import ScanQrByReferee from "./ScanQrByReferee";
+import Cookies from "js-cookie";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
   const { id } = useParams();
   const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
-
+  const refereeId = Cookies.get("__id");
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const sponsors = koiShowDetail?.data?.sponsors || [];
@@ -67,8 +69,13 @@ function KoiShowDetail() {
       children: <Category showId={id} />,
     },
     {
+      key: "scanQrByReferee",
+      label: "Quét QR Chấm Điểm",
+      children: <ScanQrByReferee refereeId={refereeId} />,
+    },
+    {
       key: "competitionRound",
-      label: "Vòng Thi",
+      label: "Lịch Sử Chấm Điểm",
       children: <CompetitionRound />,
     },
 

@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getRound } from "../api/roundApi";
+import { getRound, getRoundTypeByReferee } from "../api/roundApi";
 
 const useRound = create((set, get) => ({
   round: [],
@@ -7,6 +7,7 @@ const useRound = create((set, get) => ({
   pageSize: 10,
   totalItems: 0,
   roundList: [],
+  refereeRoundTypes: [],
   isLoading: false,
   error: null,
   totalPages: 1,
@@ -51,6 +52,38 @@ const useRound = create((set, get) => ({
           round: round,
           totalItems: total,
           totalPages: totalPages,
+          isLoading: false,
+        });
+      } else {
+        console.error("API Error:", res);
+        set({ error: res, isLoading: false });
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      set({ error: error, isLoading: false });
+    }
+  },
+  fetchRoundByReferee: async (competitionCategoryId) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await getRoundTypeByReferee(competitionCategoryId);
+
+      if (res && res.status === 200) {
+        console.log("API Response (Referee Round Types):", res.data);
+
+        let refereeRoundTypes = [];
+
+        if (res.data && res.data.data && Array.isArray(res.data.data)) {
+          refereeRoundTypes = res.data.data;
+        } else if (res.data && Array.isArray(res.data)) {
+          refereeRoundTypes = res.data;
+        } else {
+          console.error("No data array found in API response:", res.data);
+        }
+
+        set({
+          refereeRoundTypes: refereeRoundTypes,
           isLoading: false,
         });
       } else {

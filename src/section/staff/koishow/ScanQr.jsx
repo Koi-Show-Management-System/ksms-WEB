@@ -128,24 +128,13 @@ function ScanQr() {
 
   return (
     <div className=" max-w-6xl mx-auto">
-      <Title level={2} className="mb-6 text-center">
+      <Title level={3} className="mb-6 text-center">
         <span className="">Quét QR để Check-in</span>
       </Title>
 
       {!showScanner && !qrResult && (
         <div className="flex justify-center mb-6">
-          <Button 
-            type="primary" 
-            size="large" 
-            onClick={() => setShowScanner(true)}
-            style={{
-              height: "52px",
-              padding: "0 24px",
-              borderRadius: "8px",
-              fontWeight: "bold",
-              boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-            }}
-          >
+          <Button type="primary" onClick={() => setShowScanner(true)}>
             Bắt đầu quét QR
           </Button>
         </div>
@@ -154,7 +143,7 @@ function ScanQr() {
       {showScanner && scannerEnabled && (
         <div className="mb-6 shadow-md" style={{ borderRadius: "12px" }}>
           <div className="scanner-container flex flex-col items-center">
-            <div className="border-4 border-dashed border-blue-400 p-2 rounded-lg mb-4">
+            <div className="border-3 p-2 rounded-lg mb-4">
               <QrScanner
                 delay={300}
                 onError={handleError}
@@ -168,8 +157,8 @@ function ScanQr() {
             <Text className="text-center text-gray-600 italic mb-2">
               Hướng camera vào mã QR để quét
             </Text>
-            <Button 
-              onClick={() => setShowScanner(false)} 
+            <Button
+              onClick={() => setShowScanner(false)}
               className="mb-4"
               danger
             >

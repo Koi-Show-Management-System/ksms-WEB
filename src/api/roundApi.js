@@ -9,5 +9,16 @@ const getRound = (competitionCategoryId, roundType, page, size) => {
     },
   });
 };
+const updatePublishRound = (roundId) => {
+  return axiosClient.put(
+    `/registration-round/publish-registration-round/${roundId}`
+  );
+};
 
-export { getRound };
+const getRoundTypeByReferee = (competitionCategoryId) => {
+  return axiosClient.get(
+    `/round/get-round-type-for-referee/${competitionCategoryId}`
+  );
+};
+
+export { getRound, getRoundTypeByReferee, updatePublishRound };
