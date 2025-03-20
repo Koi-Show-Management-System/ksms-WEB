@@ -13,12 +13,17 @@ import {
   Select,
   Alert,
   Spin,
+  Row,
+  Col,
 } from "antd";
 import {
   ExclamationCircleOutlined,
   SendOutlined,
   CheckSquareOutlined,
   CloseOutlined,
+  EyeOutlined,
+  CheckCircleOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import useRegistration from "../../../hooks/useRegistration";
 import useCategory from "../../../hooks/useCategory";
@@ -58,9 +63,6 @@ function Registration({ showId }) {
   const { confirm } = Modal;
   const roundSelectorRef = useRef(null);
   const statusOptions = [
-    { value: "waittopaid", label: "Chờ thanh toán" },
-    { value: "paid", label: "Đã thanh toán" },
-    { value: "cancelled", label: "Đã hủy" },
     { value: "pending", label: "Đang chờ" },
     { value: "confirmed", label: "Đã xác nhận" },
     { value: "checkin", label: "Đã check-in" },
@@ -267,6 +269,34 @@ function Registration({ showId }) {
       return categoryMatches && statusMatches;
     });
   };
+  const handleViewDetails = (record) => {
+    setCurrentKoi(record);
+    setUpdatedStatus(null);
+    setIsModalVisible(true);
+  };
+  const handleCancel = () => {
+    setIsModalVisible(false);
+    setUpdatedStatus(null);
+    setCurrentKoi(null);
+  };
+
+  const showConfirmModal = (id, status) => {
+    const action = status === "confirmed" ? "phê duyệt" : "từ chối";
+    const title =
+      status === "confirmed" ? "Phê Duyệt Đăng Ký" : "Từ Chối Đăng Ký";
+
+    confirm({
+      title: title,
+      icon: <ExclamationCircleOutlined />,
+      content: `Bạn có chắc chắn muốn ${action} đăng ký này không?`,
+      okText: "Đồng ý",
+      okType: status === "confirmed" ? "primary" : "danger",
+      cancelText: "Hủy",
+      onOk() {
+        return handleUpdateStatus(id, status);
+      },
+    });
+  };
 
   // Lấy dữ liệu đã lọc
   const filteredData = getFilteredData();
@@ -382,6 +412,20 @@ function Registration({ showId }) {
         );
       },
     },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            onClick={() => handleViewDetails(record)}
+            style={{ color: "#4B5563" }}
+          />
+        </Space>
+      ),
+    },
   ];
 
   return (
@@ -391,13 +435,15 @@ function Registration({ showId }) {
         <Typography.Title level={4} style={{ margin: 0 }}>
           Quản lý đăng ký
         </Typography.Title>
-        <Button
-          type="primary"
-          icon={<SendOutlined />}
-          onClick={showAssignModal}
-        >
-          Gán vòng
-        </Button>
+        {selectedStatus === "checkin" && (
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            onClick={showAssignModal}
+          >
+            Gán vòng
+          </Button>
+        )}
       </Flex>
       {/* Thêm bộ lọc category và status */}
       <div className="mb-4 flex gap-4">
@@ -567,8 +613,11 @@ function Registration({ showId }) {
                 pagination={{
                   current: currentPage,
                   pageSize: pageSize,
-                  total: registration.filter(reg => reg.status?.toLowerCase() === "checkin").length,
-                  showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
+                  total: registration.filter(
+                    (reg) => reg.status?.toLowerCase() === "checkin"
+                  ).length,
+                  showTotal: (total, range) =>
+                    `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,
                   pageSizeOptions: ["10", "20", "50"],
                 }}
@@ -578,6 +627,188 @@ function Registration({ showId }) {
               />
             </div>
           </>
+        )}
+      </Modal>
+      <Modal
+        title="Chi Tiết Đăng Ký"
+        open={isModalVisible}
+        onCancel={handleCancel}
+        footer={null}
+        width={900}
+      >
+        {currentKoi && (
+          <div className="p-4">
+            <Row gutter={[16, 16]}>
+              {/* Thông tin đăng ký */}
+              <Col span={24}>
+                <Card
+                  title="Thông Tin Đăng Ký"
+                  bordered={false}
+                  className="w-full"
+                >
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <p>
+                        <strong>Tên Người Đăng Ký:</strong>{" "}
+                        {currentKoi.registerName}
+                      </p>
+                      <p>
+                        <strong>Tên Cá Koi:</strong>{" "}
+                        {currentKoi.koiProfile.name}
+                      </p>
+                      <p>
+                        <strong>Kích Thước Cá:</strong> {currentKoi.koiSize} cm
+                      </p>
+                      <p>
+                        <strong>Giống:</strong>{" "}
+                        {currentKoi?.koiProfile?.variety?.name}
+                      </p>
+
+                      <p>
+                        <strong>Tuổi Cá:</strong> {currentKoi.koiAge}
+                      </p>
+                    </Col>
+                    <Col span={12}>
+                      <p>
+                        <strong>Hạng Mục:</strong>{" "}
+                        {currentKoi.competitionCategory?.name}
+                      </p>
+                      {currentKoi.koiShow && (
+                        <p>
+                          <strong>Tên Cuộc Thi:</strong>{" "}
+                          {currentKoi.koiShow.name}
+                        </p>
+                      )}
+                      <p>
+                        <strong>Phí Đăng Ký:</strong>{" "}
+                        {currentKoi.registrationFee?.toLocaleString() || 0} VND
+                      </p>
+                      <p>
+                        <strong>Trạng Thái:</strong>{" "}
+                        {currentKoi.status && (
+                          <Tag
+                            color={
+                              currentKoi.status.toLowerCase() === "waittopaid"
+                                ? "blue"
+                                : currentKoi.status.toLowerCase() === "paid"
+                                  ? "cyan"
+                                  : currentKoi.status.toLowerCase() ===
+                                      "cancelled"
+                                    ? "gray"
+                                    : currentKoi.status.toLowerCase() ===
+                                        "pending"
+                                      ? "orange"
+                                      : currentKoi.status.toLowerCase() ===
+                                          "confirmed"
+                                        ? "green"
+                                        : currentKoi.status.toLowerCase() ===
+                                            "checkin"
+                                          ? "geekblue"
+                                          : currentKoi.status.toLowerCase() ===
+                                              "rejected"
+                                            ? "red"
+                                            : "default"
+                            }
+                            style={{ marginLeft: "8px" }}
+                          >
+                            {currentKoi.status.toLowerCase() === "waittopaid"
+                              ? "Chờ thanh toán"
+                              : currentKoi.status.toLowerCase() === "paid"
+                                ? "Đã thanh toán"
+                                : currentKoi.status.toLowerCase() ===
+                                    "cancelled"
+                                  ? "Đã hủy"
+                                  : currentKoi.status.toLowerCase() ===
+                                      "pending"
+                                    ? "Đang chờ"
+                                    : currentKoi.status.toLowerCase() ===
+                                        "confirmed"
+                                      ? "Đã xác nhận"
+                                      : currentKoi.status.toLowerCase() ===
+                                          "checkin"
+                                        ? "Đã check-in"
+                                        : currentKoi.status.toLowerCase() ===
+                                            "rejected"
+                                          ? "Từ chối"
+                                          : currentKoi.status}
+                          </Tag>
+                        )}
+                      </p>
+                    </Col>
+                  </Row>
+                </Card>
+              </Col>
+
+              {/* Koi Media */}
+              {currentKoi.koiMedia && currentKoi.koiMedia.length > 0 && (
+                <Col span={24}>
+                  <Card
+                    title="Hình Ảnh/Video Cá Koi"
+                    variant={false}
+                    className="w-full"
+                  >
+                    <Row gutter={[16, 16]}>
+                      {currentKoi.koiMedia.map((media, index) => (
+                        <Col span={12} key={media.id}>
+                          {media.mediaType === "Image" ? (
+                            <div>
+                              <p>
+                                <strong>Hình Ảnh:</strong>
+                              </p>
+                              <Image
+                                src={media.mediaUrl}
+                                alt="Hình Ảnh Koi"
+                                style={{
+                                  width: "100%",
+                                  maxHeight: "300px",
+                                  objectFit: "contain",
+                                }}
+                              />
+                            </div>
+                          ) : media.mediaType === "Video" ? (
+                            <div>
+                              <p>
+                                <strong>Video:</strong>
+                              </p>
+                              <video
+                                controls
+                                src={media.mediaUrl}
+                                style={{ width: "100%", maxHeight: "300px" }}
+                              />
+                            </div>
+                          ) : null}
+                        </Col>
+                      ))}
+                    </Row>
+                  </Card>
+                </Col>
+              )}
+            </Row>
+
+            {/* Nút Approve/Reject */}
+            {currentKoi.status === "pending" && (
+              <div className="mt-4 text-center space-x-3">
+                <Button
+                  type="primary"
+                  icon={<CheckCircleOutlined/>}
+                  onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
+                  className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
+                >
+                  Phê Duyệt
+                </Button>
+
+                <Button
+                  type="primary"
+                  danger
+                  icon={<CloseCircleOutlined/>}
+                  onClick={() => showConfirmModal(currentKoi.id, "rejected")}
+                  className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
+                >
+                  Từ Chối
+                </Button>
+              </div>
+            )}
+          </div>
         )}
       </Modal>
     </Card>

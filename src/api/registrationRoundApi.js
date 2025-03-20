@@ -17,5 +17,16 @@ const updateFishTank = (registrationRoundId, tankId) => {
     },
   ]);
 };
+const getRegistrationRoundByReferee = (registrationId, roundId) => {
+  return axiosClient.get(
+    "/registration-round/get-registration-round-for-referee",
+    {
+      params: {
+        registrationId: registrationId,
+        roundId: roundId,
+      },
+    }
+  );
+};
 
-export { getRegistrationRound, updateFishTank };
+export { getRegistrationRound, updateFishTank, getRegistrationRoundByReferee };

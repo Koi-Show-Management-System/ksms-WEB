@@ -12,12 +12,12 @@ import {
 import dayjs from "dayjs";
 import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
 import Category from "./Category";
-import Rules from "./Rules";
 import koiFishImage from "../../../assets/koiFishImage.png";
 import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
 import { Loading } from "../../../components";
 import useKoiShow from "../../../hooks/useKoiShow";
+import Rules from "../../staff/koishow/Rules";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;

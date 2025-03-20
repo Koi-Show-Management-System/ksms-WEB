@@ -16,13 +16,28 @@ import {
   Image,
   Card,
   notification,
+  Button,
+  Typography,
+  Space,
+  Drawer,
+  Descriptions,
+  Tabs,
+  List,
 } from "antd";
+import {
+  EyeOutlined,
+  FileImageOutlined,
+  TrophyOutlined,
+  InfoCircleOutlined,
+  QrcodeOutlined,
+} from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
 import useTank from "../../../hooks/useTank";
 
 const { Option } = Select;
+const { TabPane } = Tabs;
 
 const roundTypes = ["Preliminary", "Evaluation", "Final"];
 const roundTypeLabels = {
@@ -42,7 +57,6 @@ function CompetitionRound({ showId }) {
   const { categories, fetchCategories } = useCategory();
   const [selectedCategory, setSelectedCategory] = useState(null);
 
-  console.log("cate", categories);
 
   // Round state
   const [selectedRoundType, setSelectedRoundType] = useState(null);
@@ -61,9 +75,16 @@ function CompetitionRound({ showId }) {
     totalPages,
   } = useRegistrationRound();
 
-  const { tanks, fetchTanks } = useTank();
+  const { 
+    competitionRoundTanks,
+    fetchTanks 
+  } = useTank();
   const [loadingImages, setLoadingImages] = useState({});
   const [assigningTank, setAssigningTank] = useState({});
+
+  // Replace modal state with drawer state
+  const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
+  const [currentRegistration, setCurrentRegistration] = useState(null);
 
   // Safe API wrappers to prevent undefined calls
   const fetchRegistrationRound = useCallback(
@@ -124,7 +145,7 @@ function CompetitionRound({ showId }) {
       setSelectedCategory(value);
 
       if (value) {
-        fetchTanks(value);
+        fetchTanks(value, 1, 10, true);
       }
     },
     [fetchTanks]
@@ -264,6 +285,16 @@ function CompetitionRound({ showId }) {
     setLoadingImages((prev) => ({ ...prev, [id]: false }));
   }, []);
 
+  // Add functions to handle drawer
+  const showCategoryDetail = (record) => {
+    setCurrentRegistration(record);
+    setIsDetailDrawerVisible(true);
+  };
+
+  const handleDrawerClose = () => {
+    setIsDetailDrawerVisible(false);
+  };
+
   // Prepare display data with proper memoization
   const displayData = useMemo(() => {
     if (
@@ -287,158 +318,175 @@ function CompetitionRound({ showId }) {
   ]);
 
   // Define table columns with proper memoization
-  const columns = useMemo(
-    () => {
-      const baseColumns = [
-        {
-          title: "Top",
-          dataIndex: "index",
-          width: 60,
-          render: (index) => (
-            <span
-              style={{ color: "blue", fontWeight: "bold" }}
-            >{`#${index}`}</span>
-          ),
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        title: "Top",
+        dataIndex: "index",
+        width: 60,
+        render: (index) => (
+          <span
+            style={{ color: "blue", fontWeight: "bold" }}
+          >{`#${index}`}</span>
+        ),
+      },
+      {
+        title: "Mã Đăng Ký",
+        dataIndex: ["registration", "registrationNumber"],
+        render: (registrationNumber, record) => {
+          return (
+            registrationNumber ||
+            record.registration?.id?.substring(0, 8) ||
+            "—"
+          );
         },
-        {
-          title: "Mã Đăng Ký",
-          dataIndex: ["registration", "registrationNumber"],
-          width: 120,
-          render: (registrationNumber, record) => {
-            return (
-              registrationNumber ||
-              record.registration?.id?.substring(0, 8) ||
-              "—"
-            );
-          },
-        },
-        {
-          title: "Hình ảnh",
-          dataIndex: ["registration", "koiMedia"],
-          width: 100,
-          render: (koiMedia, record) => {
-            const id = record.key;
-            const imageMedia =
-              koiMedia && koiMedia.length > 0
-                ? koiMedia.find((media) => media.mediaType === "Image")
-                : null;
+      },
+      {
+        title: "Hình ảnh",
+        dataIndex: ["registration", "koiMedia"],
+        width: 100,
+        render: (koiMedia, record) => {
+          const id = record.key;
+          const imageMedia =
+            koiMedia && koiMedia.length > 0
+              ? koiMedia.find((media) => media.mediaType === "Image")
+              : null;
 
-            const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
+          const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
 
-            return (
-              <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
-                <Image
-                  src={imageUrl}
-                  alt="Hình cá"
-                  width={70}
-                  height={50}
-                  className="object-cover"
-                  preview={{
-                    src: imageMedia?.mediaUrl,
-                    mask: <div className="text-xs">Xem</div>,
-                  }}
-                  placeholder={
-                    <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                      <Spin size="small" />
-                    </div>
-                  }
-                  fallback={PLACEHOLDER_IMAGE}
-                />
-              </div>
-            );
-          },
+          return (
+            <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
+              <Image
+                src={imageUrl}
+                alt="Hình cá"
+                width={70}
+                height={50}
+                className="object-cover"
+                preview={{
+                  src: imageMedia?.mediaUrl,
+                  mask: <div className="text-xs">Xem</div>,
+                }}
+                placeholder={
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <Spin size="small" />
+                  </div>
+                }
+                fallback={PLACEHOLDER_IMAGE}
+              />
+            </div>
+          );
         },
-        {
-          title: "Kích thước",
-          dataIndex: ["registration", "koiSize"],
-          width: 100,
-          render: (size) => (size ? `${size} cm` : "—"),
+      },
+      {
+        title: "Kích thước",
+        dataIndex: ["registration", "koiSize"],
+        render: (size) => (size ? `${size} cm` : "—"),
+      },
+      {
+        title: "Giống",
+        dataIndex: ["registration", "koiProfile", "variety", "name"],
+        ellipsis: true,
+        render: (name) => name || "—",
+      },
+      {
+        title: "Kết quả",
+        dataIndex: "roundResults",
+        width: 100,
+        render: (results) => {
+          if (!results || results.length === 0)
+            return <Tag color="gray">Chưa có</Tag>;
+          const isPassed = results.some((result) => result.isPassed);
+          return (
+            <Tag color={isPassed ? "green" : "red"}>
+              {isPassed ? "Đạt" : "Không đạt"}
+            </Tag>
+          );
         },
-        {
-          title: "Giống",
-          dataIndex: ["registration", "koiProfile", "variety", "name"],
-          width: 150,
-          ellipsis: true,
-          render: (name) => name || "—",
-        },
-        {
-          title: "Kết quả",
-          dataIndex: "roundResults",
-          width: 100,
-          render: (results) => {
-            if (!results || results.length === 0)
-              return <Tag color="gray">Chưa có</Tag>;
-            const isPassed = results.some((result) => result.isPassed);
-            return (
-              <Tag color={isPassed ? "green" : "red"}>
-                {isPassed ? "Đạt" : "Không đạt"}
-              </Tag>
-            );
-          },
-        },
-        {
-          title: "Trạng thái",
-          dataIndex: "status",
-          width: 120,
-          render: (status) => {
-            let color = "blue";
-            let text = status;
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        width: 120,
+        render: (status) => {
+          let color = "blue";
+          let text = status;
 
-            switch (status) {
-              case "unpublic":
-                color = "gray";
-                text = "Chưa công khai";
-                break;
-              case "public":
-                color = "green";
-                text = "Đã công khai";
-                break;
-              case "pending":
-                color = "orange";
-                text = "Đang chờ";
-                break;
-              default:
-                text = status || "—";
-            }
+          switch (status) {
+            case "unpublic":
+              color = "gray";
+              text = "Chưa công khai";
+              break;
+            case "public":
+              color = "green";
+              text = "Đã công khai";
+              break;
+            case "pending":
+              color = "orange";
+              text = "Đang chờ";
+              break;
+            default:
+              text = status || "—";
+          }
 
-            return <Tag color={color}>{text}</Tag>;
-          },
+          return <Tag color={color}>{text}</Tag>;
         },
-      ];
+      },
+    ];
 
-      // Only add tank column if the selected category has tanks
-      const selectedCategoryData = categories?.find(c => c.id === selectedCategory);
-      if (selectedCategoryData?.hasTank) {
-        baseColumns.push({
-          title: "Bể",
-          dataIndex: "tankName",
-          width: 150,
-          render: (tankName, record) => (
-            <Select
-              style={{ width: "100%" }}
-              value={tankName || undefined}
-              placeholder="Chọn bể"
-              onChange={(value) => handleTankAssignment(record.id, value)}
-              loading={assigningTank[record.id]}
-              disabled={assigningTank[record.id]}
-              allowClear
-              showSearch
-              optionFilterProp="children"
-            >
-              {tanks?.map((tank) => (
-                <Option key={tank.id} value={tank.id}>
-                  {tank.name || `Bể ${tank.id}`}
-                </Option>
-              ))}
-            </Select>
-          ),
-        });
-      }
+    // Only add tank column if the selected category has tanks
+    const selectedCategoryData = categories?.find(
+      (c) => c.id === selectedCategory
+    );
+    if (selectedCategoryData?.hasTank) {
+      baseColumns.push({
+        title: "Bể",
+        dataIndex: "tankName",
+        width: 150,
+        render: (tankName, record) => (
+          <Select
+            style={{ width: "100%" }}
+            value={tankName || undefined}
+            placeholder="Chọn bể"
+            onChange={(value) => handleTankAssignment(record.id, value)}
+            loading={assigningTank[record.id]}
+            disabled={assigningTank[record.id]}
+            allowClear
+            showSearch
+            optionFilterProp="children"
+          >
+            {competitionRoundTanks?.map((tank) => (
+              <Option key={tank.id} value={tank.id}>
+                {tank.name || `Bể ${tank.id}`}
+              </Option>
+            ))}
+          </Select>
+        ),
+      });
+    }
 
-      return baseColumns;
-    },
-    [tanks, assigningTank, handleTankAssignment, categories, selectedCategory]
-  );
+    // Add actions column
+    baseColumns.push({
+      title: "Hành động",
+      key: "actions",
+      width: 80,
+      render: (_, record) => (
+        <Button
+          type="text"
+          icon={<EyeOutlined />}
+          className="text-gray-500 hover:text-blue-500"
+          onClick={() => showCategoryDetail(record)}
+        />
+      ),
+    });
+
+    return baseColumns;
+  }, [
+    competitionRoundTanks,
+    assigningTank,
+    handleTankAssignment,
+    categories,
+    selectedCategory,
+  ]);
 
   return (
     <Card>
@@ -532,6 +580,239 @@ function CompetitionRound({ showId }) {
         onChange={handleTableChange}
         loading={registrationLoading}
       />
+
+      {/* Detail Drawer */}
+      <Drawer
+        title={
+          currentRegistration?.registration?.registrationNumber
+            ? `Mã đăng ký: ${currentRegistration.registration.registrationNumber}`
+            : "Chi tiết đăng ký"
+        }
+        placement="right"
+        width={720}
+        onClose={handleDrawerClose}
+        open={isDetailDrawerVisible}
+      >
+        {currentRegistration && (
+          <Tabs defaultActiveKey="1">
+            {/* Tab 1: Thông tin cơ bản */}
+            <TabPane
+              tab={
+                <span>
+                  <InfoCircleOutlined className="mx-2" />
+                  Thông tin cơ bản
+                </span>
+              }
+              key="1"
+            >
+              <Descriptions bordered column={1} className="mb-4">
+                <Descriptions.Item label="Mã Đăng Ký">
+                  {currentRegistration.registration?.registrationNumber ||
+                    currentRegistration.registration?.id?.substring(0, 8) ||
+                    "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tên Người Đăng Ký">
+                  {currentRegistration.registration?.registerName || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tên Cá Koi">
+                  {currentRegistration.registration?.koiProfile?.name || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Giống">
+                  {currentRegistration.registration?.koiProfile?.variety
+                    ?.name || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Kích Thước">
+                  {currentRegistration.registration?.koiSize
+                    ? `${currentRegistration.registration.koiSize} cm`
+                    : "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Tuổi Cá">
+                  {currentRegistration.registration?.koiAge
+                    ? `${currentRegistration.registration.koiAge} năm`
+                    : "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Dòng máu">
+                  {currentRegistration.registration?.koiProfile?.bloodline ||
+                    "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Hạng Mục">
+                  {currentRegistration.registration?.competitionCategory
+                    ?.name || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Phí Đăng Ký">
+                  {currentRegistration.registration?.registrationFee
+                    ? `${currentRegistration.registration.registrationFee.toLocaleString()} VND`
+                    : "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Trạng Thái">
+                  <Tag
+                    color={
+                      currentRegistration.status === "unpublic"
+                        ? "gray"
+                        : currentRegistration.status === "public"
+                          ? "green"
+                          : currentRegistration.status === "pending"
+                            ? "orange"
+                            : "default"
+                    }
+                  >
+                    {currentRegistration.status === "unpublic"
+                      ? "Chưa công khai"
+                      : currentRegistration.status === "public"
+                        ? "Đã công khai"
+                        : currentRegistration.status === "pending"
+                          ? "Đang chờ"
+                          : currentRegistration.status || "—"}
+                  </Tag>
+                </Descriptions.Item>
+                <Descriptions.Item label="Bể">
+                  {currentRegistration.tankName || "Chưa gán bể"}
+                </Descriptions.Item>
+                {currentRegistration.checkInTime && (
+                  <Descriptions.Item label="Thời gian check-in">
+                    {new Date(currentRegistration.checkInTime).toLocaleString()}
+                  </Descriptions.Item>
+                )}
+                {currentRegistration.checkOutTime && (
+                  <Descriptions.Item label="Thời gian check-out">
+                    {new Date(
+                      currentRegistration.checkOutTime
+                    ).toLocaleString()}
+                  </Descriptions.Item>
+                )}
+                {currentRegistration.notes && (
+                  <Descriptions.Item label="Ghi chú">
+                    {currentRegistration.notes}
+                  </Descriptions.Item>
+                )}
+              </Descriptions>
+            </TabPane>
+
+            {/* QR Code Tab - Moved up in the tab order */}
+            <TabPane
+              tab={
+                <span>
+                  <QrcodeOutlined className="mx-2" />
+                  Mã QR chấm điểm
+                </span>
+              }
+              key="qrcode"
+            >
+              <div className="flex flex-col items-center">
+                <Typography.Title level={4} className="mb-4">
+                  Mã QR dành cho trọng tài chấm điểm
+                </Typography.Title>
+                {currentRegistration.registration?.qrcodeData ? (
+                  <Card bordered={false} className="mb-4 shadow-md">
+                    <Image
+                      src={currentRegistration.registration.qrcodeData}
+                      alt="QR Code chấm điểm"
+                      width={300}
+                      className="mx-auto"
+                    />
+                  </Card>
+                ) : (
+                  <Empty description="Không có mã QR" />
+                )}
+                <Typography.Text type="secondary" className="text-center mb-6">
+                  Trọng tài có thể quét mã QR này để chấm điểm cho cá Koi
+                </Typography.Text>
+              </div>
+            </TabPane>
+
+            {/* Tab 2: Hình ảnh và video */}
+            {currentRegistration.registration?.koiMedia &&
+              currentRegistration.registration.koiMedia.length > 0 && (
+                <TabPane
+                  tab={
+                    <span>
+                      <FileImageOutlined className="mx-2" />
+                      Hình ảnh & Video
+                    </span>
+                  }
+                  key="2"
+                >
+                  <List
+                    grid={{ gutter: 16, column: 1 }}
+                    dataSource={currentRegistration.registration.koiMedia}
+                    renderItem={(media) => (
+                      <List.Item>
+                        {media.mediaType === "Image" ? (
+                          <Card title="Hình Ảnh">
+                            <Image
+                              src={media.mediaUrl}
+                              alt="Hình Ảnh Koi"
+                              style={{
+                                width: "100%",
+                                maxHeight: "400px",
+                                objectFit: "contain",
+                              }}
+                            />
+                          </Card>
+                        ) : media.mediaType === "Video" ? (
+                          <Card title="Video">
+                            <video
+                              controls
+                              src={media.mediaUrl}
+                              style={{ width: "100%" }}
+                            />
+                          </Card>
+                        ) : null}
+                      </List.Item>
+                    )}
+                  />
+                </TabPane>
+              )}
+
+            {/* Tab 3: Kết quả */}
+            {currentRegistration.roundResults &&
+              currentRegistration.roundResults.length > 0 && (
+                <TabPane
+                  tab={
+                    <span>
+                      <TrophyOutlined className="mx-2" />
+                      Kết quả vòng thi
+                    </span>
+                  }
+                  key="3"
+                >
+                  <List
+                    dataSource={currentRegistration.roundResults}
+                    renderItem={(result) => (
+                      <List.Item>
+                        <Card
+                          title={result.roundName || "Vòng thi"}
+                          extra={
+                            <Tag color={result.isPassed ? "green" : "red"}>
+                              {result.isPassed ? "Đạt" : "Không đạt"}
+                            </Tag>
+                          }
+                        >
+                          <p>
+                            <strong>Thời gian:</strong>{" "}
+                            {result.createdAt
+                              ? new Date(result.createdAt).toLocaleString()
+                              : "—"}
+                          </p>
+                          {result.score && (
+                            <p>
+                              <strong>Điểm số:</strong> {result.score}
+                            </p>
+                          )}
+                          {result.notes && (
+                            <p>
+                              <strong>Ghi chú:</strong> {result.notes}
+                            </p>
+                          )}
+                        </Card>
+                      </List.Item>
+                    )}
+                  />
+                </TabPane>
+              )}
+          </Tabs>
+        )}
+      </Drawer>
     </Card>
   );
 }

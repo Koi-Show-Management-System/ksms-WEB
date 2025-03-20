@@ -2,7 +2,8 @@ import { create } from "zustand";
 import { getTank, createTank, updateTank } from "../api/tankApi";
 
 const useTank = create((set, get) => ({
-  tanks: [], // Đổi tên từ tank thành tanks để khớp với Tank.jsx
+  tanks: [], // Cho Tank.jsx component
+  competitionRoundTanks: [], // Mới, cho CompetitionRound.jsx
   currentPage: 1,
   pageSize: 10,
   totalItems: 0,
@@ -12,12 +13,18 @@ const useTank = create((set, get) => ({
   selectedTank: null,
   isModalVisible: false,
 
-  // Đổi tên từ fetchTank thành fetchTanks để khớp với Tank.jsx
-  fetchTanks: async (showId, page = 1, size = 10) => {
-    set({ isLoading: true, error: null, currentPage: page, pageSize: size });
+  // Sửa để hỗ trợ cả hai component
+  fetchTanks: async (categoryId, page = 1, size = 10, forCompetitionRound = false) => {
+    if (forCompetitionRound) {
+      // Chỉ cập nhật loading cho CompetitionRound
+      set({ isLoading: true, error: null });
+    } else {
+      // Cho Tank.jsx, cập nhật cả pagination
+      set({ isLoading: true, error: null, currentPage: page, pageSize: size });
+    }
 
     try {
-      const res = await getTank(showId, page, size);
+      const res = await getTank(categoryId, page, size);
 
       if (res && res.status === 200) {
         console.log("API Response:", res.data);
@@ -45,17 +52,27 @@ const useTank = create((set, get) => ({
           totalPages = res.data.totalPages || 1;
         } else if (res.data && Array.isArray(res.data)) {
           tanks = res.data;
-          total = tanks.length; // Sửa lỗi criteria.length thành tanks.length
+          total = tanks.length;
         } else {
           console.error("No data array found in API response:", res.data);
         }
 
-        set({
-          tanks: tanks, // Đổi tên từ tank thành tanks
-          totalItems: total,
-          totalPages: totalPages,
-          isLoading: false,
-        });
+        // Cập nhật state khác nhau tùy theo component gọi
+        if (forCompetitionRound) {
+          // Cho CompetitionRound component
+          set({
+            competitionRoundTanks: tanks,
+            isLoading: false,
+          });
+        } else {
+          // Cho Tank.jsx component
+          set({
+            tanks: tanks,
+            totalItems: total,
+            totalPages: totalPages,
+            isLoading: false,
+          });
+        }
       } else {
         console.error("API Error:", res);
         set({ error: res, isLoading: false });

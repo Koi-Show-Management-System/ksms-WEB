@@ -60,14 +60,14 @@ function KoiList({ showId }) {
 
   const handleCategoryChange = (value) => {
     setSelectedCategory(value);
-
+    
     // Fetch với category mới, giữ status nếu đã chọn
     fetchRegistration(
       1,
       10,
       showId,
       value === "all" ? [] : value ? [value] : [],
-      selectedStatus
+      selectedStatus === "all" ? undefined : selectedStatus
     );
   };
 
@@ -105,21 +105,22 @@ function KoiList({ showId }) {
   };
 
   const getFilteredData = () => {
+    // Nếu chưa chọn cả hạng mục và trạng thái, trả về mảng rỗng
+    if (!selectedCategory || !selectedStatus) {
+      return [];
+    }
+
     if (!registration || registration.length === 0) return [];
 
     return registration.filter((item) => {
-      // Kiểm tra category nếu đã chọn (không phải "all")
-      const categoryMatches =
-        !selectedCategory ||
-        selectedCategory === "all" ||
+      const categoryMatches = 
+        selectedCategory === "all" || 
         item.competitionCategory?.id === selectedCategory;
-
-      // Kiểm tra status nếu đã chọn (không phải "all")
+        
       const statusMatches =
-        !selectedStatus ||
-        selectedStatus === "all" ||
+        selectedStatus === "all" || 
         item.status?.toLowerCase() === selectedStatus.toLowerCase();
-
+        
       return categoryMatches && statusMatches;
     });
   };
@@ -371,15 +372,24 @@ function KoiList({ showId }) {
         columns={columns}
         dataSource={filteredData}
         loading={isLoading}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: filteredData.length,
-          showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
-        }}
+        pagination={
+          filteredData.length > 0
+            ? {
+                current: currentPage,
+                pageSize: pageSize,
+                total: filteredData.length, // Sử dụng độ dài của dữ liệu đã lọc
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} trong ${total}`,
+                showSizeChanger: true,
+                pageSizeOptions: ["10", "20", "50"],
+              }
+            : false
+        }
         onChange={handleTableChange}
         rowKey="id"
+        size="middle"
+        bordered={false}
+        scroll={{ x: "max-content" }}
       />
 
       <Modal

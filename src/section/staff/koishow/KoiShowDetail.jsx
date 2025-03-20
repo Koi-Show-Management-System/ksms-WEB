@@ -12,6 +12,7 @@ import Rules from "./Rules";
 import Tank from "./Tank";
 import Registration from "./Registration";
 import SignalRService from "../../../config/signalRService";
+import ScanQr from "./ScanQr";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -89,6 +90,11 @@ function KoiShowDetail() {
       key: "registration",
       label: "Đơn Đăng Ký",
       children: <Registration showId={id} />,
+    },
+    {
+      key: "scanQr",
+      label: "Quét mã",
+      children: <ScanQr />,
     },
     {
       key: "competitionRound",
