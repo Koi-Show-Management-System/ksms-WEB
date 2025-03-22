@@ -174,7 +174,7 @@ function CompetitionRound({ showId }) {
       setSelectedCategory(value);
 
       if (value) {
-        fetchTanks(value, 1, 10, true);
+        fetchTanks(value, 1, 100, true);
       }
     },
     [fetchTanks]
@@ -347,7 +347,7 @@ function CompetitionRound({ showId }) {
   ]);
 
   // Lấy đúng columns dựa trên loại vòng
-  const getColumnsForRoundType = () => {
+  const getColumnsForRoundType = useMemo(() => {
     // Nếu đang ở vòng Đánh Giá Chính
     if (selectedRoundType === "Evaluation") {
       return getEvaluationColumns({
@@ -357,19 +357,21 @@ function CompetitionRound({ showId }) {
         isRoundPublished,
         assigningTank,
         competitionRoundTanks,
-        handleTankChange: handleTankAssignment
+        handleTankChange: handleTankAssignment,
       });
     }
-    
+
     // Mặc định sử dụng cột của vòng Sơ Khảo
-    return [
-      // Các cột hiện tại cho vòng Sơ Khảo
+    const baseColumns = [
       {
-        title: "#",
+        title: "Top",
         dataIndex: "index",
-        key: "index",
-        width: 50,
-        render: (_, __, index) => <strong>#{index + 1}</strong>,
+        width: 60,
+        render: (index) => (
+          <span
+            style={{ color: "blue", fontWeight: "bold" }}
+          >{`#${index}`}</span>
+        ),
       },
       {
         title: "Mã Đăng Ký",
@@ -385,7 +387,6 @@ function CompetitionRound({ showId }) {
       {
         title: "Hình ảnh",
         dataIndex: ["registration", "koiMedia"],
-        width: 100,
         render: (koiMedia, record) => {
           const id = record.key;
           const imageMedia =
@@ -476,7 +477,62 @@ function CompetitionRound({ showId }) {
         },
       },
     ];
-  };
+
+    // Only add tank column if the selected category has tanks
+    const selectedCategoryData = categories?.find(
+      (c) => c.id === selectedCategory
+    );
+    if (selectedCategoryData?.hasTank) {
+      baseColumns.push({
+        title: "Bể",
+        dataIndex: "tankName",
+        render: (tankName, record) => (
+          <Select
+            value={tankName || undefined}
+            placeholder="Chọn bể"
+            onChange={(value) => handleTankAssignment(record.id, value)}
+            loading={assigningTank[record.id]}
+            disabled={assigningTank[record.id]}
+            showSearch
+            optionFilterProp="children"
+          >
+            {competitionRoundTanks?.map((tank) => (
+              <Option key={tank.id} value={tank.id}>
+                {tank.name || `Bể ${tank.id}`}
+              </Option>
+            ))}
+          </Select>
+        ),
+      });
+    }
+
+    // Add actions column
+    baseColumns.push({
+      title: "Hành động",
+      key: "actions",
+      render: (_, record) => (
+        <Button
+          type="text"
+          icon={<EyeOutlined />}
+          className="text-gray-500 hover:text-blue-500"
+          onClick={() => showCategoryDetail(record)}
+        />
+      ),
+    });
+
+    return baseColumns;
+  }, [
+    selectedRoundType,
+    showCategoryDetail,
+    loadingImages,
+    allTanksAssigned,
+    isRoundPublished,
+    assigningTank,
+    competitionRoundTanks,
+    handleTankAssignment,
+    categories,
+    selectedCategory,
+  ]);
 
   // Handle publishing round - Make sure it doesn't trigger on render
   const handlePublishRound = useCallback(async () => {
@@ -526,6 +582,22 @@ function CompetitionRound({ showId }) {
     currentPage,
     pageSize,
   ]);
+
+  // Thay đổi cách sử dụng getColumnsForRoundType
+  // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
+  const columns = getColumnsForRoundType;
+
+  // Đảm bảo competitionRoundTanks được tải đúng cách
+  useEffect(() => {
+    if (selectedCategory) {
+      fetchTanks(selectedCategory, 1, 100, true); // Tăng số lượng bể được tải
+    }
+  }, [selectedCategory, fetchTanks]);
+
+  // Thêm log để kiểm tra
+  console.log("allTanksAssigned:", allTanksAssigned);
+  console.log("competitionRoundTanks:", competitionRoundTanks);
+  console.log("registrationRound:", registrationRound);
 
   return (
     <Card>
@@ -624,7 +696,7 @@ function CompetitionRound({ showId }) {
       </div>
 
       <Table
-        columns={getColumnsForRoundType()}
+        columns={columns}
         dataSource={displayData}
         pagination={{
           current: currentPage,

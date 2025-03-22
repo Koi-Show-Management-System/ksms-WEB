@@ -1,8 +1,9 @@
 import React, { useState, useCallback, useEffect, useRef, useMemo } from "react";
-import { Button, notification, Modal, Select, Spin } from "antd";
+import { Button, notification, Modal, Select, Spin, Empty } from "antd";
 import { ArrowRightOutlined } from "@ant-design/icons";
 import useRegistration from "../../../hooks/useRegistration";
 import useRound from "../../../hooks/useRound";
+import axiosClient from "../../../config/axiosClient";
 
 const { Option } = Select;
 
@@ -31,11 +32,11 @@ function NextRound({
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [nextRoundType, setNextRoundType] = useState(null);
   const [availableSubRounds, setAvailableSubRounds] = useState([]);
-  const [selectedNextRound, setSelectedNextRound] = useState(null);
+  const [selectedNextRound, setSelectedNextRound] = useState("");
   const [isLoadingSubRounds, setIsLoadingSubRounds] = useState(false);
   const { round, fetchRound, isLoading: roundLoading } = useRound();
 
-  // Keep track of rounds we've already moved fish from
+  // Keep track of rounds we've already moved fish from - persist across renders
   const processedRoundsRef = useRef(new Set());
 
   // Kiểm tra trạng thái đánh giá của cá - sử dụng useMemo để tránh tính toán lại
@@ -61,31 +62,46 @@ function NextRound({
     return { allRegistrationsEvaluated: allEvaluated, hasPassingRegistrations: hasPassing };
   }, [registrationRound]);
 
-  // Theo dõi thay đổi của registrationRound để cập nhật trạng thái
+  // Thêm một localStorage check để lưu trữ thông tin về các vòng đã xử lý
+  useEffect(() => {
+    // Khi component mount, kiểm tra localStorage
+    const processedRoundsFromStorage = localStorage.getItem('processedRounds');
+    if (processedRoundsFromStorage) {
+      try {
+        const processedSet = new Set(JSON.parse(processedRoundsFromStorage));
+        processedRoundsRef.current = processedSet;
+      } catch (e) {
+        console.error("Error parsing processed rounds from storage:", e);
+      }
+    }
+  }, []);
+
+  // Theo dõi thay đổi của selectedSubRound để cập nhật trạng thái
   useEffect(() => {
     if (selectedSubRound !== prevSelectedSubRoundRef.current) {
       prevSelectedSubRoundRef.current = selectedSubRound;
-      setHasMovedToNextRound(false);
+      
+      // Đặt lại hasMovedToNextRound khi vòng thay đổi
+      if (
+        selectedSubRound && 
+        processedRoundsRef.current.has(selectedSubRound)
+      ) {
+        setHasMovedToNextRound(true);
+      } else {
+        setHasMovedToNextRound(false);
+      }
     }
-    
-    // Nếu đã xử lý vòng này rồi, đánh dấu đã chuyển
-    if (
-      selectedSubRound && 
-      processedRoundsRef.current.has(selectedSubRound)
-    ) {
-      setHasMovedToNextRound(true);
-    }
-  }, [selectedSubRound, registrationRound]);
+  }, [selectedSubRound]);
 
   // Kiểm tra điều kiện hiển thị nút
   const shouldShowButton = useMemo(() => {
-    // Không hiển thị nếu chưa chọn vòng
+    // Không hiển thị nếu không có vòng được chọn
     if (!selectedSubRound) return false;
     
-    // Không hiển thị nếu đã xử lý vòng này rồi
+    // Kiểm tra trực tiếp trong processedRoundsRef - Điều kiện quan trọng nhất
     if (processedRoundsRef.current.has(selectedSubRound)) return false;
     
-    // Không hiển thị nếu đã chuyển cá sang vòng tiếp theo
+    // Kiểm tra nếu đã di chuyển sang vòng tiếp theo
     if (hasMovedToNextRound) return false;
     
     // Không hiển thị nếu chưa đánh giá hết
@@ -111,132 +127,110 @@ function NextRound({
         )
       : null;
 
-  // Determine next round type index
-  const getNextRoundTypeIndex = useCallback(() => {
-    for (let i = 0; i < roundTypes.length; i++) {
-      if (roundTypes[i] === selectedRoundType) {
-        return i + 1;
-      }
+  // Xác định vòng tiếp theo mặc định khi mở modal
+  const getDefaultNextRoundType = useCallback(() => {
+    if (!selectedRoundType || !roundTypes) return null;
+    
+    const currentIndex = roundTypes.findIndex(type => type === selectedRoundType);
+    if (currentIndex >= 0 && currentIndex < roundTypes.length - 1) {
+      return roundTypes[currentIndex + 1];
     }
-    return -1;
-  }, [roundTypes, selectedRoundType]);
+    return null;
+  }, [selectedRoundType, roundTypes]);
 
-  // Fetch available sub-rounds for the next round type
-  const fetchNextRoundOptions = useCallback(
-    async () => {
-      if (!selectedCategory) return;
+  // Show modal for next round selection với trạng thái cập nhật
+  const showNextRoundModal = useCallback(() => {
+    setNextRoundType(null);
+    setSelectedNextRound("");
+    setAvailableSubRounds([]);
+    setIsModalVisible(true);
+  }, []);
 
+  // Tách riêng hàm lấy vòng phụ
+  const fetchSubRounds = useCallback(async (roundType) => {
+    if (!selectedCategory || !roundType) return;
+    
+    try {
+      setIsLoadingSubRounds(true);
+      setAvailableSubRounds([]);
+      setSelectedNextRound("");
+      
       try {
-        setIsLoadingSubRounds(true);
-        setAvailableSubRounds([]); // Reset list before fetching
-        
-        // Xác định loại vòng hiện tại
-        const currentRoundType = selectedRoundType;
-        
-        // Nếu không còn vòng nhỏ nào trong vòng hiện tại, mới chuyển sang vòng lớn tiếp theo
-        const nextRoundTypeIndex = getNextRoundTypeIndex();
-        if (nextRoundTypeIndex >= 0 && nextRoundTypeIndex < roundTypes.length) {
-          const nextType = roundTypes[nextRoundTypeIndex];
-          setNextRoundType(nextType);
-          
-          console.log("Fetching sub-rounds for next round type:", nextType);
-          
-          // QUAN TRỌNG: Trước tiên truy cập trực tiếp API để lấy danh sách vòng phụ
-          try {
-            // Thử gọi API theo cách khác để sửa lỗi
-            const response = await fetch(`/api/rounds?competitionCategoryId=${selectedCategory}&roundType=${nextType}&page=1&pageSize=100`);
-            const data = await response.json();
-            
-            console.log("Raw API response:", data);
-            
-            if (data && data.success && data.data) {
-              const nextRounds = data.data.items || [];
-              console.log(`API returned ${nextRounds.length} sub-rounds for ${nextType}`);
-              
-              if (nextRounds.length > 0) {
-                // Sắp xếp theo thứ tự vòng
-                const sortedRounds = [...nextRounds].sort((a, b) => {
-                  return (a.roundOrder || 1) - (b.roundOrder || 1);
-                });
-                
-                setAvailableSubRounds(sortedRounds);
-                setSelectedNextRound(sortedRounds[0].id);
-                return; // Thoát khỏi hàm nếu đã lấy được dữ liệu
-              }
-            }
-          } catch (directApiError) {
-            console.error("Error calling direct API:", directApiError);
-            // Tiếp tục thử phương pháp sử dụng hook
+        const response = await axiosClient.get('/rounds', {
+          params: {
+            competitionCategoryId: selectedCategory,
+            roundType: roundType,
+            page: 1,
+            pageSize: 100
           }
+        });
+        
+        if (response?.data?.success) {
+          const rounds = response.data.data.items || [];
           
-          // Phương pháp dự phòng: Sử dụng hook fetchRound
-          await fetchRound(selectedCategory, nextType, 1, 100);
-          
-          console.log("Hook round state after fetchRound:", round);
-          
-          // Sử dụng state round sau khi gọi fetchRound
-          if (round && Array.isArray(round) && round.length > 0) {
-            console.log(`Found ${round.length} sub-rounds from hook for ${nextType}`);
+          if (rounds.length > 0) {
+            const sortedRounds = [...rounds].sort((a, b) => 
+              (a.roundOrder || 1) - (b.roundOrder || 1)
+            );
             
-            // Lọc các vòng có roundType đúng
-            const validRounds = round.filter(r => r.roundType === nextType);
-            
-            if (validRounds.length > 0) {
-              const sortedRounds = [...validRounds].sort((a, b) => {
-                return (a.roundOrder || 1) - (b.roundOrder || 1);
-              });
-              
-              setAvailableSubRounds(sortedRounds);
-              setSelectedNextRound(sortedRounds[0].id);
-            } else {
-              setAvailableSubRounds([]);
-              setSelectedNextRound(null);
-              notification.info({
-                message: "Thông báo",
-                description: `Không tìm thấy vòng nào trong loại vòng ${roundTypeLabels[nextType] || nextType}`,
-              });
-            }
+            setAvailableSubRounds(sortedRounds);
           } else {
-            setAvailableSubRounds([]);
-            setSelectedNextRound(null);
             notification.info({
               message: "Thông báo",
-              description: `Không tìm thấy vòng nào trong loại vòng ${roundTypeLabels[nextType] || nextType}`,
+              description: `Không tìm thấy vòng phụ nào trong ${roundTypeLabels[roundType] || roundType}. Vui lòng tạo vòng phụ trước.`,
             });
           }
         } else {
-          // Đã đến vòng cuối
-          setAvailableSubRounds([]);
-          setSelectedNextRound(null);
-          notification.warning({
-            message: "Thông báo",
-            description: "Đã đến vòng cuối cùng của cuộc thi.",
-          });
+          throw new Error("Dữ liệu không hợp lệ");
         }
       } catch (error) {
-        console.error("Error fetching next round options:", error);
-        notification.error({
-          message: "Lỗi",
-          description: `Không thể tải danh sách vòng: ${error.message}`,
-        });
-        setAvailableSubRounds([]);
-        setSelectedNextRound(null);
-      } finally {
-        setIsLoadingSubRounds(false);
+        console.error("Error fetching sub-rounds:", error);
+        
+        // Phương án dự phòng sử dụng hook
+        await fetchRound(selectedCategory, roundType);
+        
+        if (Array.isArray(round) && round.length > 0) {
+          const validRounds = round.filter(r => r.roundType === roundType);
+          if (validRounds.length > 0) {
+            const sortedRounds = [...validRounds].sort((a, b) => 
+              (a.roundOrder || 1) - (b.roundOrder || 1)
+            );
+            
+            setAvailableSubRounds(sortedRounds);
+          } else {
+            notification.warning({
+              message: "Thông báo", 
+              description: "Không tìm thấy vòng phụ cho vòng đã chọn."
+            });
+          }
+        } else {
+          notification.error({
+            message: "Lỗi",
+            description: `Không thể tải danh sách vòng phụ: ${error.message}`,
+          });
+        }
       }
-    },
-    [selectedCategory, fetchRound, selectedRoundType, selectedSubRound, getNextRoundTypeIndex, roundTypes, round]
-  );
-
-  // Show modal for next round selection
-  const showNextRoundModal = useCallback(() => {
-    setIsModalVisible(true);
-    fetchNextRoundOptions();
-  }, [fetchNextRoundOptions]);
+    } catch (error) {
+      console.error("Error in fetchSubRounds:", error);
+    } finally {
+      setIsLoadingSubRounds(false);
+    }
+  }, [selectedCategory, fetchRound, round]);
+  
+  // Handle round type change
+  const handleNextRoundTypeChange = useCallback((value) => {
+    setNextRoundType(value);
+    if (value) {
+      fetchSubRounds(value);
+    } else {
+      setAvailableSubRounds([]);
+      setSelectedNextRound("");
+    }
+  }, [fetchSubRounds]);
 
   // Handle confirmation of moving to next round
   const handleConfirmMove = useCallback(async () => {
-    if (!selectedNextRound) {
+    if (!selectedNextRound || selectedNextRound === "no-rounds") {
       notification.warning({
         message: "Thông báo",
         description: "Vui lòng chọn vòng tiếp theo.",
@@ -283,6 +277,12 @@ function NextRound({
         // Add current round to the processed set to prevent the button from showing again
         if (selectedSubRound) {
           processedRoundsRef.current.add(selectedSubRound);
+          
+          // Lưu vào localStorage để giữ trạng thái giữa các session
+          localStorage.setItem(
+            'processedRounds', 
+            JSON.stringify(Array.from(processedRoundsRef.current))
+          );
         }
 
         // Set flag to indicate fish have been moved
@@ -327,18 +327,20 @@ function NextRound({
 
   return (
     <>
-      <div className="w-full md:w-1/4 self-end">
-        <Button
-          type="primary"
-          className="w-full"
-          onClick={showNextRoundModal}
-          loading={isMovingToNextRound}
-          icon={<ArrowRightOutlined />}
-          style={{ backgroundColor: "#52c41a" }}
-        >
-          Chuyển cá sang vòng tiếp theo
-        </Button>
-      </div>
+      {shouldShowButton && (
+        <div className="w-full md:w-1/4 self-end">
+          <Button
+            type="primary"
+            className="w-full"
+            onClick={showNextRoundModal}
+            loading={isMovingToNextRound}
+            icon={<ArrowRightOutlined />}
+            style={{ backgroundColor: "#52c41a" }}
+          >
+            Chuyển cá sang vòng tiếp theo
+          </Button>
+        </div>
+      )}
 
       <Modal
         title="Chuyển cá sang vòng tiếp theo"
@@ -352,13 +354,18 @@ function NextRound({
         <div className="mb-4">
           <p>
             Bạn đã hoàn thành xong vòng hiện tại.
-            Vui lòng chọn vòng tiếp theo.
+            Vui lòng chọn vòng muốn chuyển đến.
           </p>
         </div>
 
         <div className="mb-4">
-          <div className="font-medium mb-2">Vòng tiếp theo:</div>
-          <Select className="w-full" value={nextRoundType} disabled>
+          <div className="font-medium mb-2">Vòng:</div>
+          <Select 
+            className="w-full" 
+            value={nextRoundType} 
+            onChange={handleNextRoundTypeChange}
+            placeholder="Chọn vòng"
+          >
             {roundTypes.map((type) => (
               <Option key={type} value={type}>
                 {roundTypeLabels[type] || type}
@@ -379,24 +386,24 @@ function NextRound({
               value={selectedNextRound}
               onChange={setSelectedNextRound}
               placeholder="Chọn vòng phụ"
-              dropdownRender={(menu) => (
-                <div>
-                  <div className="px-2 py-1 text-xs text-gray-500">
-                    {nextRoundType ? `Các vòng phụ của ${roundTypeLabels[nextRoundType] || nextRoundType}` : 'Các vòng phụ'}
-                  </div>
-                  {menu}
-                </div>
-              )}
+              disabled={!nextRoundType || availableSubRounds.length === 0}
+              notFoundContent={
+                <Empty 
+                  description={
+                    <span>
+                      {nextRoundType 
+                        ? `Không tìm thấy vòng phụ nào trong ${roundTypeLabels[nextRoundType] || nextRoundType}`
+                        : "Vui lòng chọn vòng trước"}
+                    </span>
+                  }
+                />
+              }
             >
-              {availableSubRounds.length === 0 ? (
-                <Option value={null} disabled>Không có vòng phụ</Option>
-              ) : (
-                availableSubRounds.map((subRound) => (
-                  <Option key={subRound.id} value={subRound.id}>
-                    {subRound.name || `Vòng phụ ${subRound.id.substring(0, 6)}`}
-                  </Option>
-                ))
-              )}
+              {availableSubRounds.map((subRound) => (
+                <Option key={subRound.id} value={subRound.id}>
+                  {subRound.name || `Vòng phụ ${subRound.id.substring(0, 6)}`}
+                </Option>
+              ))}
             </Select>
           )}
         </div>
