@@ -85,11 +85,21 @@ function ScanQr() {
         });
       }
     } catch (error) {
-      notification.error({
-        message: "Lỗi",
-        description: `Lỗi khi check-in: ${error.message}`,
-        duration: 4,
-      });
+      // Xử lý lỗi 404 - vé đã được check-in
+      if (error.response && error.response.status === 404) {
+        notification.info({
+          message: "Vé đã được check-in",
+          description:
+            "Vé này đã được check-in trước đó và không thể sử dụng lại.",
+          duration: 4,
+        });
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: `Lỗi khi check-in: ${error.message || "Lỗi không xác định"}`, 
+          duration: 4,
+        });
+      }
     } finally {
       setIsCheckingIn(false);
     }

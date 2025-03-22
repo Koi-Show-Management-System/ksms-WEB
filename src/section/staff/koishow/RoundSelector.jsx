@@ -10,7 +10,10 @@ import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 
 const RoundSelector = forwardRef(
-  ({ onRoundSelect, showId, categoryId, preSelectPreliminary = false }, ref) => {
+  (
+    { onRoundSelect, showId, categoryId, preSelectPreliminary = false },
+    ref
+  ) => {
     const {
       categories,
       fetchCategories,
@@ -48,11 +51,16 @@ const RoundSelector = forwardRef(
     // Tự động chọn vòng đầu tiên khi có danh sách round
     useEffect(() => {
       if (round.length > 0 && !selectedRound) {
-        const firstRound = round[0];
-        setSelectedRound(firstRound.id);
-        
-        if (onRoundSelect) {
-          onRoundSelect(firstRound.id, firstRound.name);
+        // Lọc chỉ lấy các vòng có roundOrder = 1
+        const firstRounds = round.filter((r) => r.roundOrder === 1);
+
+        if (firstRounds.length > 0) {
+          const firstRound = firstRounds[0];
+          setSelectedRound(firstRound.id);
+
+          if (onRoundSelect) {
+            onRoundSelect(firstRound.id, firstRound.name);
+          }
         }
       }
     }, [round, selectedRound, onRoundSelect]);
@@ -60,7 +68,7 @@ const RoundSelector = forwardRef(
     const handleCategoryChange = (categoryId) => {
       setSelectedCategory(categoryId);
       setSelectedRound(null);
-      
+
       // Luôn fetch vòng sơ khảo khi thay đổi category
       fetchRound(categoryId, "Preliminary");
     };
@@ -105,11 +113,14 @@ const RoundSelector = forwardRef(
               value={selectedRound}
               loading={roundLoading}
             >
-              {round.map((r) => (
-                <Select.Option key={r.id} value={r.id}>
-                  {r.name}
-                </Select.Option>
-              ))}
+              {round
+                // Chỉ hiển thị các vòng có roundOrder = 1
+                .filter((r) => r.roundOrder === 1)
+                .map((r) => (
+                  <Select.Option key={r.id} value={r.id}>
+                    {r.name}
+                  </Select.Option>
+                ))}
             </Select>
           </>
         )}

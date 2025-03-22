@@ -35,6 +35,8 @@ import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
 import useTank from "../../../hooks/useTank";
+import NextRound from "./NextRound";
+import { getEvaluationColumns } from "./EvaluationColumns";
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -62,6 +64,7 @@ function CompetitionRound({ showId }) {
   const [selectedSubRound, setSelectedSubRound] = useState(null);
   const { round, fetchRound, isLoading: roundLoading } = useRound();
 
+  console.log("round", round);
   // Registration and tank states
   const {
     registrationRound,
@@ -95,6 +98,21 @@ function CompetitionRound({ showId }) {
     }
     // Check if every registration has a tankName
     return registrationRound.every((item) => Boolean(item.tankName));
+  }, [registrationRound, selectedSubRound]);
+
+  // Update the logic to hide the button only when ALL items are published
+  const isRoundPublished = useMemo(() => {
+    if (
+      !selectedSubRound ||
+      !Array.isArray(registrationRound) ||
+      registrationRound.length === 0
+    ) {
+      return false;
+    }
+
+    // Only consider the round fully published when ALL items are published
+    // If even one item is not published, the button should remain visible
+    return registrationRound.every((item) => item.status === "public");
   }, [registrationRound, selectedSubRound]);
 
   // Safe API wrappers to prevent undefined calls
@@ -328,18 +346,30 @@ function CompetitionRound({ showId }) {
     selectedSubRound,
   ]);
 
-  // Define table columns with proper memoization
-  const columns = useMemo(() => {
-    const baseColumns = [
+  // Lấy đúng columns dựa trên loại vòng
+  const getColumnsForRoundType = () => {
+    // Nếu đang ở vòng Đánh Giá Chính
+    if (selectedRoundType === "Evaluation") {
+      return getEvaluationColumns({
+        handleViewDetails: showCategoryDetail,
+        loadingImages,
+        allTanksAssigned,
+        isRoundPublished,
+        assigningTank,
+        competitionRoundTanks,
+        handleTankChange: handleTankAssignment
+      });
+    }
+    
+    // Mặc định sử dụng cột của vòng Sơ Khảo
+    return [
+      // Các cột hiện tại cho vòng Sơ Khảo
       {
-        title: "Top",
+        title: "#",
         dataIndex: "index",
-        width: 60,
-        render: (index) => (
-          <span
-            style={{ color: "blue", fontWeight: "bold" }}
-          >{`#${index}`}</span>
-        ),
+        key: "index",
+        width: 50,
+        render: (_, __, index) => <strong>#{index + 1}</strong>,
       },
       {
         title: "Mã Đăng Ký",
@@ -405,12 +435,17 @@ function CompetitionRound({ showId }) {
         render: (results) => {
           if (!results || results.length === 0)
             return <Tag color="gray">Chưa có</Tag>;
-          const isPassed = results.some((result) => result.isPassed);
-          return (
-            <Tag color={isPassed ? "green" : "red"}>
-              {isPassed ? "Đạt" : "Không đạt"}
-            </Tag>
-          );
+
+          // Get the status from the roundResult field
+          const status = results[0]?.status;
+
+          if (status === "Pass") {
+            return <Tag color="green">Đạt</Tag>;
+          } else if (status === "Fail") {
+            return <Tag color="red">Không đạt</Tag>;
+          } else {
+            return <Tag color="orange">{status || "Đang chờ"}</Tag>;
+          }
         },
       },
       {
@@ -441,59 +476,7 @@ function CompetitionRound({ showId }) {
         },
       },
     ];
-
-    // Only add tank column if the selected category has tanks
-    const selectedCategoryData = categories?.find(
-      (c) => c.id === selectedCategory
-    );
-    if (selectedCategoryData?.hasTank) {
-      baseColumns.push({
-        title: "Bể",
-        dataIndex: "tankName",
-        render: (tankName, record) => (
-          <Select
-            style={{ width: "100%" }}
-            value={tankName || undefined}
-            placeholder="Chọn bể"
-            onChange={(value) => handleTankAssignment(record.id, value)}
-            loading={assigningTank[record.id]}
-            disabled={assigningTank[record.id]}
-            allowClear
-            showSearch
-            optionFilterProp="children"
-          >
-            {competitionRoundTanks?.map((tank) => (
-              <Option key={tank.id} value={tank.id}>
-                {tank.name || `Bể ${tank.id}`}
-              </Option>
-            ))}
-          </Select>
-        ),
-      });
-    }
-
-    // Add actions column
-    baseColumns.push({
-      title: "Hành động",
-      key: "actions",
-      render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          className="text-gray-500 hover:text-blue-500"
-          onClick={() => showCategoryDetail(record)}
-        />
-      ),
-    });
-
-    return baseColumns;
-  }, [
-    competitionRoundTanks,
-    assigningTank,
-    handleTankAssignment,
-    categories,
-    selectedCategory,
-  ]);
+  };
 
   // Handle publishing round - Make sure it doesn't trigger on render
   const handlePublishRound = useCallback(async () => {
@@ -610,7 +593,8 @@ function CompetitionRound({ showId }) {
             </div>
           )}
 
-          {selectedSubRound && (
+          {/* Only show the publish button if selected round is not already published */}
+          {selectedSubRound && !isRoundPublished && (
             <div className="w-full md:w-1/4 self-end">
               <Button
                 type="primary"
@@ -620,15 +604,27 @@ function CompetitionRound({ showId }) {
                 icon={<TrophyOutlined />}
                 disabled={!allTanksAssigned}
               >
-                Công khai vòng thi 
+                Công khai vòng thi
               </Button>
             </div>
           )}
+
+          {/* Add the new MoveToNextRoundButton component */}
+          <NextRound
+            registrationRound={registrationRound}
+            selectedSubRound={selectedSubRound}
+            selectedCategory={selectedCategory}
+            selectedRoundType={selectedRoundType}
+            roundTypes={roundTypes}
+            fetchRegistrationRound={fetchRegistrationRound}
+            currentPage={currentPage}
+            pageSize={pageSize}
+          />
         </div>
       </div>
 
       <Table
-        columns={columns}
+        columns={getColumnsForRoundType()}
         dataSource={displayData}
         pagination={{
           current: currentPage,
@@ -748,7 +744,6 @@ function CompetitionRound({ showId }) {
                 )}
               </Descriptions>
             </TabPane>
-
             {/* QR Code Tab - Moved up in the tab order */}
             <TabPane
               tab={
@@ -780,7 +775,6 @@ function CompetitionRound({ showId }) {
                 </Typography.Text>
               </div>
             </TabPane>
-
             {/* Tab 2: Hình ảnh và video */}
             {currentRegistration.registration?.koiMedia &&
               currentRegistration.registration.koiMedia.length > 0 && (
@@ -824,7 +818,6 @@ function CompetitionRound({ showId }) {
                   />
                 </TabPane>
               )}
-
             {/* Tab 3: Kết quả */}
             {currentRegistration.roundResults &&
               currentRegistration.roundResults.length > 0 && (
@@ -844,8 +837,18 @@ function CompetitionRound({ showId }) {
                         <Card
                           title={result.roundName || "Vòng thi"}
                           extra={
-                            <Tag color={result.isPassed ? "green" : "red"}>
-                              {result.isPassed ? "Đạt" : "Không đạt"}
+                            <Tag
+                              color={
+                                currentRegistration.roundResults[0]?.status ===
+                                "Pass"
+                                  ? "green"
+                                  : "red"
+                              }
+                            >
+                              {currentRegistration.roundResults[0]?.status ===
+                              "Pass"
+                                ? "Đạt"
+                                : "Không đạt"}
                             </Tag>
                           }
                         >

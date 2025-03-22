@@ -11,7 +11,6 @@ import useKoiShow from "../../../hooks/useKoiShow";
 import Rules from "./Rules";
 import Tank from "./Tank";
 import Registration from "./Registration";
-import SignalRService from "../../../config/signalRService";
 import ScanQr from "./ScanQr";
 
 function KoiShowDetail() {
@@ -43,32 +42,6 @@ function KoiShowDetail() {
 
   useEffect(() => {
     fetchKoiShowDetail(id);
-
-    // console.log("Initializing SignalR in KoiShowDetail...");
-
-    // Khởi động kết nối SignalR
-    SignalRService.start()
-      .then(() => {
-        // console.log("SignalR connected successfully in KoiShowDetail");
-        // Kiểm tra trạng thái kết nối sau 2 giây
-        setTimeout(() => {
-          // console.log(
-          //   "Current SignalR state:",
-          //   SignalRService.getConnectionState()
-          // );
-        }, 2000);
-      })
-      .catch((err) => {
-        // console.error("SignalR connection error in KoiShowDetail:", err);
-      });
-
-    // Cleanup khi component unmount
-    return () => {
-      // console.log(
-      //   "KoiShowDetail unmounting, SignalR state:",
-      //   SignalRService.getConnectionState()
-      // );
-    };
   }, [id]);
 
   if (isLoading) return <Loading />;

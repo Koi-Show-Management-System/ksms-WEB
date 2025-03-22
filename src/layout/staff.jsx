@@ -9,6 +9,7 @@ import PropTypes from "prop-types";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../hooks/useAuth";
 import Cookies from "js-cookie";
+import SignalRService from "../config/signalRService";
 
 const { Sider, Content } = Layout;
 
@@ -34,6 +35,28 @@ const StaffDashboard = ({ children }) => {
     if (userId) {
       fetchUserInfo(userId);
     }
+    SignalRService.start()
+      .then(() => {
+        // console.log("SignalR connected successfully in KoiShowDetail");
+        // Kiểm tra trạng thái kết nối sau 2 giây
+        setTimeout(() => {
+          // console.log(
+          //   "Current SignalR state:",
+          //   SignalRService.getConnectionState()
+          // );
+        }, 2000);
+      })
+      .catch((err) => {
+        // console.error("SignalR connection error in KoiShowDetail:", err);
+      });
+
+    // Cleanup khi component unmount
+    return () => {
+      // console.log(
+      //   "KoiShowDetail unmounting, SignalR state:",
+      //   SignalRService.getConnectionState()
+      // );
+    };
   }, [fetchUserInfo, userId]);
 
   const items = useMemo(

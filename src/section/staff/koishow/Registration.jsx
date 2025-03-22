@@ -297,7 +297,40 @@ function Registration({ showId }) {
       },
     });
   };
+  const handleUpdateStatus = async (id, status) => {
+    try {
+      const result = await updateStatus(id, status);
+      if (result.success) {
+        notification.success({
+          message: "Thành công",
+          description: `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thành công`,
+          placement: "topRight",
+        });
 
+        // Cập nhật status trong currentKoi và set updatedStatus
+        if (currentKoi) {
+          setCurrentKoi({
+            ...currentKoi,
+            status: status,
+          });
+          setUpdatedStatus(status);
+        }
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thất bại`,
+          placement: "topRight",
+        });
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: "Đã xảy ra lỗi khi cập nhật trạng thái",
+        placement: "topRight",
+      });
+      console.error(error);
+    }
+  };
   // Lấy dữ liệu đã lọc
   const filteredData = getFilteredData();
   const columns = [
@@ -567,23 +600,6 @@ function Registration({ showId }) {
                   />
                   <Typography.Text strong>Danh sách cá đăng ký</Typography.Text>
                 </div>
-
-                <Space>
-                  <Button
-                    icon={<CheckSquareOutlined />}
-                    onClick={handleSelectAllCheckedIn}
-                    disabled={isLoading}
-                  >
-                    Chọn tất cả
-                  </Button>
-                  <Button
-                    icon={<CloseOutlined />}
-                    onClick={clearSelectedRegistrations}
-                    disabled={selectedRegistrations?.length === 0}
-                  >
-                    Bỏ chọn
-                  </Button>
-                </Space>
               </div>
 
               {selectedRegistrations?.length > 0 && (

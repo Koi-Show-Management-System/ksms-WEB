@@ -135,14 +135,95 @@ const useRegistrationRound = create((set, get) => ({
 
         return { success: true, data: roundData };
       } else {
-        console.error("API Error:", res);
-        set({ error: res, isLoading: false });
-        return { success: false, error: res };
+        // Extract error information from response body
+        let errorMessage = "Lỗi không xác định";
+        let statusCode = res?.status || 404; // Default to 404 if no status is provided
+
+        if (res?.data?.Error) {
+          // Case where error info is in res.data.Error
+          errorMessage = res.data.Error;
+        } else if (res?.data?.error) {
+          // Alternative field name
+          errorMessage = res.data.error;
+        } else if (typeof res?.data === "string") {
+          // Case where error might be the entire data string
+          errorMessage = res.data;
+        }
+
+        // If the response contains a StatusCode, use that instead
+        if (res?.data?.StatusCode) {
+          statusCode = res.data.StatusCode;
+        }
+
+        console.error(
+          "API Error:",
+          res,
+          errorMessage,
+          `Status Code: ${statusCode}`
+        );
+
+        // Set the error with the extracted message and status code
+        set({
+          error: {
+            message: errorMessage,
+            statusCode: statusCode,
+            data: res?.data,
+          },
+          isLoading: false,
+        });
+
+        return {
+          success: false,
+          error: {
+            message: errorMessage,
+            statusCode: statusCode,
+            data: res?.data,
+          },
+        };
       }
     } catch (error) {
+      // Handle network errors or other exceptions
       console.error("Fetch Referee Round Error:", error);
-      set({ error: error, isLoading: false });
-      return { success: false, error };
+
+      // Try to extract error message from error response if available
+      let errorMessage = error.message || "Lỗi không xác định";
+      let statusCode = error.response?.status || 500;
+
+      if (error.response) {
+        // The request was made and the server responded with a status code
+        // that falls out of the range of 2xx
+        if (error.response.data && error.response.data.Error) {
+          errorMessage = error.response.data.Error;
+        } else if (
+          error.response.data &&
+          typeof error.response.data === "string"
+        ) {
+          errorMessage = error.response.data;
+        }
+
+        // If the response contains a StatusCode, use that instead
+        if (error.response.data && error.response.data.StatusCode) {
+          statusCode = error.response.data.StatusCode;
+        }
+      }
+
+      set({
+        error: {
+          message: errorMessage,
+          statusCode: statusCode,
+          data: error.response?.data,
+        },
+        isLoading: false,
+      });
+
+      return {
+        success: false,
+        error: {
+          message: errorMessage,
+          statusCode: statusCode,
+          data: error.response?.data,
+        },
+      };
     }
   },
 }));

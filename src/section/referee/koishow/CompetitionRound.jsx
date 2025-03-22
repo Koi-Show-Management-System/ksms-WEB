@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Table, Tag, Space, Select, Row, Col, Button, Image, Spin } from "antd";
-import { EyeOutlined } from "@ant-design/icons";
+import { EyeOutlined, ReloadOutlined } from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
@@ -132,148 +132,159 @@ function CompetitionRound({ showId }) {
     }
   };
 
-  const columns = [
-    {
-      title: "Top",
-      dataIndex: "index",
-      width: 60,
-      render: (index) => (
-        <span style={{ color: "blue", fontWeight: "bold" }}>{`#${index}`}</span>
-      ),
-    },
-    {
-      title: "Mã Đăng Ký",
-      dataIndex: "registrationNumber",
-      render: (registrationNumber, record) =>
-        registrationNumber || record.registrationId?.substring(0, 8) || "—",
-    },
-    {
-      title: "Hình ảnh",
-      dataIndex: "imageUrl",
-      width: 100,
-      render: (imageUrl, record) => {
-        const id = record.key;
-        return (
-          <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
-            <Image
-              src={imageUrl || PLACEHOLDER_IMAGE}
-              alt="Hình cá"
-              width={70}
-              height={50}
-              className="object-cover"
-              preview={{
-                src: imageUrl,
-                mask: <div className="text-xs">Xem</div>,
-              }}
-              placeholder={
-                <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                  <Spin size="small" />
-                </div>
-              }
-              fallback={PLACEHOLDER_IMAGE}
-              onLoad={() => handleImageLoad(id)}
-              onError={() => handleImageError(id)}
-            />
-          </div>
-        );
+  const handleReloadTable = () => {
+    if (selectedSubRound) {
+      fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+    }
+  };
+
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        title: "Top",
+        dataIndex: "index",
+        width: 60,
+        render: (index) => (
+          <span
+            style={{ color: "blue", fontWeight: "bold" }}
+          >{`#${index}`}</span>
+        ),
       },
-    },
-    {
-      title: "Kích thước",
-      dataIndex: "size",
-      render: (size) => (size ? `${size} cm` : "—"),
-    },
-    {
-      title: "Giống",
-      dataIndex: "variety",
-      ellipsis: true,
-      render: (variety) => variety || "—",
-    },
-    {
-      title: "Kết quả",
-      dataIndex: "result",
-      render: (result) => {
-        if (result === "pass") return <Tag color="green">Đạt</Tag>;
-        if (result === "fail") return <Tag color="red">Không đạt</Tag>;
-        return <Tag color="orange">Chưa có</Tag>;
+      {
+        title: "Mã Đăng Ký",
+        dataIndex: ["registration", "registrationNumber"],
+        render: (registrationNumber, record) => {
+          return (
+            registrationNumber ||
+            record.registration?.id?.substring(0, 8) ||
+            "—"
+          );
+        },
       },
-    },
-    {
-      title: "Trạng thái",
-      dataIndex: "status",
-      render: (status) => {
-        let color = "blue";
-        let text = status;
+      {
+        title: "Hình ảnh",
+        dataIndex: ["registration", "koiMedia"],
+        width: 100,
+        render: (koiMedia, record) => {
+          const id = record.key;
+          const imageMedia =
+            koiMedia && koiMedia.length > 0
+              ? koiMedia.find((media) => media.mediaType === "Image")
+              : null;
 
-        switch (status) {
-          case "unpublic":
-            color = "gray";
-            text = "Chưa công khai";
-            break;
-          case "public":
-            color = "green";
-            text = "Đã công khai";
-            break;
-          case "pending":
-            color = "orange";
-            text = "Đang chờ";
-            break;
-          default:
-            text = status || "—";
-        }
+          const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
 
-        return <Tag color={color}>{text}</Tag>;
+          return (
+            <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
+              <Image
+                src={imageUrl}
+                alt="Hình cá"
+                width={70}
+                height={50}
+                className="object-cover"
+                preview={{
+                  src: imageMedia?.mediaUrl,
+                  mask: <div className="text-xs">Xem</div>,
+                }}
+                placeholder={
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <Spin size="small" />
+                  </div>
+                }
+                fallback={PLACEHOLDER_IMAGE}
+              />
+            </div>
+          );
+        },
       },
-    },
-    {
-      title: "Bể",
-      dataIndex: "tank",
-      render: (tank) => tank || "Chưa gán bể",
-    },
-    {
-      title: "Hành động",
-      key: "actions",
-      render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          className="text-gray-500 hover:text-blue-500"
-        />
-      ),
-    },
-  ];
+      {
+        title: "Kích thước",
+        dataIndex: ["registration", "koiSize"],
+        render: (size) => (size ? `${size} cm` : "—"),
+      },
+      {
+        title: "Giống",
+        dataIndex: ["registration", "koiProfile", "variety", "name"],
+        ellipsis: true,
+        render: (name) => name || "—",
+      },
+      {
+        title: "Kết quả",
+        dataIndex: "roundResults",
+        render: (results) => {
+          if (!results || results.length === 0)
+            return <Tag color="gray">Chưa có</Tag>;
 
-  // Transform the data for the table
-  const tableData = Array.isArray(registrationRound)
-    ? registrationRound.map((item, index) => {
-        // Get first image if available
-        const imageMedia = item.registration?.koiMedia?.find(
-          (media) => media.mediaType === "Image"
-        );
+          // Get the status from the roundResult field
+          const status = results[0]?.status;
 
-        // Determine result based on roundResults
-        let result = "pending";
-        if (item.roundResults && item.roundResults.length > 0) {
-          result = item.roundResults.some((r) => r.isPassed) ? "pass" : "fail";
-        }
+          if (status === "Pass") {
+            return <Tag color="green">Đạt</Tag>;
+          } else if (status === "Fail") {
+            return <Tag color="red">Không đạt</Tag>;
+          } else {
+            return <Tag color="orange">{status || "Đang chờ"}</Tag>;
+          }
+        },
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        render: (status) => {
+          let color = "blue";
+          let text = status;
 
-        return {
-          key: item.id || `item-${index}`,
-          index: index + 1 + (currentPage - 1) * pageSize,
-          registrationId: item.registration?.id,
-          registrationNumber: item.registration?.registrationNumber,
-          imageUrl: imageMedia?.mediaUrl || PLACEHOLDER_IMAGE,
-          size: item.registration?.koiSize,
-          variety: item.registration?.koiProfile?.variety?.name,
-          result: result,
-          status: item.status,
-          tank: item.tankName,
-          // Store the full record for reference
-          fullRecord: item,
-        };
-      })
-    : [];
+          switch (status) {
+            case "unpublic":
+              color = "gray";
+              text = "Chưa công khai";
+              break;
+            case "public":
+              color = "green";
+              text = "Đã công khai";
+              break;
+            case "pending":
+              color = "orange";
+              text = "Đang chờ";
+              break;
+            default:
+              text = status || "—";
+          }
 
+          return <Tag color={color}>{text}</Tag>;
+        },
+      },
+      {
+        title: "Bể",
+        dataIndex: "tankName",
+        width: 120,
+        render: (tank) => <span>{tank || "Chưa phân bổ"}</span>,
+      },
+    ];
+
+    return baseColumns;
+  }, [categories]);
+
+  const displayData = useMemo(() => {
+    if (
+      !registrationLoading &&
+      selectedSubRound &&
+      Array.isArray(registrationRound)
+    ) {
+      return registrationRound.map((item, index) => ({
+        ...item,
+        key: item.id || `registration-${index}`,
+        index: index + 1 + (currentPage - 1) * pageSize,
+      }));
+    }
+    return [];
+  }, [
+    registrationRound,
+    currentPage,
+    pageSize,
+    registrationLoading,
+    selectedSubRound,
+  ]);
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <Row gutter={16}>
@@ -345,8 +356,16 @@ function CompetitionRound({ showId }) {
       </Row>
 
       <Table
+        // title={() => (
+        //   <div className="flex justify-between items-center">
+        //     <ReloadOutlined
+        //       onClick={handleReloadTable}
+        //       loading={registrationLoading}
+        //     />
+        //   </div>
+        // )}
         columns={columns}
-        dataSource={tableData}
+        dataSource={displayData}
         loading={registrationLoading}
         pagination={{
           current: currentPage,

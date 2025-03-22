@@ -33,6 +33,7 @@ function ScanQrByReferee({ showId, refereeId }) {
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
+  const [scanError, setScanError] = useState(null);
 
   const roundTypeLabels = {
     Preliminary: "Vòng Sơ Khảo",
@@ -106,6 +107,7 @@ function ScanQrByReferee({ showId, refereeId }) {
     if (data && data.text && selectedSubRound) {
       setQrResult(data.text);
       setScannerEnabled(false);
+      setScanError(null);
       try {
         const result = await fetchRegistrationRoundByReferee(
           data.text,
@@ -114,9 +116,34 @@ function ScanQrByReferee({ showId, refereeId }) {
         if (result.success) {
           // Handle successful scan
           console.log("Scan successful:", result.data);
+        } else {
+          // Check for 404 status code
+          if (result.statusCode === 404 || (typeof result.error === 'object' && result.error.statusCode === 404)) {
+            setScanError("Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.");
+          } else {
+            // For other errors
+            const errorMessage = typeof result.error === 'object' 
+              ? (result.error.message || JSON.stringify(result.error)) 
+              : (result.error || "Không thể quét mã QR này. Vui lòng thử lại.");
+            setScanError(errorMessage);
+          }
+          setScannerEnabled(false);
+          setShowScanner(false);
         }
       } catch (error) {
         console.error("Error scanning QR code:", error);
+        // Check for 404 status code in caught error
+        if (error.statusCode === 404) {
+          setScanError("Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.");
+        } else {
+          // For other errors
+          const errorMessage = typeof error === 'object' 
+            ? (error.message || JSON.stringify(error)) 
+            : (error || "Đã xảy ra lỗi khi quét mã QR. Vui lòng thử lại.");
+          setScanError(errorMessage);
+        }
+        setScannerEnabled(false);
+        setShowScanner(false);
       }
     }
   };
@@ -130,6 +157,7 @@ function ScanQrByReferee({ showId, refereeId }) {
     setScannerEnabled(true);
     setShowScanner(true);
     resetRefereeRoundData();
+    setScanError(null);
   };
 
   const handleCategoryChange = (value) => {
@@ -159,38 +187,30 @@ function ScanQrByReferee({ showId, refereeId }) {
         !refereeId ||
         !registrationRoundId
       ) {
-        notification.error({
-          message: "Lỗi",
-          description: "Thiếu thông tin cần thiết để chấm điểm",
-        });
-        return;
+        console.error("Lỗi: Thiếu thông tin cần thiết để chấm điểm");
+        return {
+          success: false,
+          error: "Thiếu thông tin cần thiết để chấm điểm",
+        };
       }
 
       const result = await createScore(refereeId, registrationRoundId, isPass);
 
-      if (result) {
-        notification.success({
-          message: "Chấm điểm thành công",
-          description: `Đã ${isPass ? "Pass" : "Fail"} cá với mã ${registrationId ? registrationId.substring(0, 8) : "không xác định"}`,
-          duration: 3,
-        });
+      console.log("API Response in handleScore:", result);
+
+      if (result?.success) {
         setTimeout(() => {
           resetRefereeRoundData();
           setQrResult(null);
           setScannerEnabled(true);
           setShowScanner(true);
         }, 2000);
-      } else {
-        notification.info({
-          message: "Bạn đã chấm điểm rồi !",
-          description: "Vui lòng không chấm điểm nữa",
-        });
       }
+
+      return result; // Trả về kết quả để xử lý ở nơi gọi hàm này nếu cần
     } catch (error) {
-      notification.error({
-        message: "Lỗi",
-        description: `Lỗi khi chấm điểm: ${error.message || "Không xác định"}`,
-      });
+      console.log("Error caught in handleScore:", error);
+      return { success: false, error: error?.message || "Lỗi không xác định" };
     } finally {
       setIsScoring(false);
     }
@@ -271,7 +291,7 @@ function ScanQrByReferee({ showId, refereeId }) {
             <span>Quét QR để chấm điểm</span>
           </Title>
 
-          {!showScanner && !qrResult && (
+          {!showScanner && !qrResult && !scanError && (
             <div className="flex justify-center mb-6">
               <Button type="primary" onClick={() => setShowScanner(true)}>
                 Bắt đầu quét QR
@@ -279,9 +299,28 @@ function ScanQrByReferee({ showId, refereeId }) {
             </div>
           )}
 
+          {scanError && (
+            <div className="mb-6">
+              <Alert
+                message="Lỗi quét mã QR"
+                description={scanError}
+                type="error"
+                showIcon
+                className="mb-4"
+              />
+              <Button
+                type="primary"
+                icon={<ReloadOutlined />}
+                onClick={handleReset}
+              >
+                Quét lại
+              </Button>
+            </div>
+          )}
+
           {showScanner && scannerEnabled && (
-            <div className="mb-6 shadow-md" style={{ borderRadius: "12px" }}>
-              <div className="scanner-container flex flex-col items-center">
+            <div className="mb-6 ">
+              <div className=" flex flex-col items-center">
                 <div className=" rounded-lg mb-4">
                   <QrScanner
                     delay={300}
