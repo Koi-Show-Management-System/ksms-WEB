@@ -21,4 +21,8 @@ const getRoundTypeByReferee = (competitionCategoryId) => {
   );
 };
 
-export { getRound, getRoundTypeByReferee, updatePublishRound };
+const getNextRound = (roundId) => {
+  return axiosClient.get(`/round/get-next-round/${roundId}`);
+};
+
+export { getRound, getRoundTypeByReferee, updatePublishRound, getNextRound };

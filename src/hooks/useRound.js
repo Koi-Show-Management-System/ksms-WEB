@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getRound, getRoundTypeByReferee } from "../api/roundApi";
+import { getNextRound, getRound, getRoundTypeByReferee } from "../api/roundApi";
 
 const useRound = create((set, get) => ({
   round: [],
@@ -93,6 +93,22 @@ const useRound = create((set, get) => ({
     } catch (error) {
       console.error("API Error:", error);
       set({ error: error, isLoading: false });
+    }
+  },
+  fetchNextRound: async (roundId) => {
+    try {
+      set({ isLoading: true, error: null });
+
+      const res = await getNextRound(roundId);
+      console.log("API Response (Next Round):", res);
+      if (res?.status === 200) {
+        set({ nextRound: res.data, isLoading: false });
+      } else {
+        set({ error: res || "Unknown error", isLoading: false });
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      set({ error: error.message || "Unknown error", isLoading: false });
     }
   },
 }));
