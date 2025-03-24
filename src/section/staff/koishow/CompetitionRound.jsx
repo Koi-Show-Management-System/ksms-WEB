@@ -23,6 +23,9 @@ import {
   Descriptions,
   Tabs,
   List,
+  Divider,
+  Skeleton,
+  Collapse,
 } from "antd";
 import {
   EyeOutlined,
@@ -30,13 +33,19 @@ import {
   TrophyOutlined,
   InfoCircleOutlined,
   QrcodeOutlined,
+  PercentageOutlined,
+  ReloadOutlined,
 } from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
 import useTank from "../../../hooks/useTank";
+import useCriteria from "../../../hooks/useCriteria";
+import useScore from "../../../hooks/useScore";
 import NextRound from "./NextRound";
 import { getEvaluationColumns } from "./EvaluationColumns";
+import { getFinalColumns } from "./FinalColumns";
+import useRoundResult from "../../../hooks/useRoundResult";
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -115,6 +124,25 @@ function CompetitionRound({ showId }) {
     return registrationRound.every((item) => item.status === "public");
   }, [registrationRound, selectedSubRound]);
 
+  // Add criteria state
+  const {
+    criteriaCompetitionRound,
+    fetchCriteriaCompetitionRound,
+    resetCriteriaCompetitionRound,
+    isLoading: criteriaLoading,
+  } = useCriteria();
+
+  // Modify imports and state management for scores
+  const {
+    fetchScoreDetail,
+    scoreDataDetail,
+    isLoading: scoreDetailLoading,
+  } = useScore();
+
+  // Thêm hook useRoundResult
+  const { createRoundResultFinalize, isLoading: roundResultLoading } =
+    useRoundResult();
+
   // Safe API wrappers to prevent undefined calls
   const fetchRegistrationRound = useCallback(
     (roundId, page, size) => {
@@ -183,17 +211,18 @@ function CompetitionRound({ showId }) {
   // Handle round type selection
   const handleRoundTypeChange = useCallback(
     (value) => {
-      // console.log('[RoundType] Selected:', value);
-
       // Reset sub-round
       setSelectedSubRound(null);
       setSelectedRoundType(value);
+
+      // Clear previous criteria when changing round type
+      resetCriteriaCompetitionRound();
 
       if (selectedCategory && value) {
         fetchRound(selectedCategory, value);
       }
     },
-    [selectedCategory, fetchRound]
+    [selectedCategory, fetchRound, resetCriteriaCompetitionRound]
   );
 
   // Handle sub-round selection
@@ -205,15 +234,55 @@ function CompetitionRound({ showId }) {
         value = null;
       }
 
-      setSelectedSubRound(value);
+      // Only update state if the value has actually changed
+      if (value !== selectedSubRound) {
+        setSelectedSubRound(value);
 
-      // Only fetch if we have a valid value
-      if (value && typeof value === "string" && value !== "undefined") {
-        fetchRegistrationRound(value, 1, pageSize);
+        // Only fetch if we have a valid value
+        if (value && typeof value === "string" && value !== "undefined") {
+          console.log("Selected sub-round changed to:", value);
+
+          // Fetch registration data
+          fetchRegistrationRound(value, 1, pageSize);
+
+          // Only fetch criteria if we're in Evaluation round and have a valid category
+          if (selectedRoundType === "Evaluation" && selectedCategory) {
+            console.log("Fetching criteria for evaluation round:", {
+              category: selectedCategory,
+              subRound: value,
+            });
+            fetchCriteriaCompetitionRound(selectedCategory, value);
+          }
+        }
       }
     },
-    [fetchRegistrationRound, pageSize]
+    [
+      fetchRegistrationRound,
+      pageSize,
+      selectedRoundType,
+      selectedCategory,
+      fetchCriteriaCompetitionRound,
+      selectedSubRound,
+    ]
   );
+
+  // Update this when selectedRoundType changes to fetch criteria
+  useEffect(() => {
+    if (
+      (selectedRoundType === "Evaluation" || selectedRoundType === "Final") &&
+      selectedCategory &&
+      selectedSubRound &&
+      selectedSubRound !== "undefined" &&
+      isMounted.current
+    ) {
+      console.log(`Fetching criteria for ${selectedRoundType} round:`, {
+        categoryId: selectedCategory,
+        roundId: selectedSubRound,
+      });
+      fetchCriteriaCompetitionRound(selectedCategory, selectedSubRound);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRoundType, selectedCategory, selectedSubRound]);
 
   // Handle pagination
   const handleTableChange = useCallback(
@@ -314,11 +383,25 @@ function CompetitionRound({ showId }) {
     setLoadingImages((prev) => ({ ...prev, [id]: false }));
   }, []);
 
-  // Add functions to handle drawer
-  const showCategoryDetail = (record) => {
-    setCurrentRegistration(record);
-    setIsDetailDrawerVisible(true);
-  };
+  // Modify the showCategoryDetail function to fetch score details
+  const showCategoryDetail = useCallback(
+    async (record) => {
+      setCurrentRegistration(record);
+      setIsDetailDrawerVisible(true);
+
+      // Fetch score details if we have a registration round ID
+      if (record?.id) {
+        try {
+          const result = await fetchScoreDetail(record.id);
+          console.log("Score details fetched:", result);
+          console.log("Current scoreDataDetail in store:", scoreDataDetail);
+        } catch (error) {
+          console.error("Error fetching score details:", error);
+        }
+      }
+    },
+    [fetchScoreDetail, scoreDataDetail]
+  );
 
   const handleDrawerClose = () => {
     setIsDetailDrawerVisible(false);
@@ -346,10 +429,27 @@ function CompetitionRound({ showId }) {
     selectedSubRound,
   ]);
 
-  // Lấy đúng columns dựa trên loại vòng
+  // Update the getColumnsForRoundType function to use our new component
   const getColumnsForRoundType = useMemo(() => {
-    // Nếu đang ở vòng Đánh Giá Chính
-    if (selectedRoundType === "Evaluation") {
+    // For Final Round
+    if (selectedRoundType === "Final") {
+      console.log(
+        "Using FINAL round columns with criteria:",
+        criteriaCompetitionRound
+      );
+      return getFinalColumns({
+        handleViewDetails: showCategoryDetail,
+        loadingImages,
+        allTanksAssigned,
+        isRoundPublished,
+        assigningTank,
+        competitionRoundTanks,
+        handleTankChange: handleTankAssignment,
+        criteria: criteriaCompetitionRound, // Pass criteria to Final round too
+      });
+    }
+    // For Evaluation Round (existing code)
+    else if (selectedRoundType === "Evaluation") {
       return getEvaluationColumns({
         handleViewDetails: showCategoryDetail,
         loadingImages,
@@ -358,10 +458,10 @@ function CompetitionRound({ showId }) {
         assigningTank,
         competitionRoundTanks,
         handleTankChange: handleTankAssignment,
+        criteria: criteriaCompetitionRound, // Pass criteria from API
       });
     }
-
-    // Mặc định sử dụng cột của vòng Sơ Khảo
+    // Default columns for Preliminary Round (existing code)
     const baseColumns = [
       {
         title: "Top",
@@ -532,6 +632,7 @@ function CompetitionRound({ showId }) {
     handleTankAssignment,
     categories,
     selectedCategory,
+    criteriaCompetitionRound,
   ]);
 
   // Handle publishing round - Make sure it doesn't trigger on render
@@ -583,26 +684,367 @@ function CompetitionRound({ showId }) {
     pageSize,
   ]);
 
-  // Thay đổi cách sử dụng getColumnsForRoundType
-  // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
-  const columns = getColumnsForRoundType;
-
-  // Đảm bảo competitionRoundTanks được tải đúng cách
-  useEffect(() => {
-    if (selectedCategory) {
-      fetchTanks(selectedCategory, 1, 100, true); // Tăng số lượng bể được tải
+  // Fix the handleCreateFinalScore function to use local state instead of setIsRoundPublished
+  const handleCreateFinalScore = async () => {
+    if (!selectedSubRound) {
+      notification.error({
+        message: "Lỗi",
+        description: "Không thể tạo điểm cuối cùng. Thiếu thông tin vòng thi.",
+      });
+      return;
     }
-  }, [selectedCategory, fetchTanks]);
+
+    try {
+      setIsPublishing(true); // Reuse existing loading state
+      const result = await createRoundResultFinalize(selectedSubRound);
+
+      // Add log for debugging
+      console.log("API Response:", result);
+
+      // Handle response
+      if (
+        result?.statusCode === 200 ||
+        result?.statusCode === 201 ||
+        result?.status === 200 ||
+        result?.status === 201 ||
+        (result?.message && result?.message.includes("success"))
+      ) {
+        notification.success({
+          message: "Thành công",
+          description:
+            result?.message || "Đã tạo điểm cuối cùng cho vòng thi thành công",
+        });
+
+        // Refresh data
+        if (selectedSubRound) {
+          fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+        }
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: result?.message || "Không thể tạo điểm cuối cùng",
+        });
+      }
+    } catch (error) {
+      // Check special case: error but actually success
+      if (error.response && error.response.status === 201) {
+        notification.success({
+          message: "Thành công",
+          description:
+            error.response.data.message ||
+            "Đã tạo điểm cuối cùng cho vòng thi thành công",
+        });
+
+        if (selectedSubRound) {
+          fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+        }
+        return;
+      }
+
+      console.error("Error creating final score:", error);
+      notification.error({
+        message: "Lỗi",
+        description: `Không thể tạo điểm cuối cùng: ${error?.message || "Lỗi không xác định"}`,
+      });
+    } finally {
+      setIsPublishing(false);
+    }
+  };
+
+  // Now update the useEffect that's likely causing the issue
+  // Add these missing dependencies and stabilize others
+  useEffect(() => {
+    if (selectedCategory && isMounted.current) {
+      console.log("Fetching tanks for category:", selectedCategory);
+      fetchTanks(selectedCategory, 1, 100, true);
+    }
+    // Only depend on selectedCategory, not fetchTanks which might change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedCategory]);
 
   // Thêm log để kiểm tra
   console.log("allTanksAssigned:", allTanksAssigned);
   console.log("competitionRoundTanks:", competitionRoundTanks);
   console.log("registrationRound:", registrationRound);
 
+  // Create a component to display criteria above the table
+  const CriteriaDisplay = useCallback(() => {
+    console.log("Rendering CriteriaDisplay with:", criteriaCompetitionRound);
+
+    return (
+      <div className="mb-4">
+        {/* <Typography.Title level={5} className="mb-3">
+          Tiêu chí đánh giá
+        </Typography.Title> */}
+        <Row gutter={[16, 8]}>
+          {criteriaCompetitionRound.map((criteriaItem, index) => {
+            // Handle different possible data structures
+            const id =
+              criteriaItem.id ||
+              criteriaItem.criteria?.id ||
+              `criteria-${index}`;
+            const name =
+              criteriaItem.criteria?.name ||
+              criteriaItem.name ||
+              `Tiêu chí ${index + 1}`;
+            const weight = criteriaItem.weight || 0;
+            const description =
+              criteriaItem.criteria?.description ||
+              criteriaItem.description ||
+              "";
+
+            return (
+              <Col xs={24} sm={12} md={8} key={id}>
+                <Card size="small" className="h-full">
+                  <div className="flex items-center justify-between">
+                    <Typography.Text strong>{name}</Typography.Text>
+                    <Tag color="blue">
+                      <PercentageOutlined className="mr-1" />
+                      {(weight * 100).toFixed(0)}%
+                    </Tag>
+                  </div>
+                  {description && (
+                    <Typography.Text
+                      type="secondary"
+                      className="block mt-2 text-sm"
+                    >
+                      {description}
+                    </Typography.Text>
+                  )}
+                </Card>
+              </Col>
+            );
+          })}
+        </Row>
+      </div>
+    );
+  }, [criteriaCompetitionRound]);
+
+  // Cập nhật ScoreDetailsTab để thêm nút tạo điểm cuối cùng
+  const ScoreDetailsTab = () => {
+    console.log("Rendering ScoreDetailsTab with data:", scoreDataDetail);
+
+    if (scoreDetailLoading) {
+      return <Skeleton active paragraph={{ rows: 6 }} />;
+    }
+
+    if (!scoreDataDetail) {
+      return <Empty description="Chưa có thông tin chấm điểm" />;
+    }
+
+    // Handle both array and object with data property
+    const scores = Array.isArray(scoreDataDetail)
+      ? scoreDataDetail
+      : scoreDataDetail.data || [];
+
+    if (scores.length === 0) {
+      return <Empty description="Chưa có thông tin chấm điểm" />;
+    }
+
+    return (
+      <div>
+        <Collapse>
+          {scores.map((scoreItem, index) => {
+            const initialScore = Number(scoreItem.initialScore || 100);
+            const totalPointMinus = Number(scoreItem.totalPointMinus || 0);
+            const finalScore = initialScore - totalPointMinus;
+            const refereeName =
+              scoreItem.refereeAccount?.fullName ||
+              scoreItem.refereeAccount?.username ||
+              "Không xác định";
+            const scoreDate = new Date(scoreItem.createdAt).toLocaleString();
+
+            return (
+              <Collapse.Panel
+                key={scoreItem.id || `score-${index}`}
+                header={
+                  <div className="flex justify-between items-center w-full">
+                    <div className="flex items-center">
+                      <Typography.Text strong>
+                        <TrophyOutlined className="mr-2" />
+                        Trọng tài: {refereeName}
+                      </Typography.Text>
+                      <Typography.Text type="secondary" className="ml-4">
+                        {scoreDate}
+                      </Typography.Text>
+                    </div>
+                    <Tag
+                      color={
+                        finalScore >= 70
+                          ? "green"
+                          : finalScore >= 50
+                            ? "orange"
+                            : "red"
+                      }
+                      className="text-base px-3 "
+                    >
+                      <b>{finalScore.toFixed(1)}</b>
+                    </Tag>
+                  </div>
+                }
+              >
+                <div>
+                  <Card
+                    className="mb-4 text-center bg-gray-50"
+                    bordered={false}
+                  >
+                    <Row gutter={[16, 16]} align="middle" justify="center">
+                      <Col span={8}>
+                        <Typography.Title level={5}>
+                          Điểm ban đầu
+                        </Typography.Title>
+                        <Typography.Title
+                          level={3}
+                          style={{ color: "#1890ff" }}
+                        >
+                          {initialScore.toFixed(1)}
+                        </Typography.Title>
+                      </Col>
+                      <Col span={8}>
+                        <Typography.Title level={5}>Điểm trừ</Typography.Title>
+                        <Typography.Title
+                          level={3}
+                          style={{ color: "#f5222d" }}
+                        >
+                          -{totalPointMinus.toFixed(1)}
+                        </Typography.Title>
+                      </Col>
+                      <Col span={8}>
+                        <Typography.Title level={5}>
+                          Điểm cuối cùng
+                        </Typography.Title>
+                        <Typography.Title
+                          level={2}
+                          style={{ color: "#52c41a" }}
+                        >
+                          {finalScore.toFixed(1)}
+                        </Typography.Title>
+                      </Col>
+                    </Row>
+                  </Card>
+
+                  {scoreItem.comments && (
+                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                      <Typography.Text strong>Nhận xét: </Typography.Text>
+                      <Typography.Text>{scoreItem.comments}</Typography.Text>
+                    </div>
+                  )}
+
+                  {scoreItem.criteriaWithErrors &&
+                  scoreItem.criteriaWithErrors.length > 0 ? (
+                    <div className="mt-4">
+                      {scoreItem.criteriaWithErrors.map((criteria) => {
+                        const hasErrors =
+                          criteria.errors && criteria.errors.length > 0;
+                        const totalCriteriaDeduction = hasErrors
+                          ? criteria.errors.reduce(
+                              (sum, err) => sum + (err.pointMinus || 0),
+                              0
+                            )
+                          : 0;
+
+                        return (
+                          <div key={criteria.id} className="mb-4 border-b ">
+                            <Collapse>
+                              <Collapse.Panel
+                                header={
+                                  <div className="flex justify-between items-center w-full">
+                                    <div className="flex items-center">
+                                      <Typography.Text strong className="mr-2">
+                                        {criteria.name}
+                                      </Typography.Text>
+                                      <Tag color="blue">
+                                        {(criteria.weight * 100).toFixed(0)}%
+                                      </Tag>
+                                    </div>
+                                    {hasErrors && (
+                                      <Tag color="red">
+                                        -{totalCriteriaDeduction} điểm
+                                      </Tag>
+                                    )}
+                                  </div>
+                                }
+                              >
+                                {hasErrors ? (
+                                  criteria.errors.map((error, idx) => {
+                                    const severityColor =
+                                      error.severity === "eb"
+                                        ? "red"
+                                        : error.severity === "mb"
+                                          ? "orange"
+                                          : "blue";
+                                    const severityText =
+                                      error.severity === "eb"
+                                        ? "Nặng"
+                                        : error.severity === "mb"
+                                          ? "trung bình"
+                                          : "nhẹ";
+
+                                    return (
+                                      <div
+                                        key={error.id || idx}
+                                        className="mb-3 p-3 border rounded-md"
+                                      >
+                                        <div className="flex flex-col">
+                                          <div className="mb-1">
+                                            <Typography.Text strong>
+                                              Lỗi nhỏ: {error.errorTypeName}
+                                            </Typography.Text>
+                                          </div>
+                                          <div className="mb-1">
+                                            <Typography.Text>
+                                              Mức độ:{" "}
+                                              <Tag color={severityColor}>
+                                                {severityText}
+                                              </Tag>
+                                            </Typography.Text>
+                                          </div>
+                                          <div>
+                                            <Typography.Text>
+                                              Điểm trừ:{" "}
+                                              <span className="text-red-500">
+                                                -{error.pointMinus} điểm
+                                              </span>
+                                            </Typography.Text>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })
+                                ) : (
+                                  <Typography.Text
+                                    type="success"
+                                    className="block py-2"
+                                  >
+                                    Không có lỗi ở tiêu chí này
+                                  </Typography.Text>
+                                )}
+                              </Collapse.Panel>
+                            </Collapse>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <Empty description="Không có chi tiết đánh giá" />
+                  )}
+                </div>
+              </Collapse.Panel>
+            );
+          })}
+        </Collapse>
+      </div>
+    );
+  };
+
+  // Thay đổi cách sử dụng getColumnsForRoundType
+  // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
+  const columns = getColumnsForRoundType;
+
   return (
     <Card>
       <div className="mb-4">
-        <div className="flex flex-wrap md:flex-nowrap items-end gap-4">
+        <div className="flex flex-wrap md:flex-nowrap items-end gap-3">
           <div className="w-full md:w-1/4">
             <div className="text-lg font-medium mb-2">Hạng Mục:</div>
             <Select
@@ -665,35 +1107,69 @@ function CompetitionRound({ showId }) {
             </div>
           )}
 
-          {/* Only show the publish button if selected round is not already published */}
-          {selectedSubRound && !isRoundPublished && (
-            <div className="w-full md:w-1/4 self-end">
-              <Button
-                type="primary"
-                className="w-full"
-                onClick={handlePublishRound}
-                loading={isPublishing}
-                icon={<TrophyOutlined />}
-                disabled={!allTanksAssigned}
-              >
-                Công khai vòng thi
-              </Button>
+          {selectedSubRound && (
+            <div className="w-full md:w-1/4 ">
+              {!isRoundPublished && (
+                <Button
+                  type="primary"
+                  size="middle"
+                  className="w-full"
+                  onClick={handlePublishRound}
+                  loading={isPublishing}
+                  icon={<TrophyOutlined />}
+                  disabled={!allTanksAssigned}
+                >
+                  Công khai vòng thi
+                </Button>
+              )}
+
+              {/* Only show the Create Final Score button for published Evaluation/Final rounds */}
+              {selectedRoundType &&
+                (selectedRoundType === "Evaluation" ||
+                  selectedRoundType === "Final") &&
+                isRoundPublished && (
+                  <Button
+                    type="primary"
+                    size="middle"
+                    className="w-full mt-2"
+                    onClick={handleCreateFinalScore}
+                    loading={roundResultLoading}
+                    icon={<TrophyOutlined />}
+                  >
+                    Tạo Điểm Cuối Cùng
+                  </Button>
+                )}
             </div>
           )}
 
-          {/* Add the new MoveToNextRoundButton component */}
-          <NextRound
-            registrationRound={registrationRound}
-            selectedSubRound={selectedSubRound}
-            selectedCategory={selectedCategory}
-            selectedRoundType={selectedRoundType}
-            roundTypes={roundTypes}
-            fetchRegistrationRound={fetchRegistrationRound}
-            currentPage={currentPage}
-            pageSize={pageSize}
-          />
+          {selectedSubRound && (
+            <NextRound
+              registrationRound={registrationRound}
+              selectedSubRound={selectedSubRound}
+              selectedCategory={selectedCategory}
+              selectedRoundType={selectedRoundType}
+              roundTypes={roundTypes}
+              fetchRegistrationRound={fetchRegistrationRound}
+              currentPage={currentPage}
+              pageSize={pageSize}
+            />
+          )}
         </div>
       </div>
+
+      {/* Display criteria section for both Evaluation and Final rounds */}
+      {(selectedRoundType === "Evaluation" ||
+        selectedRoundType === "Final") && (
+        <>
+          {criteriaLoading ? (
+            <div className="mb-4">
+              <Skeleton active paragraph={{ rows: 2 }} />
+            </div>
+          ) : (
+            <CriteriaDisplay />
+          )}
+        </>
+      )}
 
       <Table
         columns={columns}
@@ -708,6 +1184,7 @@ function CompetitionRound({ showId }) {
         }}
         onChange={handleTableChange}
         loading={registrationLoading}
+        scroll={{ x: "max-content" }} // Add horizontal scrolling support
       />
 
       {/* Detail Drawer */}
@@ -715,7 +1192,7 @@ function CompetitionRound({ showId }) {
         title={
           currentRegistration?.registration?.registrationNumber
             ? `Mã đăng ký: ${currentRegistration.registration.registrationNumber}`
-            : "Chi tiết đăng ký"
+            : "Chi tiết"
         }
         placement="right"
         width={720}
@@ -723,7 +1200,15 @@ function CompetitionRound({ showId }) {
         open={isDetailDrawerVisible}
       >
         {currentRegistration && (
-          <Tabs defaultActiveKey="1">
+          <Tabs
+            defaultActiveKey="1"
+            onChange={(activeKey) => {
+              if (activeKey === "score-details" && currentRegistration?.id) {
+                fetchScoreDetail(currentRegistration.id);
+                console.log("Refreshing score details on tab change");
+              }
+            }}
+          >
             {/* Tab 1: Thông tin cơ bản */}
             <TabPane
               tab={
@@ -946,6 +1431,18 @@ function CompetitionRound({ showId }) {
                   />
                 </TabPane>
               )}
+            {/* Add the Score Details Tab */}
+            <TabPane
+              tab={
+                <span>
+                  <PercentageOutlined className="mx-2" />
+                  Điểm chi tiết
+                </span>
+              }
+              key="score-details"
+            >
+              <ScoreDetailsTab />
+            </TabPane>
           </Tabs>
         )}
       </Drawer>

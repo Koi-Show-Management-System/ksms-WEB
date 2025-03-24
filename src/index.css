@@ -30,7 +30,9 @@
   background-size: cover;
   background-position: center;
 }
-
+.overflow-y-auto {
+  overflow-x: hidden;
+}
 .header {
   width: -webkit-fill-available;
 }

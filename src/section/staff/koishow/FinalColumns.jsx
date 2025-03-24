@@ -17,7 +17,7 @@ const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
 const { Option } = Select;
 
 // Hàm tạo columns cho vòng đánh giá chính
-export const getEvaluationColumns = (props) => {
+export const getFinalColumns = (props) => {
   const {
     handleViewDetails,
     loadingImages,
@@ -102,6 +102,7 @@ export const getEvaluationColumns = (props) => {
       title: "Giống",
       dataIndex: ["registration", "koiProfile", "variety", "name"],
       key: "variety",
+      width: 130,
       ellipsis: true,
       render: (name) => name || "—",
     },
@@ -170,43 +171,26 @@ export const getEvaluationColumns = (props) => {
       dataIndex: "tankName",
       key: "tankName",
       render: (tankName, record) => {
-        // Try to find the matching tank ID by comparing names
-        let tankIdToUse = record.tankId;
+        // Find the matching tank name using tankId if available
+        const selectedTank = record.tankId
+          ? competitionRoundTanks?.find((tank) => tank.id === record.tankId)
+          : null;
 
-        // If no tankId but we have a name, try to find the ID from the name
-        if (!tankIdToUse && tankName) {
-          // Find the matching tank
-          const matchingTank = competitionRoundTanks?.find(
-            (tank) =>
-              tank.name === tankName || // Exact match
-              `Bể ${tank.name}` === tankName || // "Bể X" format
-              tank.name === tankName.replace("Bể ", "") || // Remove "Bể " prefix
-              tank.id === tankName.replace("Bể ", "") // Compare with ID
-          );
-
-          if (matchingTank) {
-            tankIdToUse = matchingTank.id;
-          }
-        }
-
-        console.log("Final tank selection:", {
-          tankName,
-          originalTankId: record.tankId,
-          resolvedTankId: tankIdToUse,
-        });
+        // Use the found tank name, or fall back to tankName from record, or show default text
+        const displayTankName = selectedTank?.name || tankName || "Chưa gán bể";
+        const displayTankLabel = selectedTank
+          ? `Bể ${selectedTank.name || selectedTank.id}`
+          : displayTankName;
 
         return (
           <div>
             {isRoundPublished ? (
-              <div>{tankName || "Chưa gán bể"}</div>
+              displayTankLabel
             ) : (
               <Select
                 style={{ width: "100%" }}
-                value={tankIdToUse}
-                onChange={(value) => {
-                  console.log("Selecting tank ID:", value);
-                  handleTankChange(record.id, value);
-                }}
+                value={record.tankId || undefined}
+                onChange={(value) => handleTankChange(record.id, value)}
                 loading={assigningTank[record.id]}
                 disabled={assigningTank[record.id]}
                 placeholder="Chọn bể"
@@ -215,7 +199,7 @@ export const getEvaluationColumns = (props) => {
               >
                 {competitionRoundTanks?.map((tank) => (
                   <Option key={tank.id} value={tank.id}>
-                    {tank.name}
+                    {`Bể ${tank.name || tank.id}`}
                   </Option>
                 ))}
               </Select>

@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { Select, Row, Col, QRCode, Statistic } from "antd";
+import { Select, Row, Col, QRCode, Statistic, Card as AntCard } from "antd";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
 import useScore from "../../../hooks/useScore";
+import useCriteria from "../../../hooks/useCriteria";
 import QrScanner from "react-qr-scanner";
 import {
   Button,
   Typography,
   Spin,
   Alert,
-  Card,
   Tag,
   Space,
   notification,
@@ -19,12 +19,14 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
+  PercentageOutlined,
 } from "@ant-design/icons";
+import EvaluationScoreSheet from "./EvaluationScoreSheet";
 
 const { Option } = Select;
 const { Title, Text } = Typography;
 
-function ScanQrByReferee({ showId, refereeId }) {
+function ScanQrByReferee({ showId, refereeAccountId }) {
   const [categoryId, setCategoryId] = useState(null);
   const [selectedRoundType, setSelectedRoundType] = useState(null);
   const [selectedSubRound, setSelectedSubRound] = useState(null);
@@ -34,6 +36,14 @@ function ScanQrByReferee({ showId, refereeId }) {
   const [showScanner, setShowScanner] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
   const [scanError, setScanError] = useState(null);
+  const [showDetailScoring, setShowDetailScoring] = useState(false);
+
+  const {
+    criteriaCompetitionRound,
+    fetchCriteriaCompetitionRound,
+    resetCriteriaCompetitionRound,
+    isLoading: criteriaLoading,
+  } = useCriteria();
 
   const roundTypeLabels = {
     Preliminary: "Vòng Sơ Khảo",
@@ -64,14 +74,12 @@ function ScanQrByReferee({ showId, refereeId }) {
 
   const { createScore } = useScore();
 
-  // Fetch categories when component mounts
   useEffect(() => {
     if (showId) {
       fetchCategories(showId);
     }
   }, [showId, fetchCategories]);
 
-  // When category changes, fetch round types for referee
   useEffect(() => {
     if (categoryId) {
       fetchRoundByReferee(categoryId);
@@ -81,7 +89,6 @@ function ScanQrByReferee({ showId, refereeId }) {
     }
   }, [categoryId, fetchRoundByReferee]);
 
-  // When round type is selected, fetch sub-rounds
   useEffect(() => {
     if (categoryId && selectedRoundType) {
       fetchRound(categoryId, selectedRoundType);
@@ -89,7 +96,6 @@ function ScanQrByReferee({ showId, refereeId }) {
     }
   }, [categoryId, selectedRoundType, fetchRound]);
 
-  // Process sub-rounds from the fetched data
   useEffect(() => {
     if (round && round.length > 0) {
       const uniqueSubRounds = round.map((item) => ({
@@ -103,6 +109,35 @@ function ScanQrByReferee({ showId, refereeId }) {
     }
   }, [round]);
 
+  useEffect(() => {
+    if (
+      categoryId &&
+      selectedSubRound &&
+      (selectedRoundType === "Evaluation" || selectedRoundType === "Final")
+    ) {
+      console.log(`Fetching criteria for ${selectedRoundType} round:`, {
+        categoryId: categoryId,
+        roundId: selectedSubRound,
+      });
+      fetchCriteriaCompetitionRound(categoryId, selectedSubRound);
+    } else if (
+      selectedRoundType !== "Evaluation" &&
+      selectedRoundType !== "Final"
+    ) {
+      resetCriteriaCompetitionRound();
+    }
+  }, [
+    categoryId,
+    selectedSubRound,
+    selectedRoundType,
+    fetchCriteriaCompetitionRound,
+    resetCriteriaCompetitionRound,
+  ]);
+
+  useEffect(() => {
+    resetCriteriaCompetitionRound();
+  }, [categoryId, selectedRoundType, resetCriteriaCompetitionRound]);
+
   const handleScan = async (data) => {
     if (data && data.text && selectedSubRound) {
       setQrResult(data.text);
@@ -114,17 +149,21 @@ function ScanQrByReferee({ showId, refereeId }) {
           selectedSubRound
         );
         if (result.success) {
-          // Handle successful scan
           console.log("Scan successful:", result.data);
         } else {
-          // Check for 404 status code
-          if (result.statusCode === 404 || (typeof result.error === 'object' && result.error.statusCode === 404)) {
-            setScanError("Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.");
+          if (
+            result.statusCode === 404 ||
+            (typeof result.error === "object" &&
+              result.error.statusCode === 404)
+          ) {
+            setScanError(
+              "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại."
+            );
           } else {
-            // For other errors
-            const errorMessage = typeof result.error === 'object' 
-              ? (result.error.message || JSON.stringify(result.error)) 
-              : (result.error || "Không thể quét mã QR này. Vui lòng thử lại.");
+            const errorMessage =
+              typeof result.error === "object"
+                ? result.error.message || JSON.stringify(result.error)
+                : result.error || "Không thể quét mã QR này. Vui lòng thử lại.";
             setScanError(errorMessage);
           }
           setScannerEnabled(false);
@@ -132,14 +171,15 @@ function ScanQrByReferee({ showId, refereeId }) {
         }
       } catch (error) {
         console.error("Error scanning QR code:", error);
-        // Check for 404 status code in caught error
         if (error.statusCode === 404) {
-          setScanError("Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.");
+          setScanError(
+            "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại."
+          );
         } else {
-          // For other errors
-          const errorMessage = typeof error === 'object' 
-            ? (error.message || JSON.stringify(error)) 
-            : (error || "Đã xảy ra lỗi khi quét mã QR. Vui lòng thử lại.");
+          const errorMessage =
+            typeof error === "object"
+              ? error.message || JSON.stringify(error)
+              : error || "Đã xảy ra lỗi khi quét mã QR. Vui lòng thử lại.";
           setScanError(errorMessage);
         }
         setScannerEnabled(false);
@@ -162,7 +202,6 @@ function ScanQrByReferee({ showId, refereeId }) {
 
   const handleCategoryChange = (value) => {
     setCategoryId(value);
-    // Clear dependent fields when category is cleared or changed
     setSelectedRoundType(null);
     setSelectedSubRound(null);
     setSubRounds([]);
@@ -170,13 +209,20 @@ function ScanQrByReferee({ showId, refereeId }) {
 
   const handleRoundTypeChange = (value) => {
     setSelectedRoundType(value);
-    // Clear dependent fields when round type is cleared or changed
     setSelectedSubRound(null);
     setSubRounds([]);
   };
 
   const handleScore = async (isPass) => {
     try {
+      if (
+        (selectedRoundType === "Evaluation" || selectedRoundType === "Final") &&
+        isPass
+      ) {
+        setShowDetailScoring(true);
+        return { success: true };
+      }
+
       setIsScoring(true);
       const registrationId = qrResult;
       const registrationRoundId = refereeRoundData?.id;
@@ -184,7 +230,7 @@ function ScanQrByReferee({ showId, refereeId }) {
       if (
         !registrationId ||
         !selectedSubRound ||
-        !refereeId ||
+        !refereeAccountId||
         !registrationRoundId
       ) {
         console.error("Lỗi: Thiếu thông tin cần thiết để chấm điểm");
@@ -194,7 +240,7 @@ function ScanQrByReferee({ showId, refereeId }) {
         };
       }
 
-      const result = await createScore(refereeId, registrationRoundId, isPass);
+      const result = await createScore(refereeAccountId, registrationRoundId, isPass);
 
       console.log("API Response in handleScore:", result);
 
@@ -207,13 +253,69 @@ function ScanQrByReferee({ showId, refereeId }) {
         }, 2000);
       }
 
-      return result; // Trả về kết quả để xử lý ở nơi gọi hàm này nếu cần
+      return result;
     } catch (error) {
       console.log("Error caught in handleScore:", error);
       return { success: false, error: error?.message || "Lỗi không xác định" };
     } finally {
       setIsScoring(false);
     }
+  };
+
+  const handleDetailScoreSubmitted = (scoreData) => {
+    setTimeout(() => {
+      setShowDetailScoring(false);
+      resetRefereeRoundData();
+      setQrResult(null);
+      setScannerEnabled(true);
+      setShowScanner(true);
+    }, 2000);
+  };
+
+  const CriteriaDisplay = () => {
+    return (
+      <div className="mb-6 mt-4">
+        <Title level={5} className="mb-3">
+          Tiêu chí đánh giá
+        </Title>
+        <Row gutter={[16, 8]}>
+          {criteriaCompetitionRound.map((criteriaItem, index) => {
+            const id =
+              criteriaItem.id ||
+              criteriaItem.criteria?.id ||
+              `criteria-${index}`;
+            const name =
+              criteriaItem.criteria?.name ||
+              criteriaItem.name ||
+              `Tiêu chí ${index + 1}`;
+            const weight = criteriaItem.weight || 0;
+            const description =
+              criteriaItem.criteria?.description ||
+              criteriaItem.description ||
+              "";
+
+            return (
+              <Col xs={24} sm={12} md={8} key={id}>
+                <AntCard size="small" className="h-full">
+                  <div className="flex items-center justify-between">
+                    <Typography.Text strong>{name}</Typography.Text>
+                    <Tag color="blue">{(weight * 100).toFixed(0)}%</Tag>
+                  </div>
+                  {description && (
+                    <Typography.Text
+                      type="secondary"
+                      className="block mt-2 text-sm"
+                    >
+                      {description}
+                    </Typography.Text>
+                  )}
+                </AntCard>
+              </Col>
+            );
+          })}
+        </Row>
+      </div>
+    );
   };
 
   return (
@@ -286,10 +388,32 @@ function ScanQrByReferee({ showId, refereeId }) {
       </Row>
 
       {selectedSubRound && (
-        <div className="mt-8 text-center">
-          <Title level={4} className="mb-6">
+        <div className="mt-8 ">
+          <Title level={4} className="mb-6 text-center">
             <span>Quét QR để chấm điểm</span>
           </Title>
+
+          {/* {(selectedRoundType === "Evaluation" ||
+            selectedRoundType === "Final") && (
+            <>
+              {criteriaLoading ? (
+                <div className="mb-4">
+                  <Spin tip="Đang tải tiêu chí..." />
+                </div>
+              ) : criteriaCompetitionRound &&
+                criteriaCompetitionRound.length > 0 ? (
+                <CriteriaDisplay />
+              ) : (
+                <Alert
+                  className="mb-4"
+                  message="Không có tiêu chí"
+                  description="Không có tiêu chí nào được thiết lập cho vòng này."
+                  type="info"
+                  showIcon
+                />
+              )}
+            </>
+          )} */}
 
           {!showScanner && !qrResult && !scanError && (
             <div className="flex justify-center mb-6">
@@ -353,45 +477,18 @@ function ScanQrByReferee({ showId, refereeId }) {
             </div>
           )}
 
-          {refereeRoundData && (
-            <Card className="mt-8 mx-auto max-w-lg shadow-md">
-              <div className="text-center mb-4">
-                <Title level={4}>Thông tin cá</Title>
-              </div>
-
-              {refereeRoundData.registration && (
-                <div className="grid grid-cols-2 gap-4 mb-6">
-                  <div>
-                    <Text type="secondary">Mã đăng ký:</Text>
-                    <div className="font-semibold">
-                      {refereeRoundData.registration.registrationNumber ||
-                        (qrResult ? qrResult.substring(0, 8) : "N/A")}
-                    </div>
-                  </div>
-                  <div>
-                    <Text type="secondary">Giống:</Text>
-                    <div className="font-semibold">
-                      {refereeRoundData.registration.koiProfile?.variety
-                        ?.name || "N/A"}
-                    </div>
-                  </div>
-                  <div>
-                    <Text type="secondary">Kích thước:</Text>
-                    <div className="font-semibold">
-                      {refereeRoundData.registration.koiSize
-                        ? `${refereeRoundData.registration.koiSize} cm`
-                        : "N/A"}
-                    </div>
-                  </div>
-                  <div>
-                    <Text type="secondary">Giới tính</Text>
-                    <div className="font-semibold">
-                      {refereeRoundData.registration?.koiProfile?.gender ||
-                        "Không có"}
-                    </div>
-                  </div>
+          {refereeRoundData && !showDetailScoring && (
+            <AntCard className="mt-8 mx-auto max-w-lg shadow-lg rounded-xl overflow-hidden">
+              <div className=" p-4 mb-4">
+                <Title level={4} className=" m-0">
+                  Thông tin cá
+                </Title>
+                <div className="">
+                  Mã:{" "}
+                  {refereeRoundData.registration?.registrationNumber ||
+                    qrResult?.substring(0, 8)}
                 </div>
-              )}
+              </div>
 
               {refereeRoundData.registration?.koiMedia &&
                 refereeRoundData.registration.koiMedia.length > 0 && (
@@ -401,66 +498,152 @@ function ScanQrByReferee({ showId, refereeId }) {
                         .filter((media) => media.mediaType === "Image")
                         .slice(0, 1)
                         .map((media, index) => (
-                          <img
-                            key={index}
-                            src={media.mediaUrl}
-                            alt="Hình ảnh cá"
-                            className="w-full max-w-md rounded-lg shadow-sm"
-                          />
+                          <div key={index} className="relative w-full">
+                            <img
+                              src={media.mediaUrl}
+                              alt="Hình ảnh cá"
+                              className="w-full max-h-[280px] object-cover rounded-lg"
+                            />
+                          </div>
                         ))}
                     </div>
                   </div>
                 )}
 
-              <div className="flex justify-center gap-6 mt-6">
-                <Button
-                  type="primary"
-                  size="large"
-                  icon={<CheckCircleOutlined />}
-                  onClick={() => handleScore(true)}
-                  loading={isScoring}
-                  style={{
-                    height: "52px",
-                    padding: "0 24px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                  }}
-                >
-                  PASS
-                </Button>
-                <Button
-                  danger
-                  size="large"
-                  icon={<CloseCircleOutlined />}
-                  onClick={() => handleScore(false)}
-                  loading={isScoring}
-                  style={{
-                    height: "52px",
-                    padding: "0 24px",
-                    borderRadius: "8px",
-                    fontWeight: "bold",
-                    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                  }}
-                >
-                  FAIL
-                </Button>
-                <Button
-                  size="large"
-                  icon={<ReloadOutlined />}
-                  onClick={handleReset}
-                  style={{
-                    height: "52px",
-                    padding: "0 24px",
-                    borderRadius: "8px",
-                    boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
-                  }}
-                >
-                  Quét lại
-                </Button>
-              </div>
-            </Card>
+              {refereeRoundData.registration && (
+                <div className="p-4">
+                  <div className="grid grid-cols-2 gap-y-6 gap-x-[5rem]">
+                    <div className="flex flex-col">
+                      <Text type="secondary" className="text-sm">
+                        Giống
+                      </Text>
+                      <Text strong className="text-lg">
+                        {refereeRoundData.registration.koiProfile?.variety
+                          ?.name || "N/A"}
+                      </Text>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <Text type="secondary" className="text-sm">
+                        Kích thước
+                      </Text>
+                      <Text strong className="text-lg">
+                        {refereeRoundData.registration.koiSize
+                          ? `${refereeRoundData.registration.koiSize} cm`
+                          : "N/A"}
+                      </Text>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <Text type="secondary" className="text-sm">
+                        Giới tính
+                      </Text>
+                      <Text strong className="text-lg">
+                        {refereeRoundData.registration?.koiProfile?.gender ||
+                          "Không có"}
+                      </Text>
+                    </div>
+
+                    <div className="flex flex-col">
+                      <Text type="secondary" className="text-sm">
+                        Người đăng ký
+                      </Text>
+                      <Text strong className="text-lg">
+                        {refereeRoundData.registration?.registerName || "N/A"}
+                      </Text>
+                    </div>
+                  </div>
+
+                  <div className="flex justify-between gap-6 mt-8">
+                    {selectedRoundType === "Preliminary" ? (
+                      <>
+                        <Button
+                          type="primary"
+                          size="large"
+                          icon={<CheckCircleOutlined />}
+                          onClick={() => handleScore(true)}
+                          loading={isScoring}
+                          style={{
+                            height: "52px",
+                            padding: "0 24px",
+                            borderRadius: "8px",
+                            fontWeight: "bold",
+                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                            width: "100%",
+                          }}
+                        >
+                          PASS
+                        </Button>
+                        <Button
+                          danger
+                          size="large"
+                          icon={<CloseCircleOutlined />}
+                          onClick={() => handleScore(false)}
+                          loading={isScoring}
+                          style={{
+                            height: "52px",
+                            padding: "0 24px",
+                            borderRadius: "8px",
+                            fontWeight: "bold",
+                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                            width: "100%",
+                          }}
+                        >
+                          FAIL
+                        </Button>
+                      </>
+                    ) : (
+                      <Button
+                        type="primary"
+                        size="large"
+                        icon={<PercentageOutlined />}
+                        onClick={() => handleScore(true)}
+                        loading={isScoring}
+                        style={{
+                          height: "52px",
+                          width: "100%",
+                          padding: "0 24px",
+                          borderRadius: "8px",
+                          fontWeight: "bold",
+                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                        }}
+                      >
+                        Chấm điểm chi tiết
+                      </Button>
+                    )}
+                  </div>
+
+                  <Button
+                    className="mt-4 w-full"
+                    icon={<ReloadOutlined />}
+                    onClick={handleReset}
+                  >
+                    Quét lại
+                  </Button>
+                </div>
+              )}
+            </AntCard>
           )}
+        </div>
+      )}
+
+      {showDetailScoring && refereeRoundData && (
+        <div className="mt-8">
+          <Title level={4} className="mb-4">
+            Bảng Chấm Điểm Chi Tiết
+          </Title>
+          <EvaluationScoreSheet
+            criteriaList={criteriaCompetitionRound}
+            registrationId={qrResult}
+            registrationRoundId={refereeRoundData.id}
+            refereeAccountId={refereeAccountId}
+            onScoreSubmitted={handleDetailScoreSubmitted}
+          />
+          <div className="mt-4 flex justify-center">
+            <Button onClick={() => setShowDetailScoring(false)}>
+              Quay lại
+            </Button>
+          </div>
         </div>
       )}
     </div>

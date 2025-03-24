@@ -14,4 +14,14 @@ const postCriteria = (data) => {
 const updateCriteria = (id, data) => {
   return axiosClient.put(`/criteria/${id}`, data);
 };
-export { getCriterias, postCriteria, updateCriteria };
+const getCriteriaCompetitionRound = (competitionCategoryId, roundId) => {
+  return axiosClient.get(
+    `/criteria/get-list-criteria-competition-category/${competitionCategoryId}/${roundId}`
+  );
+};
+export {
+  getCriterias,
+  postCriteria,
+  updateCriteria,
+  getCriteriaCompetitionRound,
+};

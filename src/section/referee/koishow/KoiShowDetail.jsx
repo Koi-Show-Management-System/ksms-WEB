@@ -71,7 +71,7 @@ function KoiShowDetail() {
     {
       key: "scanQrByReferee",
       label: "Quét QR Chấm Điểm",
-      children: <ScanQrByReferee refereeId={refereeId} />,
+      children: <ScanQrByReferee refereeAccountId={refereeId} />,
     },
     {
       key: "competitionRound",

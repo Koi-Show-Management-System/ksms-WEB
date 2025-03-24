@@ -3,6 +3,7 @@ import {
   getCriterias,
   postCriteria,
   updateCriteria as updateCriteriaApi,
+  getCriteriaCompetitionRound,
 } from "../api/criteriaApi";
 
 const useCriteria = create((set, get) => ({
@@ -11,9 +12,16 @@ const useCriteria = create((set, get) => ({
   pageSize: 10,
   totalItems: 0,
   criteriaList: [],
+  criteriaCompetitionRound: [],
   isLoading: false,
   error: null,
   totalPages: 1,
+
+  // Add a function to reset criteria
+  resetCriteriaCompetitionRound: () => {
+    set({ criteriaCompetitionRound: [], error: null });
+  },
+
   fetchCriteria: async (page = 1, size = 10) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
@@ -98,6 +106,58 @@ const useCriteria = create((set, get) => ({
     } catch (error) {
       console.error("API Error:", error);
       return null;
+    }
+  },
+  fetchCriteriaCompetitionRound: async (competitionCategoryId, roundId) => {
+    if (!competitionCategoryId || !roundId) {
+      console.warn(
+        "Missing categoryId or roundId for fetchCriteriaCompetitionRound",
+        { competitionCategoryId, roundId }
+      );
+      return [];
+    }
+
+    try {
+      set({ isLoading: true, error: null });
+      console.log(
+        `Fetching criteria for category ${competitionCategoryId} and round ${roundId}`
+      );
+
+      const res = await getCriteriaCompetitionRound(
+        competitionCategoryId,
+        roundId
+      );
+
+      console.log("Full API Response:", res);
+
+      if (res?.status === 200) {
+        // Handle different response formats
+        let criteriaData = [];
+
+        if (res.data?.data && Array.isArray(res.data.data)) {
+          criteriaData = res.data.data;
+        } else if (Array.isArray(res.data)) {
+          criteriaData = res.data;
+        } else {
+          console.warn("Unexpected criteria response format:", res.data);
+        }
+
+        console.log("Processed criteria data:", criteriaData);
+        set({ criteriaCompetitionRound: criteriaData, isLoading: false });
+        return criteriaData;
+      } else {
+        console.error("Failed to fetch criteria:", res);
+        set({
+          error: res || "Unknown error",
+          isLoading: false,
+          criteriaCompetitionRound: [],
+        });
+        return [];
+      }
+    } catch (error) {
+      console.error("API Error in fetchCriteriaCompetitionRound:", error);
+      set({ error: error, isLoading: false, criteriaCompetitionRound: [] });
+      return [];
     }
   },
 }));

@@ -25,4 +25,19 @@ const getNextRound = (roundId) => {
   return axiosClient.get(`/round/get-next-round/${roundId}`);
 };
 
-export { getRound, getRoundTypeByReferee, updatePublishRound, getNextRound };
+const unpublishRound = async (roundId) => {
+  try {
+    const response = await axiosClient.put(`/rounds/${roundId}/unpublish`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export {
+  getRound,
+  getRoundTypeByReferee,
+  updatePublishRound,
+  getNextRound,
+  unpublishRound,
+};

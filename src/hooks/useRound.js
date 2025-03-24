@@ -111,6 +111,21 @@ const useRound = create((set, get) => ({
       set({ error: error.message || "Unknown error", isLoading: false });
     }
   },
+  publishRound: async (roundId) => {
+    // Implementation of publishRound function
+  },
+  unpublishRound: async (roundId) => {
+    if (!roundId) return;
+
+    try {
+      await getRoundTypeByReferee(roundId);
+      // Update local state if needed
+      return true;
+    } catch (error) {
+      console.error("Error unpublishing round:", error);
+      throw error;
+    }
+  },
 }));
 
 export default useRound;
