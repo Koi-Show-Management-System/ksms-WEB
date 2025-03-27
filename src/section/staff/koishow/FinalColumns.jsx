@@ -189,11 +189,11 @@ export const getFinalColumns = (props) => {
           }
         }
 
-        console.log("Final tank selection:", {
-          tankName,
-          originalTankId: record.tankId,
-          resolvedTankId: tankIdToUse,
-        });
+        // console.log("Final tank selection:", {
+        //   tankName,
+        //   originalTankId: record.tankId,
+        //   resolvedTankId: tankIdToUse,
+        // });
 
         return (
           <div className="relative">

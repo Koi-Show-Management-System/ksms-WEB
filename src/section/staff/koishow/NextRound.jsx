@@ -10,10 +10,13 @@ import {
   ArrowRightOutlined,
   ReloadOutlined,
   CheckCircleOutlined,
+  RightCircleOutlined,
 } from "@ant-design/icons";
 import useRegistration from "../../../hooks/useRegistration";
 import useRound from "../../../hooks/useRound";
 import axios from "axios";
+import useRegistrationRound from "../../../hooks/useRegistrationRound";
+import useRoundResult from "../../../hooks/useRoundResult";
 
 const roundTypeLabels = {
   Preliminary: "Vòng Sơ Khảo",
@@ -49,6 +52,11 @@ function NextRound({
   // Lấy cả nextRound state từ hook useRound
   const { fetchNextRound, nextRound } = useRound();
   const actionInProgressRef = useRef(false);
+
+  const { createNextRoundRegistrations, isLoading: registrationLoading } =
+    useRegistrationRound();
+  const { createRoundResultsForAll, isLoading: resultLoading } =
+    useRoundResult();
 
   // Lọc danh sách cá đạt yêu cầu
   const passingFish = useMemo(() => {
@@ -226,298 +234,209 @@ function NextRound({
     setLastPrefetch(null);
   }, []);
 
-  // Chuyển cá sang vòng tiếp theo
-  const moveToNextRound = useCallback(async () => {
-    if (!selectedSubRound || actionInProgressRef.current) return false;
+  // Điều chỉnh isCurrentRoundMoved chỉ dựa trên state từ component
+  const isCurrentRoundMoved = useMemo(() => {
+    // Kiểm tra từ processedRounds (state đã có sẵn) thay vì localStorage
+    return selectedSubRound && processedRounds.includes(selectedSubRound);
+  }, [selectedSubRound, processedRounds]);
 
-    actionInProgressRef.current = true;
+  // Thêm biến để xác định có vòng tiếp theo hay không
+  const nextRoundType = useMemo(() => {
+    const currentIndex = roundTypes.findIndex(
+      (type) => type === selectedRoundType
+    );
+    if (currentIndex >= 0 && currentIndex < roundTypes.length - 1) {
+      return roundTypes[currentIndex + 1];
+    }
+    return null;
+  }, [roundTypes, selectedRoundType]);
+
+  // Thêm biến kiểm tra xem có phải vòng cuối cùng không
+  const noNextRound = useMemo(() => {
+    const currentIndex = roundTypes.findIndex(
+      (type) => type === selectedRoundType
+    );
+    return currentIndex === roundTypes.length - 1; // Trả về true nếu đây là vòng cuối cùng
+  }, [roundTypes, selectedRoundType]);
+
+  // Kiểm tra và cập nhật trạng thái ban đầu từ localStorage
+  useEffect(() => {
+    if (selectedSubRound) {
+      // Kiểm tra từ localStorage
+      const moved = isCurrentRoundMoved;
+      setFishAlreadyMoved(moved);
+    }
+  }, [selectedSubRound, isCurrentRoundMoved]);
+
+  // Cập nhật hàm handleMoveToNextRound để thực sự chuyển cá
+  const handleMoveToNextRound = async () => {
+    if (isCurrentRoundMoved) return;
+
+    // Kiểm tra để tránh xử lý đồng thời
+    if (actionInProgressRef.current) {
+      notification.info({
+        message: "Đang xử lý",
+        description:
+          "Hệ thống đang xử lý yêu cầu của bạn, vui lòng chờ trong giây lát.",
+      });
+      return;
+    }
+
     setIsMovingToNextRound(true);
-    setProcessingError(null);
+    actionInProgressRef.current = true;
 
     try {
-      // 1. Lấy danh sách cá đạt yêu cầu
-      const passingRegistrationIds = passingFish.map(
-        (item) => item.registration?.id
+      // Gọi API để lấy thông tin vòng tiếp theo nếu chưa có
+      let targetRoundId = cachedNextRoundId || hasNextRoundId;
+
+      if (!targetRoundId) {
+        const result = await fetchNextRound(selectedSubRound);
+        targetRoundId = result?.data?.nextRoundId;
+      }
+
+      if (!targetRoundId) {
+        throw new Error("Không tìm thấy thông tin vòng tiếp theo.");
+      }
+
+      // Lấy danh sách ID của các cá đạt yêu cầu
+      const passingFishIds = passingFish
+        .map((fish) => {
+          // In ra console để xem cấu trúc thực tế của đối tượng cá
+          console.log("Fish object:", fish);
+
+          // Thử các trường ID khác nhau có thể có
+          const id =
+            fish.id ||
+            fish._id ||
+            fish.registrationId ||
+            fish.roundRegistrationId;
+
+          // In ra ID để kiểm tra
+          console.log("Using ID:", id);
+
+          return id;
+        })
+        .filter((id) => id); // Lọc bỏ các ID null/undefined
+
+      // Sử dụng assignToRound thay vì createNextRoundRegistrations
+      const registrationResult = await assignToRound(
+        targetRoundId,
+        passingFishIds
       );
 
-      if (passingRegistrationIds.length === 0) {
-        notification.warning({
-          message: "Thông báo",
-          description:
-            "Không có cá nào đạt yêu cầu để chuyển sang vòng tiếp theo.",
-        });
-        return false;
+      if (!registrationResult || registrationResult.statusCode !== 200) {
+        throw new Error(
+          registrationResult?.message ||
+            "Không thể chuyển cá sang vòng tiếp theo."
+        );
       }
 
-      // 2. Đảm bảo đã fetch thông tin vòng tiếp theo
-      await fetchNextRound(selectedSubRound);
-
-      // 3. Lấy nextRoundId từ nextRound state
-      const nextRoundId = nextRound?.data?.nextRoundId;
-
-      console.log("Next Round Info:", {
-        currentRound: selectedSubRound,
-        nextRoundId: nextRoundId,
-        nextRoundData: nextRound?.data,
-        passing: passingRegistrationIds.length,
+      // Cập nhật UI và thông báo thành công
+      notification.success({
+        message: "Thành công",
+        description: `Đã chuyển ${passingFish.length} cá sang vòng tiếp theo`,
       });
 
-      if (!nextRoundId) {
-        notification.error({
-          message: "Lỗi",
-          description:
-            "Không tìm thấy vòng tiếp theo. Vui lòng kiểm tra lại cấu hình vòng thi.",
-        });
-        console.error("Missing nextRoundId:", nextRound);
-        throw new Error("Không tìm thấy vòng tiếp theo");
-      }
-
-      // 4. Chuyển cá sang vòng tiếp theo
-      const result = await assignToRound(nextRoundId, passingRegistrationIds);
-
-      if (!result || !result.success) {
-        const errorMsg =
-          result?.error?.response?.data?.message ||
-          result?.message ||
-          "Không thể chuyển cá sang vòng tiếp theo.";
-        throw new Error(errorMsg);
-      }
-
-      // 5. Cập nhật danh sách vòng đã xử lý
+      // Khi thành công, cập nhật state để đánh dấu rằng vòng này đã được xử lý
       setProcessedRounds((prev) => {
-        if (
-          !prev.includes(selectedSubRound) &&
-          !prev.includes(selectedSubRound.toString())
-        ) {
-          return [...prev, selectedSubRound.toString()];
+        if (!prev.includes(selectedSubRound)) {
+          return [...prev, selectedSubRound];
         }
         return prev;
       });
 
-      // 6. Thông báo thành công
-      notification.success({
-        message: "Thành công",
-        description: `Đã chuyển ${passingRegistrationIds.length} cá sang vòng tiếp theo.`,
-      });
+      setFishAlreadyMoved(true);
 
-      // 7. Cập nhật lại dữ liệu
-      await fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
-
-      // 8. Thêm một setState rỗng để force re-render UI
-      setTimeout(() => {
-        // Force re-render để đảm bảo UI cập nhật
-        setProcessingError(null);
-      }, 100);
-
-      return true;
+      // Làm mới dữ liệu của vòng hiện tại
+      fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
     } catch (error) {
       console.error("Error moving fish to next round:", error);
+      setProcessingError(error.message);
 
-      // Get error message from different possible sources
-      let errorMessage = "Không thể chuyển cá sang vòng tiếp theo.";
-
-      if (error?.response?.data?.message) {
-        // Direct from Axios response data
-        errorMessage = error.response.data.message;
-      } else if (
-        error?.name === "AxiosError" &&
-        error?.response?.status === 400
-      ) {
-        // Special handling for Axios 400 errors
-        errorMessage = error.response.data.message || errorMessage;
-      } else if (error?.message) {
-        // From error object message property
-        errorMessage = error.message;
-      }
-
-      // Modify the notification handler
-      if (errorMessage.includes("đã được phân vào vòng này")) {
-        notification.info({
-          message: "Thông báo",
-          description: "Một số cá đã được chuyển sang vòng tiếp theo trước đó.",
-        });
-
-        // Set state to indicate fish have been moved
-        setFishAlreadyMoved(true);
-      } else {
-        // Show error notification
-        notification.error({
-          message: "Lỗi",
-          description: errorMessage,
-        });
-      }
-
-      // Reset cached states
-      setCachedNextRoundId(null);
-      setLastPrefetch(null);
-
-      return false;
+      notification.error({
+        message: "Lỗi",
+        description: error.message,
+      });
     } finally {
       setIsMovingToNextRound(false);
       actionInProgressRef.current = false;
     }
-  }, [
-    selectedSubRound,
-    selectedCategory,
-    passingFish,
-    assignToRound,
-    fetchNextRound,
-    nextRound,
-    fetchRegistrationRound,
-    currentPage,
-    pageSize,
-    cachedNextRoundId,
-  ]);
+  };
 
-  // Xử lý khi click vào nút chuyển cá
-  const handleMoveToNextRound = useCallback(() => {
-    if (actionInProgressRef.current) return;
-
-    if (!selectedSubRound) {
-      notification.warning({
-        message: "Thông báo",
-        description: "Vui lòng chọn vòng hiện tại.",
-      });
-      return;
-    }
-
-    if (passingFish.length === 0) {
-      notification.warning({
-        message: "Thông báo",
-        description:
-          "Không có cá nào đạt yêu cầu để chuyển sang vòng tiếp theo.",
-      });
-      return;
-    }
-
-    // Kiểm tra trước xem đã có nextRoundId chưa
-    const hasNextRoundId = nextRound?.data?.nextRoundId;
-
-    if (!hasNextRoundId) {
-      notification.info({
-        message: "Đang kiểm tra",
-        description: "Đang tìm vòng tiếp theo, vui lòng đợi trong giây lát...",
-      });
-
-      // Thử fetch lại thông tin vòng tiếp theo
-      fetchNextRound(selectedSubRound).then(() => {
-        // Kiểm tra lại sau khi fetch
-        if (nextRound?.data?.nextRoundId) {
-          // Nếu có nextRoundId, hiển thị hộp thoại xác nhận
-          showConfirmDialog();
-        } else {
-          notification.error({
-            message: "Lỗi",
-            description:
-              "Không tìm thấy vòng tiếp theo. Vui lòng kiểm tra lại cấu hình vòng thi.",
-          });
-        }
-      });
-    } else {
-      // Nếu đã có nextRoundId, hiển thị hộp thoại xác nhận ngay
-      showConfirmDialog();
-    }
-
-    function showConfirmDialog() {
-      Modal.confirm({
-        title: "Xác nhận chuyển cá",
-        content: `Bạn có chắc chắn muốn chuyển ${passingFish.length} cá sang vòng tiếp theo?`,
-        okText: "Chuyển",
-        cancelText: "Hủy",
-        onOk: moveToNextRound,
-      });
-    }
-  }, [
-    selectedSubRound,
-    passingFish,
-    moveToNextRound,
-    nextRound,
-    fetchNextRound,
-  ]);
-
-  // Hiển thị UI
-  return (
-    <div className="w-full md:w-1/4 self-end">
-      {!selectedSubRound ? null : !registrationRound || // Không hiển thị gì khi chưa chọn vòng
-        registrationRound.length === 0 ? (
-        // Khi không có dữ liệu
-        <Tooltip title="Không có cá nào trong vòng thi này">
-          <Button
-            type="default"
-            disabled
-            style={{ backgroundColor: "#f0f0f0", color: "#595959" }}
-          >
-            Không có dữ liệu cá
-          </Button>
-        </Tooltip>
-      ) : isCurrentRoundProcessed ? (
-        // Đã chuyển cá sang vòng tiếp theo
+  // Quyết định nội dung hiển thị dựa trên trạng thái
+  let buttonContent;
+  if (fishAlreadyMoved) {
+    buttonContent = (
+      <Tooltip title="Đã chuyển cá sang vòng">
         <Button
           type="default"
+          icon={<CheckCircleOutlined style={{ color: "white" }} />}
           disabled={true}
-          icon={<CheckCircleOutlined />}
           style={{
-            backgroundColor: "#f6ffed",
-            color: "#52c41a",
-            borderColor: "#b7eb8f",
+            backgroundColor: "#d9d9d9",
+            color: "white",
+            borderColor: "#d9d9d9",
+            width: "100%",
           }}
         >
-          Đã chuyển cá sang vòng tiếp theo
+          Đã chuyển {passingFish.length} cá sang vòng
         </Button>
-      ) : passingFish.length > 0 ? (
-        // Có cá đạt yêu cầu -> Hiển thị nút chuyển
-        fishAlreadyMoved ? (
-          // If fish have already been moved, show a disabled success button
-          <Button
-            type="default"
-            disabled={true}
-            icon={<CheckCircleOutlined />}
-            style={{
-              backgroundColor: "#f6ffed",
-              color: "#52c41a",
-              borderColor: "#b7eb8f",
-            }}
-          >
-            Đã chuyển cá sang vòng
-          </Button>
-        ) : (
-          // Otherwise show the normal button
-          <Button
-            type="primary"
-            onClick={handleMoveToNextRound}
-            loading={isMovingToNextRound}
-            disabled={isMovingToNextRound}
-            icon={<ArrowRightOutlined />}
-            style={{ backgroundColor: "#52c41a" }}
-          >
-            Chuyển {passingFish.length} cá sang vòng tiếp theo
-          </Button>
-        )
-      ) : !hasAnyResults ? (
-        // Có cá nhưng chưa có kết quả nào
-        <Tooltip title="Cần tạo kết quả cho các cá trước">
-          <Button
-            type="default"
-            disabled
-            style={{ backgroundColor: "#f0f0f0", color: "#595959" }}
-          >
-            Chưa có kết quả đánh giá
-          </Button>
-        </Tooltip>
-      ) : (
-        // Có kết quả nhưng không có cá nào đạt
-        <Tooltip title="Không có cá đạt yêu cầu để chuyển sang vòng tiếp theo">
-          <Button
-            type="default"
-            disabled
-            style={{ backgroundColor: "#f0f0f0", color: "#595959" }}
-          >
-            Không có cá đạt yêu cầu
-          </Button>
-        </Tooltip>
-      )}
-    </div>
-  );
+      </Tooltip>
+    );
+  } else if (noNextRound) {
+    buttonContent = (
+      <Tooltip title="Đây là vòng cuối cùng">
+        <Button
+          type="default"
+          icon={<RightCircleOutlined style={{ color: "white" }} />}
+          disabled={true}
+          style={{
+            backgroundColor: "#d9d9d9",
+            color: "white",
+            borderColor: "#d9d9d9",
+            width: "100%",
+          }}
+        >
+          Không có vòng tiếp theo
+        </Button>
+      </Tooltip>
+    );
+  } else if (isCurrentRoundProcessed) {
+    buttonContent = (
+      <Button
+        type="default"
+        icon={<CheckCircleOutlined style={{ color: "white" }} />}
+        disabled={true}
+        style={{
+          backgroundColor: "#d9d9d9",
+          color: "white",
+          borderColor: "#d9d9d9",
+          width: "100%",
+        }}
+      >
+        Đã chuyển {passingFish.length} cá sang vòng
+      </Button>
+    );
+  } else {
+    buttonContent = (
+      <Button
+        icon={<RightCircleOutlined style={{ color: "white" }} />}
+        onClick={handleMoveToNextRound}
+        loading={isMovingToNextRound}
+        disabled={isMovingToNextRound || !nextRoundType}
+        style={{
+          backgroundColor: "#52c41a",
+          color: "white",
+          borderColor: "#52c41a",
+          width: "100%",
+        }}
+      >
+        Chuyển {passingFish.length} cá đạt sang vòng tiếp theo
+      </Button>
+    );
+  }
+
+  return buttonContent;
 }
 
 export default NextRound;

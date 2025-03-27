@@ -26,6 +26,7 @@ import {
   Divider,
   Skeleton,
   Collapse,
+  message,
 } from "antd";
 import {
   EyeOutlined,
@@ -35,6 +36,7 @@ import {
   QrcodeOutlined,
   PercentageOutlined,
   ReloadOutlined,
+  CheckCircleOutlined,
 } from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
@@ -109,7 +111,7 @@ function CompetitionRound({ showId }) {
   }, [registrationRound, selectedSubRound]);
 
   // Update the logic to hide the button only when ALL items are published
-  const isRoundPublished = useMemo(() => {
+  const isRoundPublished = useCallback(() => {
     if (
       !selectedSubRound ||
       !Array.isArray(registrationRound) ||
@@ -139,8 +141,11 @@ function CompetitionRound({ showId }) {
   } = useScore();
 
   // Thêm hook useRoundResult
-  const { createRoundResultFinalize, isLoading: roundResultLoading } =
-    useRoundResult();
+  const {
+    createRoundResultFinalize,
+    updateRoundResult,
+    isLoading: roundResultLoading,
+  } = useRoundResult();
 
   // Add a check to see if all entries already have scores
   const allEntriesHaveScores = useMemo(() => {
@@ -157,6 +162,30 @@ function CompetitionRound({ showId }) {
         item.roundResults[0]?.totalScore !== null
     );
   }, [registrationRound]);
+
+  // Add state to track if results are published
+  const [areResultsPublished, setAreResultsPublished] = useState(false);
+
+  // Add isPublishingScores state
+  const [isPublishingScores, setIsPublishingScores] = useState(false);
+
+  // Thay vì sử dụng useCallback với publishedRounds, chỉ kiểm tra từ API
+  const isRoundScorePublished = useCallback(
+    (roundId) => {
+      if (!Array.isArray(registrationRound) || registrationRound.length === 0) {
+        return false;
+      }
+
+      // Kiểm tra từ dữ liệu API thay vì localStorage
+      return registrationRound.every(
+        (item) =>
+          item.roundResults &&
+          item.roundResults.length > 0 &&
+          item.roundResults[0]?.isPublic === true
+      );
+    },
+    [registrationRound]
+  );
 
   // Safe API wrappers to prevent undefined calls
   const fetchRegistrationRound = useCallback(
@@ -238,7 +267,7 @@ function CompetitionRound({ showId }) {
     [selectedCategory, fetchRound, resetCriteriaCompetitionRound]
   );
 
-  // Handle sub-round selection
+  // Sửa hàm handleSubRoundChange để kiểm tra localStorage trước
   const handleSubRoundChange = useCallback(
     (value) => {
       // Validate the value
@@ -251,10 +280,35 @@ function CompetitionRound({ showId }) {
       if (value !== selectedSubRound) {
         setSelectedSubRound(value);
 
+        // Kiểm tra ngay trong localStorage xem vòng này đã công khai điểm chưa
+        if (value && isRoundScorePublished(value)) {
+          // Nếu đã công khai rồi, cập nhật state ngay lập tức
+          setAreResultsPublished(true);
+        } else {
+          // Chưa công khai thì mặc định là false
+          setAreResultsPublished(false);
+        }
+
         // Only fetch if we have a valid value
         if (value && typeof value === "string" && value !== "undefined") {
           // Fetch registration data
-          fetchRegistrationRound(value, 1, pageSize);
+          fetchRegistrationRound(value, 1, pageSize).then((data) => {
+            if (data && Array.isArray(data)) {
+              const allScoresPublished = data.every(
+                (item) =>
+                  item.roundResults &&
+                  item.roundResults.length > 0 &&
+                  item.roundResults[0]?.isPublic === true
+              );
+
+              setAreResultsPublished(allScoresPublished);
+
+              // Cập nhật localStorage nếu API cho thấy đã công khai
+              if (allScoresPublished) {
+                // savePublishedRound(value);
+              }
+            }
+          });
 
           // Only fetch criteria if we're in Evaluation round and have a valid category
           if (
@@ -442,7 +496,7 @@ function CompetitionRound({ showId }) {
         handleViewDetails: showCategoryDetail,
         loadingImages,
         allTanksAssigned,
-        isRoundPublished,
+        isRoundPublished: isRoundScorePublished,
         assigningTank,
         competitionRoundTanks,
         handleTankChange: handleTankAssignment,
@@ -455,7 +509,7 @@ function CompetitionRound({ showId }) {
         handleViewDetails: showCategoryDetail,
         loadingImages,
         allTanksAssigned,
-        isRoundPublished,
+        isRoundPublished: isRoundScorePublished,
         assigningTank,
         competitionRoundTanks,
         handleTankChange: handleTankAssignment,
@@ -627,7 +681,7 @@ function CompetitionRound({ showId }) {
     showCategoryDetail,
     loadingImages,
     allTanksAssigned,
-    isRoundPublished,
+    isRoundScorePublished,
     assigningTank,
     competitionRoundTanks,
     handleTankAssignment,
@@ -780,8 +834,6 @@ function CompetitionRound({ showId }) {
 
   // Create a component to display criteria above the table
   const CriteriaDisplay = useCallback(() => {
-    console.log("Rendering CriteriaDisplay with:", criteriaCompetitionRound);
-
     return (
       <div className="mb-4">
         {/* <Typography.Title level={5} className="mb-3">
@@ -809,10 +861,7 @@ function CompetitionRound({ showId }) {
                 <Card size="small" className="h-full">
                   <div className="flex items-center justify-between">
                     <Typography.Text strong>{name}</Typography.Text>
-                    <Tag color="blue">
-                      <PercentageOutlined className="mr-1" />
-                      {(weight * 100).toFixed(0)}%
-                    </Tag>
+                    <Tag color="blue">{(weight * 100).toFixed(0)}%</Tag>
                   </div>
                   {description && (
                     <Typography.Text
@@ -1048,9 +1097,63 @@ function CompetitionRound({ showId }) {
     );
   };
 
+  // Add effect to check published state when registrationRound changes
+  useEffect(() => {
+    if (registrationRound && registrationRound.length > 0) {
+      // Check if all results have the isPublic flag set to true
+      const allPublished = registrationRound.every(
+        (item) =>
+          item.roundResults &&
+          item.roundResults.length > 0 &&
+          item.roundResults[0]?.isPublic === true
+      );
+
+      // Update the published state based on the data
+      setAreResultsPublished(allPublished);
+    }
+  }, [registrationRound]);
+
   // Thay đổi cách sử dụng getColumnsForRoundType
   // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
   const columns = getColumnsForRoundType;
+
+  // Cập nhật hàm công khai điểm để sử dụng state
+  const handlePublishRoundResults = useCallback(async () => {
+    if (!selectedSubRound) return;
+
+    setIsPublishingScores(true);
+    try {
+      const result = await updateRoundResult(selectedSubRound);
+
+      if (result.statusCode === 200) {
+        notification.success({
+          message: "Thành công",
+          description: "Đã công khai điểm vòng thi thành công",
+        });
+
+        // Cập nhật dữ liệu từ API để cập nhật UI
+        fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: `Không thể công khai điểm: ${result?.message || "Lỗi không xác định"}`,
+        });
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: `Không thể công khai điểm: ${error?.message || "Lỗi không xác định"}`,
+      });
+    } finally {
+      setIsPublishingScores(false);
+    }
+  }, [
+    selectedSubRound,
+    updateRoundResult,
+    fetchRegistrationRound,
+    currentPage,
+    pageSize,
+  ]);
 
   return (
     <Card className="overflow-hidden">
@@ -1120,14 +1223,13 @@ function CompetitionRound({ showId }) {
 
           {/* Only render the button container if there's at least one button to show */}
           {selectedSubRound &&
-            (!isRoundPublished ||
+            (!isRoundPublished() ||
             (selectedRoundType &&
-              (selectedRoundType === "Evaluation" ||
-                selectedRoundType === "Final") &&
-              isRoundPublished &&
-              !allEntriesHaveScores) ? (
+              isRoundPublished() &&
+              (!allEntriesHaveScores ||
+                (allEntriesHaveScores && !areResultsPublished))) ? (
               <div className="w-full md:w-1/4">
-                {!isRoundPublished && (
+                {!isRoundPublished() && (
                   <>
                     <Button
                       type="primary"
@@ -1153,11 +1255,11 @@ function CompetitionRound({ showId }) {
                   </>
                 )}
 
-                {/* Only show the Create Final Score button for published Evaluation/Final rounds */}
+                {/* Show Create Final Score button when needed */}
                 {selectedRoundType &&
                   (selectedRoundType === "Evaluation" ||
                     selectedRoundType === "Final") &&
-                  isRoundPublished &&
+                  isRoundPublished() &&
                   !allEntriesHaveScores && (
                     <Button
                       type="primary"
@@ -1170,13 +1272,31 @@ function CompetitionRound({ showId }) {
                       Tạo Điểm Cuối Cùng
                     </Button>
                   )}
+
+                {/* New button for publishing round results - now showing for all round types */}
+                {selectedRoundType &&
+                  isRoundPublished() &&
+                  allEntriesHaveScores &&
+                  !areResultsPublished && (
+                    <Button
+                      type="primary"
+                      size="middle"
+                      className="w-full mt-2"
+                      onClick={handlePublishRoundResults}
+                      loading={isPublishingScores}
+                      icon={<CheckCircleOutlined />}
+                      disabled={isPublishingScores}
+                    >
+                      Công Khai Điểm
+                    </Button>
+                  )}
               </div>
             ) : null)}
 
           {/* Adjust NextRound component to take more space when buttons are hidden */}
           {selectedSubRound && (
             <div
-              className={`w-full ${!isRoundPublished || (selectedRoundType && (selectedRoundType === "Evaluation" || selectedRoundType === "Final") && isRoundPublished && !allEntriesHaveScores) ? "md:w-1/4" : "md:w-1/3"}`}
+              className={`w-full ${!isRoundPublished() || (selectedRoundType && isRoundPublished() && !allEntriesHaveScores) ? "md:w-1/4" : "md:w-1/3"}`}
             >
               <NextRound
                 registrationRound={registrationRound}
@@ -1207,7 +1327,15 @@ function CompetitionRound({ showId }) {
         </>
       )}
 
-      <div className="overflow-auto">
+      <div
+        className="overflow-auto"
+        style={{
+          minHeight:
+            selectedSubRound && displayData.length === 0 && !registrationLoading
+              ? "auto"
+              : "300px",
+        }}
+      >
         <Table
           columns={columns}
           dataSource={displayData}
@@ -1223,6 +1351,15 @@ function CompetitionRound({ showId }) {
           loading={registrationLoading}
           scroll={{ x: "max-content" }}
           size="small"
+          locale={{
+            emptyText: (
+              <Empty
+                description="Không có dữ liệu"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "24px 0" }}
+              />
+            ),
+          }}
         />
       </div>
 

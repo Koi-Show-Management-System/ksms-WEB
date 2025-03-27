@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Collapse, Timeline, Card, Image, Tabs, Modal, message } from "antd";
 import dayjs from "dayjs";
 import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
@@ -20,7 +20,7 @@ function KoiShowDetail() {
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const items = React.useMemo(() => {
+  const items = useMemo(() => {
     if (!koiShowDetail?.data) return [];
 
     const showRule = koiShowDetail?.data?.showRules;
