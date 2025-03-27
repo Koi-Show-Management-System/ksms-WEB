@@ -35,11 +35,10 @@ export const getEvaluationColumns = (props) => {
   const columns = [
     {
       title: "Top",
-      dataIndex: "index",
-      key: "index",
+      dataIndex: ["registration", "rank"],
       width: 60,
-      render: (index) => (
-        <span style={{ color: "blue", fontWeight: "bold" }}>{`#${index}`}</span>
+      render: (rank) => (
+        <span style={{ color: "blue", fontWeight: "bold" }}>{`#${rank}`}</span>
       ),
     },
     {
@@ -217,7 +216,6 @@ export const getEvaluationColumns = (props) => {
                 </Option>
               ))}
             </Select>
-           
           </div>
         );
       },

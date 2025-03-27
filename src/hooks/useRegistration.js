@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { notification } from "antd";
 import {
   getRegistration,
   updateStatusRegistration,
@@ -95,14 +96,51 @@ const useRegistration = create((set, get) => ({
         const { currentPage, pageSize, showIds } = get();
         await get().fetchRegistration(currentPage, pageSize, showIds);
         set({ assignLoading: false, selectedRegistrations: [] });
+
+        notification.success({
+          message: "Thành công",
+          description:
+            response.data?.message ||
+            "Đã chuyển cá sang vòng tiếp theo thành công",
+        });
+
         return { success: true, data: response.data };
       } else {
         set({ error: response, assignLoading: false });
+
+        notification.error({
+          message: "Lỗi",
+          description:
+            response?.data?.message ||
+            "Không thể chuyển cá sang vòng tiếp theo",
+        });
+
         return { success: false, error: response };
       }
     } catch (error) {
       console.error("Error assigning to tank:", error);
       set({ error, assignLoading: false });
+
+      let errorMsg = "Không thể chuyển cá sang vòng tiếp theo";
+
+      if (error.response?.data?.message) {
+        errorMsg = error.response.data.message;
+      } else if (error.message) {
+        errorMsg = error.message;
+      }
+
+      if (errorMsg.includes("đã được phân vào vòng này")) {
+        notification.warning({
+          message: "Thông báo",
+          description: errorMsg,
+        });
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: errorMsg,
+        });
+      }
+
       return { success: false, error };
     }
   },

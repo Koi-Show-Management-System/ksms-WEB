@@ -304,59 +304,40 @@ function NextRound({
           // In ra console để xem cấu trúc thực tế của đối tượng cá
           console.log("Fish object:", fish);
 
-          // Thử các trường ID khác nhau có thể có
-          const id =
-            fish.id ||
-            fish._id ||
-            fish.registrationId ||
-            fish.roundRegistrationId;
+          // Lấy ID từ đối tượng registration
+          const id = fish.registration?.id;
 
           // In ra ID để kiểm tra
-          console.log("Using ID:", id);
+          console.log("Using registration ID:", id);
 
           return id;
         })
         .filter((id) => id); // Lọc bỏ các ID null/undefined
 
-      // Sử dụng assignToRound thay vì createNextRoundRegistrations
+      // Call assignToRound (which now handles notifications internally)
       const registrationResult = await assignToRound(
         targetRoundId,
         passingFishIds
       );
 
-      if (!registrationResult || registrationResult.statusCode !== 200) {
-        throw new Error(
-          registrationResult?.message ||
-            "Không thể chuyển cá sang vòng tiếp theo."
-        );
+      // If successful, update state
+      if (registrationResult && registrationResult.success) {
+        // Update state to mark this round as processed
+        setProcessedRounds((prev) => {
+          if (!prev.includes(selectedSubRound)) {
+            return [...prev, selectedSubRound];
+          }
+          return prev;
+        });
+
+        setFishAlreadyMoved(true);
+
+        // Refresh data
+        fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
       }
-
-      // Cập nhật UI và thông báo thành công
-      notification.success({
-        message: "Thành công",
-        description: `Đã chuyển ${passingFish.length} cá sang vòng tiếp theo`,
-      });
-
-      // Khi thành công, cập nhật state để đánh dấu rằng vòng này đã được xử lý
-      setProcessedRounds((prev) => {
-        if (!prev.includes(selectedSubRound)) {
-          return [...prev, selectedSubRound];
-        }
-        return prev;
-      });
-
-      setFishAlreadyMoved(true);
-
-      // Làm mới dữ liệu của vòng hiện tại
-      fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
     } catch (error) {
       console.error("Error moving fish to next round:", error);
       setProcessingError(error.message);
-
-      notification.error({
-        message: "Lỗi",
-        description: error.message,
-      });
     } finally {
       setIsMovingToNextRound(false);
       actionInProgressRef.current = false;
@@ -420,7 +401,6 @@ function NextRound({
   } else {
     buttonContent = (
       <Button
-        icon={<RightCircleOutlined style={{ color: "white" }} />}
         onClick={handleMoveToNextRound}
         loading={isMovingToNextRound}
         disabled={isMovingToNextRound || !nextRoundType}
@@ -431,7 +411,7 @@ function NextRound({
           width: "100%",
         }}
       >
-        Chuyển {passingFish.length} cá đạt sang vòng tiếp theo
+        Chuyển {passingFish.length} cá sang vòng tiếp theo
       </Button>
     );
   }

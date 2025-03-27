@@ -520,12 +520,12 @@ function CompetitionRound({ showId }) {
     const baseColumns = [
       {
         title: "Top",
-        dataIndex: "index",
+        dataIndex: ["registration", "rank"],
         width: 60,
-        render: (index) => (
+        render: (rank) => (
           <span
             style={{ color: "blue", fontWeight: "bold" }}
-          >{`#${index}`}</span>
+          >{`#${rank}`}</span>
         ),
       },
       {
@@ -1228,7 +1228,7 @@ function CompetitionRound({ showId }) {
               isRoundPublished() &&
               (!allEntriesHaveScores ||
                 (allEntriesHaveScores && !areResultsPublished))) ? (
-              <div className="w-full md:w-1/4">
+              <div>
                 {!isRoundPublished() && (
                   <>
                     <Button

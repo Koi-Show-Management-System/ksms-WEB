@@ -35,6 +35,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   const [scannerEnabled, setScannerEnabled] = useState(true);
   const [showScanner, setShowScanner] = useState(false);
   const [isScoring, setIsScoring] = useState(false);
+  const [postSubmitLoading, setPostSubmitLoading] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [showDetailScoring, setShowDetailScoring] = useState(false);
 
@@ -205,12 +206,34 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setSelectedRoundType(null);
     setSelectedSubRound(null);
     setSubRounds([]);
+    resetRefereeRoundData();
+    setQrResult(null);
+    setScannerEnabled(true);
+    setShowScanner(false);
+    setScanError(null);
+    setShowDetailScoring(false);
   };
 
   const handleRoundTypeChange = (value) => {
     setSelectedRoundType(value);
     setSelectedSubRound(null);
     setSubRounds([]);
+    resetRefereeRoundData();
+    setQrResult(null);
+    setScannerEnabled(true);
+    setShowScanner(false);
+    setScanError(null);
+    setShowDetailScoring(false);
+  };
+
+  const handleSubRoundChange = (value) => {
+    setSelectedSubRound(value);
+    resetRefereeRoundData();
+    setQrResult(null);
+    setScannerEnabled(true);
+    setShowScanner(false);
+    setScanError(null);
+    setShowDetailScoring(false);
   };
 
   const handleScore = async (isPass) => {
@@ -230,7 +253,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
       if (
         !registrationId ||
         !selectedSubRound ||
-        !refereeAccountId||
+        !refereeAccountId ||
         !registrationRoundId
       ) {
         console.error("Lỗi: Thiếu thông tin cần thiết để chấm điểm");
@@ -240,16 +263,24 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         };
       }
 
-      const result = await createScore(refereeAccountId, registrationRoundId, isPass);
+      const result = await createScore(
+        refereeAccountId,
+        registrationRoundId,
+        isPass
+      );
 
       console.log("API Response in handleScore:", result);
 
       if (result?.success) {
+        setIsScoring(false);
+        setPostSubmitLoading(true);
+
         setTimeout(() => {
           resetRefereeRoundData();
           setQrResult(null);
           setScannerEnabled(true);
           setShowScanner(true);
+          setPostSubmitLoading(false);
         }, 2000);
       }
 
@@ -263,12 +294,14 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   };
 
   const handleDetailScoreSubmitted = (scoreData) => {
+    setPostSubmitLoading(true);
     setTimeout(() => {
       setShowDetailScoring(false);
       resetRefereeRoundData();
       setQrResult(null);
       setScannerEnabled(true);
       setShowScanner(true);
+      setPostSubmitLoading(false);
     }, 2000);
   };
 
@@ -371,7 +404,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
               <span className="block text-lg font-medium">Vòng Phụ:</span>
               <Select
                 value={selectedSubRound}
-                onChange={(value) => setSelectedSubRound(value)}
+                onChange={handleSubRoundChange}
                 style={{ width: "100%" }}
                 className="border rounded-md"
                 placeholder="Chọn vòng nhỏ"
@@ -555,7 +588,17 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                   </div>
 
                   <div className="flex justify-between gap-6 mt-8">
-                    {selectedRoundType === "Preliminary" ? (
+                    {postSubmitLoading ? (
+                      <div className="w-full text-center py-4">
+                        <Spin
+                          tip="Đang lưu kết quả chấm điểm..."
+                          size="large"
+                        />
+                        <div className="mt-3 text-green-600 font-medium">
+                          Đã chấm điểm thành công!
+                        </div>
+                      </div>
+                    ) : selectedRoundType === "Preliminary" ? (
                       <>
                         <Button
                           type="primary"
@@ -613,13 +656,15 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                     )}
                   </div>
 
-                  <Button
-                    className="mt-4 w-full"
-                    icon={<ReloadOutlined />}
-                    onClick={handleReset}
-                  >
-                    Quét lại
-                  </Button>
+                  {!postSubmitLoading && (
+                    <Button
+                      className="mt-4 w-full"
+                      icon={<ReloadOutlined />}
+                      onClick={handleReset}
+                    >
+                      Quét lại
+                    </Button>
+                  )}
                 </div>
               )}
             </AntCard>
@@ -629,21 +674,29 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
       {showDetailScoring && refereeRoundData && (
         <div className="mt-8">
-          <Title level={4} className="mb-4">
-            Bảng Chấm Điểm Chi Tiết
-          </Title>
-          <EvaluationScoreSheet
-            criteriaList={criteriaCompetitionRound}
-            registrationId={qrResult}
-            registrationRoundId={refereeRoundData.id}
-            refereeAccountId={refereeAccountId}
-            onScoreSubmitted={handleDetailScoreSubmitted}
-          />
-          <div className="mt-4 flex justify-center">
-            <Button onClick={() => setShowDetailScoring(false)}>
-              Quay lại
-            </Button>
-          </div>
+          {postSubmitLoading ? (
+            <div className="text-center py-8">
+              <Spin tip="Đang lưu kết quả chấm điểm..." size="large" />
+              <div className="mt-3 text-green-600 font-medium">
+                Đã chấm điểm thành công!
+              </div>
+            </div>
+          ) : (
+            <>
+              <EvaluationScoreSheet
+                criteriaList={criteriaCompetitionRound}
+                registrationId={qrResult}
+                registrationRoundId={refereeRoundData.id}
+                refereeAccountId={refereeAccountId}
+                onScoreSubmitted={handleDetailScoreSubmitted}
+              />
+              <div className="mt-4 flex justify-center">
+                <Button onClick={() => setShowDetailScoring(false)}>
+                  Quay lại
+                </Button>
+              </div>
+            </>
+          )}
         </div>
       )}
     </div>

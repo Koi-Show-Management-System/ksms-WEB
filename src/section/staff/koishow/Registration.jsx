@@ -15,6 +15,7 @@ import {
   Spin,
   Row,
   Col,
+  ConfigProvider,
 } from "antd";
 import {
   ExclamationCircleOutlined,
@@ -28,7 +29,6 @@ import {
 import useRegistration from "../../../hooks/useRegistration";
 import useCategory from "../../../hooks/useCategory";
 import RoundSelector from "./RoundSelector";
-import Title from "antd/es/skeleton/Title";
 
 function Registration({ showId }) {
   const {
@@ -69,6 +69,30 @@ function Registration({ showId }) {
     { value: "rejected", label: "Từ chối" },
   ];
 
+  // Cập nhật STATUS_CONFIG để chỉ bao gồm 4 trạng thái chính
+  const STATUS_CONFIG = {
+    pending: { color: "orange", label: "Đang chờ", order: 1 },
+    confirmed: { color: "green", label: "Đã xác nhận", order: 2 },
+    checkin: { color: "geekblue", label: "Đã check-in", order: 3 },
+    rejected: { color: "red", label: "Từ chối", order: 4 },
+  };
+
+  // Hàm này dùng để render và cũng có thể dùng ở nơi khác
+  const renderStatus = (status) => {
+    const statusKey = status?.toLowerCase() || "";
+    const config = STATUS_CONFIG[statusKey] || {
+      color: "default",
+      label: status || "N/A",
+      order: 999,
+    };
+
+    return (
+      <Tag color={config.color} style={{ fontWeight: "medium" }}>
+        {config.label}
+      </Tag>
+    );
+  };
+
   useEffect(() => {
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
@@ -81,20 +105,6 @@ function Registration({ showId }) {
 
     // Fetch lại dữ liệu với category mới
     fetchRegistration(1, 10, showId, value ? [value] : undefined);
-  };
-
-  const handleStatusChange = (value) => {
-    setSelectedStatus(value);
-
-    // Fetch lại dữ liệu với status mới
-    // Giữ nguyên category đã chọn (nếu có)
-    fetchRegistration(
-      1,
-      10,
-      showId,
-      selectedCategory ? [selectedCategory] : undefined,
-      value
-    );
   };
 
   const handleRoundSelect = (roundId, roundName) => {
@@ -130,41 +140,19 @@ function Registration({ showId }) {
   };
 
   const handleTableChange = (pagination, filters, sorter) => {
+    // Lấy trạng thái được chọn từ filters (có thể có nhiều trạng thái)
+    const filteredStatus = filters.status?.[0];
+    // Cập nhật selectedStatus state để các chức năng khác sử dụng
+    setSelectedStatus(filteredStatus);
+
+    // Fetch dữ liệu với filters mới
     fetchRegistration(
       pagination.current,
       pagination.pageSize,
       showId,
       selectedCategory ? [selectedCategory] : undefined,
-      selectedStatus
+      filteredStatus
     );
-  };
-  const handleSelectAllCheckedIn = () => {
-    // Truyền selectedStatus vào hàm selectAllCheckedInRegistrations
-    const selectedIds = selectAllCheckedInRegistrations(selectedStatus);
-
-    if (selectedIds.length === 0) {
-      const statusLabel = selectedStatus
-        ? statusOptions.find((opt) => opt.value === selectedStatus)?.label ||
-          selectedStatus
-        : "đã check-in";
-
-      notification.info({
-        message: "Không có đăng ký nào",
-        description: `Không tìm thấy đăng ký nào có trạng thái ${statusLabel}`,
-        placement: "topRight",
-      });
-    } else {
-      const statusLabel = selectedStatus
-        ? statusOptions.find((opt) => opt.value === selectedStatus)?.label ||
-          selectedStatus
-        : "đã check-in";
-
-      notification.success({
-        message: "Đã chọn đăng ký",
-        description: `Đã chọn ${selectedIds.length} đăng ký có trạng thái ${statusLabel}`,
-        placement: "topRight",
-      });
-    }
   };
 
   const handleassignToRound = () => {
@@ -400,49 +388,21 @@ function Registration({ showId }) {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status) => {
-        let color = "";
-        let statusText = status;
-
-        switch (status?.toLowerCase()) {
-          case "waittopaid":
-            color = "blue";
-            statusText = "Chờ thanh toán";
-            break;
-          case "paid":
-            color = "cyan";
-            statusText = "Đã thanh toán";
-            break;
-          case "cancelled":
-            color = "gray";
-            statusText = "Đã hủy";
-            break;
-          case "pending":
-            color = "orange";
-            statusText = "Đang chờ";
-            break;
-          case "confirmed":
-            color = "green";
-            statusText = "Đã xác nhận";
-            break;
-          case "checkin":
-            color = "geekblue";
-            statusText = "Đã check-in";
-            break;
-          case "rejected":
-            color = "red";
-            statusText = "Từ chối";
-            break;
-          default:
-            color = "default";
-            statusText = status || "N/A";
-        }
-
-        return (
-          <Tag color={color} style={{ fontWeight: "medium" }}>
-            {statusText}
-          </Tag>
-        );
+      render: renderStatus,
+      filters: Object.entries(STATUS_CONFIG).map(([key, config]) => ({
+        text: config.label,
+        value: key,
+      })),
+      onFilter: (value, record) => {
+        return record.status?.toLowerCase() === value;
+      },
+      filterMode: "menu",
+      filterSearch: false,
+      filterDropdownProps: {
+        locale: {
+          filterReset: "Xóa",
+          filterConfirm: "Đồng ý",
+        },
       },
     },
     {
@@ -462,372 +422,327 @@ function Registration({ showId }) {
   ];
 
   return (
-    <Card className="rounded-lg shadow-md">
-      {/* Header section */}
-      <Flex justify="space-between" align="center" className="mb-6">
-        <Typography.Title level={4} style={{ margin: 0 }}>
-          Quản lý đăng ký
-        </Typography.Title>
-        {selectedStatus === "checkin" && (
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={showAssignModal}
-          >
-            Gán vòng
-          </Button>
-        )}
-      </Flex>
-      {/* Thêm bộ lọc category và status */}
-      <div className="mb-4 flex gap-4">
-        <Select
-          style={{ width: "50%" }}
-          placeholder="Chọn hạng mục"
-          onChange={handleCategoryChange}
-          allowClear
-          value={selectedCategory}
-        >
-          {categories?.map((category) => (
-            <Select.Option key={category.id} value={category.id}>
-              {category.name}
-            </Select.Option>
-          ))}
-        </Select>
-        <Select
-          style={{ width: "50%" }}
-          placeholder="Lọc theo trạng thái"
-          onChange={handleStatusChange}
-          allowClear
-          value={selectedStatus}
-        >
-          {statusOptions.map((option) => (
-            <Select.Option key={option.value} value={option.value}>
-              {option.label}
-            </Select.Option>
-          ))}
-        </Select>
-      </div>
-      <Table
-        columns={columns}
-        dataSource={filteredData}
-        loading={isLoading}
-        pagination={
-          filteredData.length > 0
-            ? {
-                current: currentPage,
-                pageSize: pageSize,
-                total: filteredData.length, // Sử dụng độ dài của dữ liệu đã lọc
-                showTotal: (total, range) =>
-                  `${range[0]}-${range[1]} trong ${total}`,
-                showSizeChanger: true,
-                pageSizeOptions: ["10", "20", "50"],
-              }
-            : false
-        }
-        onChange={handleTableChange}
-        rowKey="id"
-        size="middle"
-        bordered={false}
-        scroll={{ x: "max-content" }}
-      />
-      {/* Modal gán bể */}
-      <Modal
-        title={
-          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-            <span>Gán cá tham gia vào vòng</span>
-          </div>
-        }
-        open={isAssignModalVisible}
-        onCancel={closeAssignModal}
-        footer={[
-          <Button key="cancel" onClick={closeAssignModal}>
-            Hủy
-          </Button>,
-          <Button
-            key="assign"
-            type="primary"
-            loading={assignLoading}
-            onClick={handleassignToRound}
-            disabled={selectedRegistrations?.length === 0 || !selectedRoundId}
-          >
-            Gán vòng
-          </Button>,
-        ]}
-        width={1000}
-      >
-        <div style={{ marginBottom: "24px" }}>
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              marginBottom: "12px",
-            }}
-          >
-            <Typography.Text strong>Chọn vòng</Typography.Text>
-          </div>
-
-          <div style={{ display: "flex", alignItems: "center" }}>
-            <RoundSelector
-              ref={roundSelectorRef}
-              onRoundSelect={handleRoundSelect}
-              showId={showId}
-              categoryId={selectedCategory}
-              preSelectPreliminary={true}
-            />
-          </div>
-        </div>
-
-        {selectedRoundId && (
-          <>
-            <div
-              style={{
-                borderTop: "1px solid #f0f0f0",
-                paddingTop: "24px",
-                marginBottom: "16px",
-              }}
+    <ConfigProvider
+      locale={{
+        Table: {
+          filterReset: "Xóa",
+          filterConfirm: "Đồng ý",
+        },
+      }}
+    >
+      <Card className="rounded-lg shadow-md">
+        {/* Header section */}
+        <Flex justify="space-between" align="center" className="mb-6">
+          <Typography.Title level={4} style={{ margin: 0 }}>
+            Quản lý đăng ký
+          </Typography.Title>
+          {filteredData.some(
+            (item) => item.status?.toLowerCase() === "checkin"
+          ) && (
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={showAssignModal}
             >
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "space-between",
-                  marginBottom: "16px",
-                }}
-              >
-                <div style={{ display: "flex", alignItems: "center" }}>
-                  <CheckSquareOutlined
-                    style={{ color: "#1890ff", marginRight: "8px" }}
-                  />
-                  <Typography.Text strong>Danh sách cá đăng ký</Typography.Text>
-                </div>
-              </div>
-
-              {selectedRegistrations?.length > 0 && (
-                <Alert
-                  type="info"
-                  showIcon
-                  message={
-                    <span>
-                      Đã chọn <strong>{selectedRegistrations.length}</strong>{" "}
-                      đăng ký để gán vào vòng{" "}
-                      <strong>{selectedRoundName}</strong>
-                    </span>
-                  }
-                  style={{ marginBottom: "16px" }}
-                />
-              )}
-
-              <Table
-                rowSelection={rowSelection}
-                columns={columns.filter((col) => col.key !== "actions")}
-                dataSource={registration.filter(
-                  (reg) =>
-                    reg.status?.toLowerCase() === "checkin" &&
-                    reg.competitionCategory?.id === selectedCategory
-                )}
-                loading={isLoading}
-                pagination={{
+              Gán vòng
+            </Button>
+          )}
+        </Flex>
+        {/* Thêm bộ lọc category và status */}
+        <div className="mb-4">
+          <Select
+            style={{ width: "25%" }}
+            placeholder="Chọn hạng mục"
+            onChange={handleCategoryChange}
+            allowClear
+            value={selectedCategory}
+          >
+            {categories?.map((category) => (
+              <Select.Option key={category.id} value={category.id}>
+                {category.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          loading={isLoading}
+          pagination={
+            filteredData.length > 0
+              ? {
                   current: currentPage,
                   pageSize: pageSize,
-                  total: registration.filter(
-                    (reg) => reg.status?.toLowerCase() === "checkin"
-                  ).length,
+                  total: filteredData.length, // Sử dụng độ dài của dữ liệu đã lọc
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,
                   pageSizeOptions: ["10", "20", "50"],
-                }}
-                rowKey="id"
-                size="small"
-                bordered={false}
+                }
+              : false
+          }
+          onChange={handleTableChange}
+          rowKey="id"
+          size="middle"
+          bordered={false}
+          scroll={{ x: "max-content" }}
+        />
+        {/* Modal gán bể */}
+        <Modal
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>Gán cá tham gia vào vòng</span>
+            </div>
+          }
+          open={isAssignModalVisible}
+          onCancel={closeAssignModal}
+          footer={[
+            <Button key="cancel" onClick={closeAssignModal}>
+              Hủy
+            </Button>,
+            <Button
+              key="assign"
+              type="primary"
+              loading={assignLoading}
+              onClick={handleassignToRound}
+              disabled={selectedRegistrations?.length === 0 || !selectedRoundId}
+            >
+              Gán vòng
+            </Button>,
+          ]}
+          width={1000}
+        >
+          <div style={{ marginBottom: "24px" }}>
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "12px",
+              }}
+            >
+              <Typography.Text strong>Chọn vòng</Typography.Text>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <RoundSelector
+                ref={roundSelectorRef}
+                onRoundSelect={handleRoundSelect}
+                showId={showId}
+                categoryId={selectedCategory}
+                preSelectPreliminary={true}
               />
             </div>
-          </>
-        )}
-      </Modal>
-      <Modal
-        title="Chi Tiết Đăng Ký"
-        open={isModalVisible}
-        onCancel={handleCancel}
-        footer={null}
-        width={900}
-      >
-        {currentKoi && (
-          <div className="p-4">
-            <Row gutter={[16, 16]}>
-              {/* Thông tin đăng ký */}
-              <Col span={24}>
-                <Card
-                  title="Thông Tin Đăng Ký"
-                  bordered={false}
-                  className="w-full"
+          </div>
+
+          {selectedRoundId && (
+            <>
+              <div
+                style={{
+                  borderTop: "1px solid #f0f0f0",
+                  paddingTop: "24px",
+                  marginBottom: "16px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    marginBottom: "16px",
+                  }}
                 >
-                  <Row gutter={[16, 16]}>
-                    <Col span={12}>
-                      <p>
-                        <strong>Tên Người Đăng Ký:</strong>{" "}
-                        {currentKoi.registerName}
-                      </p>
-                      <p>
-                        <strong>Tên Cá Koi:</strong>{" "}
-                        {currentKoi.koiProfile.name}
-                      </p>
-                      <p>
-                        <strong>Kích Thước Cá:</strong> {currentKoi.koiSize} cm
-                      </p>
-                      <p>
-                        <strong>Giống:</strong>{" "}
-                        {currentKoi?.koiProfile?.variety?.name}
-                      </p>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <CheckSquareOutlined
+                      style={{ color: "#1890ff", marginRight: "8px" }}
+                    />
+                    <Typography.Text strong>
+                      Danh sách cá đăng ký
+                    </Typography.Text>
+                  </div>
+                </div>
 
-                      <p>
-                        <strong>Tuổi Cá:</strong> {currentKoi.koiAge}
-                      </p>
-                    </Col>
-                    <Col span={12}>
-                      <p>
-                        <strong>Hạng Mục:</strong>{" "}
-                        {currentKoi.competitionCategory?.name}
-                      </p>
-                      {currentKoi.koiShow && (
-                        <p>
-                          <strong>Tên Cuộc Thi:</strong>{" "}
-                          {currentKoi.koiShow.name}
-                        </p>
-                      )}
-                      <p>
-                        <strong>Phí Đăng Ký:</strong>{" "}
-                        {currentKoi.registrationFee?.toLocaleString() || 0} VND
-                      </p>
-                      <p>
-                        <strong>Trạng Thái:</strong>{" "}
-                        {currentKoi.status && (
-                          <Tag
-                            color={
-                              currentKoi.status.toLowerCase() === "waittopaid"
-                                ? "blue"
-                                : currentKoi.status.toLowerCase() === "paid"
-                                  ? "cyan"
-                                  : currentKoi.status.toLowerCase() ===
-                                      "cancelled"
-                                    ? "gray"
-                                    : currentKoi.status.toLowerCase() ===
-                                        "pending"
-                                      ? "orange"
-                                      : currentKoi.status.toLowerCase() ===
-                                          "confirmed"
-                                        ? "green"
-                                        : currentKoi.status.toLowerCase() ===
-                                            "checkin"
-                                          ? "geekblue"
-                                          : currentKoi.status.toLowerCase() ===
-                                              "rejected"
-                                            ? "red"
-                                            : "default"
-                            }
-                            style={{ marginLeft: "8px" }}
-                          >
-                            {currentKoi.status.toLowerCase() === "waittopaid"
-                              ? "Chờ thanh toán"
-                              : currentKoi.status.toLowerCase() === "paid"
-                                ? "Đã thanh toán"
-                                : currentKoi.status.toLowerCase() ===
-                                    "cancelled"
-                                  ? "Đã hủy"
-                                  : currentKoi.status.toLowerCase() ===
-                                      "pending"
-                                    ? "Đang chờ"
-                                    : currentKoi.status.toLowerCase() ===
-                                        "confirmed"
-                                      ? "Đã xác nhận"
-                                      : currentKoi.status.toLowerCase() ===
-                                          "checkin"
-                                        ? "Đã check-in"
-                                        : currentKoi.status.toLowerCase() ===
-                                            "rejected"
-                                          ? "Từ chối"
-                                          : currentKoi.status}
-                          </Tag>
-                        )}
-                      </p>
-                    </Col>
-                  </Row>
-                </Card>
-              </Col>
+                {selectedRegistrations?.length > 0 && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={
+                      <span>
+                        Đã chọn <strong>{selectedRegistrations.length}</strong>{" "}
+                        đăng ký để gán vào vòng{" "}
+                        <strong>{selectedRoundName}</strong>
+                      </span>
+                    }
+                    style={{ marginBottom: "16px" }}
+                  />
+                )}
 
-              {/* Koi Media */}
-              {currentKoi.koiMedia && currentKoi.koiMedia.length > 0 && (
+                <Table
+                  rowSelection={rowSelection}
+                  columns={columns.filter((col) => col.key !== "actions")}
+                  dataSource={registration.filter(
+                    (reg) =>
+                      reg.status?.toLowerCase() === "checkin" &&
+                      reg.competitionCategory?.id === selectedCategory
+                  )}
+                  loading={isLoading}
+                  pagination={{
+                    current: currentPage,
+                    pageSize: pageSize,
+                    total: registration.filter(
+                      (reg) => reg.status?.toLowerCase() === "checkin"
+                    ).length,
+                    showTotal: (total, range) =>
+                      `${range[0]}-${range[1]} trong ${total}`,
+                    showSizeChanger: true,
+                    pageSizeOptions: ["10", "20", "50"],
+                  }}
+                  rowKey="id"
+                  size="small"
+                  bordered={false}
+                />
+              </div>
+            </>
+          )}
+        </Modal>
+        <Modal
+          title="Chi Tiết Đăng Ký"
+          open={isModalVisible}
+          onCancel={handleCancel}
+          footer={null}
+          width={900}
+        >
+          {currentKoi && (
+            <div className="p-4">
+              <Row gutter={[16, 16]}>
+                {/* Thông tin đăng ký */}
                 <Col span={24}>
                   <Card
-                    title="Hình Ảnh/Video Cá Koi"
-                    variant={false}
+                    title="Thông Tin Đăng Ký"
+                    bordered={false}
                     className="w-full"
                   >
                     <Row gutter={[16, 16]}>
-                      {currentKoi.koiMedia.map((media, index) => (
-                        <Col span={12} key={media.id}>
-                          {media.mediaType === "Image" ? (
-                            <div>
-                              <p>
-                                <strong>Hình Ảnh:</strong>
-                              </p>
-                              <Image
-                                src={media.mediaUrl}
-                                alt="Hình Ảnh Koi"
-                                style={{
-                                  width: "100%",
-                                  maxHeight: "300px",
-                                  objectFit: "contain",
-                                }}
-                              />
-                            </div>
-                          ) : media.mediaType === "Video" ? (
-                            <div>
-                              <p>
-                                <strong>Video:</strong>
-                              </p>
-                              <video
-                                controls
-                                src={media.mediaUrl}
-                                style={{ width: "100%", maxHeight: "300px" }}
-                              />
-                            </div>
-                          ) : null}
-                        </Col>
-                      ))}
+                      <Col span={12}>
+                        <p>
+                          <strong>Tên Người Đăng Ký:</strong>{" "}
+                          {currentKoi.registerName}
+                        </p>
+                        <p>
+                          <strong>Tên Cá Koi:</strong>{" "}
+                          {currentKoi.koiProfile.name}
+                        </p>
+                        <p>
+                          <strong>Kích Thước Cá:</strong> {currentKoi.koiSize}{" "}
+                          cm
+                        </p>
+                        <p>
+                          <strong>Giống:</strong>{" "}
+                          {currentKoi?.koiProfile?.variety?.name}
+                        </p>
+
+                        <p>
+                          <strong>Tuổi Cá:</strong> {currentKoi.koiAge}
+                        </p>
+                      </Col>
+                      <Col span={12}>
+                        <p>
+                          <strong>Hạng Mục:</strong>{" "}
+                          {currentKoi.competitionCategory?.name}
+                        </p>
+                        {currentKoi.koiShow && (
+                          <p>
+                            <strong>Tên Cuộc Thi:</strong>{" "}
+                            {currentKoi.koiShow.name}
+                          </p>
+                        )}
+                        <p>
+                          <strong>Phí Đăng Ký:</strong>{" "}
+                          {currentKoi.registrationFee?.toLocaleString() || 0}{" "}
+                          VND
+                        </p>
+                        <p>
+                          <strong>Trạng Thái:</strong>{" "}
+                          {renderStatus(currentKoi.status)}
+                        </p>
+                      </Col>
                     </Row>
                   </Card>
                 </Col>
+
+                {/* Koi Media */}
+                {currentKoi.koiMedia && currentKoi.koiMedia.length > 0 && (
+                  <Col span={24}>
+                    <Card
+                      title="Hình Ảnh/Video Cá Koi"
+                      variant={false}
+                      className="w-full"
+                    >
+                      <Row gutter={[16, 16]}>
+                        {currentKoi.koiMedia.map((media, index) => (
+                          <Col span={12} key={media.id}>
+                            {media.mediaType === "Image" ? (
+                              <div>
+                                <p>
+                                  <strong>Hình Ảnh:</strong>
+                                </p>
+                                <Image
+                                  src={media.mediaUrl}
+                                  alt="Hình Ảnh Koi"
+                                  style={{
+                                    width: "100%",
+                                    maxHeight: "300px",
+                                    objectFit: "contain",
+                                  }}
+                                />
+                              </div>
+                            ) : media.mediaType === "Video" ? (
+                              <div>
+                                <p>
+                                  <strong>Video:</strong>
+                                </p>
+                                <video
+                                  controls
+                                  src={media.mediaUrl}
+                                  style={{ width: "100%", maxHeight: "300px" }}
+                                />
+                              </div>
+                            ) : null}
+                          </Col>
+                        ))}
+                      </Row>
+                    </Card>
+                  </Col>
+                )}
+              </Row>
+
+              {/* Nút Approve/Reject */}
+              {currentKoi.status === "pending" && (
+                <div className="mt-4 text-center space-x-3">
+                  <Button
+                    type="primary"
+                    icon={<CheckCircleOutlined />}
+                    onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
+                    className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
+                  >
+                    Phê Duyệt
+                  </Button>
+
+                  <Button
+                    type="primary"
+                    danger
+                    icon={<CloseCircleOutlined />}
+                    onClick={() => showConfirmModal(currentKoi.id, "rejected")}
+                    className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
+                  >
+                    Từ Chối
+                  </Button>
+                </div>
               )}
-            </Row>
-
-            {/* Nút Approve/Reject */}
-            {currentKoi.status === "pending" && (
-              <div className="mt-4 text-center space-x-3">
-                <Button
-                  type="primary"
-                  icon={<CheckCircleOutlined />}
-                  onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
-                  className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
-                >
-                  Phê Duyệt
-                </Button>
-
-                <Button
-                  type="primary"
-                  danger
-                  icon={<CloseCircleOutlined />}
-                  onClick={() => showConfirmModal(currentKoi.id, "rejected")}
-                  className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
-                >
-                  Từ Chối
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-      </Modal>
-    </Card>
+            </div>
+          )}
+        </Modal>
+      </Card>
+    </ConfigProvider>
   );
 }
 
