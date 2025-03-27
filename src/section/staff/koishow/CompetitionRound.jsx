@@ -73,7 +73,6 @@ function CompetitionRound({ showId }) {
   const [selectedSubRound, setSelectedSubRound] = useState(null);
   const { round, fetchRound, isLoading: roundLoading } = useRound();
 
-  console.log("round", round);
   // Registration and tank states
   const {
     registrationRound,
@@ -143,6 +142,22 @@ function CompetitionRound({ showId }) {
   const { createRoundResultFinalize, isLoading: roundResultLoading } =
     useRoundResult();
 
+  // Add a check to see if all entries already have scores
+  const allEntriesHaveScores = useMemo(() => {
+    if (!Array.isArray(registrationRound) || registrationRound.length === 0) {
+      return false;
+    }
+
+    // Check if every registration has a score in roundResults
+    return registrationRound.every(
+      (item) =>
+        item.roundResults &&
+        item.roundResults.length > 0 &&
+        item.roundResults[0]?.totalScore !== undefined &&
+        item.roundResults[0]?.totalScore !== null
+    );
+  }, [registrationRound]);
+
   // Safe API wrappers to prevent undefined calls
   const fetchRegistrationRound = useCallback(
     (roundId, page, size) => {
@@ -153,7 +168,6 @@ function CompetitionRound({ showId }) {
         return Promise.resolve(null);
       }
 
-      // console.log('[fetchRegistrationRound] Calling API with valid ID:', roundId, page, size);
       return originalFetchRegistrationRound(roundId, page, size);
     },
     [originalFetchRegistrationRound]
@@ -171,7 +185,6 @@ function CompetitionRound({ showId }) {
         return Promise.resolve(null);
       }
 
-      // console.log('[updateFishTankInRound] Updating tank:', registrationRoundId, tankId);
       return originalUpdateFishTankInRound(registrationRoundId, tankId);
     },
     [originalUpdateFishTankInRound]
@@ -240,17 +253,15 @@ function CompetitionRound({ showId }) {
 
         // Only fetch if we have a valid value
         if (value && typeof value === "string" && value !== "undefined") {
-          console.log("Selected sub-round changed to:", value);
-
           // Fetch registration data
           fetchRegistrationRound(value, 1, pageSize);
 
           // Only fetch criteria if we're in Evaluation round and have a valid category
-          if (selectedRoundType === "Evaluation" && selectedCategory) {
-            console.log("Fetching criteria for evaluation round:", {
-              category: selectedCategory,
-              subRound: value,
-            });
+          if (
+            (selectedRoundType === "Evaluation" ||
+              selectedRoundType === "Final") &&
+            selectedCategory
+          ) {
             fetchCriteriaCompetitionRound(selectedCategory, value);
           }
         }
@@ -275,10 +286,6 @@ function CompetitionRound({ showId }) {
       selectedSubRound !== "undefined" &&
       isMounted.current
     ) {
-      console.log(`Fetching criteria for ${selectedRoundType} round:`, {
-        categoryId: selectedCategory,
-        roundId: selectedSubRound,
-      });
       fetchCriteriaCompetitionRound(selectedCategory, selectedSubRound);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -287,14 +294,11 @@ function CompetitionRound({ showId }) {
   // Handle pagination
   const handleTableChange = useCallback(
     (pagination) => {
-      console.log("[Pagination] Changed to:", pagination.current);
-
       if (
         selectedSubRound &&
         typeof selectedSubRound === "string" &&
         selectedSubRound !== "undefined"
       ) {
-        console.log("[Pagination] Fetching data for page:", pagination.current);
         fetchRegistrationRound(
           selectedSubRound,
           pagination.current || 1,
@@ -313,8 +317,6 @@ function CompetitionRound({ showId }) {
   // Handle tank assignment
   const handleTankAssignment = useCallback(
     async (registrationRoundId, tankId) => {
-      // console.log('[TankAssign] Starting assignment:', registrationRoundId, tankId);
-
       if (!registrationRoundId) {
         console.warn("[TankAssign] Missing registrationRoundId");
         return;
@@ -337,7 +339,6 @@ function CompetitionRound({ showId }) {
             typeof selectedSubRound === "string" &&
             selectedSubRound !== "undefined"
           ) {
-            // console.log('[TankAssign] Refetching after successful update with ID:', selectedSubRound);
             fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
           } else {
             console.warn(
@@ -684,7 +685,7 @@ function CompetitionRound({ showId }) {
     pageSize,
   ]);
 
-  // Fix the handleCreateFinalScore function to use local state instead of setIsRoundPublished
+  // Cập nhật xử lý lỗi trong hàm handleCreateFinalScore
   const handleCreateFinalScore = async () => {
     if (!selectedSubRound) {
       notification.error({
@@ -695,13 +696,12 @@ function CompetitionRound({ showId }) {
     }
 
     try {
-      setIsPublishing(true); // Reuse existing loading state
+      setIsPublishing(true);
       const result = await createRoundResultFinalize(selectedSubRound);
 
-      // Add log for debugging
       console.log("API Response:", result);
 
-      // Handle response
+      // Xử lý trường hợp thành công
       if (
         result?.statusCode === 200 ||
         result?.statusCode === 201 ||
@@ -715,18 +715,37 @@ function CompetitionRound({ showId }) {
             result?.message || "Đã tạo điểm cuối cùng cho vòng thi thành công",
         });
 
-        // Refresh data
-        if (selectedSubRound) {
-          fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
-        }
+        // Tải lại dữ liệu
+        fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
       } else {
-        notification.error({
-          message: "Lỗi",
-          description: result?.message || "Không thể tạo điểm cuối cùng",
-        });
+        // Kiểm tra notificationType để hiển thị đúng kiểu thông báo
+        if (result?.notificationType === "warning") {
+          notification.warning({
+            message: "Cảnh báo",
+            description: result?.message || "Không thể tạo điểm cuối cùng",
+          });
+        } else {
+          // Mặc định là error
+          notification.error({
+            message: "Lỗi",
+            description: result?.message || "Không thể tạo điểm cuối cùng",
+          });
+        }
       }
     } catch (error) {
-      // Check special case: error but actually success
+      console.error("Error creating final score:", error);
+
+      // Kiểm tra mã lỗi 400 và hiển thị thông báo tương ứng
+      if (error.response && error.response.status === 400) {
+        notification.error({
+          message: "Không thể tạo điểm cuối cùng",
+          description:
+            "Chưa có dữ liệu điểm số nào để xử lý. Vui lòng đảm bảo đã có điểm trọng tài trước khi tạo điểm cuối cùng.",
+        });
+        return;
+      }
+
+      // Xử lý đặc biệt: lỗi nhưng thực tế là thành công (status 201)
       if (error.response && error.response.status === 201) {
         notification.success({
           message: "Thành công",
@@ -734,17 +753,14 @@ function CompetitionRound({ showId }) {
             error.response.data.message ||
             "Đã tạo điểm cuối cùng cho vòng thi thành công",
         });
-
-        if (selectedSubRound) {
-          fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
-        }
+        fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
         return;
       }
 
-      console.error("Error creating final score:", error);
+      // Hiển thị thông báo lỗi chung
       notification.error({
         message: "Lỗi",
-        description: `Không thể tạo điểm cuối cùng: ${error?.message || "Lỗi không xác định"}`,
+        description: "Không thể tạo điểm cuối cùng",
       });
     } finally {
       setIsPublishing(false);
@@ -761,11 +777,6 @@ function CompetitionRound({ showId }) {
     // Only depend on selectedCategory, not fetchTanks which might change
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedCategory]);
-
-  // Thêm log để kiểm tra
-  console.log("allTanksAssigned:", allTanksAssigned);
-  console.log("competitionRoundTanks:", competitionRoundTanks);
-  console.log("registrationRound:", registrationRound);
 
   // Create a component to display criteria above the table
   const CriteriaDisplay = useCallback(() => {
@@ -1042,9 +1053,9 @@ function CompetitionRound({ showId }) {
   const columns = getColumnsForRoundType;
 
   return (
-    <Card>
+    <Card className="overflow-hidden">
       <div className="mb-4">
-        <div className="flex flex-wrap md:flex-nowrap items-end gap-3">
+        <div className="flex flex-wrap md:flex-nowrap items-end gap-4">
           <div className="w-full md:w-1/4">
             <div className="text-lg font-medium mb-2">Hạng Mục:</div>
             <Select
@@ -1107,52 +1118,77 @@ function CompetitionRound({ showId }) {
             </div>
           )}
 
-          {selectedSubRound && (
-            <div className="w-full md:w-1/4 ">
-              {!isRoundPublished && (
-                <Button
-                  type="primary"
-                  size="middle"
-                  className="w-full"
-                  onClick={handlePublishRound}
-                  loading={isPublishing}
-                  icon={<TrophyOutlined />}
-                  disabled={!allTanksAssigned}
-                >
-                  Công khai vòng thi
-                </Button>
-              )}
-
-              {/* Only show the Create Final Score button for published Evaluation/Final rounds */}
-              {selectedRoundType &&
-                (selectedRoundType === "Evaluation" ||
-                  selectedRoundType === "Final") &&
-                isRoundPublished && (
-                  <Button
-                    type="primary"
-                    size="middle"
-                    className="w-full mt-2"
-                    onClick={handleCreateFinalScore}
-                    loading={roundResultLoading}
-                    icon={<TrophyOutlined />}
-                  >
-                    Tạo Điểm Cuối Cùng
-                  </Button>
+          {/* Only render the button container if there's at least one button to show */}
+          {selectedSubRound &&
+            (!isRoundPublished ||
+            (selectedRoundType &&
+              (selectedRoundType === "Evaluation" ||
+                selectedRoundType === "Final") &&
+              isRoundPublished &&
+              !allEntriesHaveScores) ? (
+              <div className="w-full md:w-1/4">
+                {!isRoundPublished && (
+                  <>
+                    <Button
+                      type="primary"
+                      size="middle"
+                      className="w-full"
+                      onClick={() => {
+                        if (!allTanksAssigned) {
+                          notification.warning({
+                            message: "Cần gán bể cho tất cả",
+                            description:
+                              "Vui lòng gán bể cho tất cả các cá trước khi công khai vòng thi.",
+                          });
+                        } else {
+                          handlePublishRound();
+                        }
+                      }}
+                      loading={isPublishing}
+                      icon={<TrophyOutlined />}
+                      disabled={!allTanksAssigned}
+                    >
+                      Công khai vòng thi
+                    </Button>
+                  </>
                 )}
-            </div>
-          )}
 
+                {/* Only show the Create Final Score button for published Evaluation/Final rounds */}
+                {selectedRoundType &&
+                  (selectedRoundType === "Evaluation" ||
+                    selectedRoundType === "Final") &&
+                  isRoundPublished &&
+                  !allEntriesHaveScores && (
+                    <Button
+                      type="primary"
+                      size="middle"
+                      className="w-full mt-2"
+                      onClick={handleCreateFinalScore}
+                      loading={roundResultLoading}
+                      icon={<TrophyOutlined />}
+                    >
+                      Tạo Điểm Cuối Cùng
+                    </Button>
+                  )}
+              </div>
+            ) : null)}
+
+          {/* Adjust NextRound component to take more space when buttons are hidden */}
           {selectedSubRound && (
-            <NextRound
-              registrationRound={registrationRound}
-              selectedSubRound={selectedSubRound}
-              selectedCategory={selectedCategory}
-              selectedRoundType={selectedRoundType}
-              roundTypes={roundTypes}
-              fetchRegistrationRound={fetchRegistrationRound}
-              currentPage={currentPage}
-              pageSize={pageSize}
-            />
+            <div
+              className={`w-full ${!isRoundPublished || (selectedRoundType && (selectedRoundType === "Evaluation" || selectedRoundType === "Final") && isRoundPublished && !allEntriesHaveScores) ? "md:w-1/4" : "md:w-1/3"}`}
+            >
+              <NextRound
+                registrationRound={registrationRound}
+                selectedSubRound={selectedSubRound}
+                selectedCategory={selectedCategory}
+                selectedRoundType={selectedRoundType}
+                roundTypes={roundTypes}
+                fetchRegistrationRound={fetchRegistrationRound}
+                currentPage={currentPage}
+                pageSize={pageSize}
+              />
+            </div>
           )}
         </div>
       </div>
@@ -1171,21 +1207,24 @@ function CompetitionRound({ showId }) {
         </>
       )}
 
-      <Table
-        columns={columns}
-        dataSource={displayData}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: registrationTotalItems,
-          showSizeChanger: true,
-          showTotal: (total, range) =>
-            `${range[0]}-${range[1]} trong ${total} mục`,
-        }}
-        onChange={handleTableChange}
-        loading={registrationLoading}
-        scroll={{ x: "max-content" }} // Add horizontal scrolling support
-      />
+      <div className="overflow-auto">
+        <Table
+          columns={columns}
+          dataSource={displayData}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: registrationTotalItems,
+            showSizeChanger: true,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} trong ${total} mục`,
+          }}
+          onChange={handleTableChange}
+          loading={registrationLoading}
+          scroll={{ x: "max-content" }}
+          size="small"
+        />
+      </div>
 
       {/* Detail Drawer */}
       <Drawer
@@ -1388,6 +1427,7 @@ function CompetitionRound({ showId }) {
                   key="3"
                 >
                   <List
+                    grid={{ gutter: 16, column: 1 }}
                     dataSource={currentRegistration.roundResults}
                     renderItem={(result) => (
                       <List.Item>
@@ -1415,9 +1455,19 @@ function CompetitionRound({ showId }) {
                               ? new Date(result.createdAt).toLocaleString()
                               : "—"}
                           </p>
-                          {result.score && (
+                          {result.totalScore && (
                             <p>
-                              <strong>Điểm số:</strong> {result.score}
+                              <strong>Điểm số:</strong>
+                              <Tag
+                                color="blue"
+                                style={{
+                                  fontSize: "14px",
+                                  fontWeight: "bold",
+                                  marginRight: "5px",
+                                }}
+                              >
+                                {result.totalScore}
+                              </Tag>
                             </p>
                           )}
                           {result.notes && (

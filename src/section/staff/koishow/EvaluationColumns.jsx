@@ -196,30 +196,28 @@ export const getEvaluationColumns = (props) => {
         });
 
         return (
-          <div>
-            {isRoundPublished ? (
-              <div>{tankName || "Chưa gán bể"}</div>
-            ) : (
-              <Select
-                style={{ width: "100%" }}
-                value={tankIdToUse}
-                onChange={(value) => {
-                  console.log("Selecting tank ID:", value);
-                  handleTankChange(record.id, value);
-                }}
-                loading={assigningTank[record.id]}
-                disabled={assigningTank[record.id]}
-                placeholder="Chọn bể"
-                showSearch
-                optionFilterProp="children"
-              >
-                {competitionRoundTanks?.map((tank) => (
-                  <Option key={tank.id} value={tank.id}>
-                    {tank.name}
-                  </Option>
-                ))}
-              </Select>
-            )}
+          <div className="relative">
+            <Select
+              style={{ width: "100%" }}
+              value={tankIdToUse}
+              onChange={(value) => {
+                console.log("Selecting tank ID:", value);
+                handleTankChange(record.id, value);
+              }}
+              loading={assigningTank[record.id]}
+              disabled={assigningTank[record.id]}
+              placeholder="Chọn bể"
+              showSearch
+              optionFilterProp="children"
+              status={!tankName && !isRoundPublished ? "error" : undefined}
+            >
+              {competitionRoundTanks?.map((tank) => (
+                <Option key={tank.id} value={tank.id}>
+                  {tank.name}
+                </Option>
+              ))}
+            </Select>
+           
           </div>
         );
       },

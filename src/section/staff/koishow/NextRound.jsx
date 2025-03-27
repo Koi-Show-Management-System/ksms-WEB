@@ -21,11 +21,6 @@ const roundTypeLabels = {
   Final: "Vòng Chung Kết",
 };
 
-// Khóa lưu trữ trong localStorage - tạo riêng cho từng hạng mục
-function getStorageKey(category) {
-  return `koishow_processed_rounds_${category || "default"}`;
-}
-
 function NextRound({
   registrationRound,
   selectedSubRound,
@@ -44,44 +39,16 @@ function NextRound({
   const [isPrefetching, setIsPrefetching] = useState(false);
   // Thêm state để lưu lại thời gian cuối cùng prefetch
   const [lastPrefetch, setLastPrefetch] = useState(null);
+  // Add state to track whether fish have been moved
+  const [fishAlreadyMoved, setFishAlreadyMoved] = useState(false);
 
   // State để lưu trữ các vòng đã được xử lý theo category
-  const [processedRounds, setProcessedRounds] = useState(() => {
-    try {
-      const storageKey = getStorageKey(selectedCategory);
-      const saved = localStorage.getItem(storageKey);
-      return saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Error loading processed rounds from localStorage:", e);
-      return [];
-    }
-  });
+  const [processedRounds, setProcessedRounds] = useState([]);
 
   const { assignToRound } = useRegistration();
   // Lấy cả nextRound state từ hook useRound
   const { fetchNextRound, nextRound } = useRound();
   const actionInProgressRef = useRef(false);
-
-  // Cập nhật danh sách các vòng đã xử lý khi chuyển category
-  useEffect(() => {
-    try {
-      const storageKey = getStorageKey(selectedCategory);
-      const saved = localStorage.getItem(storageKey);
-      const parsedData = saved ? JSON.parse(saved) : [];
-      setProcessedRounds(parsedData);
-    } catch (e) {
-      console.error("Error loading processed rounds for category:", e);
-      setProcessedRounds([]);
-    }
-  }, [selectedCategory]);
-
-  // Lưu trữ processedRounds vào localStorage khi thay đổi
-  useEffect(() => {
-    if (selectedCategory) {
-      const storageKey = getStorageKey(selectedCategory);
-      localStorage.setItem(storageKey, JSON.stringify(processedRounds));
-    }
-  }, [processedRounds, selectedCategory]);
 
   // Lọc danh sách cá đạt yêu cầu
   const passingFish = useMemo(() => {
@@ -124,22 +91,11 @@ function NextRound({
 
   // Thêm hàm để xóa roundId khỏi processedRounds
   const resetProcessedRoundStatus = useCallback(() => {
-    if (!selectedSubRound || !selectedCategory) return;
+    if (!selectedSubRound) return;
 
     // Cập nhật state processedRounds
     setProcessedRounds((prev) => prev.filter((id) => id !== selectedSubRound));
-
-    // Cập nhật localStorage
-    try {
-      const storageKey = getStorageKey(selectedCategory);
-      const saved = localStorage.getItem(storageKey);
-      const parsedData = saved ? JSON.parse(saved) : [];
-      const updatedData = parsedData.filter((id) => id !== selectedSubRound);
-      localStorage.setItem(storageKey, JSON.stringify(updatedData));
-    } catch (e) {
-      console.error("Error updating processed rounds:", e);
-    }
-  }, [selectedSubRound, selectedCategory]);
+  }, [selectedSubRound]);
 
   // Thêm hàm kiểm tra trạng thái chuyển cá từ server
   const checkPromotionFromServer = useCallback(async () => {
@@ -156,16 +112,6 @@ function NextRound({
       // Cập nhật trạng thái local dựa trên kết quả từ server
       if (hasBeenPromoted && !processedRounds.includes(selectedSubRound)) {
         setProcessedRounds((prev) => [...prev, selectedSubRound]);
-        // Cập nhật localStorage
-        const storageKey = getStorageKey(selectedCategory);
-        const saved = localStorage.getItem(storageKey);
-        const parsedData = saved ? JSON.parse(saved) : [];
-        if (!parsedData.includes(selectedSubRound)) {
-          localStorage.setItem(
-            storageKey,
-            JSON.stringify([...parsedData, selectedSubRound])
-          );
-        }
       } else if (
         !hasBeenPromoted &&
         processedRounds.includes(selectedSubRound)
@@ -177,12 +123,7 @@ function NextRound({
     } catch (error) {
       console.error("Error checking promotion status:", error);
     }
-  }, [
-    selectedSubRound,
-    selectedCategory,
-    processedRounds,
-    resetProcessedRoundStatus,
-  ]);
+  }, [selectedSubRound, processedRounds, resetProcessedRoundStatus]);
 
   // Gọi hàm kiểm tra từ server khi component mount hoặc thay đổi vòng
   useEffect(() => {
@@ -389,26 +330,15 @@ function NextRound({
         errorMessage = error.message;
       }
 
-      // Special case for fish already moved to this round
+      // Modify the notification handler
       if (errorMessage.includes("đã được phân vào vòng này")) {
         notification.info({
           message: "Thông báo",
           description: "Một số cá đã được chuyển sang vòng tiếp theo trước đó.",
         });
 
-        // Update UI to show round as processed
-        setProcessedRounds((prev) => {
-          if (
-            !prev.includes(selectedSubRound) &&
-            !prev.includes(selectedSubRound.toString())
-          ) {
-            return [...prev, selectedSubRound.toString()];
-          }
-          return prev;
-        });
-
-        // Refresh data
-        await fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+        // Set state to indicate fish have been moved
+        setFishAlreadyMoved(true);
       } else {
         // Show error notification
         notification.error({
@@ -536,17 +466,33 @@ function NextRound({
         </Button>
       ) : passingFish.length > 0 ? (
         // Có cá đạt yêu cầu -> Hiển thị nút chuyển
-        <Button
-          type="primary"
-          className="w-full"
-          onClick={handleMoveToNextRound}
-          loading={isMovingToNextRound}
-          disabled={isMovingToNextRound}
-          icon={<ArrowRightOutlined />}
-          style={{ backgroundColor: "#52c41a" }}
-        >
-          Chuyển {passingFish.length} cá sang vòng tiếp theo
-        </Button>
+        fishAlreadyMoved ? (
+          // If fish have already been moved, show a disabled success button
+          <Button
+            type="default"
+            disabled={true}
+            icon={<CheckCircleOutlined />}
+            style={{
+              backgroundColor: "#f6ffed",
+              color: "#52c41a",
+              borderColor: "#b7eb8f",
+            }}
+          >
+            Đã chuyển cá sang vòng
+          </Button>
+        ) : (
+          // Otherwise show the normal button
+          <Button
+            type="primary"
+            onClick={handleMoveToNextRound}
+            loading={isMovingToNextRound}
+            disabled={isMovingToNextRound}
+            icon={<ArrowRightOutlined />}
+            style={{ backgroundColor: "#52c41a" }}
+          >
+            Chuyển {passingFish.length} cá sang vòng tiếp theo
+          </Button>
+        )
       ) : !hasAnyResults ? (
         // Có cá nhưng chưa có kết quả nào
         <Tooltip title="Cần tạo kết quả cho các cá trước">

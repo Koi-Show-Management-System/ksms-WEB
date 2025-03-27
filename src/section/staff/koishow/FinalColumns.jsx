@@ -102,7 +102,6 @@ export const getFinalColumns = (props) => {
       title: "Giống",
       dataIndex: ["registration", "koiProfile", "variety", "name"],
       key: "variety",
-      width: 130,
       ellipsis: true,
       render: (name) => name || "—",
     },
@@ -171,39 +170,53 @@ export const getFinalColumns = (props) => {
       dataIndex: "tankName",
       key: "tankName",
       render: (tankName, record) => {
-        // Find the matching tank name using tankId if available
-        const selectedTank = record.tankId
-          ? competitionRoundTanks?.find((tank) => tank.id === record.tankId)
-          : null;
+        // Try to find the matching tank ID by comparing names
+        let tankIdToUse = record.tankId;
 
-        // Use the found tank name, or fall back to tankName from record, or show default text
-        const displayTankName = selectedTank?.name || tankName || "Chưa gán bể";
-        const displayTankLabel = selectedTank
-          ? `Bể ${selectedTank.name || selectedTank.id}`
-          : displayTankName;
+        // If no tankId but we have a name, try to find the ID from the name
+        if (!tankIdToUse && tankName) {
+          // Find the matching tank
+          const matchingTank = competitionRoundTanks?.find(
+            (tank) =>
+              tank.name === tankName || // Exact match
+              `Bể ${tank.name}` === tankName || // "Bể X" format
+              tank.name === tankName.replace("Bể ", "") || // Remove "Bể " prefix
+              tank.id === tankName.replace("Bể ", "") // Compare with ID
+          );
+
+          if (matchingTank) {
+            tankIdToUse = matchingTank.id;
+          }
+        }
+
+        console.log("Final tank selection:", {
+          tankName,
+          originalTankId: record.tankId,
+          resolvedTankId: tankIdToUse,
+        });
 
         return (
-          <div>
-            {isRoundPublished ? (
-              displayTankLabel
-            ) : (
-              <Select
-                style={{ width: "100%" }}
-                value={record.tankId || undefined}
-                onChange={(value) => handleTankChange(record.id, value)}
-                loading={assigningTank[record.id]}
-                disabled={assigningTank[record.id]}
-                placeholder="Chọn bể"
-                showSearch
-                optionFilterProp="children"
-              >
-                {competitionRoundTanks?.map((tank) => (
-                  <Option key={tank.id} value={tank.id}>
-                    {`Bể ${tank.name || tank.id}`}
-                  </Option>
-                ))}
-              </Select>
-            )}
+          <div className="relative">
+            <Select
+              style={{ width: "100%" }}
+              value={tankIdToUse}
+              onChange={(value) => {
+                console.log("Selecting tank ID:", value);
+                handleTankChange(record.id, value);
+              }}
+              loading={assigningTank[record.id]}
+              disabled={assigningTank[record.id]}
+              placeholder="Chọn bể"
+              showSearch
+              optionFilterProp="children"
+              status={!tankName && !isRoundPublished ? "error" : undefined}
+            >
+              {competitionRoundTanks?.map((tank) => (
+                <Option key={tank.id} value={tank.id}>
+                  {tank.name}
+                </Option>
+              ))}
+            </Select>
           </div>
         );
       },

@@ -35,6 +35,16 @@ const useRoundResult = create((set, get) => ({
         };
       }
 
+      if (error.response && error.response.status === 500) {
+        return {
+          statusCode: 500,
+          message:
+            "Chưa đủ thông tin điểm của các trọng tài. Vui lòng đảm bảo tất cả trọng tài đã chấm điểm trước khi tổng hợp.",
+          error: true,
+          notificationType: "warning",
+        };
+      }
+
       return {
         statusCode: error.response?.status || 500,
         message: error.message || "An error occurred",

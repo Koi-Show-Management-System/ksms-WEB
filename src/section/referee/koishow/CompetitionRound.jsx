@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Table, Tag, Space, Select, Row, Col, Button, Image, Spin } from "antd";
+import { Table, Tag, Space, Select, Row, Col, Button, Image, Spin, Tooltip } from "antd";
 import { EyeOutlined, ReloadOutlined } from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
@@ -209,24 +209,39 @@ function CompetitionRound({ showId }) {
         render: (name) => name || "—",
       },
       {
-        title: "Kết quả",
-        dataIndex: "roundResults",
-        render: (results) => {
-          if (!results || results.length === 0)
-            return <Tag color="gray">Chưa có</Tag>;
-
-          // Get the status from the roundResult field
-          const status = results[0]?.status;
-
-          if (status === "Pass") {
-            return <Tag color="green">Đạt</Tag>;
-          } else if (status === "Fail") {
-            return <Tag color="red">Không đạt</Tag>;
-          } else {
-            return <Tag color="orange">{status || "Đang chờ"}</Tag>;
-          }
+        title: "Điểm",
+        dataIndex: ["roundResults", "0", "totalScore"],
+        key: "score",
+        render: (totalScore) => {
+          if (totalScore === undefined || totalScore === null) return "—";
+          return (
+            <Tooltip title="Điểm tổng">
+              <Tag color="blue" style={{ fontSize: "14px", fontWeight: "bold" }}>
+                {totalScore.toFixed(1)}
+              </Tag>
+            </Tooltip>
+          );
         },
       },
+      // {
+      //   title: "Kết quả",
+      //   dataIndex: "roundResults",
+      //   render: (results) => {
+      //     if (!results || results.length === 0)
+      //       return <Tag color="gray">Chưa có</Tag>;
+
+      //     // Get the status from the roundResult field
+      //     const status = results[0]?.status;
+
+      //     if (status === "Pass") {
+      //       return <Tag color="green">Đạt</Tag>;
+      //     } else if (status === "Fail") {
+      //       return <Tag color="red">Không đạt</Tag>;
+      //     } else {
+      //       return <Tag color="orange">{status || "Đang chờ"}</Tag>;
+      //     }
+      //   },
+      // },
       {
         title: "Trạng thái",
         dataIndex: "status",

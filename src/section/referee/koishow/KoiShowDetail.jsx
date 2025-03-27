@@ -56,7 +56,6 @@ function KoiShowDetail() {
   if (isLoading) return <Loading />;
 
   if (!koiShowDetail) {
-    console.log("Lỗi dữ liệu");
 
     return (
       <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>

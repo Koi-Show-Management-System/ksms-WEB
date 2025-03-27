@@ -19,6 +19,57 @@ function KoiShowDetail() {
 
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+
+  const items = React.useMemo(() => {
+    if (!koiShowDetail?.data) return [];
+
+    const showRule = koiShowDetail?.data?.showRules;
+    return [
+      {
+        key: "category",
+        label: "Danh Mục",
+        children: <Category showId={id} />,
+      },
+      {
+        key: "registration",
+        label: "Đơn Đăng Ký",
+        children: <Registration showId={id} />,
+      },
+      {
+        key: "scanQr",
+        label: "Quét mã",
+        children: <ScanQr />,
+      },
+      {
+        key: "competitionRound",
+        label: "Vòng Thi",
+        children: <CompetitionRound showId={id} />,
+      },
+      {
+        key: "tank",
+        label: "Quản Lý Bể",
+        children: <Tank showId={id} />,
+      },
+      {
+        key: "rules",
+        label: "Quy Tắc",
+        children: <Rules showId={id} showRule={showRule} />,
+      },
+    ];
+  }, [id, koiShowDetail?.data]);
+
+  useEffect(() => {
+    fetchKoiShowDetail(id);
+  }, [id, fetchKoiShowDetail]);
+
+  if (isLoading) return <Loading />;
+
+  if (!koiShowDetail) {
+    return (
+      <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>
+    );
+  }
+
   const sponsors = koiShowDetail?.data?.sponsors || [];
   const displaySponsors = showAll ? sponsors : sponsors.slice(0, 2);
   const extraCount = sponsors.length - 2;
@@ -39,53 +90,6 @@ function KoiShowDetail() {
 
   const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
   const formatTime = (date) => dayjs(date).format("hh:mm A");
-
-  useEffect(() => {
-    fetchKoiShowDetail(id);
-  }, [id]);
-
-  if (isLoading) return <Loading />;
-
-  if (!koiShowDetail) {
-    console.log("Lỗi dữ liệu");
-
-    return (
-      <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>
-    );
-  }
-  const items = [
-    {
-      key: "category",
-      label: "Danh Mục",
-      children: <Category showId={id} />,
-    },
-    {
-      key: "registration",
-      label: "Đơn Đăng Ký",
-      children: <Registration showId={id} />,
-    },
-    {
-      key: "scanQr",
-      label: "Quét mã",
-      children: <ScanQr />,
-    },
-    {
-      key: "competitionRound",
-      label: "Vòng Thi",
-      children: <CompetitionRound showId={id} />,
-    },
-    {
-      key: "tank",
-      label: "Quản Lý Bể",
-      children: <Tank showId={id} />,
-    },
-
-    {
-      key: "rules",
-      label: "Quy Tắc",
-      children: <Rules showId={id} showRule={showRule} />,
-    },
-  ];
 
   const scheduleItems = [
     {
