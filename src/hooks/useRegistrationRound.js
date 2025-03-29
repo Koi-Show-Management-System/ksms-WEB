@@ -5,6 +5,7 @@ import {
   getRegistrationRoundByReferee,
 } from "../api/registrationRoundApi";
 import { updatePublishRound } from "../api/roundApi";
+import { notification } from "antd";
 
 const useRegistrationRound = create((set, get) => ({
   registrationRound: [],
@@ -73,20 +74,53 @@ const useRegistrationRound = create((set, get) => ({
   updateFishTankInRound: async (registrationRoundId, tankId) => {
     set({ isLoading: true, error: null });
 
+    if (!registrationRoundId || !tankId) {
+      notification.error({
+        message: "Lỗi gán bể",
+        description: "Thiếu thông tin cần thiết để gán bể",
+        placement: "topRight",
+      });
+      set({ isLoading: false });
+      return { success: false, error: "Missing required information" };
+    }
+
     try {
       const res = await updateFishTank(registrationRoundId, tankId);
       console.log("Update response:", res.data);
 
       if (res && res.status === 200) {
+        // Show success notification with the API message
+        notification.success({
+          message: "Gán bể thành công",
+          description: res.data?.message || "Cá Koi đã được gán bể thành công",
+          placement: "topRight",
+        });
+
         // Don't auto-refetch - let the component handle this
         set({ isLoading: false });
         return { success: true, data: res.data };
       } else {
+        // Show error notification
+        notification.error({
+          message: "Lỗi gán bể",
+          description: "Không thể gán bể. Vui lòng thử lại sau.",
+          placement: "topRight",
+        });
+
         set({ error: res, isLoading: false });
         return { success: false, error: res };
       }
     } catch (error) {
       console.error("Update Fish Tank Error:", error);
+
+      // Show error notification
+      notification.error({
+        message: "Lỗi gán bể",
+        description:
+          error.response?.data?.message || "Đã xảy ra lỗi khi gán bể",
+        placement: "topRight",
+      });
+
       set({ error: error, isLoading: false });
       return { success: false, error };
     }
@@ -184,28 +218,12 @@ const useRegistrationRound = create((set, get) => ({
     } catch (error) {
       // Handle network errors or other exceptions
       console.error("Fetch Referee Round Error:", error);
-
-      // Try to extract error message from error response if available
-      let errorMessage = error.message || "Lỗi không xác định";
-      let statusCode = error.response?.status || 500;
-
-      if (error.response) {
-        // The request was made and the server responded with a status code
-        // that falls out of the range of 2xx
-        if (error.response.data && error.response.data.Error) {
-          errorMessage = error.response.data.Error;
-        } else if (
-          error.response.data &&
-          typeof error.response.data === "string"
-        ) {
-          errorMessage = error.response.data;
-        }
-
-        // If the response contains a StatusCode, use that instead
-        if (error.response.data && error.response.data.StatusCode) {
-          statusCode = error.response.data.StatusCode;
-        }
-      }
+      notification.error({
+        message: "Lỗi",
+        description:
+          error.response?.data?.Error || "Đã xảy ra lỗi khi tải dữ liệu",
+        placement: "topRight",
+      });
 
       set({
         error: {

@@ -74,7 +74,8 @@ function Registration({ showId }) {
     pending: { color: "orange", label: "Đang chờ", order: 1 },
     confirmed: { color: "green", label: "Đã xác nhận", order: 2 },
     checkin: { color: "geekblue", label: "Đã check-in", order: 3 },
-    rejected: { color: "red", label: "Từ chối", order: 4 },
+    competition: { color: "purple", label: "Thi đấu", order: 4 },
+    rejected: { color: "red", label: "Từ chối", order: 5 },
   };
 
   // Hàm này dùng để render và cũng có thể dùng ở nơi khác
@@ -92,6 +93,10 @@ function Registration({ showId }) {
       </Tag>
     );
   };
+
+  // Add these new state variables
+  const [showAllMedia, setShowAllMedia] = useState(false);
+  const [mediaModalVisible, setMediaModalVisible] = useState(false);
 
   useEffect(() => {
     fetchCategories(showId);
@@ -140,18 +145,19 @@ function Registration({ showId }) {
   };
 
   const handleTableChange = (pagination, filters, sorter) => {
-    // Lấy trạng thái được chọn từ filters (có thể có nhiều trạng thái)
-    const filteredStatus = filters.status?.[0];
-    // Cập nhật selectedStatus state để các chức năng khác sử dụng
-    setSelectedStatus(filteredStatus);
+    // Get all selected statuses from filters (can be multiple now)
+    const filteredStatuses = filters.status;
 
-    // Fetch dữ liệu với filters mới
+    // Update selectedStatus state to handle multiple selections
+    setSelectedStatus(filteredStatuses);
+
+    // Fetch data with filters
     fetchRegistration(
       pagination.current,
       pagination.pageSize,
       showId,
       selectedCategory ? [selectedCategory] : undefined,
-      filteredStatus
+      filteredStatuses // Pass the array of selected statuses
     );
   };
 
@@ -197,19 +203,8 @@ function Registration({ showId }) {
         );
 
         if (result.success) {
-          notification.success({
-            message: "Gán vòng thành công",
-            description: "Các đăng ký đã được gán vào vòng thành công",
-            placement: "topRight",
-          });
           closeAssignModal();
           fetchRegistration(currentPage, pageSize, showId);
-        } else {
-          notification.error({
-            message: "Gán vòng thất bại",
-            description: "Đã xảy ra lỗi khi gán bể. Vui lòng thử lại sau.",
-            placement: "topRight",
-          });
         }
       },
     });
@@ -222,8 +217,9 @@ function Registration({ showId }) {
     },
     getCheckboxProps: (record) => ({
       disabled:
-        record.status?.toLowerCase() !==
-        (selectedStatus || "checkin").toLowerCase(),
+        selectedStatus && selectedStatus.length > 0
+          ? !selectedStatus.includes(record.status?.toLowerCase())
+          : record.status?.toLowerCase() !== "checkin",
       name: record.id,
     }),
   };
@@ -243,8 +239,8 @@ function Registration({ showId }) {
     return null;
   };
   const getFilteredData = () => {
-    // Nếu chưa chọn cả hạng mục và trạng thái, trả về mảng rỗng
-    if (!selectedCategory || !selectedStatus) {
+    // If no category selected, return empty array
+    if (!selectedCategory) {
       return [];
     }
 
@@ -252,8 +248,13 @@ function Registration({ showId }) {
 
     return registration.filter((item) => {
       const categoryMatches = item.competitionCategory?.id === selectedCategory;
+
+      // Handle multiple status filtering
       const statusMatches =
-        item.status?.toLowerCase() === selectedStatus.toLowerCase();
+        selectedStatus && selectedStatus.length > 0
+          ? selectedStatus.includes(item.status?.toLowerCase())
+          : true;
+
       return categoryMatches && statusMatches;
     });
   };
@@ -289,13 +290,7 @@ function Registration({ showId }) {
     try {
       const result = await updateStatus(id, status);
       if (result.success) {
-        notification.success({
-          message: "Thành công",
-          description: `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thành công`,
-          placement: "topRight",
-        });
-
-        // Cập nhật status trong currentKoi và set updatedStatus
+        // Only update the UI state, notifications are handled in the hook
         if (currentKoi) {
           setCurrentKoi({
             ...currentKoi,
@@ -303,19 +298,8 @@ function Registration({ showId }) {
           });
           setUpdatedStatus(status);
         }
-      } else {
-        notification.error({
-          message: "Lỗi",
-          description: `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thất bại`,
-          placement: "topRight",
-        });
       }
     } catch (error) {
-      notification.error({
-        message: "Lỗi",
-        description: "Đã xảy ra lỗi khi cập nhật trạng thái",
-        placement: "topRight",
-      });
       console.error(error);
     }
   };
@@ -355,8 +339,7 @@ function Registration({ showId }) {
             src={imageUrl}
             alt="Koi"
             style={{
-              width: 100,
-              height: 70,
+              width: 120,
               objectFit: "cover",
               borderRadius: "4px",
             }}
@@ -397,6 +380,7 @@ function Registration({ showId }) {
         return record.status?.toLowerCase() === value;
       },
       filterMode: "menu",
+      filterMultiple: true,
       filterSearch: false,
       filterDropdownProps: {
         locale: {
@@ -678,10 +662,11 @@ function Registration({ showId }) {
                       className="w-full"
                     >
                       <Row gutter={[16, 16]}>
-                        {currentKoi.koiMedia.map((media, index) => (
-                          <Col span={12} key={media.id}>
+                        {/* Limit display to first 2 media items initially */}
+                        {currentKoi.koiMedia.slice(0, 2).map((media, index) => (
+                          <Col span={12} key={media.id} className="relative">
                             {media.mediaType === "Image" ? (
-                              <div>
+                              <div className="relative">
                                 <p>
                                   <strong>Hình Ảnh:</strong>
                                 </p>
@@ -694,9 +679,22 @@ function Registration({ showId }) {
                                     objectFit: "contain",
                                   }}
                                 />
+                                {/* Add overlay with +X on the second image if there are more than 2 */}
+                                {index === 1 &&
+                                  currentKoi.koiMedia.length > 2 && (
+                                    <div
+                                      onClick={() => setMediaModalVisible(true)}
+                                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer"
+                                      style={{ borderRadius: "8px" }}
+                                    >
+                                      <span className="text-white font-semibold">
+                                        +{currentKoi.koiMedia.length - 2}
+                                      </span>
+                                    </div>
+                                  )}
                               </div>
                             ) : media.mediaType === "Video" ? (
-                              <div>
+                              <div className="relative">
                                 <p>
                                   <strong>Video:</strong>
                                 </p>
@@ -705,6 +703,19 @@ function Registration({ showId }) {
                                   src={media.mediaUrl}
                                   style={{ width: "100%", maxHeight: "300px" }}
                                 />
+                                {/* Add overlay with +X on the second video if there are more than 2 */}
+                                {index === 1 &&
+                                  currentKoi.koiMedia.length > 2 && (
+                                    <div
+                                      onClick={() => setMediaModalVisible(true)}
+                                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer"
+                                      style={{ borderRadius: "8px" }}
+                                    >
+                                      <span className="text-white font-semibold">
+                                        +{currentKoi.koiMedia.length - 2}
+                                      </span>
+                                    </div>
+                                  )}
                               </div>
                             ) : null}
                           </Col>
@@ -722,7 +733,11 @@ function Registration({ showId }) {
                     type="primary"
                     icon={<CheckCircleOutlined />}
                     onClick={() => showConfirmModal(currentKoi.id, "confirmed")}
-                    className="bg-green-600 hover:bg-green-700 border-green-600 hover:border-green-700 text-white font-bold w-36"
+                    style={{
+                      backgroundColor: "#52c41a",
+                      color: "white",
+                      borderColor: "#52c41a",
+                    }}
                   >
                     Phê Duyệt
                   </Button>
@@ -732,7 +747,11 @@ function Registration({ showId }) {
                     danger
                     icon={<CloseCircleOutlined />}
                     onClick={() => showConfirmModal(currentKoi.id, "rejected")}
-                    className="bg-red-600 hover:bg-red-700 border-red-600 hover:border-red-700 text-white font-bold w-36"
+                    style={{
+                      backgroundColor: "#dc2626",
+                      borderColor: "#dc2626",
+                      color: "white",
+                    }}
                   >
                     Từ Chối
                   </Button>
@@ -740,6 +759,42 @@ function Registration({ showId }) {
               )}
             </div>
           )}
+        </Modal>
+        {/* Add a new modal to display all media */}
+        <Modal
+          title="Tất cả hình ảnh/video"
+          open={mediaModalVisible}
+          onCancel={() => setMediaModalVisible(false)}
+          footer={null}
+          width={900}
+        >
+          <Row gutter={[16, 16]}>
+            {currentKoi?.koiMedia?.map((media) => (
+              <Col span={12} key={media.id}>
+                {media.mediaType === "Image" ? (
+                  <div>
+                    <Image
+                      src={media.mediaUrl}
+                      alt="Hình Ảnh Koi"
+                      style={{
+                        width: "100%",
+                        maxHeight: "300px",
+                        objectFit: "contain",
+                      }}
+                    />
+                  </div>
+                ) : media.mediaType === "Video" ? (
+                  <div>
+                    <video
+                      controls
+                      src={media.mediaUrl}
+                      style={{ width: "100%", maxHeight: "300px" }}
+                    />
+                  </div>
+                ) : null}
+              </Col>
+            ))}
+          </Row>
         </Modal>
       </Card>
     </ConfigProvider>

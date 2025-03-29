@@ -169,7 +169,7 @@ function CompetitionRound({ showId }) {
   // Add isPublishingScores state
   const [isPublishingScores, setIsPublishingScores] = useState(false);
 
-  // Thay vì sử dụng useCallback với publishedRounds, chỉ kiểm tra từ API
+  // Fix the problematic isRoundScorePublished function
   const isRoundScorePublished = useCallback(
     (roundId) => {
       if (!Array.isArray(registrationRound) || registrationRound.length === 0) {
@@ -267,7 +267,7 @@ function CompetitionRound({ showId }) {
     [selectedCategory, fetchRound, resetCriteriaCompetitionRound]
   );
 
-  // Sửa hàm handleSubRoundChange để kiểm tra localStorage trước
+  // Fix the handleSubRoundChange function to avoid the circular dependency
   const handleSubRoundChange = useCallback(
     (value) => {
       // Validate the value
@@ -280,14 +280,8 @@ function CompetitionRound({ showId }) {
       if (value !== selectedSubRound) {
         setSelectedSubRound(value);
 
-        // Kiểm tra ngay trong localStorage xem vòng này đã công khai điểm chưa
-        if (value && isRoundScorePublished(value)) {
-          // Nếu đã công khai rồi, cập nhật state ngay lập tức
-          setAreResultsPublished(true);
-        } else {
-          // Chưa công khai thì mặc định là false
-          setAreResultsPublished(false);
-        }
+        // Remove the immediate state update here - this was causing the loop
+        // We'll rely on the data from the API to set this state
 
         // Only fetch if we have a valid value
         if (value && typeof value === "string" && value !== "undefined") {
@@ -301,12 +295,8 @@ function CompetitionRound({ showId }) {
                   item.roundResults[0]?.isPublic === true
               );
 
+              // This is now the only place we update this state for this action
               setAreResultsPublished(allScoresPublished);
-
-              // Cập nhật localStorage nếu API cho thấy đã công khai
-              if (allScoresPublished) {
-                // savePublishedRound(value);
-              }
             }
           });
 
@@ -330,6 +320,34 @@ function CompetitionRound({ showId }) {
       selectedSubRound,
     ]
   );
+
+  // Fix the problematic useEffect that was also updating areResultsPublished
+  // This was creating a circular update pattern with handleSubRoundChange
+  useEffect(() => {
+    if (registrationRound && registrationRound.length > 0) {
+      // Only update if this effect is triggered by an API data change,
+      // not by a state change from handleSubRoundChange
+      if (registrationRound !== previousRegistrationRoundRef.current) {
+        const allPublished = registrationRound.every(
+          (item) =>
+            item.roundResults &&
+            item.roundResults.length > 0 &&
+            item.roundResults[0]?.isPublic === true
+        );
+
+        // Update the state only if it's different from current value
+        if (allPublished !== areResultsPublished) {
+          setAreResultsPublished(allPublished);
+        }
+
+        // Update ref to prevent unnecessary updates
+        previousRegistrationRoundRef.current = registrationRound;
+      }
+    }
+  }, [registrationRound, areResultsPublished]);
+
+  // Add this ref at the top of your component with other refs
+  const previousRegistrationRoundRef = useRef(null);
 
   // Update this when selectedRoundType changes to fetch criteria
   useEffect(() => {
@@ -382,11 +400,6 @@ function CompetitionRound({ showId }) {
         const result = await updateFishTankInRound(registrationRoundId, tankId);
 
         if (result?.success) {
-          notification.success({
-            message: "Thành công",
-            description: "Cập nhật bể thành công",
-          });
-
           // Only refetch if we have a valid selectedSubRound
           if (
             selectedSubRound &&
@@ -400,18 +413,9 @@ function CompetitionRound({ showId }) {
               selectedSubRound
             );
           }
-        } else {
-          notification.error({
-            message: "Lỗi",
-            description: `Không thể cập nhật bể: ${result?.error?.message || "Lỗi không xác định"}`,
-          });
         }
       } catch (error) {
         console.error("[TankAssign] Error:", error);
-        notification.error({
-          message: "Lỗi",
-          description: `Không thể cập nhật bể: ${error?.message || "Lỗi không xác định"}`,
-        });
       } finally {
         setAssigningTank((prev) => ({ ...prev, [registrationRoundId]: false }));
       }
@@ -462,18 +466,85 @@ function CompetitionRound({ showId }) {
     setIsDetailDrawerVisible(false);
   };
 
-  // Prepare display data with proper memoization
+  // Cập nhật phần displayData để tính toán thứ hạng dựa trên điểm số
+
   const displayData = useMemo(() => {
     if (
       !registrationLoading &&
       selectedSubRound &&
       Array.isArray(registrationRound)
     ) {
-      return registrationRound.map((item, index) => ({
+      // Create array with index
+      const dataWithIndex = registrationRound.map((item, index) => ({
         ...item,
         key: item.id || `registration-${index}`,
         index: index + 1 + (currentPage - 1) * pageSize,
       }));
+
+      // Kiểm tra xem có điểm đã công khai chưa
+      const hasPublishedScores = dataWithIndex.some(
+        (item) => 
+          item.roundResults && 
+          item.roundResults.length > 0 && 
+          item.roundResults[0]?.totalScore !== undefined &&
+          item.roundResults[0]?.isPublic === true
+      );
+
+      // Sort by total score first (descending order - higher scores first)
+      const sortedData = dataWithIndex.sort((a, b) => {
+        // First sort by total score if available (for Evaluation and Final rounds)
+        const scoreA =
+          a.roundResults && a.roundResults[0]?.totalScore !== undefined
+            ? Number(a.roundResults[0]?.totalScore)
+            : -1;
+        const scoreB =
+          b.roundResults && b.roundResults[0]?.totalScore !== undefined
+            ? Number(b.roundResults[0]?.totalScore)
+            : -1;
+
+        // If both have scores, sort by score (descending)
+        if (scoreA >= 0 && scoreB >= 0) {
+          if (scoreA !== scoreB) return scoreB - scoreA;
+        }
+
+        // If scores are equal or not available, sort by rank
+        const rankA = a.registration?.rank || Number.MAX_VALUE;
+        const rankB = b.registration?.rank || Number.MAX_VALUE;
+        if (rankA !== rankB) return rankA - rankB;
+
+        // If ranks are equal or not available, sort by registration number
+        const regNumA = a.registration?.registrationNumber || "";
+        const regNumB = b.registration?.registrationNumber || "";
+        return regNumA.localeCompare(regNumB);
+      });
+
+      // Nếu đã có điểm công khai, tính toán thứ hạng dựa trên điểm số
+      if (hasPublishedScores) {
+        // Tạo một bản sao để sắp xếp theo điểm
+        const rankedData = [...sortedData];
+        
+        // Gán thứ hạng dựa trên vị trí sau khi sắp xếp
+        let currentRank = 1;
+        let previousScore = null;
+        
+        rankedData.forEach((item, index) => {
+          const score = item.roundResults && item.roundResults[0]?.totalScore;
+          
+          // Nếu điểm khác với điểm trước đó, tăng thứ hạng
+          if (score !== previousScore) {
+            currentRank = index + 1;
+          }
+          
+          // Gán thứ hạng mới
+          item.calculatedRank = currentRank;
+          previousScore = score;
+        });
+        
+        return rankedData;
+      }
+      
+      // Nếu chưa có điểm công khai, trả về dữ liệu đã sắp xếp nhưng không tính thứ hạng
+      return sortedData;
     }
     return [];
   }, [
@@ -520,24 +591,32 @@ function CompetitionRound({ showId }) {
     const baseColumns = [
       {
         title: "Top",
-        dataIndex: ["registration", "rank"],
-        width: 60,
+        dataIndex: ["rank"],
+        width: 40,
         render: (rank) => (
-          <span
-            style={{ color: "blue", fontWeight: "bold" }}
-          >{`#${rank}`}</span>
+          <span style={{ color: "blue", fontWeight: "bold" }}>
+            {rank ? `#${rank}` : "_"}
+          </span>
         ),
+        sorter: (a, b) => {
+          // Handle null/undefined values for sorting
+          const rankA = a.registration?.rank || Number.MAX_VALUE;
+          const rankB = b.registration?.rank || Number.MAX_VALUE;
+          return rankA - rankB;
+        },
       },
       {
         title: "Mã Đăng Ký",
         dataIndex: ["registration", "registrationNumber"],
         render: (registrationNumber, record) => {
-          return (
-            registrationNumber ||
-            record.registration?.id?.substring(0, 8) ||
-            "—"
-          );
+          return registrationNumber || "—";
         },
+        sorter: (a, b) => {
+          const regNumA = a.registration?.registrationNumber || "";
+          const regNumB = b.registration?.registrationNumber || "";
+          return regNumA.localeCompare(regNumB);
+        },
+        // defaultSortOrder: "ascend",
       },
       {
         title: "Hình ảnh",
@@ -556,7 +635,7 @@ function CompetitionRound({ showId }) {
               <Image
                 src={imageUrl}
                 alt="Hình cá"
-                width={70}
+                width={80}
                 height={50}
                 className="object-cover"
                 preview={{
@@ -641,23 +720,33 @@ function CompetitionRound({ showId }) {
       baseColumns.push({
         title: "Bể",
         dataIndex: "tankName",
-        render: (tankName, record) => (
-          <Select
-            value={tankName || undefined}
-            placeholder="Chọn bể"
-            onChange={(value) => handleTankAssignment(record.id, value)}
-            loading={assigningTank[record.id]}
-            disabled={assigningTank[record.id]}
-            showSearch
-            optionFilterProp="children"
-          >
-            {competitionRoundTanks?.map((tank) => (
-              <Option key={tank.id} value={tank.id}>
-                {tank.name || `Bể ${tank.id}`}
-              </Option>
-            ))}
-          </Select>
-        ),
+        width: 100,
+        render: (tankName, record) => {
+          // Nếu đã công khai vòng thi thì chỉ hiển thị tên bể, không cho chọn
+          if (record.status === "public") {
+            return (
+              <Typography.Text>{tankName || "Chưa gán bể"}</Typography.Text>
+            );
+          }
+
+          return (
+            <Select
+              value={tankName || undefined}
+              placeholder="Chọn bể"
+              onChange={(value) => handleTankAssignment(record.id, value)}
+              loading={assigningTank[record.id]}
+              disabled={assigningTank[record.id] || record.status === "public"}
+              showSearch
+              optionFilterProp="children"
+            >
+              {competitionRoundTanks?.map((tank) => (
+                <Option key={tank.id} value={tank.id}>
+                  {tank.name || `Bể ${tank.id}`}
+                </Option>
+              ))}
+            </Select>
+          );
+        },
       });
     }
 
@@ -821,16 +910,16 @@ function CompetitionRound({ showId }) {
     }
   };
 
-  // Now update the useEffect that's likely causing the issue
-  // Add these missing dependencies and stabilize others
+  // Stabilize the fetchTanks effect
   useEffect(() => {
     if (selectedCategory && isMounted.current) {
       console.log("Fetching tanks for category:", selectedCategory);
-      fetchTanks(selectedCategory, 1, 100, true);
+      // Store the category in a ref to avoid refetching on unmount
+      const currentCategory = selectedCategory;
+      fetchTanks(currentCategory, 1, 100, true);
     }
     // Only depend on selectedCategory, not fetchTanks which might change
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedCategory]);
+  }, [selectedCategory, fetchTanks]);
 
   // Create a component to display criteria above the table
   const CriteriaDisplay = useCallback(() => {
@@ -1096,22 +1185,6 @@ function CompetitionRound({ showId }) {
       </div>
     );
   };
-
-  // Add effect to check published state when registrationRound changes
-  useEffect(() => {
-    if (registrationRound && registrationRound.length > 0) {
-      // Check if all results have the isPublic flag set to true
-      const allPublished = registrationRound.every(
-        (item) =>
-          item.roundResults &&
-          item.roundResults.length > 0 &&
-          item.roundResults[0]?.isPublic === true
-      );
-
-      // Update the published state based on the data
-      setAreResultsPublished(allPublished);
-    }
-  }, [registrationRound]);
 
   // Thay đổi cách sử dụng getColumnsForRoundType
   // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm

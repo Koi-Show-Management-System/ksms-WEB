@@ -15,7 +15,7 @@ const useScore = create((set, get) => ({
       if (res?.status === 200) {
         notification.success({
           message: "Chấm điểm thành công",
-          description: `Đã ${isPass ? "Pass" : "Fail"}`,
+          description: res?.data?.message || "Đã chấm điểm",
           duration: 3,
         });
 
@@ -133,7 +133,7 @@ const useScore = create((set, get) => ({
     set({ isLoading: true, scoreDataDetail: null });
     try {
       const res = await getScoreDetail(registrationRoundId);
-      if (res?.status=== 200 && res?.data) {
+      if (res?.status === 200 && res?.data) {
         console.log("Score detail fetched successfully:", res);
         set({ isLoading: false, scoreDataDetail: res.data });
         return { success: true, data: res.data };

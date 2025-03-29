@@ -35,21 +35,34 @@ export const getEvaluationColumns = (props) => {
   const columns = [
     {
       title: "Top",
-      dataIndex: ["registration", "rank"],
+      dataIndex: ["rank"],
       width: 60,
       render: (rank) => (
-        <span style={{ color: "blue", fontWeight: "bold" }}>{`#${rank}`}</span>
+        <span style={{ color: "blue", fontWeight: "bold" }}>
+          {rank ? `#${rank}` : "_"}
+        </span>
       ),
+      sorter: (a, b) => {
+        // Handle null/undefined values for sorting
+        const rankA = a.registration?.rank || Number.MAX_VALUE;
+        const rankB = b.registration?.rank || Number.MAX_VALUE;
+        return rankA - rankB;
+      },
+      defaultSortOrder: "ascend",
     },
     {
       title: "Mã Đăng Ký",
       dataIndex: ["registration", "registrationNumber"],
       key: "registrationCode",
       render: (registrationNumber, record) => {
-        return (
-          registrationNumber || record.registration?.id?.substring(0, 8) || "—"
-        );
+        return registrationNumber || "—";
       },
+      sorter: (a, b) => {
+        const regNumA = a.registration?.registrationNumber || "";
+        const regNumB = b.registration?.registrationNumber || "";
+        return regNumA.localeCompare(regNumB);
+      },
+      defaultSortOrder: "ascend",
     },
     {
       title: "Hình ảnh",
@@ -113,7 +126,7 @@ export const getEvaluationColumns = (props) => {
         return (
           <Tooltip title="Điểm tổng">
             <Tag color="blue" style={{ fontSize: "14px", fontWeight: "bold" }}>
-              {totalScore.toFixed(1)}
+              {totalScore.toFixed(2)}
             </Tag>
           </Tooltip>
         );
@@ -188,11 +201,10 @@ export const getEvaluationColumns = (props) => {
           }
         }
 
-        // console.log("Final tank selection:", {
-        //   tankName,
-        //   originalTankId: record.tankId,
-        //   resolvedTankId: tankIdToUse,
-        // });
+        // Kiểm tra nếu đã công khai vòng thi thì chỉ hiển thị tên bể, không cho chọn
+        if (record.status === "public") {
+          return <Typography.Text>{tankName || "Chưa gán bể"}</Typography.Text>;
+        }
 
         return (
           <div className="relative">
@@ -204,7 +216,7 @@ export const getEvaluationColumns = (props) => {
                 handleTankChange(record.id, value);
               }}
               loading={assigningTank[record.id]}
-              disabled={assigningTank[record.id]}
+              disabled={assigningTank[record.id] || record.status === "public"}
               placeholder="Chọn bể"
               showSearch
               optionFilterProp="children"

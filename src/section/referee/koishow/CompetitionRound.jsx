@@ -1,9 +1,29 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { Table, Tag, Space, Select, Row, Col, Button, Image, Spin, Tooltip } from "antd";
-import { EyeOutlined, ReloadOutlined } from "@ant-design/icons";
+import {
+  Table,
+  Tag,
+  Space,
+  Select,
+  Row,
+  Col,
+  Button,
+  Image,
+  Spin,
+  Tooltip,
+  Drawer,
+  Tabs,
+  Typography,
+  Descriptions,
+  List,
+  Card,
+  Empty,
+  Collapse,
+} from "antd";
+import { EyeOutlined, ReloadOutlined, TrophyOutlined } from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
+import useScore from "../../../hooks/useScore";
 
 const { Option } = Select;
 
@@ -16,6 +36,9 @@ function CompetitionRound({ showId }) {
   const [subRounds, setSubRounds] = useState([]);
   const [selectedSubRound, setSelectedSubRound] = useState(null);
   const [loadingImages, setLoadingImages] = useState({});
+  const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
+  const [currentRegistration, setCurrentRegistration] = useState(null);
+  const [scoreDetails, setScoreDetails] = useState(null);
   const roundTypeLabels = {
     Preliminary: "Vòng Sơ Khảo",
     Evaluation: "Vòng Đánh Giá Chính",
@@ -43,6 +66,8 @@ function CompetitionRound({ showId }) {
     pageSize,
     totalItems,
   } = useRegistrationRound();
+
+  const { fetchScoreDetail } = useScore();
 
   // Fetch categories when component mounts or showId changes
   useEffect(() => {
@@ -138,33 +163,37 @@ function CompetitionRound({ showId }) {
     }
   };
 
+  const handleViewDetails = async (record) => {
+    setCurrentRegistration(record);
+    setIsDetailDrawerVisible(true);
+
+    // Fetch score details when opening the drawer
+    if (record && record.id) {
+      const response = await fetchScoreDetail(record.id);
+      if (response.success) {
+        setScoreDetails(response.data);
+      } else {
+        setScoreDetails(null);
+      }
+    }
+  };
+
+  const handleDrawerClose = () => {
+    setIsDetailDrawerVisible(false);
+  };
+
   const columns = useMemo(() => {
     const baseColumns = [
-      {
-        title: "Top",
-        dataIndex: "index",
-        width: 60,
-        render: (index) => (
-          <span
-            style={{ color: "blue", fontWeight: "bold" }}
-          >{`#${index}`}</span>
-        ),
-      },
       {
         title: "Mã Đăng Ký",
         dataIndex: ["registration", "registrationNumber"],
         render: (registrationNumber, record) => {
-          return (
-            registrationNumber ||
-            record.registration?.id?.substring(0, 8) ||
-            "—"
-          );
+          return registrationNumber || "—";
         },
       },
       {
         title: "Hình ảnh",
         dataIndex: ["registration", "koiMedia"],
-        width: 100,
         render: (koiMedia, record) => {
           const id = record.key;
           const imageMedia =
@@ -216,64 +245,32 @@ function CompetitionRound({ showId }) {
           if (totalScore === undefined || totalScore === null) return "—";
           return (
             <Tooltip title="Điểm tổng">
-              <Tag color="blue" style={{ fontSize: "14px", fontWeight: "bold" }}>
-                {totalScore.toFixed(1)}
+              <Tag
+                color="blue"
+                style={{ fontSize: "14px", fontWeight: "bold" }}
+              >
+                {totalScore.toFixed(2)}
               </Tag>
             </Tooltip>
           );
         },
       },
-      // {
-      //   title: "Kết quả",
-      //   dataIndex: "roundResults",
-      //   render: (results) => {
-      //     if (!results || results.length === 0)
-      //       return <Tag color="gray">Chưa có</Tag>;
-
-      //     // Get the status from the roundResult field
-      //     const status = results[0]?.status;
-
-      //     if (status === "Pass") {
-      //       return <Tag color="green">Đạt</Tag>;
-      //     } else if (status === "Fail") {
-      //       return <Tag color="red">Không đạt</Tag>;
-      //     } else {
-      //       return <Tag color="orange">{status || "Đang chờ"}</Tag>;
-      //     }
-      //   },
-      // },
-      {
-        title: "Trạng thái",
-        dataIndex: "status",
-        render: (status) => {
-          let color = "blue";
-          let text = status;
-
-          switch (status) {
-            case "unpublic":
-              color = "gray";
-              text = "Chưa công khai";
-              break;
-            case "public":
-              color = "green";
-              text = "Đã công khai";
-              break;
-            case "pending":
-              color = "orange";
-              text = "Đang chờ";
-              break;
-            default:
-              text = status || "—";
-          }
-
-          return <Tag color={color}>{text}</Tag>;
-        },
-      },
       {
         title: "Bể",
         dataIndex: "tankName",
-        width: 120,
         render: (tank) => <span>{tank || "Chưa phân bổ"}</span>,
+      },
+      {
+        title: "Hành động",
+        key: "action",
+        render: (_, record) => (
+          <Button
+            type="text"
+            icon={<EyeOutlined />}
+            className="text-gray-500 hover:text-blue-500"
+            onClick={() => handleViewDetails(record)}
+          />
+        ),
       },
     ];
 
@@ -371,14 +368,6 @@ function CompetitionRound({ showId }) {
       </Row>
 
       <Table
-        // title={() => (
-        //   <div className="flex justify-between items-center">
-        //     <ReloadOutlined
-        //       onClick={handleReloadTable}
-        //       loading={registrationLoading}
-        //     />
-        //   </div>
-        // )}
         columns={columns}
         dataSource={displayData}
         loading={registrationLoading}
@@ -393,6 +382,203 @@ function CompetitionRound({ showId }) {
         onChange={handleTableChange}
         className="mt-4"
       />
+
+      <Drawer
+        title="Chi tiết kết quả"
+        width={600}
+        onClose={handleDrawerClose}
+        open={isDetailDrawerVisible}
+      >
+        {currentRegistration && (
+          <Tabs defaultActiveKey="1">
+            <Tabs.TabPane
+              tab={
+                <span>
+                  <TrophyOutlined className="mx-2" />
+                  Chi tiết điểm số
+                </span>
+              }
+              key="2"
+            >
+              {scoreDetails &&
+              scoreDetails.data &&
+              scoreDetails.data.length > 0 ? (
+                <List
+                  grid={{ gutter: 16, column: 1 }}
+                  dataSource={scoreDetails.data}
+                  renderItem={(scoreItem) => (
+                    <List.Item>
+                      <Card
+                        title="Điểm số của trọng tài"
+                        extra={
+                          <Tag
+                            color={
+                              scoreItem.status === "Pass" ? "green" : "red"
+                            }
+                          >
+                            {scoreItem.status === "Pass" ? "Đạt" : "Không đạt"}
+                          </Tag>
+                        }
+                      >
+                        <div className="bg-gray-50 p-4 mb-4 rounded-md">
+                          <Row gutter={16} justify="space-between">
+                            <Col span={8} className="text-center">
+                              <Typography.Text className="block text-gray-600">
+                                Điểm ban đầu
+                              </Typography.Text>
+                              <Typography.Text className="block text-3xl font-bold text-blue-500">
+                                {scoreItem.initialScore.toFixed(1)}
+                              </Typography.Text>
+                            </Col>
+                            <Col span={8} className="text-center">
+                              <Typography.Text className="block text-gray-600">
+                                Điểm trừ
+                              </Typography.Text>
+                              <Typography.Text className="block text-3xl font-bold text-red-500">
+                                {scoreItem.totalPointMinus
+                                  ? `-${scoreItem.totalPointMinus.toFixed(1)}`
+                                  : "0.0"}
+                              </Typography.Text>
+                            </Col>
+                            <Col span={8} className="text-center">
+                              <Typography.Text className="block text-gray-600">
+                                Điểm cuối cùng
+                              </Typography.Text>
+                              <Typography.Text className="block text-3xl font-bold text-green-500">
+                                {(
+                                  scoreItem.initialScore -
+                                  (scoreItem.totalPointMinus || 0)
+                                ).toFixed(1)}
+                              </Typography.Text>
+                            </Col>
+                          </Row>
+                        </div>
+
+                        <p>
+                          <strong>Thời gian:</strong>{" "}
+                          {scoreItem.createdAt
+                            ? new Date(scoreItem.createdAt).toLocaleString()
+                            : "—"}
+                        </p>
+                        {scoreItem.criteriaWithErrors &&
+                        scoreItem.criteriaWithErrors.length > 0 ? (
+                          <div className="mt-4">
+                            {scoreItem.criteriaWithErrors.map((criteria) => {
+                              const hasErrors =
+                                criteria.errors && criteria.errors.length > 0;
+                              const totalCriteriaDeduction = hasErrors
+                                ? criteria.errors.reduce(
+                                    (sum, err) => sum + (err.pointMinus || 0),
+                                    0
+                                  )
+                                : 0;
+
+                              return (
+                                <div
+                                  key={criteria.id}
+                                  className="mb-4 border-b "
+                                >
+                                  <Collapse>
+                                    <Collapse.Panel
+                                      header={
+                                        <div className="flex justify-between ">
+                                          <div className="flex ">
+                                            <Typography.Text
+                                              strong
+                                              className="mr-2"
+                                            >
+                                              {criteria.name}
+                                            </Typography.Text>
+                                            <Tag color="blue">
+                                              {(criteria.weight * 100).toFixed(
+                                                0
+                                              )}
+                                              %
+                                            </Tag>
+                                          </div>
+                                          {hasErrors && (
+                                            <Tag color="red">
+                                              -{totalCriteriaDeduction} điểm
+                                            </Tag>
+                                          )}
+                                        </div>
+                                      }
+                                    >
+                                      {hasErrors ? (
+                                        criteria.errors.map((error, idx) => {
+                                          const severityColor =
+                                            error.severity === "eb"
+                                              ? "red"
+                                              : error.severity === "mb"
+                                                ? "orange"
+                                                : "blue";
+                                          const severityText =
+                                            error.severity === "eb"
+                                              ? "Nặng"
+                                              : error.severity === "mb"
+                                                ? "trung bình"
+                                                : "nhẹ";
+
+                                          return (
+                                            <div
+                                              key={error.id || idx}
+                                              className="mb-3 p-3 border rounded-md"
+                                            >
+                                              <div className="flex flex-col">
+                                                <div className="mb-1">
+                                                  <Typography.Text strong>
+                                                    Lỗi nhỏ:{" "}
+                                                    {error.errorTypeName}
+                                                  </Typography.Text>
+                                                </div>
+                                                <div className="mb-1">
+                                                  <Typography.Text>
+                                                    Mức độ:{" "}
+                                                    <Tag color={severityColor}>
+                                                      {severityText}
+                                                    </Tag>
+                                                  </Typography.Text>
+                                                </div>
+                                                <div>
+                                                  <Typography.Text>
+                                                    Điểm trừ:{" "}
+                                                    <span className="text-red-500">
+                                                      -{error.pointMinus} điểm
+                                                    </span>
+                                                  </Typography.Text>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          );
+                                        })
+                                      ) : (
+                                        <Typography.Text
+                                          type="success"
+                                          className="block py-2"
+                                        >
+                                          Không có lỗi ở tiêu chí này
+                                        </Typography.Text>
+                                      )}
+                                    </Collapse.Panel>
+                                  </Collapse>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <Empty description="Không có chi tiết đánh giá" />
+                        )}
+                      </Card>
+                    </List.Item>
+                  )}
+                />
+              ) : (
+                <Empty description="Không có dữ liệu điểm số" />
+              )}
+            </Tabs.TabPane>
+          </Tabs>
+        )}
+      </Drawer>
     </div>
   );
 }

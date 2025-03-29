@@ -152,37 +152,39 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         if (result.success) {
           console.log("Scan successful:", result.data);
         } else {
+          let errorMessage = "Không thể quét mã QR này. Vui lòng thử lại.";
+
           if (
             result.statusCode === 404 ||
             (typeof result.error === "object" &&
               result.error.statusCode === 404)
           ) {
-            setScanError(
-              "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại."
-            );
-          } else {
-            const errorMessage =
-              typeof result.error === "object"
-                ? result.error.message || JSON.stringify(result.error)
-                : result.error || "Không thể quét mã QR này. Vui lòng thử lại.";
-            setScanError(errorMessage);
+            errorMessage =
+              "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.";
+          } else if (typeof result.error === "object") {
+            errorMessage = result.error.message || JSON.stringify(result.error);
+          } else if (result.error) {
+            errorMessage = result.error;
           }
+
+          setScanError(errorMessage);
           setScannerEnabled(false);
           setShowScanner(false);
         }
       } catch (error) {
         console.error("Error scanning QR code:", error);
+        let errorMessage = "Đã xảy ra lỗi khi quét mã QR. Vui lòng thử lại.";
+
         if (error.statusCode === 404) {
-          setScanError(
-            "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại."
-          );
-        } else {
-          const errorMessage =
-            typeof error === "object"
-              ? error.message || JSON.stringify(error)
-              : error || "Đã xảy ra lỗi khi quét mã QR. Vui lòng thử lại.";
-          setScanError(errorMessage);
+          errorMessage =
+            "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.";
+        } else if (typeof error === "object") {
+          errorMessage = error.message || JSON.stringify(error);
+        } else if (error) {
+          errorMessage = error;
         }
+
+        setScanError(errorMessage);
         setScannerEnabled(false);
         setShowScanner(false);
       }
@@ -460,7 +462,6 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
             <div className="mb-6">
               <Alert
                 message="Lỗi quét mã QR"
-                description={scanError}
                 type="error"
                 showIcon
                 className="mb-4"
@@ -502,13 +503,13 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
             </div>
           )}
 
-          {registrationLoading && (
+          {/* {registrationLoading && (
             <div className="flex justify-center my-8">
               <div className="text-center">
                 <Spin size="large" tip="Đang tải thông tin..." />
               </div>
             </div>
-          )}
+          )} */}
 
           {refereeRoundData && !showDetailScoring && (
             <AntCard className="mt-8 mx-auto max-w-lg shadow-lg rounded-xl overflow-hidden">
@@ -517,9 +518,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                   Thông tin cá
                 </Title>
                 <div className="">
-                  Mã:{" "}
-                  {refereeRoundData.registration?.registrationNumber ||
-                    qrResult?.substring(0, 8)}
+                  Mã: {refereeRoundData.registration?.registrationNumber || "-"}
                 </div>
               </div>
 
@@ -594,7 +593,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                           tip="Đang lưu kết quả chấm điểm..."
                           size="large"
                         />
-                        <div className="mt-3 text-green-600 font-medium">
+                        <div className="mt-3 text-blue-500 font-medium">
                           Đã chấm điểm thành công!
                         </div>
                       </div>
@@ -615,7 +614,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                             width: "100%",
                           }}
                         >
-                          PASS
+                          Đạt
                         </Button>
                         <Button
                           danger
@@ -632,7 +631,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                             width: "100%",
                           }}
                         >
-                          FAIL
+                          Không Đạt
                         </Button>
                       </>
                     ) : (
@@ -677,7 +676,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
           {postSubmitLoading ? (
             <div className="text-center py-8">
               <Spin tip="Đang lưu kết quả chấm điểm..." size="large" />
-              <div className="mt-3 text-green-600 font-medium">
+              <div className="mt-3 text-blue-500 font-medium">
                 Đã chấm điểm thành công!
               </div>
             </div>

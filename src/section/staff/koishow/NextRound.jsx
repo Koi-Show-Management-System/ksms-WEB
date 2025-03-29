@@ -198,7 +198,7 @@ function NextRound({
       passingFish.length > 0 &&
       !cachedNextRoundId &&
       !isPrefetching &&
-      (!lastPrefetch || Date.now() - lastPrefetch > 60000) // Chỉ prefetch nếu đã qua 1 phút
+      (!lastPrefetch || Date.now() - lastPrefetch > 60000) 
     ) {
       prefetchNextRound();
     }

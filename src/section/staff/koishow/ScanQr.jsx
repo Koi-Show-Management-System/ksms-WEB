@@ -68,22 +68,10 @@ function ScanQr() {
     try {
       setIsCheckingIn(true);
       const registrationId = registrationPayment.data.registration.id;
-      const result = await updateStatus(registrationId, "checkin");
+      await updateStatus(registrationId, "checkin");
 
-      if (result.success) {
-        notification.success({
-          message: "Check-in Thành công",
-          description: `Đã check-in thành công cho: ${registrationPayment.data.registration.registerName}`,
-          duration: 4,
-        });
-        setTimeout(handleReset, 2000);
-      } else {
-        notification.error({
-          message: "Check-in Thất bại",
-          description: `Không thể check-in: ${result.error?.message || "Lỗi không xác định"}`,
-          duration: 4,
-        });
-      }
+      // Reset state to go back to scanning mode
+      handleReset();
     } catch (error) {
       // Xử lý lỗi 404 - vé đã được check-in
       if (error.response && error.response.status === 404) {
@@ -96,7 +84,7 @@ function ScanQr() {
       } else {
         notification.error({
           message: "Lỗi",
-          description: `Lỗi khi check-in: ${error.message || "Lỗi không xác định"}`, 
+          description: `Lỗi khi check-in: ${error.message || "Lỗi không xác định"}`,
           duration: 4,
         });
       }
@@ -109,22 +97,10 @@ function ScanQr() {
     try {
       setIsRejecting(true);
       const registrationId = registrationPayment.data.registration.id;
-      const result = await updateStatus(registrationId, "rejected");
+      await updateStatus(registrationId, "rejected");
 
-      if (result.success) {
-        notification.success({
-          message: "Từ chối Thành công",
-          description: `Đã từ chối check-in cho: ${registrationPayment.data.registration.registerName}`,
-          duration: 4,
-        });
-        setTimeout(handleReset, 2000);
-      } else {
-        notification.error({
-          message: "Từ chối Thất bại",
-          description: `Không thể từ chối: ${result.error?.message || "Lỗi không xác định"}`,
-          duration: 4,
-        });
-      }
+      // Reset state to go back to scanning mode
+      handleReset();
     } catch (error) {
       notification.error({
         message: "Lỗi",
@@ -415,8 +391,10 @@ function ScanQr() {
                 isCheckingIn ||
                 registrationPayment.data.registration.status === "checkin"
               }
-              className="bg-green-500 hover:bg-green-600"
               style={{
+                backgroundColor: "#52c41a",
+                color: "white",
+                borderColor: "#52c41a",
                 height: "52px",
                 padding: "0 24px",
                 borderRadius: "8px",

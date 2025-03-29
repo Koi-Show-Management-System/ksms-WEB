@@ -76,12 +76,41 @@ const useRegistration = create((set, get) => ({
       if (response && response.status === 200) {
         const { currentPage, pageSize, showIds } = get();
         get().fetchRegistration(currentPage, pageSize, showIds);
+
+        // Display success notification with message from response if available
+        notification.success({
+          message: "Thành công",
+          description:
+            response.data?.message ||
+            `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thành công`,
+          placement: "topRight",
+        });
+
         return { success: true, data: response.data };
       } else {
+        // Display error notification
+        notification.error({
+          message: "Lỗi",
+          description:
+            response?.data?.message ||
+            `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thất bại`,
+          placement: "topRight",
+        });
+
         return { success: false, error: response };
       }
     } catch (error) {
       console.error("Error updating status:", error);
+
+      // Display error notification for exceptions
+      notification.error({
+        message: "Lỗi",
+        description:
+          error.response?.data?.Error ||
+          "Đã xảy ra lỗi khi cập nhật trạng thái",
+        placement: "topRight",
+      });
+
       return { success: false, error };
     }
   },

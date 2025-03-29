@@ -24,6 +24,7 @@ import {
   SaveOutlined,
   InfoCircleOutlined,
   PercentageOutlined,
+  EditOutlined,
 } from "@ant-design/icons";
 import useScore from "../../../hooks/useScore";
 import { createErrorType } from "../../../api/errorType";
@@ -65,6 +66,14 @@ const EvaluationScoreSheet = ({
   // Thêm state để lưu trữ lỗi tạm thời
   const [tempErrorId, setTempErrorId] = useState(-1); // ID tạm thời bắt đầu từ -1 và giảm dần
   const [localErrorTypes, setLocalErrorTypes] = useState([]); // Lưu tất cả các error types được tạo cục bộ
+
+  // Thêm state để theo dõi chế độ chỉnh sửa
+  const [isEditing, setIsEditing] = useState(false);
+  const [editingError, setEditingError] = useState(null);
+  const [editingErrorIndex, setEditingErrorIndex] = useState(null);
+
+  // Thêm state để theo dõi giá trị hiện tại của slider
+  const [currentPercentage, setCurrentPercentage] = useState(10);
 
   // Cập nhật useEffect để theo dõi criteriaErrors
   useEffect(() => {
@@ -390,11 +399,6 @@ const EvaluationScoreSheet = ({
         if (onScoreSubmitted && typeof onScoreSubmitted === "function") {
           onScoreSubmitted(result);
         }
-      } else {
-        notification.error({
-          message: "Lỗi khi lưu điểm",
-          description: result.error || "Không thể lưu điểm đánh giá",
-        });
       }
     } catch (error) {
       console.error("Error submitting score:", error);
@@ -420,7 +424,7 @@ const EvaluationScoreSheet = ({
     }
   };
 
-  // Add this function to handle severity change
+  // Cập nhật hàm handleSeverityChange để cập nhật cả công thức hiển thị
   const handleSeverityChange = (value) => {
     const selectedSeverity = severityLevels.find((s) => s.value === value);
     if (selectedSeverity) {
@@ -431,52 +435,179 @@ const EvaluationScoreSheet = ({
         (selectedSeverity.range[0] + selectedSeverity.range[1]) / 2
       );
       form.setFieldsValue({ percentage: defaultPercentage });
+      setCurrentPercentage(defaultPercentage); // Cập nhật state
+
+      // Cập nhật công thức hiển thị với giá trị phần trăm mới
+      if (currentCriteriaId) {
+        const criteria = criteriaList.find(
+          (c) => (c.criteria?.id || c.id) === currentCriteriaId
+        );
+        if (criteria) {
+          const weight = criteria.weight || 0;
+          const calculatedPoint = parseFloat(
+            (weight * (defaultPercentage / 100) * 100).toFixed(2)
+          );
+
+          // Cập nhật công thức hiển thị
+          setCalculatedFormula({
+            weight: (weight * 100).toFixed(0),
+            percentage: defaultPercentage,
+            result: calculatedPoint,
+          });
+        }
+      }
     }
   };
 
-  // Show modal to add a new error
-  const showAddErrorModal = (criteriaObj) => {
-    // Đảm bảo lấy đúng ID của criteria, không phải ID của object cha
-    const criteriaId = criteriaObj.criteria?.id || criteriaObj.id;
-
+  // Thêm hàm để xử lý việc mở modal để chỉnh sửa lỗi
+  const handleEditError = (criteriaId, error, index) => {
     setCurrentCriteriaId(criteriaId);
-    setAddErrorModalVisible(true);
+    setIsEditing(true);
+    setEditingError(error);
+    setEditingErrorIndex(index);
+    setNewErrorName(error.errorName);
+    setCurrentPercentage(error.percentage); // Cập nhật state với giá trị phần trăm hiện tại
 
-    // Default to light error
-    const defaultSeverity = "eb";
-    const defaultSeverityObj = severityLevels.find(
-      (s) => s.value === defaultSeverity
+    // Tìm range cho severity
+    const selectedSeverity = severityLevels.find(
+      (s) => s.value === error.severity
     );
-    setSliderRange(defaultSeverityObj.range);
+    setSliderRange(selectedSeverity ? selectedSeverity.range : [0, 30]);
 
-    // Default percentage
-    const defaultPercentage = 15; // Giá trị mặc định 15%
-
-    // Tính điểm trừ mặc định
+    // Tìm tiêu chí
     const criteria = criteriaList.find(
       (c) => (c.criteria?.id || c.id) === criteriaId
     );
 
     if (criteria) {
       const weight = criteria.weight || 0;
-      const defaultPointMinus = parseFloat(
+
+      // Cập nhật công thức hiển thị
+      setCalculatedFormula({
+        weight: (weight * 100).toFixed(0),
+        percentage: error.percentage,
+        result: error.pointMinus,
+      });
+
+      // Set values for the form
+      form.setFieldsValue({
+        errorName: error.errorName,
+        severity: error.severity,
+        percentage: error.percentage,
+        calculatedPointMinus: error.pointMinus,
+      });
+    }
+
+    setAddErrorModalVisible(true);
+  };
+
+  // Cập nhật hàm để lưu lỗi đã chỉnh sửa
+  const handleSaveError = () => {
+    if (isEditing) {
+      // Lưu chỉnh sửa lỗi
+      const formValues = form.getFieldsValue();
+
+      // Tìm tiêu chí
+      const criteria = criteriaList.find(
+        (c) => (c.criteria?.id || c.id) === currentCriteriaId
+      );
+
+      if (!criteria) {
+        notification.error({
+          message: "Lỗi",
+          description: "Không tìm thấy tiêu chí",
+        });
+        return;
+      }
+
+      // Tính điểm trừ
+      const weight = criteria.weight || 0;
+      const pointMinus = parseFloat(
+        (weight * (formValues.percentage / 100) * 100).toFixed(2)
+      );
+
+      // Cập nhật lỗi đang chỉnh sửa
+      const updatedError = {
+        ...editingError,
+        errorName: newErrorName,
+        severity: formValues.severity,
+        percentage: formValues.percentage,
+        pointMinus: pointMinus,
+      };
+
+      // Cập nhật state
+      setCriteriaErrors((prevErrors) => {
+        const newErrors = { ...prevErrors };
+        newErrors[currentCriteriaId][editingErrorIndex] = updatedError;
+        return newErrors;
+      });
+
+      notification.success({
+        message: "Thành công",
+        description: "Đã cập nhật lỗi",
+      });
+    } else {
+      // Gọi hàm tạo lỗi mới nếu không phải đang chỉnh sửa
+      handleCreateLocalErrorType();
+    }
+
+    // Đóng modal và reset state
+    setAddErrorModalVisible(false);
+    setIsEditing(false);
+    setEditingError(null);
+    setEditingErrorIndex(null);
+    form.resetFields();
+    setNewErrorName("");
+  };
+
+  // Cập nhật hàm showAddErrorModal để khởi tạo công thức hiển thị
+  const showAddErrorModal = (criteriaObj) => {
+    // Reset editing state
+    setIsEditing(false);
+    setEditingError(null);
+    setEditingErrorIndex(null);
+    setNewErrorName("");
+
+    // Thiết lập giá trị phần trăm mặc định
+    const defaultPercentage = 10;
+    setCurrentPercentage(defaultPercentage);
+
+    // Lấy ID tiêu chí
+    const criteriaId = criteriaObj.criteria?.id || criteriaObj.id;
+    setCurrentCriteriaId(criteriaId);
+
+    // Thiết lập range mặc định cho slider (lỗi nhẹ)
+    setSliderRange([0, 30]);
+
+    // Tìm tiêu chí để lấy trọng số
+    const criteria = criteriaList.find(
+      (c) => (c.criteria?.id || c.id) === criteriaId
+    );
+
+    if (criteria) {
+      const weight = criteria.weight || 0;
+
+      // Tính điểm trừ ban đầu
+      const initialPointMinus = parseFloat(
         (weight * (defaultPercentage / 100) * 100).toFixed(2)
       );
 
-      // Cập nhật công thức hiển thị ban đầu
+      // Cập nhật công thức hiển thị với giá trị ban đầu
       setCalculatedFormula({
         weight: (weight * 100).toFixed(0),
         percentage: defaultPercentage,
-        result: defaultPointMinus,
+        result: initialPointMinus,
       });
 
-      // Set default values for the form
+      // Thiết lập giá trị ban đầu cho form
       form.setFieldsValue({
-        severity: defaultSeverity,
+        severity: "eb", // Mặc định là lỗi nhẹ
         percentage: defaultPercentage,
-        calculatedPointMinus: defaultPointMinus,
+        calculatedPointMinus: initialPointMinus,
       });
     }
+
+    setAddErrorModalVisible(true);
   };
 
   // Formula explanation
@@ -596,12 +727,21 @@ const EvaluationScoreSheet = ({
                           title: "Hành động",
                           key: "action",
                           render: (_, record, index) => (
-                            <Button
-                              type="text"
-                              danger
-                              icon={<DeleteOutlined />}
-                              onClick={() => removeError(criteriaId, index)}
-                            />
+                            <Space>
+                              <Button
+                                type="text"
+                                icon={<EditOutlined />}
+                                onClick={() =>
+                                  handleEditError(criteriaId, record, index)
+                                }
+                              />
+                              <Button
+                                type="text"
+                                danger
+                                icon={<DeleteOutlined />}
+                                onClick={() => removeError(criteriaId, index)}
+                              />
+                            </Space>
                           ),
                         },
                       ]}
@@ -686,11 +826,20 @@ const EvaluationScoreSheet = ({
 
       {/* Modal to add new error */}
       <Modal
-        title="Thêm lỗi mới"
+        title={isEditing ? "Chỉnh sửa lỗi" : "Thêm lỗi mới"}
         open={addErrorModalVisible}
-        onCancel={() => setAddErrorModalVisible(false)}
-        onOk={handleCreateLocalErrorType}
+        onCancel={() => {
+          setAddErrorModalVisible(false);
+          setIsEditing(false);
+          setEditingError(null);
+          setEditingErrorIndex(null);
+          form.resetFields();
+          setNewErrorName("");
+        }}
+        onOk={handleSaveError}
         confirmLoading={creatingError}
+        okText="Lưu"
+        cancelText="Hủy"
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -724,8 +873,7 @@ const EvaluationScoreSheet = ({
             name="percentage"
             label={
               <span>
-                Phần trăm lỗi:{" "}
-                <Text strong>{form.getFieldValue("percentage")}%</Text>
+                Phần trăm lỗi: <Text strong>{currentPercentage}%</Text>
                 <Tooltip title="Phần trăm trong khoảng của mức độ lỗi đã chọn">
                   <InfoCircleOutlined className="ml-1" />
                 </Tooltip>
@@ -745,6 +893,9 @@ const EvaluationScoreSheet = ({
                 formatter: (value) => `${value}%`,
               }}
               onChange={(value) => {
+                // Cập nhật state để hiển thị giá trị hiện tại
+                setCurrentPercentage(value);
+
                 // Tính toán điểm trừ theo công thức và hiển thị
                 if (currentCriteriaId) {
                   const criteria = criteriaList.find(
@@ -785,9 +936,6 @@ const EvaluationScoreSheet = ({
                 </Text>
               </Text>
             </div>
-            {/* <div className="mt-1 text-xs text-gray-500">
-              <Text>Trọng số tiêu chí × (Mức độ lỗi/100) × 100</Text>
-            </div> */}
           </div>
 
           {/* Thêm trường ẩn để lưu điểm trừ đã tính */}
