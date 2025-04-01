@@ -578,27 +578,13 @@ function Category({ showId }) {
                                 </div>
                               }
                             >
-                              <div className="p-3">
+                              <div className="p-2">
                                 <p>
                                   <strong>Thứ tự:</strong> {round.roundOrder}
                                 </p>
                                 <p>
-                                  <strong>Thời gian bắt đầu:</strong>{" "}
-                                  {round.startTime
-                                    ? new Date(round.startTime).toLocaleString()
-                                    : "Chưa xác định"}
-                                </p>
-                                <p>
-                                  <strong>Thời gian kết thúc:</strong>{" "}
-                                  {round.endTime
-                                    ? new Date(round.endTime).toLocaleString()
-                                    : "Chưa xác định"}
-                                </p>
-                                <p>
-                                  <strong>
-                                    Điểm tối thiểu để vào vòng sau:
-                                  </strong>{" "}
-                                  {round.minScoreToAdvance}
+                                  <strong>Số lượng cá qua vòng:</strong>{" "}
+                                  {round.numberOfRegistrationToAdvance}
                                 </p>
                               </div>
                             </Collapse.Panel>

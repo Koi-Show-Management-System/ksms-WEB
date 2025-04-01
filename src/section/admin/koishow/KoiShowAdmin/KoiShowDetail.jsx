@@ -26,17 +26,18 @@ import {
 import koiFishImage from "../../../../assets/koiFishImage.png";
 import sponsorLogo1 from "../../../../assets/sponsorLogo1.png";
 import Category from "./Category";
-import KoiList from "./KoiList";
 import ManageShow from "./ManageShow";
 import Votes from "./Votes";
 import Rules from "./Rules";
 import Sponsor from "./Sponsor";
-import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
 import { Loading } from "../../../../components";
 import useTicketType from "../../../../hooks/useTicketType";
+import CompetitionRound from "./CompetitionRound";
+import Registration from "./Registration";
 import Tank from "./Tank";
+import Ticket from "./Ticket";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -278,7 +279,12 @@ function KoiShowDetail() {
     {
       key: "koiList",
       label: "Đơn Đăng Ký",
-      children: <KoiList showId={id} />,
+      children: <Registration showId={id} />,
+    },
+    {
+      key: "ticket",
+      label: "Quản lý vé",
+      children: <Ticket showId={id} />,
     },
     {
       key: "manageShow",

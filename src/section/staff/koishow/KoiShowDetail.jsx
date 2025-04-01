@@ -4,14 +4,15 @@ import dayjs from "dayjs";
 import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
 import Category from "./Category";
 import koiFishImage from "../../../assets/koiFishImage.png";
-import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
 import { Loading } from "../../../components";
 import useKoiShow from "../../../hooks/useKoiShow";
 import Rules from "./Rules";
-import Tank from "./Tank";
-import Registration from "./Registration";
+import Tank from "../../admin/koishow/KoiShowAdmin/Tank";
+import Registration from "../../admin/koishow/KoiShowAdmin/Registration";
 import ScanQr from "./ScanQr";
+import CompetitionRound from "../../admin/koishow/KoiShowAdmin/CompetitionRound";
+import Ticket from "../../admin/koishow/KoiShowAdmin/Ticket";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -34,6 +35,11 @@ function KoiShowDetail() {
         key: "registration",
         label: "Đơn Đăng Ký",
         children: <Registration showId={id} />,
+      },
+      {
+        key: "ticket",
+        label: "Quản lý vé",
+        children: <Ticket showId={id} />,
       },
       {
         key: "scanQr",

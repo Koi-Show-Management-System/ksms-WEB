@@ -6,8 +6,8 @@ import React, {
   useImperativeHandle,
 } from "react";
 import { Select, Space, Typography } from "antd";
-import useCategory from "../../../hooks/useCategory";
-import useRound from "../../../hooks/useRound";
+import useCategory from "../../../../hooks/useCategory";
+import useRound from "../../../../hooks/useRound";
 
 const RoundSelector = forwardRef(
   (

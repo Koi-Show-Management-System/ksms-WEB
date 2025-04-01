@@ -12,11 +12,11 @@ import {
   CheckCircleOutlined,
   RightCircleOutlined,
 } from "@ant-design/icons";
-import useRegistration from "../../../hooks/useRegistration";
-import useRound from "../../../hooks/useRound";
+import useRegistration from "../../../../hooks/useRegistration";
+import useRound from "../../../../hooks/useRound";
 import axios from "axios";
-import useRegistrationRound from "../../../hooks/useRegistrationRound";
-import useRoundResult from "../../../hooks/useRoundResult";
+import useRegistrationRound from "../../../../hooks/useRegistrationRound";
+import useRoundResult from "../../../../hooks/useRoundResult";
 
 const roundTypeLabels = {
   Preliminary: "Vòng Sơ Khảo",
@@ -198,7 +198,7 @@ function NextRound({
       passingFish.length > 0 &&
       !cachedNextRoundId &&
       !isPrefetching &&
-      (!lastPrefetch || Date.now() - lastPrefetch > 60000) 
+      (!lastPrefetch || Date.now() - lastPrefetch > 60000)
     ) {
       prefetchNextRound();
     }

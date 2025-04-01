@@ -1,9 +1,82 @@
 import { create } from "zustand";
-import { createTicket, updateTicket, deleteTicket } from "../api/ticketTypeApi";
+import {
+  createTicket,
+  updateTicket,
+  deleteTicket,
+  getTicketTypes,
+  getTicketOrderDetails,
+  updateTicketOrderStatus as updateOrderStatusApi,
+} from "../api/ticketTypeApi";
 
 const useTicketType = create((set, get) => ({
   isLoading: false,
   error: null,
+  ticketTypes: [],
+  totalTicketTypes: 0,
+  currentPage: 1,
+  pageSize: 10,
+  orderDetails: [],
+  isLoadingDetails: false,
+
+  fetchTicketTypes: async (showId, page, pageSize) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await getTicketTypes(showId, page, pageSize);
+      if (response?.data?.statusCode === 200) {
+        set({
+          ticketTypes: response,
+          totalTicketTypes: response.data.data.total,
+          currentPage: response.data.data.page,
+          pageSize: response.data.data.size,
+          isLoading: false,
+        });
+        return { success: true, data: response.data };
+      } else {
+        set({
+          error: response?.data?.message || "Failed to fetch ticket types",
+          isLoading: false,
+        });
+        return {
+          success: false,
+          message: response?.data?.message || "Failed to fetch ticket types",
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching ticket types:", error);
+      set({ error: error.message || "An error occurred", isLoading: false });
+      return { success: false, message: error.message || "An error occurred" };
+    }
+  },
+
+  fetchTicketOrderDetails: async (orderId) => {
+    set({ isLoadingDetails: true, error: null });
+    try {
+      const response = await getTicketOrderDetails(orderId);
+      if (response?.data?.statusCode === 200) {
+        set({
+          orderDetails: response.data.data,
+          isLoadingDetails: false,
+        });
+        return { success: true, data: response.data.data };
+      } else {
+        set({
+          error: response?.data?.message || "Failed to fetch order details",
+          isLoadingDetails: false,
+        });
+        return {
+          success: false,
+          message: response?.data?.message || "Failed to fetch order details",
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+      set({
+        error: error.message || "An error occurred",
+        isLoadingDetails: false,
+      });
+      return { success: false, message: error.message || "An error occurred" };
+    }
+  },
 
   createTicketType: async (showId, ticketData) => {
     set({ isLoading: true, error: null });
@@ -79,6 +152,33 @@ const useTicketType = create((set, get) => ({
     } catch (error) {
       console.error("Error deleting ticket:", error);
       set({ error: error.message || "An error occurred", isLoading: false });
+      return { success: false, message: error.message || "An error occurred" };
+    }
+  },
+
+  updateTicketOrderStatus: async (orderId, status) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await updateOrderStatusApi(orderId, status);
+      if (response?.data?.statusCode === 200) {
+        set({ isLoading: false });
+        return { success: true, data: response.data };
+      } else {
+        set({
+          error: response?.data?.message || "Failed to update order status",
+          isLoading: false,
+        });
+        return {
+          success: false,
+          message: response?.data?.message || "Failed to update order status",
+        };
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      set({
+        error: error.message || "An error occurred",
+        isLoading: false,
+      });
       return { success: false, message: error.message || "An error occurred" };
     }
   },

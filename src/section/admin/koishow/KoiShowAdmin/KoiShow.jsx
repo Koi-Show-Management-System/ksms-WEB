@@ -135,13 +135,13 @@ function KoiShow() {
         </Tag>
       ),
     },
-    {
-      title: "Chỉnh Sửa",
-      key: "edit",
-      render: (_, record) => (
-        <Button type="text" icon={<EditOutlined style={{ color: "red" }} />} />
-      ),
-    },
+    // {
+    //   title: "Chỉnh Sửa",
+    //   key: "edit",
+    //   render: (_, record) => (
+    //     <Button type="text" icon={<EditOutlined style={{ color: "red" }} />} />
+    //   ),
+    // },
   ];
 
   return (

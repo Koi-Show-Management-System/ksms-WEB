@@ -1,0 +1,424 @@
+import React, { useState, useEffect } from "react";
+import dayjs from "dayjs";
+import {
+  Table,
+  Button,
+  Input,
+  Select,
+  Spin,
+  Typography,
+  Tag,
+  Space,
+  Modal,
+  Pagination,
+  Alert,
+  Divider,
+  Tooltip,
+} from "antd";
+import {
+  InfoCircleOutlined,
+  CloseOutlined,
+  EyeOutlined,
+  CheckOutlined,
+  StopOutlined,
+} from "@ant-design/icons";
+import useTicketType from "../../../../hooks/useTicketType";
+
+const { Title, Text } = Typography;
+const { Search } = Input;
+const { Option } = Select;
+
+function Ticket({ showId }) {
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [selectedOrderId, setSelectedOrderId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const {
+    isLoading,
+    error,
+    ticketTypes: ticketOrders,
+    totalTicketTypes: totalTicketOrders,
+    fetchTicketTypes: fetchTicketOrders,
+    fetchTicketOrderDetails,
+    orderDetails: ticketOrderDetails,
+    isLoadingDetails,
+  } = useTicketType();
+
+  useEffect(() => {
+    if (showId) {
+      fetchTicketOrders(showId, currentPage, pageSize);
+    }
+  }, [showId, currentPage, pageSize, fetchTicketOrders]);
+
+  const handlePageChange = (page, newPageSize) => {
+    if (pageSize !== newPageSize) {
+      setPageSize(newPageSize);
+      setCurrentPage(1);
+    } else {
+      setCurrentPage(page);
+    }
+  };
+
+  const handleStatusChange = async (orderId, newStatus) => {
+    // Assuming you'll add this functionality to your useTicketType hook
+    const result = await updateTicketOrderStatus(orderId, newStatus);
+    if (result?.success) {
+      fetchTicketOrders(showId, currentPage, pageSize);
+    }
+  };
+
+  const getStatusTag = (status) => {
+    switch (status) {
+      case "paid":
+        return <Tag color="success">Đã thanh toán</Tag>;
+      case "pending":
+        return <Tag color="warning">Chờ thanh toán</Tag>;
+      default:
+        return <Tag>{status}</Tag>;
+    }
+  };
+
+  const formatDate = (dateString) => {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString("vi-VN", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    } catch (error) {
+      return dateString;
+    }
+  };
+
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(amount);
+  };
+
+  const fetchOrderDetails = async (orderId) => {
+    const result = await fetchTicketOrderDetails(orderId);
+    if (!result?.success) {
+      console.error("Failed to fetch order details");
+    }
+  };
+
+  const handleViewDetails = (orderId) => {
+    setSelectedOrderId(orderId);
+    fetchOrderDetails(orderId);
+    setIsDetailsOpen(true);
+  };
+
+  const handleCloseDetails = () => {
+    setIsDetailsOpen(false);
+  };
+
+  // Filter orders
+  const items = ticketOrders?.data?.data?.items || [];
+  const filteredOrders = Array.isArray(items)
+    ? items.filter((order) => {
+        const matchesSearch =
+          order.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          order.transactionCode
+            ?.toLowerCase()
+            .includes(searchTerm.toLowerCase());
+
+        const matchesStatus =
+          statusFilter === "all" || order.status === statusFilter;
+
+        return matchesSearch && matchesStatus;
+      })
+    : [];
+
+  // Update pagination handling
+  useEffect(() => {
+    if (showId) {
+      fetchTicketOrders(showId, currentPage, pageSize);
+    }
+  }, [showId, currentPage, pageSize, fetchTicketOrders]);
+
+  // Update total count reference
+  const totalItems = ticketOrders?.data?.data?.total || 0;
+
+  // Table columns
+  const columns = [
+    {
+      title: "Họ tên",
+      dataIndex: "fullName",
+      key: "fullName",
+    },
+    {
+      title: "Email",
+      dataIndex: "email",
+      key: "email",
+    },
+    {
+      title: "Ngày đặt",
+      dataIndex: "orderDate",
+      key: "orderDate",
+      render: (text) => formatDate(text),
+    },
+    {
+      title: "Mã giao dịch",
+      dataIndex: "transactionCode",
+      key: "transactionCode",
+    },
+    {
+      title: "Tổng tiền",
+      dataIndex: "totalAmount",
+      key: "totalAmount",
+      render: (text) => formatCurrency(text),
+    },
+    {
+      title: "Phương thức thanh toán",
+      dataIndex: "paymentMethod",
+      key: "paymentMethod",
+    },
+    {
+      title: "Trạng thái",
+      dataIndex: "status",
+      key: "status",
+      render: (status) => getStatusTag(status),
+    },
+    {
+      title: "Thao tác",
+      key: "actions",
+      render: (_, record) => (
+        <Space>
+          <Tooltip title="Xem chi tiết">
+            <Button
+              type="text"
+              size="small"
+              icon={<EyeOutlined />}
+              onClick={() => handleViewDetails(record.id)}
+            />
+          </Tooltip>
+          {/* {record.status === "pending" && (
+            <Tooltip title="Đánh dấu đã thanh toán">
+              <Button
+                type="text"
+                size="small"
+                className="text-green-500 hover:text-green-700"
+                icon={<CheckOutlined />}
+                onClick={() => handleStatusChange(record.id, "paid")}
+              />
+            </Tooltip>
+          )}
+          {record.status === "paid" && (
+            <Tooltip title="Đánh dấu chờ thanh toán">
+              <Button
+                type="text"
+                size="small"
+                className="text-red-500 hover:text-red-700"
+                icon={<StopOutlined />}
+                onClick={() => handleStatusChange(record.id, "pending")}
+              />
+            </Tooltip>
+          )} */}
+        </Space>
+      ),
+    },
+  ];
+
+  // Details modal columns
+  const detailColumns = [
+    {
+      title: "Loại vé",
+      dataIndex: ["ticketType", "name"],
+      key: "ticketType",
+    },
+    {
+      title: "Tên show",
+      dataIndex: ["ticketType", "koiShow", "name"],
+      key: "showName",
+    },
+    {
+      title: "Số lượng",
+      dataIndex: "quantity",
+      key: "quantity",
+      align: "right",
+    },
+    {
+      title: "Đơn giá",
+      dataIndex: "unitPrice",
+      key: "unitPrice",
+      align: "right",
+      render: (price) => formatCurrency(price),
+    },
+    {
+      title: "Thành tiền",
+      key: "subtotal",
+      align: "right",
+      render: (_, record) => formatCurrency(record.quantity * record.unitPrice),
+    },
+  ];
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-[400px]">
+        <Spin size="large" />
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <Alert message={`Error: ${error}`} type="error" />
+      </div>
+    );
+  }
+
+  // Calculate total from order details
+  const orderTotal = Array.isArray(ticketOrderDetails)
+    ? ticketOrderDetails.reduce(
+        (sum, ticket) => sum + ticket.quantity * ticket.unitPrice,
+        0
+      )
+    : 0;
+
+  return (
+    <div className="p-4 bg-white rounded-lg shadow-md">
+      {/* <Title level={4} className="mb-6">
+        Quản lý đơn hàng vé
+      </Title> */}
+
+      <div className="flex flex-wrap gap-4 mb-6">
+        <Search
+          placeholder="Tìm kiếm theo tên, email hoặc mã giao dịch"
+          allowClear
+          onSearch={(value) => setSearchTerm(value)}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          value={searchTerm}
+          style={{ width: 300 }}
+        />
+
+        <Select
+          placeholder="Lọc theo trạng thái"
+          value={statusFilter}
+          onChange={(value) => setStatusFilter(value)}
+          style={{ width: 150 }}
+        >
+          <Option value="all">Tất cả</Option>
+          <Option value="paid">Đã thanh toán</Option>
+          <Option value="pending">Chờ thanh toán</Option>
+        </Select>
+      </div>
+
+      <Table
+        columns={columns}
+        dataSource={filteredOrders}
+        rowKey="id"
+        pagination={false}
+        className="mb-6"
+        size="middle"
+        locale={{ emptyText: "Không tìm thấy đơn hàng vé nào" }}
+      />
+
+      {totalItems > 0 && (
+        <div className="flex justify-end items-center mt-4">
+          <div className="mr-2 text-gray-600">
+            {Math.min((currentPage - 1) * pageSize + 1, totalItems)}-
+            {Math.min(currentPage * pageSize, totalItems)} trong {totalItems}
+          </div>
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalItems}
+            onChange={handlePageChange}
+            onShowSizeChange={(current, size) => {
+              setPageSize(size);
+              setCurrentPage(1);
+            }}
+            showSizeChanger={true}
+            pageSizeOptions={["10", "20", "50"]}
+            showTotal={false}
+            size="small"
+            className="flex items-center"
+            itemRender={(page, type, originalElement) => {
+              if (type === "prev") {
+                return (
+                  <Button type="text" size="small">
+                    &lt;
+                  </Button>
+                );
+              }
+              if (type === "next") {
+                return (
+                  <Button type="text" size="small">
+                    &gt;
+                  </Button>
+                );
+              }
+              return originalElement;
+            }}
+          />
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      <Modal
+        title="Chi tiết đơn hàng"
+        open={isDetailsOpen}
+        onCancel={handleCloseDetails}
+        width={800}
+        footer={[
+          <Button key="close" onClick={handleCloseDetails}>
+            Đóng
+          </Button>,
+        ]}
+      >
+        {isLoadingDetails ? (
+          <div className="flex justify-center my-8">
+            <Spin />
+          </div>
+        ) : (
+          <div>
+            {Array.isArray(ticketOrderDetails) &&
+            ticketOrderDetails.length > 0 ? (
+              <>
+                <Text className="block mb-4">
+                  <strong>Mã đơn hàng:</strong> {selectedOrderId}
+                </Text>
+
+                <Table
+                  columns={detailColumns}
+                  dataSource={ticketOrderDetails}
+                  rowKey="id"
+                  pagination={false}
+                  size="small"
+                  className="mb-4"
+                  summary={() => (
+                    <Table.Summary.Row>
+                      <Table.Summary.Cell index={0} colSpan={3} />
+                      <Table.Summary.Cell index={3} align="right">
+                        <strong>Tổng cộng</strong>
+                      </Table.Summary.Cell>
+                      <Table.Summary.Cell index={4} align="right">
+                        <strong>{formatCurrency(orderTotal)}</strong>
+                      </Table.Summary.Cell>
+                    </Table.Summary.Row>
+                  )}
+                />
+              </>
+            ) : (
+              <div className="text-center text-gray-500 py-8">
+                Không tìm thấy chi tiết vé cho đơn hàng này
+              </div>
+            )}
+          </div>
+        )}
+      </Modal>
+    </div>
+  );
+}
+
+export default Ticket;

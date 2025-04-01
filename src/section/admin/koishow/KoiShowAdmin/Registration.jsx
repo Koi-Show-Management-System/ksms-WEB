@@ -26,8 +26,8 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
 } from "@ant-design/icons";
-import useRegistration from "../../../hooks/useRegistration";
-import useCategory from "../../../hooks/useCategory";
+import useRegistration from "../../../../hooks/useRegistration";
+import useCategory from "../../../../hooks/useCategory";
 import RoundSelector from "./RoundSelector";
 
 function Registration({ showId }) {
@@ -417,9 +417,9 @@ function Registration({ showId }) {
       <Card className="rounded-lg shadow-md">
         {/* Header section */}
         <Flex justify="space-between" align="center" className="mb-6">
-          <Typography.Title level={4} style={{ margin: 0 }}>
+          {/* <Typography.Title level={4} style={{ margin: 0 }}>
             Quản lý đăng ký
-          </Typography.Title>
+          </Typography.Title> */}
           {filteredData.some(
             (item) => item.status?.toLowerCase() === "checkin"
           ) && (

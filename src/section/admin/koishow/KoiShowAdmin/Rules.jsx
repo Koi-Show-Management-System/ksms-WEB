@@ -323,24 +323,36 @@ const Rules = ({ showId, showRule = [] }) => {
 
       {/* Pagination */}
       {totalItems > 0 && (
-        <div className="flex flex-wrap items-center justify-center mt-4 mb-2 px-3 py-2 bg-white rounded-lg shadow-sm">
-          <span className="mr-2 text-gray-600 text-sm">
-            Hiển thị {(currentPage - 1) * pageSize + 1}-
-            {Math.min(currentPage * pageSize, totalItems)} của {totalItems} quy
-            tắc
+        <div className="flex items-center justify-end mt-4 mb-2 px-3 py-2 bg-white rounded-lg shadow-sm">
+          <span className="text-gray-600 text-sm">
+            {(currentPage - 1) * pageSize + 1}-
+            {Math.min(currentPage * pageSize, totalItems)} trong {totalItems}
           </span>
-          <Pagination
-            current={currentPage}
-            pageSize={pageSize}
-            total={totalItems}
-            onChange={handlePageChange}
-            size="small"
-            simple
-            showSizeChanger={false}
-            className="mx-2"
-          />
-          <div className="flex items-center ml-2 mt-1 sm:mt-0">
-            <span className="mr-2 text-gray-600 text-sm">Hiển thị:</span>
+          <div className="flex items-center mx-2">
+            <button
+              onClick={() =>
+                currentPage > 1 && handlePageChange(currentPage - 1, pageSize)
+              }
+              className="px-2 text-blue-500"
+              disabled={currentPage === 1}
+            >
+              &lt;
+            </button>
+            <div className="px-3 py-1 mx-1 border border-blue-500 rounded-md text-blue-500">
+              {currentPage}
+            </div>
+            <button
+              onClick={() =>
+                currentPage < totalPages &&
+                handlePageChange(currentPage + 1, pageSize)
+              }
+              className="px-2 text-blue-500"
+              disabled={currentPage === totalPages}
+            >
+              &gt;
+            </button>
+          </div>
+          <div className="flex items-center">
             <Select
               value={pageSize}
               onChange={(value) => handlePageChange(1, value)}
@@ -353,6 +365,7 @@ const Rules = ({ showId, showRule = [] }) => {
               dropdownMatchSelectWidth={false}
               className="w-16"
             />
+            <span className="ml-1 text-gray-600 text-sm">/ page</span>
           </div>
         </div>
       )}
