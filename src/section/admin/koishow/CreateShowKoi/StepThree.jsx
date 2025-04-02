@@ -231,12 +231,11 @@ function StepThree({ updateFormData, initialData, showErrors }) {
           Thêm Quy Tắc
         </Button>
       </div>
-      {/* {showErrors && rules.length < 3 && (
+      {showErrors && rules.length < 3 && (
         <p className="text-red-500 text-xs mt-1">
           Cần có ít nhất 3 quy tắc cho chương trình.
         </p>
-      )} */}
-      {/* Danh sách quy tắc */}
+      )}
       <List
         dataSource={filteredRules}
         renderItem={(rule, index) => (
@@ -448,11 +447,11 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       </Space>
 
       {/* Hiển thị lỗi nếu chưa có ít nhất 3 trạng thái */}
-      {/* {showErrors && showStatusList.length < 3 && (
+      {showErrors && showStatusList.length < 3 && (
         <p className="text-red-500 text-xs mt-2">
           Cần chọn ít nhất 3 trạng thái cho chương trình.
         </p>
-      )} */}
+      )}
 
       {/* Danh sách Trạng Thái */}
       <Collapse className="mt-4">
