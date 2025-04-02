@@ -3,11 +3,14 @@ import {
   Button,
   Table,
   Tag,
-  Spin,
-  message,
+  notification,
   Pagination,
   Input,
   DatePicker,
+  Select,
+  Modal,
+  Form,
+  Input as AntInput,
 } from "antd";
 import { EditOutlined } from "@ant-design/icons";
 import NoKoiShow from "../../../../assets/NoKoiShow.png";
@@ -21,6 +24,12 @@ function KoiShow() {
   const [searchText, setSearchText] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [filteredData, setFilteredData] = useState([]);
+  const [localData, setLocalData] = useState([]);
+  const [form] = Form.useForm();
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedShowId, setSelectedShowId] = useState(null);
+  const [selectedStatus, setSelectedStatus] = useState(null);
+
   const {
     koiShows,
     isLoading,
@@ -29,6 +38,7 @@ function KoiShow() {
     currentPage,
     pageSize,
     totalItems,
+    updateKoiShowStatus,
   } = useKoiShow();
 
   useEffect(() => {
@@ -36,11 +46,26 @@ function KoiShow() {
   }, []);
 
   useEffect(() => {
+    if (koiShows && koiShows.length > 0) {
+      const formattedData = koiShows.map((item) => ({
+        key: item.id,
+        id: item.id,
+        name: item.name,
+        startExhibitionDate: item.startExhibitionDate,
+        registrationFee: item.registrationFee,
+        location: item.location,
+        status: item.status,
+      }));
+      setLocalData(formattedData);
+    }
+  }, [koiShows]);
+
+  useEffect(() => {
     handleSearch();
-  }, [searchText, selectedDate, koiShows]);
+  }, [searchText, selectedDate, localData]);
 
   const handleSearch = () => {
-    const filtered = koiShows.filter((item) => {
+    const filtered = localData.filter((item) => {
       const matchName = item.name
         .toLowerCase()
         .includes(searchText.toLowerCase());
@@ -59,9 +84,102 @@ function KoiShow() {
     fetchKoiShowList(page, size);
   };
 
-  if (isLoading) return <Loading />;
-  if (error) {
-    message.error("Lỗi tải dữ liệu!");
+  const handleStatusChange = (status, showId) => {
+    // Find the current show to check its status
+    const currentShow = localData.find((item) => item.id === showId);
+
+    // If the show is already cancelled, don't allow status change
+    if (currentShow && currentShow.status === "cancelled") {
+      notification.error({
+        message: "Không thể thay đổi",
+        description: "Không thể cập nhật trạng thái khi triển lãm đã bị hủy",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    if (status === "cancelled") {
+      setSelectedShowId(showId);
+      setSelectedStatus(status);
+      setIsModalOpen(true);
+    } else {
+      updateStatus(showId, status);
+    }
+  };
+
+  const updateStatus = async (showId, status, reason = "") => {
+    try {
+      setLocalData((prevData) =>
+        prevData.map((item) =>
+          item.id === showId ? { ...item, status: status } : item
+        )
+      );
+
+      setFilteredData((prevData) =>
+        prevData.map((item) =>
+          item.id === showId ? { ...item, status: status } : item
+        )
+      );
+
+      const result = await updateKoiShowStatus(showId, status, reason);
+
+      if (result.success) {
+        notification.success({
+          message: "Thành công",
+          description: `Cập nhật trạng thái triển lãm thành ${getStatusLabel(status)}`,
+          placement: "topRight",
+        });
+
+        await fetchKoiShowList(currentPage, pageSize);
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: result.message || "Cập nhật trạng thái thất bại",
+          placement: "topRight",
+        });
+        await fetchKoiShowList(currentPage, pageSize);
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: "Có lỗi xảy ra: " + error.message,
+        placement: "topRight",
+      });
+      await fetchKoiShowList(currentPage, pageSize);
+    }
+  };
+
+  const handleModalOk = () => {
+    form.validateFields().then((values) => {
+      updateStatus(selectedShowId, selectedStatus, values.cancellationReason);
+      setIsModalOpen(false);
+      form.resetFields();
+    });
+  };
+
+  const handleModalCancel = () => {
+    setIsModalOpen(false);
+    form.resetFields();
+  };
+
+  const statusOptions = [
+    { value: "pending", label: "Chờ duyệt", color: "orange" },
+    { value: "cancelled", label: "Đã hủy", color: "red" },
+    { value: "published", label: "Đã công bố", color: "green" },
+  ];
+
+  const getStatusLabel = (status) => {
+    const option = statusOptions.find((opt) => opt.value === status);
+    return option ? option.label : status;
+  };
+
+  if (isLoading && localData.length === 0) return <Loading />;
+  if (error && localData.length === 0) {
+    notification.error({
+      message: "Lỗi",
+      description: "Không thể tải dữ liệu triển lãm",
+      placement: "topRight",
+    });
     return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
   }
 
@@ -86,7 +204,7 @@ function KoiShow() {
       key: "startExhibitionDate",
       sorter: (a, b) =>
         new Date(a.startExhibitionDate) - new Date(b.startExhibitionDate),
-      render: (date) => new Date(date).toLocaleDateString("vi-VN"), // Hiển thị dạng DD/MM/YYYY
+      render: (date) => new Date(date).toLocaleDateString("vi-VN"),
     },
     {
       title: "Phí Đăng Kí",
@@ -98,7 +216,6 @@ function KoiShow() {
           ? fee.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
           : "Miễn phí",
     },
-
     {
       title: "Địa Điểm",
       dataIndex: "location",
@@ -109,39 +226,21 @@ function KoiShow() {
       dataIndex: "status",
       key: "status",
       sorter: (a, b) => a.status.localeCompare(b.status),
-      render: (status) => (
-        <Tag
-          color={
-            status === "pending"
-              ? "orange"
-              : status === "approved"
-                ? "green"
-                : status === "upcoming"
-                  ? "blue"
-                  : status === "in progress"
-                    ? "yellow"
-                    : "default"
-          }
-        >
-          {status === "pending"
-            ? "Chờ duyệt"
-            : status === "approved"
-              ? "Đã duyệt"
-              : status === "upcoming"
-                ? "Sắp diễn ra"
-                : status === "in progress"
-                  ? "Đang diễn ra"
-                  : "Hết hạn"}
-        </Tag>
-      ),
+      render: (status, record) => {
+        return (
+          <Select
+            value={status}
+            style={{ width: 150 }}
+            onChange={(value) => handleStatusChange(value, record.id)}
+            options={statusOptions.map((opt) => ({
+              value: opt.value,
+              label: <span style={{ color: opt.color }}>{opt.label}</span>,
+            }))}
+            dropdownStyle={{ minWidth: 150 }}
+          />
+        );
+      },
     },
-    // {
-    //   title: "Chỉnh Sửa",
-    //   key: "edit",
-    //   render: (_, record) => (
-    //     <Button type="text" icon={<EditOutlined style={{ color: "red" }} />} />
-    //   ),
-    // },
   ];
 
   return (
@@ -178,15 +277,7 @@ function KoiShow() {
       </div>
       <Table
         columns={columns}
-        dataSource={filteredData.map((item) => ({
-          key: item.id,
-          id: item.id,
-          name: item.name,
-          startExhibitionDate: item.startExhibitionDate,
-          registrationFee: item.registrationFee,
-          location: item.location,
-          status: item.status,
-        }))}
+        dataSource={filteredData}
         pagination={false}
         className="bg-white rounded-lg shadow-sm"
         locale={{
@@ -204,7 +295,7 @@ function KoiShow() {
       />
 
       <div className="flex justify-end items-center mt-4">
-        <span>{`1-${koiShows.length} của ${totalItems}`}</span>
+        <span>{`1-${filteredData.length} của ${totalItems}`}</span>
         <Pagination
           current={currentPage}
           total={totalItems}
@@ -213,6 +304,30 @@ function KoiShow() {
           onChange={handlePageChange}
         />
       </div>
+
+      <Modal
+        title="Lý do hủy triển lãm"
+        open={isModalOpen}
+        onOk={handleModalOk}
+        onCancel={handleModalCancel}
+        okText="Xác nhận"
+        cancelText="Hủy bỏ"
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            name="cancellationReason"
+            label="Lý do hủy"
+            rules={[
+              { required: true, message: "Vui lòng nhập lý do hủy triển lãm" },
+            ]}
+          >
+            <AntInput.TextArea
+              rows={4}
+              placeholder="Nhập lý do hủy triển lãm"
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

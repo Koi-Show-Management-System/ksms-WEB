@@ -6,6 +6,7 @@ import {
   getTicketTypes,
   getTicketOrderDetails,
   updateTicketOrderStatus as updateOrderStatusApi,
+  updateTicketRefund,
 } from "../api/ticketTypeApi";
 
 const useTicketType = create((set, get) => ({
@@ -179,6 +180,24 @@ const useTicketType = create((set, get) => ({
         error: error.message || "An error occurred",
         isLoading: false,
       });
+      return { success: false, message: error.message || "An error occurred" };
+    }
+  },
+  updateTicketRefund: async (ticketOrderId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await updateTicketRefund(ticketOrderId);
+      if (response?.data?.statusCode === 200) {
+        set({ isLoading: false });
+        return { success: true, data: response.data };
+      } else {
+        console.log(response);
+        set({ isLoading: false });
+        return { success: false, message: "Failed to update ticket refund" };
+      }
+    } catch (error) {
+      console.error("Error updating ticket refund:", error);
+      set({ error: error.message || "An error occurred", isLoading: false });
       return { success: false, message: error.message || "An error occurred" };
     }
   },

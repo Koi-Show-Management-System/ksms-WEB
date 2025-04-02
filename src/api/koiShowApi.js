@@ -13,4 +13,9 @@ const getKoiShowDetail = (id) => {
 const updateShow = (id, data) => {
   return axiosClient.put(`/koi-show/${id}`, data);
 };
-export { getKoiShowList, getKoiShowDetail, updateShow };
+const updateKoiShowStatus = (id, status, cancellationReason = "") => {
+  return axiosClient.put(
+    `/koi-show/update-show-status${id}?status=${status}${cancellationReason ? `&cancellationReason=${encodeURIComponent(cancellationReason)}` : ""}`
+  );
+};
+export { getKoiShowList, getKoiShowDetail, updateShow, updateKoiShowStatus };

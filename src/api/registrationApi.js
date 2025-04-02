@@ -14,8 +14,20 @@ const getRegistration = (page, size, showIds, categoryIds) => {
   );
 };
 
-const updateStatusRegistration = (id, status) => {
-  return axiosClient.put(`/registration/${id}?status=${status}`);
+const updateStatusRegistration = (id, status, rejectedReason, refundType) => {
+  let params = `status=${status}`;
+
+  // Chỉ thêm rejectedReason khi status là rejected
+  if (status === "rejected" && rejectedReason) {
+    params += `&rejectedReason=${rejectedReason}`;
+  }
+
+  // Chỉ thêm refundType khi status là Refunded
+  if (status === "Refunded" && refundType) {
+    params += `&refundType=${refundType}`;
+  }
+
+  return axiosClient.put(`/registration/${id}?${params}`);
 };
 
 const patchRound = (roundId, registrationIds) => {

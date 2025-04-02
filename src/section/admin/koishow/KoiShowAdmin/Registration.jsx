@@ -16,6 +16,7 @@ import {
   Row,
   Col,
   ConfigProvider,
+  Input,
 } from "antd";
 import {
   ExclamationCircleOutlined,
@@ -30,7 +31,7 @@ import useRegistration from "../../../../hooks/useRegistration";
 import useCategory from "../../../../hooks/useCategory";
 import RoundSelector from "./RoundSelector";
 
-function Registration({ showId }) {
+function Registration({ showId, statusShow }) {
   const {
     registration,
     isLoading,
@@ -55,7 +56,6 @@ function Registration({ showId }) {
   const [selectedRoundName, setSelectedRoundName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
-
   // Các state khác giữ nguyên
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentKoi, setCurrentKoi] = useState(null);
@@ -76,9 +76,10 @@ function Registration({ showId }) {
     checkin: { color: "geekblue", label: "Đã check-in", order: 3 },
     competition: { color: "purple", label: "Thi đấu", order: 4 },
     rejected: { color: "red", label: "Từ chối", order: 5 },
+    refunded: { color: "magenta", label: "Đã hoàn tiền", order: 6 },
   };
 
-  // Hàm này dùng để render và cũng có thể dùng ở nơi khác
+  // Add back the renderStatus function
   const renderStatus = (status) => {
     const statusKey = status?.toLowerCase() || "";
     const config = STATUS_CONFIG[statusKey] || {
@@ -97,6 +98,20 @@ function Registration({ showId }) {
   // Add these new state variables
   const [showAllMedia, setShowAllMedia] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
+  const [rejectionId, setRejectionId] = useState(null);
+
+  // Add new states
+  const [isRefundModalVisible, setIsRefundModalVisible] = useState(false);
+  const [refundType, setRefundType] = useState(null);
+  const [selectedRegistrationId, setSelectedRegistrationId] = useState(null);
+
+  // Add refund type options
+  const REFUND_TYPE_OPTIONS = [
+    { value: "NotQualified", label: "Không đủ điều kiện" },
+    { value: "ShowCancelled", label: "Show bị hủy" },
+  ];
 
   useEffect(() => {
     fetchCategories(showId);
@@ -270,6 +285,14 @@ function Registration({ showId }) {
   };
 
   const showConfirmModal = (id, status) => {
+    if (status === "rejected") {
+      // Show rejection reason modal instead
+      setRejectionId(id);
+      setRejectionReason("");
+      setIsRejectModalVisible(true);
+      return;
+    }
+
     const action = status === "confirmed" ? "phê duyệt" : "từ chối";
     const title =
       status === "confirmed" ? "Phê Duyệt Đăng Ký" : "Từ Chối Đăng Ký";
@@ -286,23 +309,71 @@ function Registration({ showId }) {
       },
     });
   };
-  const handleUpdateStatus = async (id, status) => {
+
+  const handleUpdateStatus = async (id, status, reason = null) => {
     try {
-      const result = await updateStatus(id, status);
+      const result = await updateStatus(id, status, reason);
       if (result.success) {
         // Only update the UI state, notifications are handled in the hook
         if (currentKoi) {
           setCurrentKoi({
             ...currentKoi,
             status: status,
+            rejectedReason: reason,
           });
           setUpdatedStatus(status);
         }
+
+        // Close the modal after successful update
+        setIsModalVisible(false);
       }
     } catch (error) {
       console.error(error);
     }
   };
+
+  const handleRejectConfirm = () => {
+    if (!rejectionReason.trim()) {
+      notification.warning({
+        message: "Thiếu thông tin",
+        description: "Vui lòng nhập lý do từ chối",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    handleUpdateStatus(rejectionId, "rejected", rejectionReason);
+    setIsRejectModalVisible(false);
+  };
+
+  // Add refund handler
+  const handleRefund = async () => {
+    if (!refundType) {
+      notification.warning({
+        message: "Thiếu thông tin",
+        description: "Vui lòng chọn lý do hoàn tiền",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    try {
+      const result = await updateStatus(
+        selectedRegistrationId,
+        "Refunded",
+        null,
+        refundType
+      );
+      if (result.success) {
+        setIsRefundModalVisible(false);
+        setRefundType(null);
+        fetchRegistration(currentPage, pageSize, showId);
+      }
+    } catch (error) {
+      console.error(error);
+    }
+  };
+
   // Lấy dữ liệu đã lọc
   const filteredData = getFilteredData();
   const columns = [
@@ -592,7 +663,28 @@ function Registration({ showId }) {
           title="Chi Tiết Đăng Ký"
           open={isModalVisible}
           onCancel={handleCancel}
-          footer={null}
+          footer={
+            <>
+              <Button key="cancel" onClick={handleCancel}>
+                Đóng
+              </Button>
+              {statusShow === "cancelled" &&
+                currentKoi?.status !== "Refunded" && (
+                  <Button
+                    key="refund"
+                    type="primary"
+                    danger
+                    onClick={() => {
+                      setSelectedRegistrationId(currentKoi.id);
+                      setIsRefundModalVisible(true);
+                      setIsModalVisible(false); // Đóng modal chi tiết
+                    }}
+                  >
+                    Hoàn Tiền
+                  </Button>
+                )}
+            </>
+          }
           width={900}
         >
           {currentKoi && (
@@ -648,6 +740,13 @@ function Registration({ showId }) {
                           <strong>Trạng Thái:</strong>{" "}
                           {renderStatus(currentKoi.status)}
                         </p>
+                        {currentKoi.status === "rejected" &&
+                          currentKoi.rejectedReason && (
+                            <p>
+                              <strong>Lý do từ chối:</strong>{" "}
+                              {currentKoi.rejectedReason}
+                            </p>
+                          )}
                       </Col>
                     </Row>
                   </Card>
@@ -662,64 +761,136 @@ function Registration({ showId }) {
                       className="w-full"
                     >
                       <Row gutter={[16, 16]}>
-                        {/* Limit display to first 2 media items initially */}
-                        {currentKoi.koiMedia.slice(0, 2).map((media, index) => (
-                          <Col span={12} key={media.id} className="relative">
-                            {media.mediaType === "Image" ? (
-                              <div className="relative">
-                                <p>
-                                  <strong>Hình Ảnh:</strong>
-                                </p>
-                                <Image
-                                  src={media.mediaUrl}
-                                  alt="Hình Ảnh Koi"
-                                  style={{
-                                    width: "100%",
-                                    maxHeight: "300px",
-                                    objectFit: "contain",
-                                  }}
-                                />
-                                {/* Add overlay with +X on the second image if there are more than 2 */}
-                                {index === 1 &&
-                                  currentKoi.koiMedia.length > 2 && (
-                                    <div
-                                      onClick={() => setMediaModalVisible(true)}
-                                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer"
-                                      style={{ borderRadius: "8px" }}
-                                    >
-                                      <span className="text-white font-semibold">
-                                        +{currentKoi.koiMedia.length - 2}
-                                      </span>
-                                    </div>
-                                  )}
+                        {/* Luôn hiển thị "Hình Ảnh:" bên trái và "Video:" bên phải */}
+                        <Col span={12}>
+                          <div>
+                            <p>
+                              <strong>Hình Ảnh:</strong>
+                            </p>
+                            {currentKoi.koiMedia.find(
+                              (media) => media.mediaType === "Image"
+                            ) ? (
+                              <Image
+                                src={
+                                  currentKoi.koiMedia.find(
+                                    (media) => media.mediaType === "Image"
+                                  )?.mediaUrl
+                                }
+                                alt="Hình Ảnh Koi"
+                                style={{
+                                  width: "95%",
+                                  height: "300px",
+                                  objectFit: "contain",
+                                  borderRadius: "4px",
+                                }}
+                                placeholder={
+                                  <div
+                                    style={{
+                                      width: "100%",
+                                      height: "300px",
+                                      display: "flex",
+                                      justifyContent: "center",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <Spin />
+                                  </div>
+                                }
+                                preview={{
+                                  mask: (
+                                    <EyeOutlined style={{ fontSize: "18px" }} />
+                                  ),
+                                  icons: false,
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: "100%",
+                                  height: "300px",
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f0f0f0",
+                                  borderRadius: "4px",
+                                }}
+                              >
+                                Không có hình ảnh
                               </div>
-                            ) : media.mediaType === "Video" ? (
-                              <div className="relative">
-                                <p>
-                                  <strong>Video:</strong>
-                                </p>
-                                <video
-                                  controls
-                                  src={media.mediaUrl}
-                                  style={{ width: "100%", maxHeight: "300px" }}
-                                />
-                                {/* Add overlay with +X on the second video if there are more than 2 */}
-                                {index === 1 &&
-                                  currentKoi.koiMedia.length > 2 && (
-                                    <div
-                                      onClick={() => setMediaModalVisible(true)}
-                                      className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center cursor-pointer"
-                                      style={{ borderRadius: "8px" }}
-                                    >
-                                      <span className="text-white font-semibold">
-                                        +{currentKoi.koiMedia.length - 2}
-                                      </span>
-                                    </div>
-                                  )}
+                            )}
+                            {currentKoi.koiMedia.filter(
+                              (media) => media.mediaType === "Image"
+                            ).length > 1 && (
+                              <Button
+                                type="text"
+                                icon={<EyeOutlined />}
+                                onClick={() => setMediaModalVisible(true)}
+                                style={{ marginTop: 8 }}
+                              >
+                                Xem thêm{" "}
+                                {currentKoi.koiMedia.filter(
+                                  (media) => media.mediaType === "Image"
+                                ).length - 1}{" "}
+                                hình ảnh
+                              </Button>
+                            )}
+                          </div>
+                        </Col>
+                        <Col span={12}>
+                          <div>
+                            <p>
+                              <strong>Video:</strong>
+                            </p>
+                            {currentKoi.koiMedia.find(
+                              (media) => media.mediaType === "Video"
+                            ) ? (
+                              <video
+                                controls
+                                src={
+                                  currentKoi.koiMedia.find(
+                                    (media) => media.mediaType === "Video"
+                                  )?.mediaUrl
+                                }
+                                style={{
+                                  width: "100%",
+                                  height: "270px",
+                                  objectFit: "contain",
+                                  borderRadius: "4px",
+                                }}
+                              />
+                            ) : (
+                              <div
+                                style={{
+                                  width: "100%",
+                                  height: "300px",
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                  background: "#f0f0f0",
+                                  borderRadius: "4px",
+                                }}
+                              >
+                                Không có video
                               </div>
-                            ) : null}
-                          </Col>
-                        ))}
+                            )}
+                            {currentKoi.koiMedia.filter(
+                              (media) => media.mediaType === "Video"
+                            ).length > 1 && (
+                              <Button
+                                type="text"
+                                icon={<EyeOutlined />}
+                                onClick={() => setMediaModalVisible(true)}
+                                style={{ marginTop: 8 }}
+                              >
+                                Xem thêm{" "}
+                                {currentKoi.koiMedia.filter(
+                                  (media) => media.mediaType === "Video"
+                                ).length - 1}{" "}
+                                video
+                              </Button>
+                            )}
+                          </div>
+                        </Col>
                       </Row>
                     </Card>
                   </Col>
@@ -762,39 +933,110 @@ function Registration({ showId }) {
         </Modal>
         {/* Add a new modal to display all media */}
         <Modal
-          title="Tất cả hình ảnh/video"
+          title="Tất cả hình ảnh và video"
           open={mediaModalVisible}
           onCancel={() => setMediaModalVisible(false)}
           footer={null}
           width={900}
         >
-          <Row gutter={[16, 16]}>
-            {currentKoi?.koiMedia?.map((media) => (
-              <Col span={12} key={media.id}>
-                {media.mediaType === "Image" ? (
-                  <div>
-                    <Image
-                      src={media.mediaUrl}
-                      alt="Hình Ảnh Koi"
-                      style={{
-                        width: "100%",
-                        maxHeight: "300px",
-                        objectFit: "contain",
-                      }}
-                    />
-                  </div>
-                ) : media.mediaType === "Video" ? (
-                  <div>
-                    <video
-                      controls
-                      src={media.mediaUrl}
-                      style={{ width: "100%", maxHeight: "300px" }}
-                    />
-                  </div>
-                ) : null}
-              </Col>
-            ))}
-          </Row>
+          {/* Hiển thị tất cả hình ảnh trước */}
+          {currentKoi?.koiMedia?.filter((media) => media.mediaType === "Image")
+            .length > 0 && (
+            <>
+              <Typography.Title level={5}>Hình Ảnh</Typography.Title>
+              <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                {currentKoi?.koiMedia
+                  ?.filter((media) => media.mediaType === "Image")
+                  .map((media, index) => (
+                    <Col span={12} key={`image-${media.id}`}>
+                      <Image
+                        src={media.mediaUrl}
+                        alt={`Hình Ảnh Koi ${index + 1}`}
+                        style={{
+                          width: "100%",
+                          height: "300px",
+                          objectFit: "contain",
+                          borderRadius: "4px",
+                        }}
+                      />
+                    </Col>
+                  ))}
+              </Row>
+            </>
+          )}
+
+          {/* Sau đó hiển thị tất cả video */}
+          {currentKoi?.koiMedia?.filter((media) => media.mediaType === "Video")
+            .length > 0 && (
+            <>
+              <Typography.Title level={5}>Video</Typography.Title>
+              <Row gutter={[16, 16]}>
+                {currentKoi?.koiMedia
+                  ?.filter((media) => media.mediaType === "Video")
+                  .map((media, index) => (
+                    <Col span={12} key={`video-${media.id}`}>
+                      <video
+                        controls
+                        src={media.mediaUrl}
+                        style={{
+                          width: "100%",
+                          height: "300px",
+                          objectFit: "contain",
+                          background: "#f0f0f0",
+                          borderRadius: "4px",
+                        }}
+                      />
+                    </Col>
+                  ))}
+              </Row>
+            </>
+          )}
+        </Modal>
+        {/* Add the rejection reason modal */}
+        <Modal
+          title="Từ Chối Đăng Ký"
+          open={isRejectModalVisible}
+          onCancel={() => setIsRejectModalVisible(false)}
+          onOk={handleRejectConfirm}
+          okText="Xác nhận"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <div>
+            <Typography.Text>
+              Vui lòng nhập lý do từ chối đăng ký:
+            </Typography.Text>
+            <Input.TextArea
+              rows={4}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Nhập lý do từ chối..."
+              style={{ marginTop: 16 }}
+            />
+          </div>
+        </Modal>
+        {/* Add Refund Modal */}
+        <Modal
+          title="Hoàn Tiền Đăng Ký"
+          open={isRefundModalVisible}
+          onCancel={() => {
+            setIsRefundModalVisible(false);
+            setRefundType(null);
+          }}
+          onOk={handleRefund}
+          okText="Xác nhận"
+          cancelText="Hủy"
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text>Chọn lý do hoàn tiền:</Typography.Text>
+            <Select
+              style={{ width: "100%", marginTop: 8 }}
+              placeholder="Chọn lý do hoàn tiền"
+              value={refundType}
+              onChange={(value) => setRefundType(value)}
+              options={REFUND_TYPE_OPTIONS}
+            />
+          </div>
         </Modal>
       </Card>
     </ConfigProvider>

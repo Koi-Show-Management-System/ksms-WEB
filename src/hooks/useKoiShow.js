@@ -3,11 +3,12 @@ import {
   getKoiShowList,
   getKoiShowDetail,
   updateShow,
-} from "../api/koiShowApi"; // ✅ Import API mới
+  updateKoiShowStatus,
+} from "../api/koiShowApi"; 
 
 const useKoiShow = create((set, get) => ({
   koiShows: [],
-  koiShowDetail: null, // ✅ Thêm state lưu chi tiết Koi Show
+  koiShowDetail: null, 
   currentPage: 1,
   pageSize: 10,
   totalItems: 0,
@@ -57,16 +58,12 @@ const useKoiShow = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // Log the data being sent to help debug
       console.log("Updating with data:", updatedFields);
 
-      // Make the API call to update
       const res = await updateShow(id, updatedFields);
 
       if (res && res.status === 200) {
-        // Update the local state directly with the updated fields
         set((state) => {
-          // Make sure koiShowDetail exists before updating
           if (!state.koiShowDetail || !state.koiShowDetail.data) {
             return { isLoading: false };
           }
@@ -94,6 +91,62 @@ const useKoiShow = create((set, get) => ({
       }
     } catch (error) {
       console.error("Update error:", error);
+      set({ error: error.message, isLoading: false });
+      return {
+        success: false,
+        message: error.message,
+        details: error.response?.data,
+      };
+    }
+  },
+  updateKoiShowStatus: async (id, status, cancellationReason = "") => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await updateKoiShowStatus(id, status, cancellationReason);
+
+      if (res && res.status === 200) {
+        const koiShowDetail = get().koiShowDetail;
+        if (
+          koiShowDetail &&
+          koiShowDetail.data &&
+          koiShowDetail.data.id === id
+        ) {
+          set((state) => ({
+            koiShowDetail: {
+              ...state.koiShowDetail,
+              data: {
+                ...state.koiShowDetail.data,
+                status: status,
+                cancellationReason:
+                  status === "Cancelled" ? cancellationReason : null,
+              },
+            },
+            isLoading: false,
+          }));
+        }
+
+        set((state) => ({
+          koiShows: state.koiShows.map((show) =>
+            show.id === id ? { ...show, status: status } : show
+          ),
+          isLoading: false,
+        }));
+
+        return { success: true, message: "Status updated successfully" };
+      } else {
+        set({
+          error: res?.data?.message || "Status update failed",
+          isLoading: false,
+        });
+        return {
+          success: false,
+          message: res?.data?.message || "Status update failed",
+          details: res?.data,
+        };
+      }
+    } catch (error) {
+      console.error("Status update error:", error);
       set({ error: error.message, isLoading: false });
       return {
         success: false,

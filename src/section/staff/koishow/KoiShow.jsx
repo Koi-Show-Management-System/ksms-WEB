@@ -114,24 +114,20 @@ function KoiShow() {
           color={
             status === "pending"
               ? "orange"
-              : status === "approved"
-                ? "green"
-                : status === "upcoming"
-                  ? "blue"
-                  : status === "in progress"
-                    ? "yellow"
-                    : "default"
+              : status === "cancelled"
+                ? "red"
+                : status === "published"
+                  ? "green"
+                  : "default"
           }
         >
           {status === "pending"
             ? "Chờ duyệt"
-            : status === "approved"
-              ? "Đã duyệt"
-              : status === "upcoming"
-                ? "Sắp diễn ra"
-                : status === "in progress"
-                  ? "Đang diễn ra"
-                  : "Hết hạn"}
+            : status === "cancelled"
+              ? "Đã hủy"
+              : status === "published"
+                ? "Đã công bố"
+                : status}
         </Tag>
       ),
     },

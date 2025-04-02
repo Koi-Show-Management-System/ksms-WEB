@@ -93,7 +93,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
         maxEntries: currentCategory.maxEntries,
         minEntries: currentCategory.minEntries,
         registrationFee: currentCategory.registrationFee,
-        status: currentCategory.status,
+        // status: currentCategory.status,
         categoryVarieties:
           currentCategory.categoryVarieties?.map((v) => v.variety.id) || [],
         awards: currentCategory.awards || [],
@@ -134,7 +134,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           values.maxEntries || currentCategory.maxEntries || 0
         ),
         registrationFee: parseFloat(values.registrationFee || 0),
-        status: values.status,
+        // status: values.status,
 
         createCompetionCategoryVarieties: formData.categoryVarieties || [],
 
@@ -302,11 +302,39 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const handleRemoveCriteria = (criteriaId, roundType) => {
     const currentCriteria =
       form.getFieldValue("criteriaCompetitionCategories") || [];
+
+    // Xử lý cả hai trường hợp: criteriaId hoặc criteria.id
+    const updatedCriteria = currentCriteria.filter(
+      (c) =>
+        !(
+          (c.criteriaId === criteriaId || c.criteria?.id === criteriaId) &&
+          c.roundType === roundType
+        )
+    );
+
+    console.log(
+      "Removing criteria with id:",
+      criteriaId,
+      "and roundType:",
+      roundType
+    );
+    console.log(
+      "Criteria before:",
+      currentCriteria.length,
+      "after:",
+      updatedCriteria.length
+    );
+
+    // Cập nhật form
     form.setFieldsValue({
-      criteriaCompetitionCategories: currentCriteria.filter(
-        (c) => !(c.criteriaId === criteriaId && c.roundType === roundType)
-      ),
+      criteriaCompetitionCategories: updatedCriteria,
     });
+
+    // Cập nhật state để kích hoạt render lại
+    setCriteriaWeights({ ...criteriaWeights });
+
+    // Thông báo xóa thành công
+    message.success("Đã xóa tiêu chí");
   };
   const handleWeightChange = (criteriaId, roundType, value) => {
     const key = `${criteriaId}-${roundType}`;
@@ -440,6 +468,12 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     const newRounds = currentRounds.filter((_, index) => index !== fieldName);
     form.setFieldsValue({ rounds: newRounds });
   };
+
+  const handleShowAddCriteriaModal = (roundType) => {
+    setSelectedRoundForCriteria(roundType);
+    setTempSelectedCriteria([]);
+  };
+
   return (
     <Modal
       open={true}
@@ -551,7 +585,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                     </Select>
                   </Form.Item>
                 </Col>
-                <Col span={12}>
+                {/* <Col span={12}>
                   <Form.Item name="status" label="Trạng thái">
                     <Select>
                       <Option value="pending">Chờ duyệt</Option>
@@ -559,7 +593,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       <Option value="upcoming">Sắp diễn ra</Option>
                     </Select>
                   </Form.Item>
-                </Col>
+                </Col> */}
                 <Col span={24}>
                   <Form.Item name="description" label="Mô tả">
                     <TextArea rows={4} placeholder="Nhập mô tả" />
@@ -675,7 +709,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                         </Form.Item>
                                       </div>
 
-                                      <div>
+                                      {/* <div>
                                         <Form.Item
                                           name={[field.name, "status"]}
                                           label="Trạng thái"
@@ -692,7 +726,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                             </Option>
                                           </Select>
                                         </Form.Item>
-                                      </div>
+                                      </div> */}
                                     </Space>
                                   </Panel>
                                 ))}
@@ -893,24 +927,8 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
               </Form.List>
             </Tabs.TabPane>
             <Tabs.TabPane tab="Tiêu chí đánh giá" key="4">
-              <div className="mb-4 flex justify-between">
+              <div className="mb-4">
                 <h3 className="text-lg font-bold m-0">Danh Sách Tiêu Chí</h3>
-                {!editingCriteria ? (
-                  <Tooltip title="Chỉnh sửa tiêu chí">
-                    <Button
-                      type="text"
-                      icon={<EditOutlined style={{ color: "#1890ff" }} />}
-                      onClick={() => setEditingCriteria(true)}
-                    />
-                  </Tooltip>
-                ) : (
-                  <Button
-                    icon={<CheckOutlined />}
-                    onClick={() => setEditingCriteria(false)}
-                  >
-                    Hoàn tất
-                  </Button>
-                )}
               </div>
 
               {/* Danh sách tiêu chí */}
@@ -987,127 +1005,108 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                           Chưa có tiêu chí nào cho {round.label}
                         </div>
                       )}
+
+                      {/* Luôn hiển thị nút thêm tiêu chí, không cần điều kiện editingCriteria */}
+                      <div className="flex justify-center mt-3">
+                        <Button
+                          type="dashed"
+                          icon={<PlusOutlined />}
+                          onClick={() =>
+                            handleShowAddCriteriaModal(round.value)
+                          }
+                        >
+                          Thêm tiêu chí cho {round.label}
+                        </Button>
+                      </div>
                     </Tabs.TabPane>
                   );
                 })}
               </Tabs>
 
-              {/* Chọn tiêu chí - Moved Below */}
-              {editingCriteria && (
-                <div className="mt-4 border-t pt-4">
+              {/* Modal thêm tiêu chí cho vòng được chọn - không phụ thuộc vào editingCriteria */}
+              <Modal
+                title={`Thêm tiêu chí cho ${roundLabelMap[selectedRoundForCriteria] || ""}`}
+                open={selectedRoundForCriteria !== null}
+                onOk={() => handleAddCriteriaToRound(selectedRoundForCriteria)}
+                onCancel={() => setSelectedRoundForCriteria(null)}
+                okText="Thêm"
+                cancelText="Hủy"
+              >
+                <div className="mb-3">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Chọn tiêu chí
+                  </label>
+                  <Select
+                    mode="multiple"
+                    placeholder="Chọn tiêu chí"
+                    className="w-full mb-2"
+                    onChange={handleCriteriaSelection}
+                    loading={isLoadingCriteria}
+                  >
+                    {criteria.map((item) => (
+                      <Option key={item.id} value={item.id}>
+                        {item.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </div>
+
+                {tempSelectedCriteria.length > 0 && (
                   <div className="mb-3">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Chọn tiêu chí
+                      Thiết lập trọng số cho tiêu chí
                     </label>
-                    <Select
-                      mode="multiple"
-                      placeholder="Chọn tiêu chí"
-                      className="w-full mb-2"
-                      onChange={handleCriteriaSelection}
-                      loading={isLoadingCriteria}
-                    >
-                      {criteria.map((item) => (
-                        <Option key={item.id} value={item.id}>
-                          {item.name}
-                        </Option>
-                      ))}
-                    </Select>
-                  </div>
-
-                  {tempSelectedCriteria.length > 0 && (
-                    <>
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Thiết lập trọng số cho tiêu chí
-                        </label>
-                        <div className="space-y-2 max-h-60 overflow-y-auto border rounded-md p-2">
-                          {tempSelectedCriteria.map((criteriaItem, index) => {
-                            // Tìm thông tin chi tiết của tiêu chí từ danh sách criteria
-                            const criteriaInfo = criteria.find(
-                              (c) => c.id === criteriaItem.criteriaId
-                            );
-                            return (
-                              <div
-                                key={index}
-                                className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
-                              >
-                                <span className="flex-1">
-                                  {criteriaInfo?.name ||
-                                    criteriaItem.criteriaName ||
-                                    criteriaItem.criteriaId}
-                                </span>
-                                <InputNumber
-                                  min={0}
-                                  max={100}
-                                  formatter={(value) => `${value}%`}
-                                  parser={(value) => value.replace("%", "")}
-                                  value={(criteriaItem.weight * 100).toFixed(0)}
-                                  onChange={(value) => {
-                                    const updatedCriteria = [
-                                      ...tempSelectedCriteria,
-                                    ];
-                                    updatedCriteria[index].weight =
-                                      Number(value) / 100;
-                                    setTempSelectedCriteria(updatedCriteria);
-                                  }}
-                                  className="w-24"
-                                />
-                                <Button
-                                  type="text"
-                                  danger
-                                  icon={<DeleteOutlined />}
-                                  onClick={() => {
-                                    const updatedCriteria = [
-                                      ...tempSelectedCriteria,
-                                    ];
-                                    updatedCriteria.splice(index, 1);
-                                    setTempSelectedCriteria(updatedCriteria);
-                                  }}
-                                  size="small"
-                                />
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      <div className="mb-3">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Chọn vòng chính để gán tiêu chí
-                        </label>
-                        <div className="flex space-x-2">
-                          <Select
-                            className="flex-1"
-                            placeholder="Chọn vòng chính"
-                            onChange={setSelectedRoundForCriteria}
-                            value={selectedRoundForCriteria}
+                    <div className="space-y-2 ">
+                      {tempSelectedCriteria.map((criteriaItem, index) => {
+                        const criteriaInfo = criteria.find(
+                          (c) => c.id === criteriaItem.criteriaId
+                        );
+                        return (
+                          <div
+                            key={index}
+                            className="flex items-center space-x-2 p-2 hover:bg-gray-50 rounded"
                           >
-                            {mainRounds.map((round) => (
-                              <Option key={round.value} value={round.value}>
-                                {round.label}
-                              </Option>
-                            ))}
-                          </Select>
-
-                          {selectedRoundForCriteria && (
+                            <span className="flex-1">
+                              {criteriaInfo?.name ||
+                                criteriaItem.criteriaName ||
+                                criteriaItem.criteriaId}
+                            </span>
+                            <InputNumber
+                              min={0}
+                              max={100}
+                              formatter={(value) => `${value}%`}
+                              parser={(value) => value.replace("%", "")}
+                              value={(criteriaItem.weight * 100).toFixed(0)}
+                              onChange={(value) => {
+                                const updatedCriteria = [
+                                  ...tempSelectedCriteria,
+                                ];
+                                updatedCriteria[index].weight =
+                                  Number(value) / 100;
+                                setTempSelectedCriteria(updatedCriteria);
+                              }}
+                              className="w-24"
+                            />
                             <Button
-                              type="primary"
-                              icon={<PlusOutlined />}
-                              onClick={() =>
-                                handleAddCriteriaToRound(
-                                  selectedRoundForCriteria
-                                )
-                              }
-                            >
-                              Thêm
-                            </Button>
-                          )}
-                        </div>
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
+                              type="text"
+                              danger
+                              icon={<DeleteOutlined />}
+                              onClick={() => {
+                                const updatedCriteria = [
+                                  ...tempSelectedCriteria,
+                                ];
+                                updatedCriteria.splice(index, 1);
+                                setTempSelectedCriteria(updatedCriteria);
+                              }}
+                              size="small"
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </Modal>
             </Tabs.TabPane>
             <Tabs.TabPane tab="Trọng tài" key="5">
               <div className="mb-4 flex justify-between">

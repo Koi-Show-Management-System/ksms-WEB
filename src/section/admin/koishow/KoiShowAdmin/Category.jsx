@@ -166,38 +166,38 @@ function Category({ showId }) {
       key: "maxEntries",
       sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
     },
-    {
-      title: "Trạng Thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag
-          color={
-            status === "pending"
-              ? "orange"
-              : status === "approved"
-                ? "green"
-                : status === "upcoming"
-                  ? "blue"
-                  : "default"
-          }
-        >
-          {status === "pending"
-            ? "Chờ duyệt"
-            : status === "approved"
-              ? "Đã duyệt"
-              : status === "upcoming"
-                ? "Sắp diễn ra"
-                : status}
-        </Tag>
-      ),
-      filters: [
-        { text: "Chờ duyệt", value: "pending" },
-        { text: "Đã duyệt", value: "approved" },
-        { text: "Sắp diễn ra", value: "upcoming" },
-      ],
-      onFilter: (value, record) => record.status === value,
-    },
+    // {
+    //   title: "Trạng Thái",
+    //   dataIndex: "status",
+    //   key: "status",
+    //   render: (status) => (
+    //     <Tag
+    //       color={
+    //         status === "pending"
+    //           ? "orange"
+    //           : status === "approved"
+    //             ? "green"
+    //             : status === "upcoming"
+    //               ? "blue"
+    //               : "default"
+    //       }
+    //     >
+    //       {status === "pending"
+    //         ? "Chờ duyệt"
+    //         : status === "approved"
+    //           ? "Đã duyệt"
+    //           : status === "upcoming"
+    //             ? "Sắp diễn ra"
+    //             : status}
+    //     </Tag>
+    //   ),
+    //   filters: [
+    //     { text: "Chờ duyệt", value: "pending" },
+    //     { text: "Đã duyệt", value: "approved" },
+    //     { text: "Sắp diễn ra", value: "upcoming" },
+    //   ],
+    //   onFilter: (value, record) => record.status === value,
+    // },
     {
       title: "Hành Động",
       key: "actions",
@@ -277,7 +277,7 @@ function Category({ showId }) {
                 <Descriptions.Item label="Số lượng tối thiểu ">
                   {selectedCategory.minEntries}
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
+                {/* <Descriptions.Item label="Trạng thái">
                   <Tag
                     color={
                       selectedCategory.status === "pending"
@@ -297,7 +297,7 @@ function Category({ showId }) {
                           ? "Sắp diễn ra"
                           : selectedCategory.status}
                   </Tag>
-                </Descriptions.Item>
+                </Descriptions.Item> */}
                 <Descriptions.Item label="Bể trưng bày">
                   {selectedCategory.hasTank ? "Có" : "Không"}
                 </Descriptions.Item>

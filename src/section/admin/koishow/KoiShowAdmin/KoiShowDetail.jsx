@@ -279,12 +279,14 @@ function KoiShowDetail() {
     {
       key: "koiList",
       label: "Đơn Đăng Ký",
-      children: <Registration showId={id} />,
+      children: (
+        <Registration showId={id} statusShow={koiShowDetail.data.status} />
+      ),
     },
     {
       key: "ticket",
       label: "Quản lý vé",
-      children: <Ticket showId={id} />,
+      children: <Ticket showId={id} statusShow={koiShowDetail.data.status} />,
     },
     {
       key: "manageShow",

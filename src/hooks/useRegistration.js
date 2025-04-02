@@ -70,9 +70,15 @@ const useRegistration = create((set, get) => ({
     }
   },
 
-  updateStatus: async (id, status) => {
+  updateStatus: async (id, status, reason = null, refundType = null) => {
     try {
-      const response = await updateStatusRegistration(id, status);
+      const response = await updateStatusRegistration(
+        id,
+        status,
+        status === "rejected" ? reason : null,
+        status === "Refunded" ? refundType : null
+      );
+
       if (response && response.status === 200) {
         const { currentPage, pageSize, showIds } = get();
         get().fetchRegistration(currentPage, pageSize, showIds);
@@ -82,7 +88,15 @@ const useRegistration = create((set, get) => ({
           message: "Thành công",
           description:
             response.data?.message ||
-            `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thành công`,
+            `${
+              status === "confirmed"
+                ? "Phê duyệt"
+                : status === "rejected"
+                  ? "Từ chối"
+                  : status === "Refunded"
+                    ? "Hoàn tiền"
+                    : "Cập nhật"
+            } đăng ký thành công`,
           placement: "topRight",
         });
 
@@ -93,7 +107,15 @@ const useRegistration = create((set, get) => ({
           message: "Lỗi",
           description:
             response?.data?.message ||
-            `${status === "confirmed" ? "Phê duyệt" : "Từ chối"} đăng ký thất bại`,
+            `${
+              status === "confirmed"
+                ? "Phê duyệt"
+                : status === "rejected"
+                  ? "Từ chối"
+                  : status === "Refunded"
+                    ? "Hoàn tiền"
+                    : "Cập nhật"
+            } đăng ký thất bại`,
           placement: "topRight",
         });
 
@@ -102,7 +124,6 @@ const useRegistration = create((set, get) => ({
     } catch (error) {
       console.error("Error updating status:", error);
 
-      // Display error notification for exceptions
       notification.error({
         message: "Lỗi",
         description:

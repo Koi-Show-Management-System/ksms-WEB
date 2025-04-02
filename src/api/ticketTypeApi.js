@@ -14,6 +14,10 @@ const getTicketOrderDetails = (orderId) => {
   return axiosClient.get(`/ticket-order/get-order-details/${orderId}`);
 };
 
+const updateTicketRefund = (ticketOrderId) => {
+  return axiosClient.put(`/ticket/mark-as-refunded/${ticketOrderId}`);
+};
+
 const createTicket = (showId, data) => {
   return axiosClient.post(`/ticket-type/create/${showId}`, data);
 };
@@ -39,4 +43,5 @@ export {
   getTicketTypes,
   getTicketOrderDetails,
   updateTicketOrderStatus,
+  updateTicketRefund,
 };

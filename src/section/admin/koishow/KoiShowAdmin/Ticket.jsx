@@ -14,6 +14,7 @@ import {
   Alert,
   Divider,
   Tooltip,
+  notification,
 } from "antd";
 import {
   InfoCircleOutlined,
@@ -23,19 +24,20 @@ import {
   StopOutlined,
 } from "@ant-design/icons";
 import useTicketType from "../../../../hooks/useTicketType";
+import { Loading } from "../../../../components";
 
 const { Title, Text } = Typography;
 const { Search } = Input;
 const { Option } = Select;
 
-function Ticket({ showId }) {
+function Ticket({ showId, statusShow }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
-
+  const [displayedOrders, setDisplayedOrders] = useState([]);
   const {
     isLoading,
     error,
@@ -45,6 +47,7 @@ function Ticket({ showId }) {
     fetchTicketOrderDetails,
     orderDetails: ticketOrderDetails,
     isLoadingDetails,
+    updateTicketRefund,
   } = useTicketType();
 
   useEffect(() => {
@@ -52,6 +55,26 @@ function Ticket({ showId }) {
       fetchTicketOrders(showId, currentPage, pageSize);
     }
   }, [showId, currentPage, pageSize, fetchTicketOrders]);
+
+  useEffect(() => {
+    // Check localStorage for refunded orders when displaying order details
+    const refundedOrders = JSON.parse(
+      localStorage.getItem("refundedOrders") || "[]"
+    );
+
+    // If showing a list of orders, filter out refunded ones
+    const filteredOrders = ticketOrderDetails.filter(
+      (order) => !refundedOrders.includes(order.id)
+    );
+    setDisplayedOrders(filteredOrders);
+
+    // Or mark orders as refunded if you're showing them with a status
+    const ordersWithRefundStatus = ticketOrderDetails.map((order) => ({
+      ...order,
+      isRefunded: refundedOrders.includes(order.id),
+    }));
+    setDisplayedOrders(ordersWithRefundStatus);
+  }, [ticketOrderDetails]);
 
   const handlePageChange = (page, newPageSize) => {
     if (pageSize !== newPageSize) {
@@ -122,8 +145,22 @@ function Ticket({ showId }) {
 
   // Filter orders
   const items = ticketOrders?.data?.data?.items || [];
+  const refundedOrders = JSON.parse(
+    localStorage.getItem("refundedOrders") || "[]"
+  );
+
   const filteredOrders = Array.isArray(items)
     ? items.filter((order) => {
+        // Lọc những đơn hàng đã hoàn tiền
+        if (refundedOrders.includes(order.id)) {
+          return false;
+        }
+
+        // Chỉ hiển thị đơn hàng đã thanh toán
+        if (order.status !== "paid") {
+          return false;
+        }
+
         const matchesSearch =
           order.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
           order.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -131,10 +168,7 @@ function Ticket({ showId }) {
             ?.toLowerCase()
             .includes(searchTerm.toLowerCase());
 
-        const matchesStatus =
-          statusFilter === "all" || order.status === statusFilter;
-
-        return matchesSearch && matchesStatus;
+        return matchesSearch;
       })
     : [];
 
@@ -261,12 +295,49 @@ function Ticket({ showId }) {
     },
   ];
 
+  const handleRefund = async (orderId) => {
+    // Ensure we have an orderId
+    if (!orderId) {
+      notification.error({
+        message: "Lỗi",
+        description: "Không tìm thấy mã đơn hàng",
+      });
+      return;
+    }
+
+    const { success, data, message } = await updateTicketRefund(orderId);
+
+    if (success) {
+      notification.success({
+        message: "Hoàn tiền thành công",
+        description: "Đã hoàn tiền cho đơn hàng này thành công",
+      });
+
+      // Store refunded order ID in localStorage
+      const refundedOrders = JSON.parse(
+        localStorage.getItem("refundedOrders") || "[]"
+      );
+      refundedOrders.push(orderId);
+      localStorage.setItem("refundedOrders", JSON.stringify(refundedOrders));
+
+      // Đóng modal chi tiết
+      setIsDetailsOpen(false);
+
+      // Refresh order details
+      fetchTicketOrderDetails(orderId);
+
+      // Also refresh the main list
+      fetchTicketOrders(showId, currentPage, pageSize);
+    } else {
+      notification.error({
+        message: "Hoàn tiền thất bại",
+        description: message || "Đã xảy ra lỗi khi hoàn tiền",
+      });
+    }
+  };
+
   if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-[400px]">
-        <Spin size="large" />
-      </div>
-    );
+    return <Loading />;
   }
 
   if (error) {
@@ -300,17 +371,6 @@ function Ticket({ showId }) {
           value={searchTerm}
           style={{ width: 300 }}
         />
-
-        <Select
-          placeholder="Lọc theo trạng thái"
-          value={statusFilter}
-          onChange={(value) => setStatusFilter(value)}
-          style={{ width: 150 }}
-        >
-          <Option value="all">Tất cả</Option>
-          <Option value="paid">Đã thanh toán</Option>
-          <Option value="pending">Chờ thanh toán</Option>
-        </Select>
       </div>
 
       <Table
@@ -371,10 +431,19 @@ function Ticket({ showId }) {
         onCancel={handleCloseDetails}
         width={800}
         footer={[
+          statusShow === "cancelled" && (
+            <Button
+              key="refund"
+              danger
+              onClick={() => handleRefund(selectedOrderId)}
+            >
+              Hoàn tiền đơn hàng
+            </Button>
+          ),
           <Button key="close" onClick={handleCloseDetails}>
             Đóng
           </Button>,
-        ]}
+        ].filter(Boolean)}
       >
         {isLoadingDetails ? (
           <div className="flex justify-center my-8">
@@ -385,13 +454,9 @@ function Ticket({ showId }) {
             {Array.isArray(ticketOrderDetails) &&
             ticketOrderDetails.length > 0 ? (
               <>
-                <Text className="block mb-4">
-                  <strong>Mã đơn hàng:</strong> {selectedOrderId}
-                </Text>
-
                 <Table
                   columns={detailColumns}
-                  dataSource={ticketOrderDetails}
+                  dataSource={displayedOrders}
                   rowKey="id"
                   pagination={false}
                   size="small"

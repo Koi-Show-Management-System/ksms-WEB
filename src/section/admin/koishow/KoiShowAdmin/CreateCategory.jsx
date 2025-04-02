@@ -680,12 +680,12 @@ function CreateCategory({ showId, onCategoryCreated }) {
                               />
                             </div>
 
-                            <div>
+                            {/* <div>
                               <label className="block text-sm font-medium text-gray-700">
                                 Thứ tự vòng
                               </label>
                               <Input value={subRound.roundOrder} disabled />
-                            </div>
+                            </div> */}
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700">
@@ -717,7 +717,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                               />
                             </div>
 
-                            <div>
+                            {/* <div>
                               <label className="block text-sm font-medium text-gray-700">
                                 Trạng thái
                               </label>
@@ -746,7 +746,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                                 <Option value="completed">Hoàn thành</Option>
                                 <Option value="pending">Chờ duyệt</Option>
                               </Select>
-                            </div>
+                            </div> */}
                           </Space>
                         </Panel>
                       ))}

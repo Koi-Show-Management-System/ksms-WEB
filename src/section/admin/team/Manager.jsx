@@ -186,15 +186,15 @@ function Manager({ accounts = [], isLoading, role }) {
         const options = [
           {
             value: "active",
-            label: <span className="text-green-500">Active</span>,
+            label: <span className="text-green-500">Hoạt động</span>,
           },
           {
             value: "blocked",
-            label: <span className="text-orange-500">Blocked</span>,
+            label: <span className="text-orange-500">Đã khóa</span>,
           },
           {
             value: "deleted",
-            label: <span className="text-red-500">Deleted</span>,
+            label: <span className="text-red-500">Đã xóa</span>,
           },
         ];
 

@@ -164,43 +164,18 @@ function Category({ showId }) {
     //   },
     // },
     {
+      title: "SL Koi tối thiểu",
+      dataIndex: "minEntries",
+      key: "minEntries",
+      sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
+    },
+    {
       title: "SL Koi tối đa",
       dataIndex: "maxEntries",
       key: "maxEntries",
       sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
     },
-    {
-      title: "Trạng Thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag
-          color={
-            status === "pending"
-              ? "orange"
-              : status === "approved"
-                ? "green"
-                : status === "upcoming"
-                  ? "blue"
-                  : "default"
-          }
-        >
-          {status === "pending"
-            ? "Chờ duyệt"
-            : status === "approved"
-              ? "Đã duyệt"
-              : status === "upcoming"
-                ? "Sắp diễn ra"
-                : status}
-        </Tag>
-      ),
-      filters: [
-        { text: "Chờ duyệt", value: "pending" },
-        { text: "Đã duyệt", value: "approved" },
-        { text: "Sắp diễn ra", value: "upcoming" },
-      ],
-      onFilter: (value, record) => record.status === value,
-    },
+
     {
       title: "Hành Động",
       key: "actions",
@@ -261,33 +236,16 @@ function Category({ showId }) {
                 <Descriptions.Item label="Kích thước">
                   {selectedCategory.sizeMin} - {selectedCategory.sizeMax} cm
                 </Descriptions.Item>
+                <Descriptions.Item label="Số lượng tối thiểu">
+                  {selectedCategory.minEntries}
+                </Descriptions.Item>
                 <Descriptions.Item label="Số lượng tối đa">
                   {selectedCategory.maxEntries}
                 </Descriptions.Item>
                 <Descriptions.Item label="Bể trưng bày">
                   {selectedCategory.hasTank ? "Có" : "Không"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  <Tag
-                    color={
-                      selectedCategory.status === "pending"
-                        ? "orange"
-                        : selectedCategory.status === "approved"
-                          ? "green"
-                          : selectedCategory.status === "upcoming"
-                            ? "blue"
-                            : "default"
-                    }
-                  >
-                    {selectedCategory.status === "pending"
-                      ? "Chờ duyệt"
-                      : selectedCategory.status === "approved"
-                        ? "Đã duyệt"
-                        : selectedCategory.status === "upcoming"
-                          ? "Sắp diễn ra"
-                          : selectedCategory.status}
-                  </Tag>
-                </Descriptions.Item>
+
                 <Descriptions.Item label="Mô tả">
                   {selectedCategory.description}
                 </Descriptions.Item>
