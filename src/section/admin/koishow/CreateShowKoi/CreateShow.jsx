@@ -76,56 +76,167 @@ function CreateShow() {
     }
 
     if (currentStep === 2) {
-      if (formData.createCategorieShowRequests.length === 0) {
-        hasError = true;
-      } else {
-        formData.createCategorieShowRequests.forEach((category) => {
-          if (
-            !category.name ||
-            !category.sizeMin ||
-            !category.sizeMax ||
-            !category.description ||
-            // !category.startTime ||
-            // !category.endTime ||
-            !category.registrationFee ||
-            !category.maxEntries ||
-            !category.hasTank ||
-            category.createCompetionCategoryVarieties.length === 0
-          ) {
-            hasError = true;
+      // Make categories optional - only validate if categories exist
+      if (formData.createCategorieShowRequests.length > 0) {
+        formData.createCategorieShowRequests.forEach(
+          (category, categoryIndex) => {
+            let categoryHasError = false;
+            let errorMessage = `Hạng mục "${category.name || `#${categoryIndex + 1}`}" thiếu thông tin: `;
+            let errorDetails = [];
+
+            // Basic information validation
+            if (!category.name) {
+              errorDetails.push("tên hạng mục");
+              categoryHasError = true;
+            }
+            if (!category.sizeMin) {
+              errorDetails.push("kích thước tối thiểu");
+              categoryHasError = true;
+            }
+            if (!category.sizeMax) {
+              errorDetails.push("kích thước tối đa");
+              categoryHasError = true;
+            }
+            if (!category.description) {
+              errorDetails.push("mô tả");
+              categoryHasError = true;
+            }
+            if (!category.registrationFee) {
+              errorDetails.push("phí đăng ký");
+              categoryHasError = true;
+            }
+            if (category.hasTank === undefined) {
+              errorDetails.push("thông tin bể trưng bày");
+              categoryHasError = true;
+            }
+            if (
+              !category.createCompetionCategoryVarieties ||
+              category.createCompetionCategoryVarieties.length === 0
+            ) {
+              errorDetails.push("giống cá Koi");
+              categoryHasError = true;
+            }
+
+            // Check rounds (Preliminary, Evaluation, Final)
+            const roundTypes = ["Preliminary", "Evaluation", "Final"];
+            const missingRoundTypes = roundTypes.filter(
+              (type) =>
+                !category.createRoundRequests?.some(
+                  (round) => round.roundType === type
+                )
+            );
+
+            if (missingRoundTypes.length > 0) {
+              errorDetails.push(
+                `các vòng thi (${missingRoundTypes.join(", ")})`
+              );
+              categoryHasError = true;
+            }
+
+            // Check referees
+            if (
+              !category.createRefereeAssignmentRequests ||
+              category.createRefereeAssignmentRequests.length === 0
+            ) {
+              errorDetails.push("trọng tài");
+              categoryHasError = true;
+            }
+
+            // Check awards (must have all 4 types)
+            if (
+              !category.createAwardCateShowRequests ||
+              category.createAwardCateShowRequests.length < 4
+            ) {
+              errorDetails.push("đủ 4 loại giải thưởng");
+              categoryHasError = true;
+            }
+
+            // Criteria checks for each round
+            roundTypes.forEach((roundType) => {
+              const criteriaForRound =
+                category.createCriteriaCompetitionCategoryRequests?.filter(
+                  (c) => c.roundType === roundType
+                ) || [];
+
+              if (criteriaForRound.length < 3) {
+                errorDetails.push(`ít nhất 3 tiêu chí cho ${roundType}`);
+                categoryHasError = true;
+              }
+            });
+
+            if (categoryHasError) {
+              hasError = true;
+              // Show notification with specific category errors
+              notification.error({
+                message: `Lỗi ở hạng mục ${categoryIndex + 1}`,
+                description: errorMessage + errorDetails.join(", "),
+                placement: "topRight",
+                duration: 10, // Longer duration so user can read all errors
+              });
+            }
           }
-        });
+        );
       }
     }
 
     if (currentStep === 3) {
-      let hasError = false;
+      // Stop showing the generic error notification
+      // hasError = true;
 
+      let step3HasErrors = false;
+
+      // Check rules
       if (formData.createShowRuleRequests.length < 3) {
-        hasError = true;
+        step3HasErrors = true;
+        notification.error({
+          message: "Lỗi quy tắc",
+          description: "Cần có ít nhất 3 quy tắc cho chương trình.",
+          placement: "topRight",
+          duration: 6,
+        });
       }
 
+      // Check status count
       if (formData.createShowStatusRequests.length < 3) {
-        hasError = true;
+        step3HasErrors = true;
+        notification.error({
+          message: "Lỗi trạng thái",
+          description: "Cần có ít nhất 3 trạng thái cho chương trình.",
+          placement: "topRight",
+          duration: 6,
+        });
       }
 
-      const invalidStatuses = formData.createShowStatusRequests.some(
+      // Check invalid statuses
+      const invalidStatuses = formData.createShowStatusRequests.filter(
         (status) => !status.startDate || !status.endDate
       );
 
-      if (invalidStatuses) {
-        hasError = true;
+      if (invalidStatuses.length > 0) {
+        step3HasErrors = true;
+        notification.error({
+          message: "Lỗi trạng thái",
+          description: `${invalidStatuses.length} trạng thái chưa có đầy đủ ngày bắt đầu và kết thúc.`,
+          placement: "topRight",
+          duration: 6,
+        });
       }
 
-      return !hasError;
+      hasError = step3HasErrors;
     }
 
-    if (hasError) {
+    // Change the generic error message to only show if we don't have specific errors
+    if (hasError && currentStep !== 2 && currentStep !== 3) {
       notification.error({
         message: "Lỗi nhập liệu",
         description: "Vui lòng điền đầy đủ thông tin trước khi tiếp tục.",
         placement: "topRight",
       });
+      return false;
+    }
+
+    // If we've shown specific errors for steps 2 or 3, just return false
+    if (hasError) {
       return false;
     }
 
@@ -164,18 +275,25 @@ function CreateShow() {
 
   const handleSubmit = async () => {
     setIsConfirmModalOpen(false);
+    console.log("Submit button clicked - Form data:", formData);
+
     try {
+      console.log("Calling fetchCreateKoi API...");
       const response = await fetchCreateKoi(formData);
+      console.log("API Response:", response);
 
       if (response?.statusCode === 201) {
-        console.log("response", response);
+        console.log("Success! Status code 201 received");
 
         setTimeout(() => {
           navigate("/admin/showList");
         }, 2000);
+      } else {
+        console.error("API returned unexpected status:", response?.statusCode);
       }
     } catch (error) {
-      console.error("Lỗi tạo chương trình:", error);
+      console.error("Error submitting form:", error);
+      console.error("Error details:", error.response?.data || error.message);
     }
   };
 

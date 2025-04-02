@@ -147,14 +147,6 @@ function KoiShowDetail() {
       label: "Vé",
       children: (
         <div className="space-y-2">
-          <div>
-            Phí Đăng Ký -{" "}
-            {new Intl.NumberFormat("vi-VN", {
-              style: "currency",
-              currency: "VND",
-            }).format(koiShowDetail.data.registrationFee)}
-          </div>
-
           {koiShowDetail.data.ticketTypes.map((ticket) => (
             <div key={ticket.id}>
               <div>
@@ -168,10 +160,8 @@ function KoiShowDetail() {
             </div>
           ))}
 
-          <div>
-            Tham gia tối thiểu: {koiShowDetail.data.minParticipants} - Tham gia
-            tối đa: {koiShowDetail.data.maxParticipants}
-          </div>
+          <div>Tham gia tối thiểu: {koiShowDetail.data.minParticipants}</div>
+          <div>Tham gia tối đa: {koiShowDetail.data.maxParticipants}</div>
         </div>
       ),
     },

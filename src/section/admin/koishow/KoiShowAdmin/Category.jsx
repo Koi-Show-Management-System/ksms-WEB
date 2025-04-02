@@ -62,8 +62,6 @@ function Category({ showId }) {
     fetchCategories(showId, 1, 10);
   }, [showId]);
 
-
-
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
   };
@@ -156,6 +154,12 @@ function Category({ showId }) {
     //     return record.varieties.some((variety) => variety === value);
     //   },
     // },
+    {
+      title: "SL Koi tối thiểu",
+      dataIndex: "minEntries",
+      key: "minEntries",
+      sorter: (a, b) => (a.minEntries || 0) - (b.minEntries || 0),
+    },
     {
       title: "SL Koi tối đa",
       dataIndex: "maxEntries",
@@ -256,6 +260,7 @@ function Category({ showId }) {
         onClose={() => setIsDetailDrawerVisible(false)}
         open={isDetailDrawerVisible}
       >
+      
         {selectedCategory && (
           <Tabs defaultActiveKey="1">
             <TabPane tab="Thông tin cơ bản" key="1">
@@ -268,6 +273,9 @@ function Category({ showId }) {
                 </Descriptions.Item>
                 <Descriptions.Item label="Số lượng tối đa">
                   {selectedCategory.maxEntries}
+                </Descriptions.Item>
+                <Descriptions.Item label="Số lượng tối thiểu ">
+                  {selectedCategory.minEntries}
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
                   <Tag

@@ -91,6 +91,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
         sizeMax: currentCategory.sizeMax,
         description: currentCategory.description,
         maxEntries: currentCategory.maxEntries,
+        minEntries: currentCategory.minEntries,
         registrationFee: currentCategory.registrationFee,
         status: currentCategory.status,
         categoryVarieties:
@@ -126,6 +127,9 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
         sizeMin: parseFloat(values.sizeMin),
         sizeMax: parseFloat(values.sizeMax),
         description: values.description,
+        minEntries: parseInt(
+          values.minEntries || currentCategory.minEntries || 0
+        ),
         maxEntries: parseInt(
           values.maxEntries || currentCategory.maxEntries || 0
         ),
@@ -490,7 +494,10 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       },
                     ]}
                   >
-                    <Input type="number" placeholder="Nhập kích thước tối thiểu" />
+                    <Input
+                      type="number"
+                      placeholder="Nhập kích thước tối thiểu"
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -508,13 +515,32 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                   </Form.Item>
                 </Col>
                 <Col span={12}>
+                  <Form.Item
+                    name="minEntries"
+                    label="Số lượng tham gia tối thiểu"
+                  >
+                    <Input
+                      type="number"
+                      placeholder="Nhập số lượng tối thiểu"
+                    />
+                  </Form.Item>
+                </Col>
+                <Col span={12}>
                   <Form.Item name="maxEntries" label="Số lượng tham gia tối đa">
                     <Input type="number" placeholder="Nhập số lượng tối đa" />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="registrationFee" label="Phí đăng ký">
-                    <Input type="number" placeholder="Nhập phí đăng ký" />
+                  <Form.Item name="registrationFee" label="Phí tham gia">
+                    <InputNumber
+                      min={0}
+                      placeholder="Nhập phí tham gia"
+                      className="w-full"
+                      formatter={(value) =>
+                        `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                      }
+                      parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
@@ -770,7 +796,14 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                   },
                                 ]}
                               >
-                                <Input placeholder="Nhập loại giải thưởng" />
+                                <Select placeholder="Chọn loại giải thưởng">
+                                  <Option value="first">Giải Nhất</Option>
+                                  <Option value="second">Giải Nhì</Option>
+                                  <Option value="third">Giải Ba</Option>
+                                  <Option value="honorable">
+                                    Giải Khuyến Khích
+                                  </Option>
+                                </Select>
                               </Form.Item>
                             </Col>
                             <Col span={12}>

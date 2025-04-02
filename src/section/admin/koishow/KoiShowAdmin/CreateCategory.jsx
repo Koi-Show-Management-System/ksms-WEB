@@ -76,6 +76,8 @@ function CreateCategory({ showId, onCategoryCreated }) {
     sizeMax: "",
     description: "",
     maxEntries: 0,
+    minEntries: 0,
+    registrationFee: 0,
     status: "pending",
     startTime: null,
     endTime: null,
@@ -112,7 +114,9 @@ function CreateCategory({ showId, onCategoryCreated }) {
       sizeMin: "",
       sizeMax: "",
       description: "",
-      maxEntries: 10,
+      maxEntries: 0,
+      minEntries: 0,
+      registrationFee: 0,
       status: "pending",
       startTime: null,
       endTime: null,
@@ -382,12 +386,14 @@ function CreateCategory({ showId, onCategoryCreated }) {
     const { tempSelectedCriteria, ...categoryData } = category;
 
     // Ensure showId is set
-    categoryData.showId = showId;
+    categoryData.koiShowId = showId;
 
     // Ensure numeric fields are properly formatted
     categoryData.sizeMin = parseFloat(categoryData.sizeMin);
     categoryData.sizeMax = parseFloat(categoryData.sizeMax);
     categoryData.maxEntries = parseInt(categoryData.maxEntries);
+    categoryData.minEntries = parseInt(categoryData.minEntries);
+    categoryData.registrationFee = parseFloat(categoryData.registrationFee);
 
     // Ensure award values are numbers
     categoryData.createAwardCateShowRequests =
@@ -495,6 +501,30 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 </p>
               )}
             </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phí tham gia (VND)
+              </label>
+              <InputNumber
+                min={0}
+                placeholder="Nhập phí tham gia"
+                value={category.registrationFee}
+                onChange={(value) =>
+                  handleCategoryChange("registrationFee", value)
+                }
+                className="w-full"
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+              />
+              {showErrors &&
+                (!category.registrationFee || category.registrationFee < 0) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Phí đăng ký không được âm.
+                  </p>
+                )}
+            </div>
           </div>
 
           <div className="mb-4">
@@ -546,6 +576,24 @@ function CreateCategory({ showId, onCategoryCreated }) {
             </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
+                Số lượng tham gia tối thiểu
+              </label>
+              <InputNumber
+                min={1}
+                placeholder="Nhập số lượng tham gia tối thiểu"
+                value={category.minEntries}
+                onChange={(value) => handleCategoryChange("minEntries", value)}
+                className="w-full"
+              />
+              {showErrors &&
+                (!category.minEntries || category.minEntries < 1) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Số lượng tham gia tối thiểu phải lớn hơn 0.
+                  </p>
+                )}
+            </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
                 Số lượng tham gia tối đa
               </label>
               <InputNumber
@@ -555,11 +603,12 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 onChange={(value) => handleCategoryChange("maxEntries", value)}
                 className="w-full"
               />
-              {showErrors && !category.maxEntries && (
-                <p className="text-red-500 text-xs mt-1">
-                  Số lượng tham gia tối đa là bắt buộc.
-                </p>
-              )}
+              {showErrors &&
+                (!category.maxEntries || category.maxEntries < 1) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Số lượng tham gia tối đa phải lớn hơn 0.
+                  </p>
+                )}
             </div>
           </div>
 
@@ -640,7 +689,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
 
                             <div>
                               <label className="block text-sm font-medium text-gray-700">
-                                Điểm tối thiểu để vượt qua
+                                Số lượng cá để qua vòng
                               </label>
                               <Input
                                 type="number"
@@ -894,17 +943,25 @@ function CreateCategory({ showId, onCategoryCreated }) {
                             <label className="block text-sm font-medium text-gray-700">
                               Loại Giải Thưởng
                             </label>
-                            <Input
-                              placeholder="Nhập loại giải thưởng"
+                            <Select
+                              placeholder="Chọn loại giải thưởng"
                               value={award.awardType}
-                              onChange={(e) =>
+                              onChange={(value) =>
                                 handleAwardChange(
                                   awardIndex,
                                   "awardType",
-                                  e.target.value
+                                  value
                                 )
                               }
-                            />
+                              className="w-full"
+                            >
+                              <Option value="first">Giải Nhất</Option>
+                              <Option value="second">Giải Nhì</Option>
+                              <Option value="third">Giải Ba</Option>
+                              <Option value="honorable">
+                                Giải Khuyến Khích
+                              </Option>
+                            </Select>
                             {showErrors && !award.awardType && (
                               <p className="text-red-500 text-xs mt-1">
                                 Loại giải thưởng là bắt buộc.
