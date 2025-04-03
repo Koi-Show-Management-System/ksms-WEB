@@ -27,8 +27,10 @@ function KoiShow() {
   const [localData, setLocalData] = useState([]);
   const [form] = Form.useForm();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [selectedShowId, setSelectedShowId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
+  const [currentStatus, setCurrentStatus] = useState(null);
 
   const {
     koiShows,
@@ -98,12 +100,40 @@ function KoiShow() {
       return;
     }
 
+    if (
+      currentShow &&
+      currentShow.status === "published" &&
+      status === "pending"
+    ) {
+      notification.error({
+        message: "Không thể thay đổi",
+        description: "Không thể chuyển trạng thái từ khi đã công bố ",
+        placement: "topRight",
+      });
+      return;
+    }
+    if (
+      currentShow &&
+      currentShow.status === "internalpublished" &&
+      status === "pending"
+    ) {
+      notification.error({
+        message: "Không thể thay đổi",
+        description: "Không thể chuyển trạng thái từ khi đã công bố nội bộ ",
+        placement: "topRight",
+      });
+      return;
+    }
+    // Store current and new status information
+    setSelectedShowId(showId);
+    setSelectedStatus(status);
+    setCurrentStatus(currentShow.status);
+
+    // Show appropriate modal
     if (status === "cancelled") {
-      setSelectedShowId(showId);
-      setSelectedStatus(status);
       setIsModalOpen(true);
     } else {
-      updateStatus(showId, status);
+      setIsConfirmModalOpen(true);
     }
   };
 
@@ -128,6 +158,14 @@ function KoiShow() {
           message: "Thành công",
           description: `Cập nhật trạng thái triển lãm thành ${getStatusLabel(status)}`,
           placement: "topRight",
+        });
+
+        notification.warning({
+          message: "Lưu ý",
+          description:
+            "Khi đã cập nhật trạng thái, bạn sẽ không thể quay lại trạng thái trước đó",
+          placement: "topRight",
+          duration: 5,
         });
 
         await fetchKoiShowList(currentPage, pageSize);
@@ -162,10 +200,16 @@ function KoiShow() {
     form.resetFields();
   };
 
+  const handleConfirmStatusChange = () => {
+    updateStatus(selectedShowId, selectedStatus);
+    setIsConfirmModalOpen(false);
+  };
+
   const statusOptions = [
     { value: "pending", label: "Chờ duyệt", color: "orange" },
     { value: "cancelled", label: "Đã hủy", color: "red" },
     { value: "published", label: "Đã công bố", color: "green" },
+    { value: "internalpublished", label: "Đã công bố nội bộ", color: "blue" },
   ];
 
   const getStatusLabel = (status) => {
@@ -327,6 +371,25 @@ function KoiShow() {
             />
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Xác nhận thay đổi trạng thái"
+        open={isConfirmModalOpen}
+        onOk={handleConfirmStatusChange}
+        onCancel={() => setIsConfirmModalOpen(false)}
+        okText="Xác nhận"
+        cancelText="Hủy bỏ"
+      >
+        <p>
+          Bạn có chắc chắn muốn thay đổi trạng thái từ "
+          {getStatusLabel(currentStatus)}" thành "
+          {getStatusLabel(selectedStatus)}"?
+        </p>
+        <p className="text-red-500 font-medium">
+          Lưu ý: Khi đã cập nhật trạng thái, bạn sẽ không thể quay lại trạng
+          thái trước đó.
+        </p>
       </Modal>
     </div>
   );

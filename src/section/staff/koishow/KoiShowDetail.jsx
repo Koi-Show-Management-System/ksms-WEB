@@ -13,6 +13,7 @@ import Registration from "../../admin/koishow/KoiShowAdmin/Registration";
 import ScanQr from "./ScanQr";
 import CompetitionRound from "../../admin/koishow/KoiShowAdmin/CompetitionRound";
 import Ticket from "../../admin/koishow/KoiShowAdmin/Ticket";
+import ScanQrWrapper from "./ScanQrWrapper";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -44,7 +45,7 @@ function KoiShowDetail() {
       {
         key: "scanQr",
         label: "Quét mã",
-        children: <ScanQr />,
+        children: <ScanQrWrapper />,
       },
       {
         key: "competitionRound",

@@ -10,6 +10,8 @@ import {
   DatePicker,
   Select,
   Collapse,
+  Checkbox,
+  TimePicker,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -31,24 +33,112 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
-  const [timeErrors, setTimeErrors] = useState({ startDate: "", endDate: "" });
-  const [showStatusList, setShowStatusList] = useState(
-    initialData.createShowStatusRequests || []
-  );
-  const [newShowStatus, setNewShowStatus] = useState({
-    statusName: "",
-    description: "",
-    startDate: null,
-    endDate: null,
-  });
 
+  // Tạo danh sách tất cả các trạng thái với thời gian ban đầu là null
+  const statusMapping = {
+    "Mở Đăng Ký": {
+      key: "RegistrationOpen",
+      description: "Giai đoạn đăng ký.",
+    },
+    "Điểm Danh": {
+      key: "CheckIn",
+      description: "Giai đoạn check-in.",
+    },
+    "Vòng Sơ Khảo": {
+      key: "Preliminary",
+      description: "Vòng sơ khảo.",
+    },
+    "Vòng Đánh Giá Chính": {
+      key: "Evaluation",
+      description: "Vòng đánh giá chính.",
+    },
+    "Vòng Chung Kết": {
+      key: "Final",
+      description: "Vòng chung kết.",
+    },
+    "Triển Lãm": {
+      key: "Exhibition",
+      description: "Triển lãm cá koi.",
+    },
+    "Công bố kết quả": {
+      key: "PublicResult",
+      description: "Công bố kết quả.",
+    },
+    "Trao giải": {
+      key: "Award",
+      description: "Lễ trao giải.",
+    },
+    "Kết thúc sự kiện": {
+      key: "Finished",
+      description: "Kết thúc sự kiện.",
+    },
+  };
+
+  // Tạo mảng tất cả trạng thái có sẵn
+  const [availableStatuses, setAvailableStatuses] = useState(
+    Object.entries(statusMapping).map(([label, { key, description }]) => ({
+      label,
+      statusName: key,
+      description,
+      startDate: null,
+      endDate: null,
+      selected: false, // Flag để theo dõi trạng thái có được chọn hay không
+    }))
+  );
+
+  // Khởi tạo từ dữ liệu ban đầu nếu có
   useEffect(() => {
+    if (initialData.createShowStatusRequests?.length > 0) {
+      const updatedStatuses = [...availableStatuses];
+
+      initialData.createShowStatusRequests.forEach((savedStatus) => {
+        const index = updatedStatuses.findIndex(
+          (status) => status.statusName === savedStatus.statusName
+        );
+
+        if (index !== -1) {
+          updatedStatuses[index] = {
+            ...updatedStatuses[index],
+            startDate: savedStatus.startDate
+              ? dayjs(savedStatus.startDate)
+              : null,
+            endDate: savedStatus.endDate ? dayjs(savedStatus.endDate) : null,
+            selected: true,
+          };
+        }
+      });
+
+      setAvailableStatuses(updatedStatuses);
+    }
+  }, []);
+
+  // Cập nhật form data mỗi khi có thay đổi
+  useEffect(() => {
+    // Chỉ gửi lên các trạng thái được chọn (có selected = true)
+    const selectedStatuses = availableStatuses
+      .filter((status) => status.selected && status.startDate)
+      .map((status) => ({
+        statusName: status.statusName,
+        description: status.description,
+        startDate: status.startDate
+          ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+          : null,
+        endDate:
+          // Use the endDate for all statuses if it exists
+          status.endDate
+            ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format()
+            : status.startDate
+              ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+              : null,
+      }));
+
     updateFormData({
       createShowRuleRequests: rules,
-      createShowStatusRequests: showStatusList,
+      createShowStatusRequests: selectedStatuses,
     });
+
     setFilteredRules(rules);
-  }, [rules, showStatusList]);
+  }, [rules, availableStatuses]);
 
   // Lọc danh sách theo search
   useEffect(() => {
@@ -62,72 +152,6 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       );
     }
   }, [searchText, rules]);
-
-  const statusMapping = {
-    "Mở Đăng Ký": {
-      key: "RegistrationOpen",
-      description: "Cho phép người tham gia đăng ký sự kiện.",
-    },
-    "Đóng Đăng Ký": {
-      key: "RegistrationClosed",
-      description: "Không còn cho phép đăng ký tham gia.",
-    },
-    "Điểm Danh": {
-      key: "CheckIn",
-      description: "Người tham gia thực hiện điểm danh trước sự kiện.",
-    },
-    "Vòng Sơ Loại": {
-      key: "Preliminary",
-      description: "Vòng sơ tuyển để lọc ra các ứng viên phù hợp.",
-    },
-    "Vòng Đánh Giá": {
-      key: "Evaluation",
-      description: "Ban giám khảo tiến hành chấm điểm.",
-    },
-    "Vòng Chung Kết": {
-      key: "Final",
-      description: "Vòng thi cuối cùng để tìm ra người chiến thắng.",
-    },
-    "Grand Champion": {
-      key: "GrandChampion",
-      description: "Xác định người chiến thắng chung cuộc.",
-    },
-    "Hoàn Thành": {
-      key: "Completed",
-      description: "Sự kiện đã kết thúc thành công.",
-    },
-    "Triển Lãm": {
-      key: "Exhibition",
-      description: "Trưng bày hoặc giới thiệu sản phẩm, dịch vụ.",
-    },
-    "Kết Thúc": {
-      key: "Finished",
-      description: "Sự kiện đã kết thúc hoàn toàn.",
-    },
-  };
-
-  const statusOptions = Object.entries(statusMapping).map(
-    ([label, { key, description }]) => ({
-      label,
-      value: key,
-      description,
-    })
-  );
-
-  const handleStatusChange = (value) => {
-    const selectedStatus = statusOptions.find(
-      (status) => status.value === value
-    );
-
-    if (selectedStatus) {
-      setNewShowStatus({
-        statusName: selectedStatus.value,
-        description: selectedStatus.description,
-        startDate: null,
-        endDate: null,
-      });
-    }
-  };
 
   const addRule = () => {
     if (newRule.title.trim() && newRule.content.trim()) {
@@ -163,48 +187,63 @@ function StepThree({ updateFormData, initialData, showErrors }) {
     setRules(updatedRules);
   };
 
-  const handleAddStatus = () => {
-    let errors = { startDate: "", endDate: "" };
+  // Cập nhật trạng thái được chọn
+  const handleStatusSelection = (index) => {
+    const updatedStatuses = [...availableStatuses];
+    updatedStatuses[index].selected = !updatedStatuses[index].selected;
 
-    if (!newShowStatus.startDate) {
-      errors.startDate = "Vui lòng chọn ngày bắt đầu.";
-    }
-    if (!newShowStatus.endDate) {
-      errors.endDate = "Vui lòng chọn ngày kết thúc.";
-    } else if (
-      newShowStatus.startDate &&
-      newShowStatus.endDate.isBefore(newShowStatus.startDate)
-    ) {
-      errors.endDate = "Ngày kết thúc phải sau ngày bắt đầu.";
+    // Nếu bỏ chọn, xóa ngày
+    if (!updatedStatuses[index].selected) {
+      updatedStatuses[index].startDate = null;
+      updatedStatuses[index].endDate = null;
     }
 
-    setTimeErrors(errors);
-
-    if (!errors.startDate && !errors.endDate) {
-      const startDateVN = dayjs(newShowStatus.startDate)
-        .tz("Asia/Ho_Chi_Minh")
-        .format();
-      const endDateVN = dayjs(newShowStatus.endDate)
-        .tz("Asia/Ho_Chi_Minh")
-        .format();
-
-      setShowStatusList((prev) => [
-        ...prev,
-        { ...newShowStatus, startDate: startDateVN, endDate: endDateVN },
-      ]);
-
-      setNewShowStatus({
-        statusName: "",
-        description: "",
-        startDate: null,
-        endDate: null,
-      });
-      setTimeErrors({ startDate: "", endDate: "" }); // Reset lỗi sau khi thêm thành công
-    }
+    setAvailableStatuses(updatedStatuses);
   };
 
-  const handleRemoveStatus = (index) => {
-    setShowStatusList((prev) => prev.filter((_, i) => i !== index));
+  // Cập nhật ngày cho trạng thái
+  const handleDateChange = (index, dateType, value) => {
+    const updatedStatuses = [...availableStatuses];
+    updatedStatuses[index][dateType] = value;
+
+    // Nếu đặt ngày, tự động chọn trạng thái đó
+    if (value) {
+      updatedStatuses[index].selected = true;
+    }
+
+    setAvailableStatuses(updatedStatuses);
+  };
+
+  // Kiểm tra xem có lỗi về ngày không
+  const getDateError = (status, dateType) => {
+    if (!status.selected) return null;
+
+    if (dateType === "startDate" && !status.startDate) {
+      return status.statusName === "Finished"
+        ? "Thời gian kết thúc là bắt buộc"
+        : "Ngày là bắt buộc";
+    }
+
+    if (status.statusName === "RegistrationOpen") {
+      if (dateType === "endDate" && !status.endDate) {
+        return "Ngày kết thúc là bắt buộc";
+      }
+      if (
+        dateType === "endDate" &&
+        status.startDate &&
+        status.endDate &&
+        status.endDate.isBefore(status.startDate)
+      ) {
+        return "Ngày kết thúc phải sau ngày bắt đầu";
+      }
+    } else if (status.statusName !== "Finished") {
+      // For other statuses (except Finished), we need both startDate and endDate
+      if (dateType === "endDate" && !status.endDate) {
+        return "Giờ kết thúc là bắt buộc";
+      }
+    }
+
+    return null;
   };
 
   return (
@@ -335,162 +374,229 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       </Modal>
 
       {/* Tiêu đề */}
-      <Title level={3} className="text-blue-500">
+      <Title level={3} className="text-blue-500 mt-8">
         Trạng Thái Chương Trình
       </Title>
       <Divider />
-
-      <Space direction="vertical" className="w-full">
-        {/* Chọn trạng thái */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Tên trạng thái
-          </label>
-          <Select
-            placeholder="Chọn trạng thái"
-            className="w-full"
-            value={
-              statusOptions.find(
-                (option) => option.value === newShowStatus.statusName
-              )?.label || null
-            }
-            onChange={(value) => {
-              const selectedStatus = statusOptions.find(
-                (status) => status.value === value
-              );
-              if (selectedStatus) {
-                setNewShowStatus({
-                  statusName: selectedStatus.value, // Lưu giá trị tiếng Anh
-                  description: selectedStatus.description, // Lưu mô tả trạng thái
-                  startDate: null,
-                  endDate: null,
-                });
-              }
-            }}
-          >
-            {statusOptions.map((status) => (
-              <Select.Option key={status.value} value={status.value}>
-                {status.label} {/* Hiển thị tiếng Việt */}
-              </Select.Option>
-            ))}
-          </Select>
-        </div>
-
-        {/* Mô tả trạng thái */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700">
-            Mô tả trạng thái
-          </label>
-          <Input.TextArea
-            rows={2}
-            placeholder="Mô tả trạng thái"
-            value={newShowStatus.description}
-            disabled
-          />
-        </div>
-
-        {/* Ngày bắt đầu và kết thúc */}
-        <div className="flex space-x-4">
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Ngày bắt đầu
-            </label>
-            <DatePicker
-              showTime
-              className="w-full"
-              value={
-                newShowStatus.startDate ? dayjs(newShowStatus.startDate) : null
-              }
-              onChange={(value) =>
-                setNewShowStatus((prev) => ({ ...prev, startDate: value }))
-              }
-              format="YYYY-MM-DD HH:mm:ss"
-              placeholder="Chọn ngày bắt đầu"
-            />
-            {timeErrors.startDate && (
-              <p className="text-red-500 text-xs mt-1">
-                {timeErrors.startDate}
-              </p>
-            )}
-          </div>
-
-          <div className="flex-1">
-            <label className="block text-sm font-medium text-gray-700">
-              Ngày kết thúc
-            </label>
-            <DatePicker
-              showTime
-              className="w-full"
-              value={
-                newShowStatus.endDate ? dayjs(newShowStatus.endDate) : null
-              }
-              onChange={(value) =>
-                setNewShowStatus((prev) => ({ ...prev, endDate: value }))
-              }
-              format="YYYY-MM-DD HH:mm:ss"
-              placeholder="Chọn ngày kết thúc"
-            />
-            {timeErrors.endDate && (
-              <p className="text-red-500 text-xs mt-1">{timeErrors.endDate}</p>
-            )}
-          </div>
-        </div>
-
-        {/* Nút Thêm Trạng Thái */}
-        <Button
-          type="primary"
-          onClick={handleAddStatus}
-          icon={<PlusOutlined />}
-        >
-          Thêm Trạng Thái
-        </Button>
-      </Space>
+      
 
       {/* Hiển thị lỗi nếu chưa có ít nhất 3 trạng thái */}
-      {showErrors && showStatusList.length < 3 && (
-        <p className="text-red-500 text-xs mt-2">
+      {showErrors && availableStatuses.filter((s) => s.selected).length < 3 && (
+        <p className="text-red-500 text-sm font-medium mb-4">
           Cần chọn ít nhất 3 trạng thái cho chương trình.
         </p>
       )}
 
-      {/* Danh sách Trạng Thái */}
-      <Collapse className="mt-4">
-        {showStatusList.map((status, index) => {
-          const statusInVietnamese = Object.keys(statusMapping).find(
-            (key) => statusMapping[key].key === status.statusName
-          );
+      {/* Bảng trạng thái */}
+      <List
+        className="bg-white rounded-lg shadow p-3"
+        itemLayout="horizontal"
+        dataSource={availableStatuses}
+        renderItem={(status, index) => (
+          <List.Item
+            className={`border-b ${status.selected ? "bg-blue-50" : ""}`}
+          >
+            <div className="grid grid-cols-12 gap-4 w-full items-center">
+              {/* Checkbox chọn trạng thái - show only description */}
+              <div className="col-span-3">
+                <Checkbox
+                  checked={status.selected}
+                  onChange={() => handleStatusSelection(index)}
+                  className="font-medium"
+                >
+                  {status.description}
+                </Checkbox>
+              </div>
 
-          return (
-            <Collapse.Panel
-              key={index}
-              header={`${statusInVietnamese || status.statusName} (${status.startDate ? dayjs(status.startDate).format("DD/MM/YYYY HH:mm") : "Chưa có"} - ${status.endDate ? dayjs(status.endDate).format("DD/MM/YYYY HH:mm") : "Chưa có"})`}
-              extra={
-                <Button
-                  type="text"
-                  icon={<DeleteOutlined />}
-                  danger
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleRemoveStatus(index);
-                  }}
-                />
-              }
-            >
-              <p>
-                <strong>Mô tả:</strong> {status.description}
-              </p>
-              <p>
-                <strong>Ngày bắt đầu:</strong>{" "}
-                {dayjs(status.startDate).format("YYYY-MM-DD HH:mm:ss")}
-              </p>
-              <p>
-                <strong>Ngày kết thúc:</strong>{" "}
-                {dayjs(status.endDate).format("YYYY-MM-DD HH:mm:ss")}
-              </p>
-            </Collapse.Panel>
-          );
-        })}
-      </Collapse>
+              {/* For Registration Open - Show Start and End Date */}
+              {status.statusName === "RegistrationOpen" ? (
+                <>
+                  {/* Ngày bắt đầu */}
+                  <div className="col-span-4">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Ngày bắt đầu
+                    </label>
+                    <DatePicker
+                      showTime
+                      className="w-full"
+                      disabled={!status.selected}
+                      value={status.startDate}
+                      onChange={(value) =>
+                        handleDateChange(index, "startDate", value)
+                      }
+                      format="YYYY-MM-DD HH:mm:ss"
+                      placeholder="Chọn ngày bắt đầu"
+                    />
+                    {getDateError(status, "startDate") && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {getDateError(status, "startDate")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Ngày kết thúc */}
+                  <div className="col-span-4">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Ngày kết thúc
+                    </label>
+                    <DatePicker
+                      showTime
+                      className="w-full"
+                      disabled={!status.selected}
+                      value={status.endDate}
+                      onChange={(value) =>
+                        handleDateChange(index, "endDate", value)
+                      }
+                      format="YYYY-MM-DD HH:mm:ss"
+                      placeholder="Chọn ngày kết thúc"
+                    />
+                    {getDateError(status, "endDate") && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {getDateError(status, "endDate")}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : status.statusName === "Finished" ? (
+                <>
+                  {/* For Finished status - Show just a single Date+Time picker */}
+                  <div className="col-span-8">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Thời gian kết thúc sự kiện
+                    </label>
+                    <DatePicker
+                      showTime
+                      className="w-full"
+                      disabled={!status.selected}
+                      value={status.startDate}
+                      onChange={(value) => {
+                        // Update both startDate and endDate with the same value
+                        handleDateChange(index, "startDate", value);
+                        handleDateChange(index, "endDate", value);
+                      }}
+                      format="YYYY-MM-DD HH:mm:ss"
+                      placeholder="Chọn thời gian kết thúc sự kiện"
+                    />
+                    {getDateError(status, "startDate") && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {getDateError(status, "startDate")}
+                      </p>
+                    )}
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* For other statuses - Show Date and Time Range */}
+                  <div className="col-span-4">
+                    <label className="block text-xs font-medium text-gray-700 mb-1">
+                      Ngày diễn ra
+                    </label>
+                    <DatePicker
+                      className="w-full"
+                      disabled={!status.selected}
+                      value={status.startDate}
+                      onChange={(value) => {
+                        // Only update the date part, preserve the time if it exists
+                        let newValue = value;
+                        if (value && status.startDate) {
+                          // Copy the time from existing startDate to the new date
+                          newValue = value
+                            .hour(status.startDate.hour())
+                            .minute(status.startDate.minute())
+                            .second(status.startDate.second());
+                        }
+                        handleDateChange(index, "startDate", newValue);
+
+                        // Also update endDate to have the same date
+                        if (value && status.endDate) {
+                          const newEndDate = value
+                            .hour(status.endDate.hour())
+                            .minute(status.endDate.minute())
+                            .second(status.endDate.second());
+                          handleDateChange(index, "endDate", newEndDate);
+                        } else if (value) {
+                          // If no existing end date, create one with same date
+                          const newEndDate = value
+                            .hour(value.hour() + 1)
+                            .minute(0)
+                            .second(0);
+                          handleDateChange(index, "endDate", newEndDate);
+                        }
+                      }}
+                      format="YYYY-MM-DD"
+                      placeholder="Chọn ngày"
+                    />
+                    {getDateError(status, "startDate") && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {getDateError(status, "startDate")}
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Thời gian bắt đầu và kết thúc */}
+                  <div className="col-span-4">
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Giờ bắt đầu
+                        </label>
+                        <TimePicker
+                          className="w-full"
+                          disabled={!status.selected || !status.startDate}
+                          value={status.startDate}
+                          onChange={(value) => {
+                            if (value && status.startDate) {
+                              // Keep the date but update the time
+                              const newDate = status.startDate
+                                .hour(value.hour())
+                                .minute(value.minute())
+                                .second(value.second());
+                              handleDateChange(index, "startDate", newDate);
+                            }
+                          }}
+                          format="HH:mm"
+                          placeholder="Giờ bắt đầu"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">
+                          Giờ kết thúc
+                        </label>
+                        <TimePicker
+                          className="w-full"
+                          disabled={!status.selected || !status.startDate}
+                          value={status.endDate}
+                          onChange={(value) => {
+                            if (value && status.startDate) {
+                              // This creates a new date with the same date as startDate but with the time from the time picker
+                              const newEndDate = status.startDate
+                                .hour(value.hour())
+                                .minute(value.minute())
+                                .second(value.second());
+
+                              // This updates the endDate state with the time picked from the TimePicker
+                              handleDateChange(index, "endDate", newEndDate);
+                            }
+                          }}
+                          format="HH:mm"
+                          placeholder="Giờ kết thúc"
+                        />
+                        {status.startDate &&
+                          status.endDate &&
+                          status.endDate.isBefore(status.startDate) && (
+                            <p className="text-red-500 text-xs mt-1">
+                              Giờ kết thúc phải sau giờ bắt đầu
+                            </p>
+                          )}
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          </List.Item>
+        )}
+      />
     </div>
   );
 }

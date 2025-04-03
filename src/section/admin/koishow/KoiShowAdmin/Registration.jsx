@@ -17,6 +17,7 @@ import {
   Col,
   ConfigProvider,
   Input,
+  Empty,
 } from "antd";
 import {
   ExclamationCircleOutlined,
@@ -541,6 +542,15 @@ function Registration({ showId, statusShow }) {
           size="middle"
           bordered={false}
           scroll={{ x: "max-content" }}
+          locale={{
+            emptyText: (
+              <Empty
+                description="Không có dữ liệu"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "24px 0" }}
+              />
+            ),
+          }}
         />
         {/* Modal gán bể */}
         <Modal
@@ -680,7 +690,7 @@ function Registration({ showId, statusShow }) {
                       setIsModalVisible(false); // Đóng modal chi tiết
                     }}
                   >
-                    Hoàn Tiền
+                    Đã Hoàn Tiền
                   </Button>
                 )}
             </>

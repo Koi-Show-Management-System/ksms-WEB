@@ -16,6 +16,7 @@ import {
   Input as AntInput,
   Tag,
   notification,
+  Empty,
 } from "antd";
 import {
   PlusOutlined,
@@ -347,6 +348,15 @@ function Tank({ showId }) {
               `${range[0]}-${range[1]} trong ${total} mục`,
           }}
           onChange={handleTableChange}
+          locale={{
+            emptyText: (
+              <Empty
+                description="Không có dữ liệu"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "24px 0" }}
+              />
+            ),
+          }}
         />
       </Card>
 

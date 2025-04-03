@@ -10,6 +10,14 @@ const getTicketTypes = (showId, page, size) => {
   });
 };
 
+const getInfoByQrCode = (ticketId) => {
+  return axiosClient.get(`/ticket/get-info-by-qr-code?ticketId=${ticketId}`);
+};
+
+const updateTicketCheckIn = (ticketId) => {
+  return axiosClient.put(`/ticket/check-in/${ticketId}`);
+};
+
 const getTicketOrderDetails = (orderId) => {
   return axiosClient.get(`/ticket-order/get-order-details/${orderId}`);
 };
@@ -44,4 +52,6 @@ export {
   getTicketOrderDetails,
   updateTicketOrderStatus,
   updateTicketRefund,
+  getInfoByQrCode,
+  updateTicketCheckIn,
 };

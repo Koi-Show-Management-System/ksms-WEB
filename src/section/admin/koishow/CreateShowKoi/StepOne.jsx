@@ -30,7 +30,11 @@ const cloudinary = new Cloudinary({
 });
 
 function StepOne({ updateFormData, initialData, showErrors }) {
-  const [data, setData] = useState(initialData);
+  const [data, setData] = useState({
+    ...initialData,
+    hasGrandChampion: false,
+    hasBestInShow: false,
+  });
   const [uploadedImages, setUploadedImages] = useState([]);
   const { accountManage, fetchAccountTeam } = useAccountTeam();
   const staff = accountManage.staff || [];
@@ -50,7 +54,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
   useEffect(() => {
     if (JSON.stringify(data) !== JSON.stringify(initialData)) {
-      updateFormData(data);
+      updateFormData({
+        ...data,
+        hasGrandChampion: false,
+        hasBestInShow: false,
+      });
       console.log("Current formData:", data);
     }
   }, [data]);
@@ -417,7 +425,6 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             </p>
           )}
         </div>
-    
       </div>
 
       {/* Tải lên Hình ảnh */}
@@ -571,27 +578,6 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         ))}
       </Collapse>
 
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-3">
-          Giải thưởng lớn
-        </label>
-        <Checkbox
-          checked={data.hasGrandChampion}
-          onChange={(e) =>
-            setData({ ...data, hasGrandChampion: e.target.checked })
-          }
-        >
-          Giải Best in Show
-        </Checkbox>
-        <Checkbox
-          checked={data.hasBestInShow}
-          onChange={(e) =>
-            setData({ ...data, hasBestInShow: e.target.checked })
-          }
-        >
-          Giải GrandChampion
-        </Checkbox>
-      </div>
       {/* Quản lý vé */}
       <h3 className="text-sm font-bold mb-4 text-gray-700">Quản lý vé</h3>
       <Button onClick={handleAddTicketType} icon={<PlusOutlined />}>

@@ -60,7 +60,7 @@ function ScanQr() {
   const handleReset = () => {
     setQrResult(null);
     setScannerEnabled(true);
-    setShowScanner(false);
+    setShowScanner(true);
     reset();
   };
 
@@ -114,10 +114,6 @@ function ScanQr() {
 
   return (
     <div className=" max-w-6xl mx-auto">
-      <Title level={3} className="mb-6 text-center">
-        <span className="">Quét QR để Check-in</span>
-      </Title>
-
       {!showScanner && !qrResult && (
         <div className="flex justify-center mb-6">
           <Button type="primary" onClick={() => setShowScanner(true)}>

@@ -93,15 +93,26 @@ function Ticket({ showId, statusShow }) {
     }
   };
 
-  const getStatusTag = (status) => {
+  const getStatusTag = (status, isRefunded) => {
+    let statusTag;
     switch (status) {
       case "paid":
-        return <Tag color="success">Đã thanh toán</Tag>;
+        statusTag = <Tag color="success">Đã thanh toán</Tag>;
+        break;
       case "pending":
-        return <Tag color="warning">Chờ thanh toán</Tag>;
+        statusTag = <Tag color="warning">Chờ thanh toán</Tag>;
+        break;
       default:
-        return <Tag>{status}</Tag>;
+        statusTag = <Tag>{status}</Tag>;
+        break;
     }
+
+    return (
+      <Space>
+        {statusTag}
+        {isRefunded && <Tag color="red">Đã hoàn tiền</Tag>}
+      </Space>
+    );
   };
 
   const formatDate = (dateString) => {
@@ -150,26 +161,28 @@ function Ticket({ showId, statusShow }) {
   );
 
   const filteredOrders = Array.isArray(items)
-    ? items.filter((order) => {
-        // Lọc những đơn hàng đã hoàn tiền
-        if (refundedOrders.includes(order.id)) {
-          return false;
-        }
+    ? items
+        .filter((order) => {
+          // Không lọc ra những đơn hàng đã hoàn tiền nữa
 
-        // Chỉ hiển thị đơn hàng đã thanh toán
-        if (order.status !== "paid") {
-          return false;
-        }
+          // Chỉ hiển thị đơn hàng đã thanh toán
+          if (order.status !== "paid") {
+            return false;
+          }
 
-        const matchesSearch =
-          order.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          order.transactionCode
-            ?.toLowerCase()
-            .includes(searchTerm.toLowerCase());
+          const matchesSearch =
+            order.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            order.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            order.transactionCode
+              ?.toLowerCase()
+              .includes(searchTerm.toLowerCase());
 
-        return matchesSearch;
-      })
+          return matchesSearch;
+        })
+        .map((order) => ({
+          ...order,
+          isRefunded: refundedOrders.includes(order.id),
+        }))
     : [];
 
   // Update pagination handling
@@ -212,7 +225,7 @@ function Ticket({ showId, statusShow }) {
       render: (text) => formatCurrency(text),
     },
     {
-      title: "Phương thức thanh toán",
+      title: "Phương thức",
       dataIndex: "paymentMethod",
       key: "paymentMethod",
     },
@@ -220,7 +233,7 @@ function Ticket({ showId, statusShow }) {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      render: (status) => getStatusTag(status),
+      render: (status, record) => getStatusTag(status, record.isRefunded),
     },
     {
       title: "Thao tác",
@@ -437,7 +450,7 @@ function Ticket({ showId, statusShow }) {
               danger
               onClick={() => handleRefund(selectedOrderId)}
             >
-              Hoàn tiền đơn hàng
+              Đã Hoàn tiền
             </Button>
           ),
           <Button key="close" onClick={handleCloseDetails}>

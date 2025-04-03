@@ -7,6 +7,8 @@ import {
   getTicketOrderDetails,
   updateTicketOrderStatus as updateOrderStatusApi,
   updateTicketRefund,
+  getInfoByQrCode,
+  updateTicketCheckIn,
 } from "../api/ticketTypeApi";
 
 const useTicketType = create((set, get) => ({
@@ -44,6 +46,30 @@ const useTicketType = create((set, get) => ({
       }
     } catch (error) {
       console.error("Error fetching ticket types:", error);
+      set({ error: error.message || "An error occurred", isLoading: false });
+      return { success: false, message: error.message || "An error occurred" };
+    }
+  },
+
+  fetchInfoByQrCode: async (ticketId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await getInfoByQrCode(ticketId);
+      if (response?.data?.statusCode === 200) {
+        set({ isLoading: false });
+        return { success: true, data: response.data };
+      } else {
+        set({
+          error: response?.data?.message || "Failed to fetch info by qr code",
+          isLoading: false,
+        });
+        return {
+          success: false,
+          message: response?.data?.message || "Failed to fetch info by qr code",
+        };
+      }
+    } catch (error) {
+      console.error("Error fetching info by qr code:", error);
       set({ error: error.message || "An error occurred", isLoading: false });
       return { success: false, message: error.message || "An error occurred" };
     }
@@ -131,6 +157,31 @@ const useTicketType = create((set, get) => ({
     }
   },
 
+  fetchUpdateTicketCheckIn: async (ticketId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await updateTicketCheckIn(ticketId);
+      if (response?.data?.statusCode === 200) {
+        set({ isLoading: false });
+        return { success: true, data: response.data };
+      } else {
+        set({
+          error: response?.data?.message || "Failed to update ticket check in",
+          isLoading: false,
+        });
+        return {
+          success: false,
+          message:
+            response?.data?.message || "Failed to update ticket check in",
+        };
+      }
+    } catch (error) {
+      console.error("Error updating ticket check in:", error);
+      set({ error: error.message || "An error occurred", isLoading: false });
+      return { success: false, message: error.message || "An error occurred" };
+    }
+  },
+
   deleteTicketType: async (ticketId) => {
     set({ isLoading: true, error: null });
 
@@ -200,6 +251,9 @@ const useTicketType = create((set, get) => ({
       set({ error: error.message || "An error occurred", isLoading: false });
       return { success: false, message: error.message || "An error occurred" };
     }
+  },
+  resetError: () => {
+    set({ error: null });
   },
 }));
 
