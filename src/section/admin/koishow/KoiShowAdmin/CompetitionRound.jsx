@@ -278,35 +278,71 @@ function CompetitionRound({ showId }) {
 
       // Only update state if the value has actually changed
       if (value !== selectedSubRound) {
+        // First set the selected sub round
         setSelectedSubRound(value);
-
-        // Remove the immediate state update here - this was causing the loop
-        // We'll rely on the data from the API to set this state
 
         // Only fetch if we have a valid value
         if (value && typeof value === "string" && value !== "undefined") {
-          // Fetch registration data
-          fetchRegistrationRound(value, 1, pageSize).then((data) => {
-            if (data && Array.isArray(data)) {
-              const allScoresPublished = data.every(
-                (item) =>
-                  item.roundResults &&
-                  item.roundResults.length > 0 &&
-                  item.roundResults[0]?.isPublic === true
-              );
+          // Use a local variable to track if we should update
+          let shouldUpdateState = true;
 
-              // This is now the only place we update this state for this action
-              setAreResultsPublished(allScoresPublished);
+          // Wrap in try/catch to prevent any unhandled rejection errors
+          try {
+            // Fetch registration data - store the promise but don't chain state updates here
+            const fetchPromise = fetchRegistrationRound(value, 1, pageSize);
+
+            // Handle the data separately to avoid tight coupling of state updates
+            fetchPromise
+              .then((data) => {
+                // Only update state if component is still mounted and we should update
+                if (
+                  isMounted.current &&
+                  shouldUpdateState &&
+                  Array.isArray(data)
+                ) {
+                  const allScoresPublished = data.every(
+                    (item) =>
+                      item.roundResults &&
+                      item.roundResults.length > 0 &&
+                      item.roundResults[0]?.isPublic === true
+                  );
+
+                  // Compare with current state before updating to prevent unnecessary renders
+                  if (allScoresPublished !== areResultsPublished) {
+                    setAreResultsPublished((prevState) => {
+                      // Only update if the value has changed
+                      if (allScoresPublished !== prevState) {
+                        return allScoresPublished;
+                      }
+                      return prevState;
+                    });
+                  }
+                }
+              })
+              .catch((err) => {
+                console.error(
+                  "[handleSubRoundChange] Error fetching registration data:",
+                  err
+                );
+              });
+          } catch (error) {
+            console.error("[handleSubRoundChange] Error:", error);
+          }
+
+          // Only fetch criteria if needed - separate from the registration data fetch
+          try {
+            if (
+              (selectedRoundType === "Evaluation" ||
+                selectedRoundType === "Final") &&
+              selectedCategory
+            ) {
+              fetchCriteriaCompetitionRound(selectedCategory, value);
             }
-          });
-
-          // Only fetch criteria if we're in Evaluation round and have a valid category
-          if (
-            (selectedRoundType === "Evaluation" ||
-              selectedRoundType === "Final") &&
-            selectedCategory
-          ) {
-            fetchCriteriaCompetitionRound(selectedCategory, value);
+          } catch (error) {
+            console.error(
+              "[handleSubRoundChange] Error fetching criteria:",
+              error
+            );
           }
         }
       }
@@ -318,36 +354,50 @@ function CompetitionRound({ showId }) {
       selectedCategory,
       fetchCriteriaCompetitionRound,
       selectedSubRound,
+      areResultsPublished, // Include this in dependencies to properly compare current value
+      isMounted,
     ]
   );
 
-  // Fix the problematic useEffect that was also updating areResultsPublished
-  // This was creating a circular update pattern with handleSubRoundChange
-  useEffect(() => {
-    if (registrationRound && registrationRound.length > 0) {
-      // Only update if this effect is triggered by an API data change,
-      // not by a state change from handleSubRoundChange
-      if (registrationRound !== previousRegistrationRoundRef.current) {
-        const allPublished = registrationRound.every(
-          (item) =>
-            item.roundResults &&
-            item.roundResults.length > 0 &&
-            item.roundResults[0]?.isPublic === true
-        );
-
-        // Update the state only if it's different from current value
-        if (allPublished !== areResultsPublished) {
-          setAreResultsPublished(allPublished);
-        }
-
-        // Update ref to prevent unnecessary updates
-        previousRegistrationRoundRef.current = registrationRound;
-      }
-    }
-  }, [registrationRound, areResultsPublished]);
-
   // Add this ref at the top of your component with other refs
   const previousRegistrationRoundRef = useRef(null);
+
+  // Fix the problematic useEffect that was also updating areResultsPublished
+  // Use a ref to track changes instead of depending on the state variable
+  useEffect(() => {
+    // Create a cleanup function that runs when the component unmounts
+    const handleRegistrationDataChange = () => {
+      if (registrationRound && registrationRound.length > 0) {
+        // Only update if the data has actually changed
+        if (registrationRound !== previousRegistrationRoundRef.current) {
+          const allPublished = registrationRound.every(
+            (item) =>
+              item.roundResults &&
+              item.roundResults.length > 0 &&
+              item.roundResults[0]?.isPublic === true
+          );
+
+          // Update the state using the functional form to avoid stale closures
+          setAreResultsPublished((prevState) => {
+            // Only update if the value has changed
+            if (allPublished !== prevState) {
+              return allPublished;
+            }
+            return prevState;
+          });
+
+          // Update ref to prevent unnecessary updates
+          previousRegistrationRoundRef.current = registrationRound;
+        }
+      }
+    };
+
+    // Call it once
+    handleRegistrationDataChange();
+
+    // Only run this effect when registrationRound changes
+    // This is safe because we're using refs and functional updates
+  }, [registrationRound]);
 
   // Update this when selectedRoundType changes to fetch criteria
   useEffect(() => {

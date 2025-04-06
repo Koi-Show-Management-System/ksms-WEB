@@ -306,7 +306,7 @@ function KoiShowDetail() {
     {
       key: "votes",
       label: "Bình Chọn",
-      children: <Votes />,
+      children: <Votes showId={id} />,
     },
     {
       key: "rules",

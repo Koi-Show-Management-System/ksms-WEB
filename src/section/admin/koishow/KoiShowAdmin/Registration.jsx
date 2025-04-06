@@ -788,7 +788,7 @@ function Registration({ showId, statusShow }) {
                                 }
                                 alt="Hình Ảnh Koi"
                                 style={{
-                                  width: "95%",
+                                  width: "100%",
                                   height: "300px",
                                   objectFit: "contain",
                                   borderRadius: "4px",
