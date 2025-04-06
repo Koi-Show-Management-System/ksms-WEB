@@ -296,11 +296,11 @@ function Sponsor({ showId }) {
       render: (_, record) => (
         <div className="flex items-center space-x-4">
           <EyeOutlined
-            className="text-gray-500 hover:text-blue-500 cursor-pointer text-lg"
+            className="text-gray-500 hover:text-blue-500 cursor-pointer "
             onClick={() => showViewModal(record)}
           />
           <EditOutlined
-            className="text-blue-500 hover:text-blue-700 cursor-pointer text-lg ml-4"
+            className="text-blue-500 hover:text-blue-700 cursor-pointer  ml-4"
             onClick={() => showModal(record)}
           />
           <Popconfirm
@@ -309,7 +309,7 @@ function Sponsor({ showId }) {
             okText="Có"
             cancelText="Không"
           >
-            <DeleteOutlined className="text-red-500 hover:text-red-700 cursor-pointer text-lg ml-4" />
+            <DeleteOutlined className="text-red-500 hover:text-red-700 cursor-pointerml-4" />
           </Popconfirm>
         </div>
       ),

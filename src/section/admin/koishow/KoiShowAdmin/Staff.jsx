@@ -1,12 +1,32 @@
 // Staff.jsx
-import React, { useState, useEffect } from "react";
-import { Table, Button, Modal, Form, Input, message, Tag } from "antd";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useImperativeHandle,
+  forwardRef,
+} from "react";
+import {
+  Table,
+  Button,
+  Modal,
+  Form,
+  Select,
+  notification,
+  Tag,
+  Popconfirm,
+} from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import useShowStaff from "../../../../hooks/useShowStaff";
+import useAccountTeam from "../../../../hooks/useAccountTeam";
 
-function Staff({ showId }) {
-  const [isModalVisible, setIsModalVisible] = useState(false);
+const Staff = forwardRef(({ showId, hideAddButton = false }, ref) => {
+  const [isAddModalVisible, setIsAddModalVisible] = useState(false);
+  const [selectedAccountId, setSelectedAccountId] = useState(null);
+  const [accountOptions, setAccountOptions] = useState([]);
+  const [loadingAccounts, setLoadingAccounts] = useState(false);
   const [form] = Form.useForm();
+  const addButtonRef = useRef(null);
 
   // Get the staff data and functions from the custom hook
   const {
@@ -19,13 +39,32 @@ function Staff({ showId }) {
       totalItems,
     },
     fetchShowStaff,
+    createShowStaffMember,
+    deleteShowStaffMember,
   } = useShowStaff();
+
+  // Get account team data
+  const {
+    fetchAccountTeam,
+    accountManage,
+    isLoading: accountsLoading,
+  } = useAccountTeam();
+
+  // Expose functions to parent component
+  useImperativeHandle(ref, () => ({
+    fetchAvailableAccounts,
+    showAddModal,
+  }));
 
   // Fetch staff data when component mounts or when pagination changes
   useEffect(() => {
     // If showId is not provided, you won't be able to fetch staff data
     if (!showId) {
-      message.error("Show ID is required to fetch staff data");
+      notification.error({
+        message: "Lỗi",
+        description: "Show ID is required to fetch staff data",
+        placement: "topRight",
+      });
       return;
     }
 
@@ -36,12 +75,81 @@ function Staff({ showId }) {
   // Show error message if API call fails
   useEffect(() => {
     if (error) {
-      message.error(error);
+      notification.error({
+        message: "Lỗi",
+        description: error,
+        placement: "topRight",
+      });
     }
   }, [error]);
 
   const handleTableChange = (pagination) => {
     fetchShowStaff(pagination.current, pagination.pageSize, "Staff", showId);
+  };
+
+  // Fetch accounts that are not already assigned to the show
+  const fetchAvailableAccounts = async () => {
+    setLoadingAccounts(true);
+    try {
+      // Fetch all staff from account team
+      await fetchAccountTeam(1, 100, "Staff"); // Get up to 100 staff members
+
+      // Filter out staff already in the show
+      const currentStaffIds = staff.map((staffMember) => staffMember.accountId);
+
+      const availableStaff = accountManage.staff.filter(
+        (staffMember) => !currentStaffIds.some((id) => id === staffMember.id)
+      );
+
+      setAccountOptions(availableStaff);
+      return availableStaff.length; // Return count for parent component
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description: "Failed to fetch available staff members",
+        placement: "topRight",
+      });
+      return 0;
+    } finally {
+      setLoadingAccounts(false);
+    }
+  };
+
+  const showAddModal = () => {
+    setIsAddModalVisible(true);
+    fetchAvailableAccounts();
+  };
+
+  const handleAddCancel = () => {
+    setIsAddModalVisible(false);
+    setSelectedAccountId(null);
+    form.resetFields();
+  };
+
+  const handleAddStaff = async () => {
+    if (!selectedAccountId) {
+      notification.error({
+        message: "Lỗi",
+        description: "Vui lòng chọn tài khoản",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    const success = await createShowStaffMember(
+      showId,
+      selectedAccountId,
+      "Staff"
+    );
+    if (success) {
+      setIsAddModalVisible(false);
+      setSelectedAccountId(null);
+      form.resetFields();
+    }
+  };
+
+  const handleDeleteStaff = async (showStaffId) => {
+    await deleteShowStaffMember(showStaffId, "Staff", showId);
   };
 
   const columns = [
@@ -80,18 +188,44 @@ function Staff({ showId }) {
       key: "action",
       render: (_, record) => (
         <div className="flex gap-3">
-          <EditOutlined className="cursor-pointer" />
-          <DeleteOutlined className="cursor-pointer" />
+          <Popconfirm
+            title="Bạn có chắc chắn muốn xóa nhân viên này?"
+            onConfirm={() => handleDeleteStaff(record.showStaffId)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <DeleteOutlined className="cursor-pointer text-red-500" />
+          </Popconfirm>
         </div>
       ),
     },
   ];
 
   return (
-    <div>
+    <div className="staff-component">
+      {!hideAddButton && (
+        <div className="flex justify-end mb-4">
+          <Button type="primary" icon={<PlusOutlined />} onClick={showAddModal}>
+            Thêm nhân viên
+          </Button>
+        </div>
+      )}
+
+      {/* Hidden button for parent component to trigger */}
+      <button
+        ref={addButtonRef}
+        className="hidden"
+        data-add-button="true"
+        onClick={showAddModal}
+      />
+
       <Table
         columns={columns}
-        dataSource={staff.map((item) => ({ ...item, key: item.id }))}
+        dataSource={staff.map((item) => ({
+          ...item,
+          key: item.showStaffId,
+          showStaffId: item.showStaffId,
+        }))}
         loading={isLoading}
         pagination={{
           current: currentPage,
@@ -103,8 +237,46 @@ function Staff({ showId }) {
         }}
         onChange={handleTableChange}
       />
+
+      <Modal
+        title="Thêm nhân viên"
+        open={isAddModalVisible}
+        onCancel={handleAddCancel}
+        onOk={handleAddStaff}
+        okText="Thêm"
+        cancelText="Hủy"
+        confirmLoading={loadingAccounts || accountsLoading}
+      >
+        <Form form={form} layout="vertical">
+          <Form.Item
+            label="Chọn tài khoản"
+            name="accountId"
+            rules={[{ required: true, message: "Vui lòng chọn tài khoản" }]}
+          >
+            {accountOptions.length === 0 && !loadingAccounts && (
+              <p className="text-yellow-500 mb-2">
+                Không có nhân viên nào khả dụng để thêm.
+              </p>
+            )}
+            <Select
+              placeholder="Chọn tài khoản"
+              loading={loadingAccounts || accountsLoading}
+              onChange={(value) => setSelectedAccountId(value)}
+              options={accountOptions.map((account) => ({
+                value: account.id,
+                label: `${account.fullName} (${account.email})`,
+              }))}
+              notFoundContent={
+                loadingAccounts || accountsLoading
+                  ? "Đang tải..."
+                  : "Không có nhân viên nào khả dụng"
+              }
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
-}
+});
 
 export default Staff;

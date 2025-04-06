@@ -8,9 +8,14 @@ const showStaff = (page, size, role, showId) => {
       size: size,
     },
   });
-  const createShowStaff = (data) => {
-    return axiosClient.post("/show-staff-manager/create", data);
-  };
+};
+const createShowStaff = (showId, accountId) => {
+  return axiosClient.post(
+    `/show-staff-manager/add-staff-or-manager/${showId}/${accountId}`
+  );
+};
+const deleteShowStaff = (id) => {
+  return axiosClient.delete(`/show-staff-manager/${id}`);
 };
 
-export { showStaff };
+export { showStaff, createShowStaff, deleteShowStaff };

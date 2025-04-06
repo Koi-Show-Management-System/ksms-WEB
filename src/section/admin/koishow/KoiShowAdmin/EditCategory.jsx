@@ -325,9 +325,29 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       updatedCriteria.length
     );
 
+    // Reindex the order property for each round type
+    const reindexedCriteria = [...updatedCriteria];
+    const roundGroups = {};
+
+    // Group criteria by roundType
+    reindexedCriteria.forEach((criteria) => {
+      if (!roundGroups[criteria.roundType]) {
+        roundGroups[criteria.roundType] = [];
+      }
+      roundGroups[criteria.roundType].push(criteria);
+    });
+
+    // Sort and reindex each group
+    Object.keys(roundGroups).forEach((round) => {
+      roundGroups[round].sort((a, b) => (a.order || 0) - (b.order || 0));
+      roundGroups[round].forEach((criteria, index) => {
+        criteria.order = index + 1;
+      });
+    });
+
     // Cập nhật form
     form.setFieldsValue({
-      criteriaCompetitionCategories: updatedCriteria,
+      criteriaCompetitionCategories: reindexedCriteria,
     });
 
     // Cập nhật state để kích hoạt render lại
@@ -1043,11 +1063,26 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                     onChange={handleCriteriaSelection}
                     loading={isLoadingCriteria}
                   >
-                    {criteria.map((item) => (
-                      <Option key={item.id} value={item.id}>
-                        {item.name}
-                      </Option>
-                    ))}
+                    {criteria
+                      .filter((item) => {
+                        // Get current criteria for the selected round
+                        const existingCriteria = (
+                          form.getFieldValue("criteriaCompetitionCategories") ||
+                          []
+                        )
+                          .filter(
+                            (c) => c.roundType === selectedRoundForCriteria
+                          )
+                          .map((c) => c.criteriaId || c.criteria?.id);
+
+                        // Only show criteria that are not already assigned to this round
+                        return !existingCriteria.includes(item.id);
+                      })
+                      .map((item) => (
+                        <Option key={item.id} value={item.id}>
+                          {item.name}
+                        </Option>
+                      ))}
                   </Select>
                 </div>
 
