@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Card, Spin, Alert, Typography, Input, Button, List, Space, message } from 'antd';
 import { SendOutlined, UserOutlined, EyeOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import axios from 'axios';
+import axiosClient from '../../../config/axiosClient';
 import { useLocation } from 'react-router-dom';
 // Import GetStream.io SDK
 import {
@@ -44,7 +44,7 @@ function Livestream({showId}) {
       
       try {
         // Bước 1: Lấy thông tin livestream từ API
-        const response = await axios.get(`/api/livestream/${streamId}`);
+        const response = await axiosClient.get(`/livestream/${streamId}`);
         
         if (!response?.data?.data) {
           throw new Error('Không nhận được dữ liệu livestream từ server');
@@ -62,7 +62,7 @@ function Livestream({showId}) {
         }
         
         // Bước 2: Lấy token người xem từ API
-        const tokenResponse = await axios.get(`/api/livestream/viewer-token/${streamId}`);
+        const tokenResponse = await axiosClient.get(`/livestream/viewer-token/${streamId}`);
         
         if (!tokenResponse?.data?.data) {
           throw new Error('Không nhận được token người xem từ server');
