@@ -14,6 +14,7 @@ import ScanQr from "./ScanQr";
 import CompetitionRound from "../../admin/koishow/KoiShowAdmin/CompetitionRound";
 import Ticket from "../../admin/koishow/KoiShowAdmin/Ticket";
 import ScanQrWrapper from "./ScanQrWrapper";
+import LiveStream from "./LiveStream";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -61,6 +62,11 @@ function KoiShowDetail() {
         key: "rules",
         label: "Quy Tắc",
         children: <Rules showId={id} showRule={showRule} />,
+      },
+      {
+        key: "liveStream",
+        label: "Live Stream",
+        children: <LiveStream showId={id} />,
       },
     ];
   }, [id, koiShowDetail?.data]);

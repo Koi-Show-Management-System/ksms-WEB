@@ -7,6 +7,8 @@ import ManagerDashboard from "../layout/manager";
 import RefereeDashboard from "../layout/referee";
 import Cookies from "js-cookie";
 import StaffDashboard from "../layout/staff";
+import Livestream from "../section/staff/koishow/LiveStream";
+import StreamRoom from "../section/staff/koishow/StreamRoom";
 
 export const KoiShowPageAdmin = lazy(
   () => import("../pages/AdminPage/KoiShowPage")
@@ -142,6 +144,8 @@ export const Router = () => {
         { element: <NewStaffPage />, path: "news" },
         { element: <KoiShowDetailStaffPage />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/staff/showList" replace />, index: true },
+        { element: <StreamRoom />, path: "koishow/:id/livestream/create" },
+        { element: <Livestream />, path: "koishow/:id/livestream" },
         { element: <Error404 />, path: "*" },
       ],
     },
