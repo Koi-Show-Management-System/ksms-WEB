@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import axiosClient from "../../../config/axiosClient";
 import {
   Card,
   Button,
@@ -25,7 +26,6 @@ import {
   LinkOutlined,
 } from "@ant-design/icons";
 import { useNavigate, useParams } from "react-router-dom";
-import axios from "axios";
 // Import GetStream.io SDK
 import { StreamVideoClient } from "@stream-io/video-react-sdk";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
@@ -72,8 +72,8 @@ function StreamRoom({ showId, channelName, onBack }) {
       const playbackUrl = `https://stream.mux.com/${callId}.m3u8`;
       
       // Bước 1: Tạo livestream mới trong database trước
-      const response = await axios.post(
-        `/api/livestream/create/${id}`,
+      const response = await axiosClient.post(
+        `/livestream/create/${id}`,
         { 
           streamUrl: playbackUrl,
           title: channelName || "Koi Show Livestream",
@@ -97,8 +97,8 @@ function StreamRoom({ showId, channelName, onBack }) {
       setCreatedLivestreamId(livestreamId);
 
       // Bước 2: Lấy token phát livestream
-      const tokenResponse = await axios.get(
-        `/api/livestream/token/${livestreamId}`,
+      const tokenResponse = await axiosClient.get(
+        `/livestream/token/${livestreamId}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -180,8 +180,8 @@ function StreamRoom({ showId, channelName, onBack }) {
     if (!createdLivestreamId) return;
 
     try {
-      const response = await axios.get(
-        `/api/livestream/${createdLivestreamId}`,
+      const response = await axiosClient.get(
+        `/livestream/${createdLivestreamId}`,
         {
           headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
         }
@@ -219,7 +219,7 @@ function StreamRoom({ showId, channelName, onBack }) {
       setLoading(true);
 
       // Gọi API kết thúc livestream
-      await axios.post(
+      await axiosClient.post(
         `/api/livestream/end/${createdLivestreamId}`,
         {},
         {
@@ -250,7 +250,7 @@ function StreamRoom({ showId, channelName, onBack }) {
       }
 
       // Gọi API kết thúc livestream ở backend
-      await axios.post(
+      await axiosClient.post(
         `/api/livestream/end/${createdLivestreamId}`,
         {},
         {
