@@ -114,11 +114,22 @@ const useRoundResult = create((set, get) => ({
       const res = await getRoundResult(categoryId);
       console.log("API Response when getting round result:", res);
       set({ isLoading: false });
+
+      // Kiểm tra response có thành công không
       if (res && (res.statusCode === 201 || res.statusCode === 200)) {
-        console.log("Cấu trúc data trong API response:", res.data);
-        if (res.data && res.data.data) {
-          console.log("Cấu trúc data.data trong API response:", res.data.data);
+        console.log("Đã nhận được dữ liệu:", res);
+
+        // Kiểm tra cấu trúc response
+        if (res.data) {
+          return {
+            statusCode: 200,
+            data: {
+              data: Array.isArray(res.data) ? res.data : res.data.data || [],
+            },
+            message: res.message || "Lấy kết quả thành công",
+          };
         }
+
         return res;
       } else {
         set({
