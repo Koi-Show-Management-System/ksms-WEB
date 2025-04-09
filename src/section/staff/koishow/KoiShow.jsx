@@ -109,27 +109,24 @@ function KoiShow() {
       dataIndex: "status",
       key: "status",
       sorter: (a, b) => a.status.localeCompare(b.status),
-      render: (status) => (
-        <Tag
-          color={
-            status === "pending"
-              ? "orange"
-              : status === "cancelled"
-                ? "red"
-                : status === "published"
-                  ? "green"
-                  : "default"
-          }
-        >
-          {status === "pending"
-            ? "Chờ duyệt"
-            : status === "cancelled"
-              ? "Đã hủy"
-              : status === "published"
-                ? "Đã công bố"
-                : status}
-        </Tag>
-      ),
+      render: (status) => {
+        const statusMap = {
+          pending: { label: "Chờ duyệt", color: "orange" },
+          internalpublished: { label: "Đã công bố nội bộ", color: "blue" },
+          published: { label: "Đã công bố", color: "green" },
+          upcoming: { label: "Sắp diễn ra", color: "cyan" },
+          inprogress: { label: "Đang diễn ra", color: "purple" },
+          finished: { label: "Đã kết thúc", color: "gray" },
+          cancelled: { label: "Đã hủy", color: "red" },
+        };
+
+        const statusInfo = statusMap[status] || {
+          label: status,
+          color: "default",
+        };
+
+        return <Tag color={statusInfo.color}>{statusInfo.label}</Tag>;
+      },
     },
   ];
 
