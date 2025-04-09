@@ -36,6 +36,7 @@ function RoundResult({ showId }) {
   }, [showId]);
 
   const handleCategoryChange = async (value) => {
+    console.log("Selected categoryId:", value);
     setSelectedCategory(value);
     if (value) {
       const response = await fetchGetRoundResult(value);
@@ -43,14 +44,13 @@ function RoundResult({ showId }) {
 
       if (
         response &&
-        response.statusCode === 200 &&
+        response.status === 200 &&
         response.data &&
         response.data.data
       ) {
         console.log("Đã tìm thấy dữ liệu:", response.data.data);
         setResultData(response.data.data);
       } else {
-        console.log("Không tìm thấy dữ liệu hợp lệ", response);
         setResultData([]);
       }
     } else {
