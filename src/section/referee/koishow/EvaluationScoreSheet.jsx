@@ -353,7 +353,7 @@ const EvaluationScoreSheet = ({
                 errorTypeId: realErrorId,
                 severity: error.severity,
                 pointMinus: error.pointMinus,
-                weight: error.weight, // Thêm trường weight khi gửi xuống backend
+                weight: error.percentage, // Thay đổi từ error.weight thành error.percentage
               });
 
               return realErrorId;
@@ -366,7 +366,7 @@ const EvaluationScoreSheet = ({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
               pointMinus: error.pointMinus,
-              weight: error.weight, // Thêm trường weight khi gửi xuống backend
+              weight: error.percentage, // Thay đổi từ error.weight thành error.percentage
             });
           }
         }
