@@ -15,12 +15,20 @@ import {
   message,
 } from "antd";
 import dayjs from "dayjs";
+import utc from "dayjs/plugin/utc";
+import timezone from "dayjs/plugin/timezone";
 import {
   DeleteOutlined,
   EditOutlined,
   PlusOutlined,
   SearchOutlined,
 } from "@ant-design/icons";
+
+// Cài đặt plugins cho dayjs
+dayjs.extend(utc);
+dayjs.extend(timezone);
+// Thiết lập timezone mặc định là UTC+7
+dayjs.tz.setDefault("Asia/Ho_Chi_Minh");
 
 const { Title, Text } = Typography;
 
@@ -34,6 +42,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
+
+  // CSS cho thông báo múi giờ
+  const timezoneCss = `
+    .timezone-popup .ant-picker-footer {
+      padding: 4px 8px;
+    }
+  `;
 
   // Tạo danh sách tất cả các trạng thái với thời gian ban đầu là null
   const statusMapping = {
@@ -101,9 +116,11 @@ function StepThree({ updateFormData, initialData, showErrors }) {
           updatedStatuses[index] = {
             ...updatedStatuses[index],
             startDate: savedStatus.startDate
-              ? dayjs(savedStatus.startDate)
+              ? dayjs(savedStatus.startDate).tz("Asia/Ho_Chi_Minh")
               : null,
-            endDate: savedStatus.endDate ? dayjs(savedStatus.endDate) : null,
+            endDate: savedStatus.endDate
+              ? dayjs(savedStatus.endDate).tz("Asia/Ho_Chi_Minh")
+              : null,
             selected: true,
           };
         }
@@ -122,14 +139,20 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         statusName: status.statusName,
         description: status.description,
         startDate: status.startDate
-          ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+          ? dayjs(status.startDate)
+              .tz("Asia/Ho_Chi_Minh")
+              .format("YYYY-MM-DDTHH:mm:ss.SSS[Z]")
           : null,
         endDate:
           // Use the endDate for all statuses if it exists
           status.endDate
-            ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format()
+            ? dayjs(status.endDate)
+                .tz("Asia/Ho_Chi_Minh")
+                .format("YYYY-MM-DDTHH:mm:ss.SSS[Z]")
             : status.startDate
-              ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+              ? dayjs(status.startDate)
+                  .tz("Asia/Ho_Chi_Minh")
+                  .format("YYYY-MM-DDTHH:mm:ss.SSS[Z]")
               : null,
       }));
 
@@ -309,6 +332,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
   return (
     <div>
+      <style>{timezoneCss}</style>
       <Title level={3} className="text-blue-500">
         Bước 3: Quy Tắc & Quy Định
       </Title>
@@ -477,7 +501,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       Ngày bắt đầu
                     </label>
                     <DatePicker
-                      showTime
+                      showTime={{ defaultValue: null }}
                       className="w-full"
                       disabled={!status.selected}
                       value={status.startDate}
@@ -486,6 +510,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       }
                       format="YYYY-MM-DD HH:mm:ss"
                       placeholder="Chọn ngày bắt đầu"
+                      showNow={false}
+                      popupClassName="timezone-popup"
+                      renderExtraFooter={() => (
+                        <div className="text-xs text-gray-500 text-right">
+                          Giờ Việt Nam (UTC+7)
+                        </div>
+                      )}
                     />
                     {getDateError(status, "startDate") && (
                       <p className="text-red-500 text-xs mt-1">
@@ -500,7 +531,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       Ngày kết thúc
                     </label>
                     <DatePicker
-                      showTime
+                      showTime={{ defaultValue: null }}
                       className="w-full"
                       disabled={!status.selected}
                       value={status.endDate}
@@ -509,6 +540,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       }
                       format="YYYY-MM-DD HH:mm:ss"
                       placeholder="Chọn ngày kết thúc"
+                      showNow={false}
+                      popupClassName="timezone-popup"
+                      renderExtraFooter={() => (
+                        <div className="text-xs text-gray-500 text-right">
+                          Giờ Việt Nam (UTC+7)
+                        </div>
+                      )}
                     />
                     {getDateError(status, "endDate") && (
                       <p className="text-red-500 text-xs mt-1">
@@ -525,7 +563,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       Thời gian kết thúc sự kiện
                     </label>
                     <DatePicker
-                      showTime
+                      showTime={{ defaultValue: null }}
                       className="w-full"
                       disabled={!status.selected}
                       value={status.startDate}
@@ -536,6 +574,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       }}
                       format="YYYY-MM-DD HH:mm:ss"
                       placeholder="Chọn thời gian kết thúc sự kiện"
+                      showNow={false}
+                      popupClassName="timezone-popup"
+                      renderExtraFooter={() => (
+                        <div className="text-xs text-gray-500 text-right">
+                          Giờ Việt Nam (UTC+7)
+                        </div>
+                      )}
                     />
                     {getDateError(status, "startDate") && (
                       <p className="text-red-500 text-xs mt-1">
@@ -552,14 +597,15 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       Ngày diễn ra
                     </label>
                     <DatePicker
+                      showTime={{ defaultValue: null }}
                       className="w-full"
                       disabled={!status.selected}
                       value={status.startDate}
                       onChange={(value) => {
-                        // Only update the date part, preserve the time if it exists
+                        // Chỉ cập nhật phần ngày, không tự động thiết lập giờ
                         let newValue = value;
                         if (value && status.startDate) {
-                          // Copy the time from existing startDate to the new date
+                          // Giữ lại thời gian từ startDate nếu đã có
                           newValue = value
                             .hour(status.startDate.hour())
                             .minute(status.startDate.minute())
@@ -567,24 +613,24 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         }
                         handleDateChange(index, "startDate", newValue);
 
-                        // Also update endDate to have the same date
+                        // Cập nhật cùng ngày cho endDate nếu đã có
                         if (value && status.endDate) {
                           const newEndDate = value
                             .hour(status.endDate.hour())
                             .minute(status.endDate.minute())
                             .second(status.endDate.second());
                           handleDateChange(index, "endDate", newEndDate);
-                        } else if (value) {
-                          // If no existing end date, create one with same date
-                          const newEndDate = value
-                            .hour(value.hour() + 1)
-                            .minute(0)
-                            .second(0);
-                          handleDateChange(index, "endDate", newEndDate);
                         }
+                        // Bỏ tự động tạo endDate với giờ +1
                       }}
                       format="YYYY-MM-DD"
                       placeholder="Chọn ngày"
+                      popupClassName="timezone-popup"
+                      renderExtraFooter={() => (
+                        <div className="text-xs text-gray-500 text-right">
+                          Giờ Việt Nam (UTC+7)
+                        </div>
+                      )}
                     />
                     {getDateError(status, "startDate") && (
                       <p className="text-red-500 text-xs mt-1">
@@ -606,16 +652,30 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                           value={status.startDate}
                           onChange={(value) => {
                             if (value && status.startDate) {
-                              // Keep the date but update the time
+                              // Chỉ cập nhật giờ, giữ nguyên ngày
                               const newDate = status.startDate
                                 .hour(value.hour())
                                 .minute(value.minute())
                                 .second(value.second());
                               handleDateChange(index, "startDate", newDate);
+                            } else if (status.startDate) {
+                              // Trường hợp xoá giờ
+                              const newDate = status.startDate
+                                .hour(0)
+                                .minute(0)
+                                .second(0);
+                              handleDateChange(index, "startDate", newDate);
                             }
                           }}
                           format="HH:mm"
                           placeholder="Giờ bắt đầu"
+                          popupClassName="timezone-popup"
+                          renderExtraFooter={() => (
+                            <div className="text-xs text-gray-500 text-right">
+                              Giờ Việt Nam (UTC+7)
+                            </div>
+                          )}
+                          allowClear={true}
                         />
                       </div>
                       <div>
@@ -628,18 +688,31 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                           value={status.endDate}
                           onChange={(value) => {
                             if (value && status.startDate) {
-                              // This creates a new date with the same date as startDate but with the time from the time picker
+                              // Tạo ngày kết thúc với ngày giống startDate nhưng giờ từ timepicker
                               const newEndDate = status.startDate
                                 .hour(value.hour())
                                 .minute(value.minute())
                                 .second(value.second());
 
-                              // This updates the endDate state with the time picked from the TimePicker
+                              handleDateChange(index, "endDate", newEndDate);
+                            } else if (status.startDate) {
+                              // Trường hợp xoá giờ
+                              const newEndDate = status.startDate
+                                .hour(0)
+                                .minute(0)
+                                .second(0);
                               handleDateChange(index, "endDate", newEndDate);
                             }
                           }}
                           format="HH:mm"
                           placeholder="Giờ kết thúc"
+                          popupClassName="timezone-popup"
+                          renderExtraFooter={() => (
+                            <div className="text-xs text-gray-500 text-right">
+                              Giờ Việt Nam (UTC+7)
+                            </div>
+                          )}
+                          allowClear={true}
                         />
                         {status.startDate &&
                           status.endDate &&

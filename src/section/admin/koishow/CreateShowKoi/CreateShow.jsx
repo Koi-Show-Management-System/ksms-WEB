@@ -352,7 +352,6 @@ function CreateShow() {
 
       if (response?.statusCode === 201) {
         console.log("Success! Status code 201 received");
-        message.success("Tạo chương trình thành công!");
 
         setTimeout(() => {
           navigate("/admin/showList");

@@ -45,6 +45,10 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     startExhibitionDate: "",
     endExhibitionDate: "",
   });
+  const [participantErrors, setParticipantErrors] = useState({
+    minParticipants: "",
+    maxParticipants: "",
+  });
 
   useEffect(() => {
     if (JSON.stringify(data) !== JSON.stringify(initialData)) {
@@ -264,34 +268,49 @@ function StepOne({ updateFormData, initialData, showErrors }) {
   };
 
   const handleNumberChange = (field, value) => {
-    if (value < 0) {
-      message.error(`${field} không được nhỏ hơn 0`);
+    // Kiểm tra xem value có phải là số hợp lệ không
+    const numValue = Number(value);
+
+    // Tạo bản sao của state lỗi
+    const newParticipantErrors = { ...participantErrors };
+
+    // Kiểm tra xem giá trị có hợp lệ không (phải là số và lớn hơn hoặc bằng 0)
+    if (isNaN(numValue) || numValue < 0) {
+      newParticipantErrors[field] = "Giá trị phải là số và lớn hơn hoặc bằng 0";
+      setParticipantErrors(newParticipantErrors);
       return;
+    } else {
+      newParticipantErrors[field] = "";
     }
 
-    if (
-      field === "maxParticipants" &&
-      data.minParticipants &&
-      value < data.minParticipants
-    ) {
-      message.error(
-        "Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu"
-      );
-      return;
+    // Tạo bản sao của data với giá trị mới
+    const newData = { ...data, [field]: numValue };
+
+    // Nếu đang cập nhật minParticipants
+    if (field === "minParticipants") {
+      if (newData.maxParticipants && numValue >= newData.maxParticipants) {
+        newParticipantErrors.minParticipants =
+          "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa";
+      } else {
+        newParticipantErrors.minParticipants = "";
+      }
     }
 
-    if (
-      field === "minParticipants" &&
-      data.maxParticipants &&
-      value > data.maxParticipants
-    ) {
-      message.error(
-        "Số lượng tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa"
-      );
-      return;
+    // Nếu đang cập nhật maxParticipants
+    if (field === "maxParticipants") {
+      if (newData.minParticipants && numValue <= newData.minParticipants) {
+        newParticipantErrors.maxParticipants =
+          "Số lượng tối đa phải lớn hơn số lượng tối thiểu";
+      } else {
+        newParticipantErrors.maxParticipants = "";
+      }
     }
 
-    setData({ ...data, [field]: value });
+    // Cập nhật state lỗi
+    setParticipantErrors(newParticipantErrors);
+
+    // Luôn cập nhật data để lưu giá trị người dùng đã nhập
+    setData(newData);
   };
 
   return (
@@ -437,6 +456,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             }
             min={0}
           />
+          {participantErrors.minParticipants && (
+            <p className="text-red-500 text-xs mt-1">
+              {participantErrors.minParticipants}
+            </p>
+          )}
           {showErrors && !data.minParticipants && (
             <p className="text-red-500 text-xs mt-1">
               Số lượng tối thiểu là bắt buộc.{" "}
@@ -457,6 +481,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             }
             min={0}
           />
+          {participantErrors.maxParticipants && (
+            <p className="text-red-500 text-xs mt-1">
+              {participantErrors.maxParticipants}
+            </p>
+          )}
           {showErrors && !data.maxParticipants && (
             <p className="text-red-500 text-xs mt-1">
               Số lượng tối đa là bắt buộc.{" "}
