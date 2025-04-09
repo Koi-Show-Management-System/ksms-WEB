@@ -353,7 +353,7 @@ const EvaluationScoreSheet = ({
                 errorTypeId: realErrorId,
                 severity: error.severity,
                 pointMinus: error.pointMinus,
-                weight: error.percentage, // Thay đổi từ error.weight thành error.percentage
+                weight: error.percentage / 100, // Chuyển từ % sang decimal
               });
 
               return realErrorId;
@@ -366,7 +366,7 @@ const EvaluationScoreSheet = ({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
               pointMinus: error.pointMinus,
-              weight: error.percentage, // Thay đổi từ error.weight thành error.percentage
+              weight: error.percentage / 100, // Chuyển từ % sang decimal
             });
           }
         }
