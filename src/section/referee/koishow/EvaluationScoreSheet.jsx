@@ -151,6 +151,7 @@ const EvaluationScoreSheet = ({
       severity, // Mức độ lỗi (eb, mb, sb)
       pointMinus, // Điểm trừ đã tính
       percentage, // % lỗi đã chọn
+      weight: percentage * 100, // Thêm trường weight, % lỗi nhân với 100%
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
 
@@ -241,6 +242,7 @@ const EvaluationScoreSheet = ({
         severity: formValues.severity,
         pointMinus: pointMinus,
         percentage: formValues.percentage,
+        weight: formValues.percentage * 100, // Thêm trường weight, % lỗi nhân với 100%
         errorName: newErrorName,
         isLocal: true, // Đánh dấu lỗi này là cục bộ
       };
@@ -293,6 +295,7 @@ const EvaluationScoreSheet = ({
           100
       ),
       percentage, // % lỗi đã chọn
+      weight: percentage * 100, // Thêm trường weight, % lỗi nhân với 100%
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
 
@@ -350,6 +353,7 @@ const EvaluationScoreSheet = ({
                 errorTypeId: realErrorId,
                 severity: error.severity,
                 pointMinus: error.pointMinus,
+                weight: error.weight, // Thêm trường weight khi gửi xuống backend
               });
 
               return realErrorId;
@@ -362,6 +366,7 @@ const EvaluationScoreSheet = ({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
               pointMinus: error.pointMinus,
+              weight: error.weight, // Thêm trường weight khi gửi xuống backend
             });
           }
         }
@@ -532,6 +537,7 @@ const EvaluationScoreSheet = ({
         errorName: newErrorName,
         severity: formValues.severity,
         percentage: formValues.percentage,
+        weight: formValues.percentage * 100, // Thêm trường weight, % lỗi nhân với 100%
         pointMinus: pointMinus,
       };
 
