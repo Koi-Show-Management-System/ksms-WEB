@@ -12,6 +12,7 @@ import {
   Collapse,
   Checkbox,
   TimePicker,
+  message,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -204,13 +205,73 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   // Cập nhật ngày cho trạng thái
   const handleDateChange = (index, dateType, value) => {
     const updatedStatuses = [...availableStatuses];
-    updatedStatuses[index][dateType] = value;
+    const currentStatus = updatedStatuses[index];
+    const statusName = currentStatus.statusName;
 
-    // Nếu đặt ngày, tự động chọn trạng thái đó
+    // Kiểm tra tính hợp lệ của ngày tháng
     if (value) {
-      updatedStatuses[index].selected = true;
+      // Kiểm tra ngày kết thúc phải sau ngày bắt đầu
+      if (
+        dateType === "endDate" &&
+        currentStatus.startDate &&
+        value.isBefore(currentStatus.startDate)
+      ) {
+        message.error("Ngày kết thúc phải sau ngày bắt đầu");
+        return;
+      }
+
+      // Kiểm tra ngày bắt đầu phải trước ngày kết thúc
+      if (
+        dateType === "startDate" &&
+        currentStatus.endDate &&
+        value.isAfter(currentStatus.endDate)
+      ) {
+        message.error("Ngày bắt đầu phải trước ngày kết thúc");
+        return;
+      }
+
+      // Kiểm tra thứ tự các trạng thái
+      if (statusName === "RegistrationOpen") {
+        // Ngày bắt đầu đăng ký phải trước ngày kết thúc đăng ký
+        if (dateType === "startDate") {
+          const checkInStatus = availableStatuses.find(
+            (s) => s.statusName === "CheckIn"
+          );
+          if (
+            checkInStatus?.startDate &&
+            value.isAfter(checkInStatus.startDate)
+          ) {
+            message.error("Ngày bắt đầu đăng ký phải trước ngày điểm danh");
+            return;
+          }
+        }
+      } else if (statusName === "CheckIn") {
+        // Ngày điểm danh phải sau ngày kết thúc đăng ký
+        const registrationStatus = availableStatuses.find(
+          (s) => s.statusName === "RegistrationOpen"
+        );
+        if (
+          registrationStatus?.endDate &&
+          value.isBefore(registrationStatus.endDate)
+        ) {
+          message.error("Ngày điểm danh phải sau ngày kết thúc đăng ký");
+          return;
+        }
+      } else if (statusName === "Finished") {
+        // Ngày kết thúc phải sau tất cả các ngày khác
+        const otherStatuses = availableStatuses.filter(
+          (s) => s.statusName !== "Finished"
+        );
+        for (const status of otherStatuses) {
+          if (status.endDate && value.isBefore(status.endDate)) {
+            message.error("Ngày kết thúc phải sau tất cả các ngày khác");
+            return;
+          }
+        }
+      }
     }
 
+    updatedStatuses[index][dateType] = value;
     setAvailableStatuses(updatedStatuses);
   };
 
@@ -378,7 +439,6 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         Trạng Thái Chương Trình
       </Title>
       <Divider />
-      
 
       {/* Hiển thị lỗi nếu chưa có ít nhất 3 trạng thái */}
       {showErrors && availableStatuses.filter((s) => s.selected).length < 3 && (

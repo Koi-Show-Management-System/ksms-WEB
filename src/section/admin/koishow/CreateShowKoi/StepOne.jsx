@@ -131,6 +131,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
   };
 
   const handleSponsorChange = (index, field, value) => {
+    if (field === "investMoney" && value < 0) {
+      message.error("Số tiền đầu tư không được nhỏ hơn 0");
+      return;
+    }
+
     setData((prevData) => {
       const newSponsorRequests = prevData.createSponsorRequests.map(
         (sponsor, i) => (i === index ? { ...sponsor, [field]: value } : sponsor)
@@ -203,6 +208,16 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
   // Cập nhật thông tin loại vé
   const handleTicketTypeChange = (index, field, value) => {
+    if (field === "price" && value < 0) {
+      message.error("Giá vé không được nhỏ hơn 0");
+      return;
+    }
+
+    if (field === "availableQuantity" && value < 0) {
+      message.error("Số lượng vé không được nhỏ hơn 0");
+      return;
+    }
+
     const newTicketTypes = [...data.createTicketTypeRequests];
     newTicketTypes[index] = { ...newTicketTypes[index], [field]: value };
     setData({ ...data, createTicketTypeRequests: newTicketTypes });
@@ -233,12 +248,50 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       value.isBefore(data.startExhibitionDate)
     ) {
       newTimeErrors[field] = "Ngày kết thúc sự kiện phải sau ngày bắt đầu.";
+    } else if (
+      field === "startExhibitionDate" &&
+      data.endDate &&
+      value.isBefore(data.endDate)
+    ) {
+      newTimeErrors[field] =
+        "Ngày bắt đầu sự kiện phải sau ngày kết thúc đăng ký.";
     } else {
       newTimeErrors[field] = "";
     }
 
     setTimeErrors(newTimeErrors);
     setData({ ...data, [field]: value.tz("Asia/Ho_Chi_Minh").format() });
+  };
+
+  const handleNumberChange = (field, value) => {
+    if (value < 0) {
+      message.error(`${field} không được nhỏ hơn 0`);
+      return;
+    }
+
+    if (
+      field === "maxParticipants" &&
+      data.minParticipants &&
+      value < data.minParticipants
+    ) {
+      message.error(
+        "Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu"
+      );
+      return;
+    }
+
+    if (
+      field === "minParticipants" &&
+      data.maxParticipants &&
+      value > data.maxParticipants
+    ) {
+      message.error(
+        "Số lượng tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa"
+      );
+      return;
+    }
+
+    setData({ ...data, [field]: value });
   };
 
   return (
@@ -380,8 +433,9 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             placeholder="Nhập số lượng tối thiểu"
             value={data.minParticipants}
             onChange={(e) =>
-              setData({ ...data, minParticipants: e.target.value })
+              handleNumberChange("minParticipants", parseInt(e.target.value))
             }
+            min={0}
           />
           {showErrors && !data.minParticipants && (
             <p className="text-red-500 text-xs mt-1">
@@ -399,8 +453,9 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             placeholder="Nhập số lượng tối đa"
             value={data.maxParticipants}
             onChange={(e) =>
-              setData({ ...data, maxParticipants: e.target.value })
+              handleNumberChange("maxParticipants", parseInt(e.target.value))
             }
+            min={0}
           />
           {showErrors && !data.maxParticipants && (
             <p className="text-red-500 text-xs mt-1">
@@ -469,7 +524,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         Quản lý nhà tài trợ
       </label>
       <Button onClick={handleAddSponsor} icon={<PlusOutlined />}>
-        Thêm Sponsor
+        Thêm nhà tài trợ
       </Button>
 
       {/* Hiển thị lỗi nếu chưa có nhà tài trợ nào */}
@@ -562,9 +617,14 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   type="number"
                   value={sponsor.investMoney}
                   onChange={(e) =>
-                    handleSponsorChange(index, "investMoney", e.target.value)
+                    handleSponsorChange(
+                      index,
+                      "investMoney",
+                      parseInt(e.target.value)
+                    )
                   }
                   placeholder="Nhập số tiền tài trợ"
+                  min={0}
                 />
                 {showErrors &&
                   (!sponsor.investMoney || sponsor.investMoney <= 0) && (
@@ -637,10 +697,14 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   type="number"
                   value={ticket.price}
                   onChange={(e) =>
-                    handleTicketTypeChange(index, "price", e.target.value)
+                    handleTicketTypeChange(
+                      index,
+                      "price",
+                      parseInt(e.target.value)
+                    )
                   }
                   placeholder="Nhập giá vé"
-                  min={1}
+                  min={0}
                 />
                 {showErrors && (!ticket.price || ticket.price <= 0) && (
                   <p className="text-red-500 text-xs mt-1">
@@ -661,11 +725,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                     handleTicketTypeChange(
                       index,
                       "availableQuantity",
-                      e.target.value
+                      parseInt(e.target.value)
                     )
                   }
                   placeholder="Nhập số lượng vé"
-                  min={1}
+                  min={0}
                 />
                 {showErrors &&
                   (!ticket.availableQuantity ||
@@ -684,12 +748,12 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         {/* Select Manager */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn Manager
+            Chọn quản lý
           </label>
           <Select
             mode="multiple"
             className="w-full"
-            placeholder="Chọn Manager"
+            placeholder="Chọn quản lý"
             value={data.assignManagerRequests}
             onChange={(value) =>
               setData({ ...data, assignManagerRequests: value })
@@ -712,12 +776,12 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         {/* Select Staff */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn Staff
+            Chọn nhân viên
           </label>
           <Select
             mode="multiple"
             className="w-full"
-            placeholder="Chọn Staff"
+            placeholder="Chọn nhân viên"
             value={data.assignStaffRequests}
             onChange={(value) =>
               setData({ ...data, assignStaffRequests: value })

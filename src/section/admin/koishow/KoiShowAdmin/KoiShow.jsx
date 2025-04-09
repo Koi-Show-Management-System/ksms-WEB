@@ -49,6 +49,7 @@ function KoiShow() {
 
   useEffect(() => {
     if (koiShows && koiShows.length > 0) {
+      console.log("KoiShows data:", koiShows);
       const formattedData = koiShows.map((item) => ({
         key: item.id,
         id: item.id,
@@ -57,6 +58,8 @@ function KoiShow() {
         registrationFee: item.registrationFee,
         location: item.location,
         status: item.status,
+        minParticipants: item.minParticipants,
+        maxParticipants: item.maxParticipants,
       }));
       setLocalData(formattedData);
     }
@@ -90,7 +93,22 @@ function KoiShow() {
     // Find the current show to check its status
     const currentShow = localData.find((item) => item.id === showId);
 
-    // If the show is already cancelled, don't allow status change
+    // Nếu trạng thái không nằm trong 3 trạng thái có thể cập nhật, không cho phép thay đổi
+    if (
+      currentShow &&
+      !["pending", "internalpublished", "published"].includes(
+        currentShow.status
+      )
+    ) {
+      notification.error({
+        message: "Không thể thay đổi",
+        description: "Không thể cập nhật trạng thái ở giai đoạn này",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    // Các kiểm tra trạng thái hiện có
     if (currentShow && currentShow.status === "cancelled") {
       notification.error({
         message: "Không thể thay đổi",
@@ -107,11 +125,12 @@ function KoiShow() {
     ) {
       notification.error({
         message: "Không thể thay đổi",
-        description: "Không thể chuyển trạng thái từ khi đã công bố ",
+        description: "Không thể chuyển trạng thái từ khi đã công bố",
         placement: "topRight",
       });
       return;
     }
+
     if (
       currentShow &&
       currentShow.status === "internalpublished" &&
@@ -119,11 +138,12 @@ function KoiShow() {
     ) {
       notification.error({
         message: "Không thể thay đổi",
-        description: "Không thể chuyển trạng thái từ khi đã công bố nội bộ ",
+        description: "Không thể chuyển trạng thái từ khi đã công bố nội bộ",
         placement: "topRight",
       });
       return;
     }
+
     // Store current and new status information
     setSelectedShowId(showId);
     setSelectedStatus(status);
@@ -207,10 +227,35 @@ function KoiShow() {
 
   const statusOptions = [
     { value: "pending", label: "Chờ duyệt", color: "orange" },
-    { value: "cancelled", label: "Đã hủy", color: "red" },
-    { value: "published", label: "Đã công bố", color: "green" },
     { value: "internalpublished", label: "Đã công bố nội bộ", color: "blue" },
+    { value: "published", label: "Đã công bố", color: "green" },
+    { value: "upcoming", label: "Sắp diễn ra", color: "cyan" },
+    { value: "inprogress", label: "Đang diễn ra", color: "purple" },
+    { value: "finished", label: "Đã kết thúc", color: "gray" },
+    { value: "cancelled", label: "Đã hủy", color: "red" },
   ];
+
+  const getAvailableStatusOptions = (currentStatus) => {
+    // Chỉ cho phép cập nhật 3 trạng thái đầu
+    if (currentStatus === "pending") {
+      return statusOptions.filter((option) =>
+        ["pending", "internalpublished", "published", "cancelled"].includes(
+          option.value
+        )
+      );
+    } else if (currentStatus === "internalpublished") {
+      return statusOptions.filter((option) =>
+        ["internalpublished", "published", "cancelled"].includes(option.value)
+      );
+    } else if (currentStatus === "published") {
+      return statusOptions.filter((option) =>
+        ["published", "cancelled"].includes(option.value)
+      );
+    } else {
+      // Các trạng thái khác không cho phép thay đổi
+      return statusOptions.filter((option) => option.value === currentStatus);
+    }
+  };
 
   const getStatusLabel = (status) => {
     const option = statusOptions.find((opt) => opt.value === status);
@@ -250,15 +295,27 @@ function KoiShow() {
         new Date(a.startExhibitionDate) - new Date(b.startExhibitionDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
     },
+    // {
+    //   title: "Phí Đăng Kí",
+    //   dataIndex: "registrationFee",
+    //   key: "registrationFee",
+    //   sorter: (a, b) => a.registrationFee - b.registrationFee,
+    //   render: (fee) =>
+    //     fee
+    //       ? fee.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
+    //       : "Miễn phí",
+    // },
     {
-      title: "Phí Đăng Kí",
-      dataIndex: "registrationFee",
-      key: "registrationFee",
-      sorter: (a, b) => a.registrationFee - b.registrationFee,
-      render: (fee) =>
-        fee
-          ? fee.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-          : "Miễn phí",
+      title: "Số lượng tối thiểu",
+      dataIndex: "minParticipants",
+      key: "minParticipants",
+      render: (value) => value || "0",
+    },
+    {
+      title: "Số lượng tối đa",
+      dataIndex: "maxParticipants",
+      key: "maxParticipants",
+      render: (value) => value || "0",
     },
     {
       title: "Địa Điểm",
@@ -271,16 +328,21 @@ function KoiShow() {
       key: "status",
       sorter: (a, b) => a.status.localeCompare(b.status),
       render: (status, record) => {
+        const availableOptions = getAvailableStatusOptions(status);
+
         return (
           <Select
             value={status}
             style={{ width: 150 }}
             onChange={(value) => handleStatusChange(value, record.id)}
-            options={statusOptions.map((opt) => ({
+            options={availableOptions.map((opt) => ({
               value: opt.value,
               label: <span style={{ color: opt.color }}>{opt.label}</span>,
             }))}
             dropdownStyle={{ minWidth: 150 }}
+            disabled={
+              !["pending", "internalpublished", "published"].includes(status)
+            }
           />
         );
       },

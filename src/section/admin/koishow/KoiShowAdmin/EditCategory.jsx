@@ -93,9 +93,8 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
         maxEntries: currentCategory.maxEntries,
         minEntries: currentCategory.minEntries,
         registrationFee: currentCategory.registrationFee,
-        // status: currentCategory.status,
         categoryVarieties:
-          currentCategory.categoryVarieties?.map((v) => v.variety.id) || [],
+          currentCategory.categoryVarieties?.map((cv) => cv.variety.id) || [],
         awards: currentCategory.awards || [],
         criteriaCompetitionCategories:
           currentCategory.criteriaCompetitionCategories || [],
@@ -104,8 +103,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
         hasTank: currentCategory.hasTank,
       };
 
-      // console.log("Setting form data:", formData);
-      // console.log("Criteria data:", formData.criteriaCompetitionCategories);
       form.setFieldsValue(formData);
     }
   }, [currentCategory, form]);
@@ -113,7 +110,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const handleSubmit = async () => {
     try {
       const values = await form.validateFields();
-
       const formData = form.getFieldsValue(true);
 
       const refereeAssignments = processRefereeAssignments(
@@ -134,7 +130,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           values.maxEntries || currentCategory.maxEntries || 0
         ),
         registrationFee: parseFloat(values.registrationFee || 0),
-        // status: values.status,
 
         createCompetionCategoryVarieties: formData.categoryVarieties || [],
 
@@ -537,6 +532,30 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                     <Input placeholder="Nhập tên hạng mục" />
                   </Form.Item>
                 </Col>
+                <Col span={24}>
+                  <Form.Item
+                    name="categoryVarieties"
+                    label="Chọn loại cá Koi"
+                    rules={[
+                      {
+                        required: true,
+                        message: "Vui lòng chọn ít nhất một loại cá Koi",
+                      },
+                    ]}
+                  >
+                    <Select
+                      mode="multiple"
+                      placeholder="Chọn loại cá Koi"
+                      loading={isLoadingVariety}
+                    >
+                      {variety.map((item) => (
+                        <Option key={item.id} value={item.id}>
+                          {item.name}
+                        </Option>
+                      ))}
+                    </Select>
+                  </Form.Item>
+                </Col>
                 <Col span={12}>
                   <Form.Item
                     name="sizeMin"
@@ -694,7 +713,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                         </Form.Item>
                                       </div>
 
-                                      <div>
+                                      {/* <div>
                                         <Form.Item
                                           name={[field.name, "roundOrder"]}
                                           label="Thứ tự vòng"
@@ -711,22 +730,28 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                             className="w-full"
                                           />
                                         </Form.Item>
-                                      </div>
+                                      </div> */}
 
                                       <div>
-                                        <Form.Item
-                                          name={[
-                                            field.name,
-                                            "numberOfRegistrationToAdvance",
-                                          ]}
-                                          label="Số lượng cá qua vòng"
-                                        >
-                                          <InputNumber
-                                            min={0}
-                                            max={100}
-                                            className="w-full"
-                                          />
-                                        </Form.Item>
+                                        {form.getFieldValue([
+                                          "rounds",
+                                          field.name,
+                                          "numberOfRegistrationToAdvance",
+                                        ]) !== null && (
+                                          <Form.Item
+                                            name={[
+                                              field.name,
+                                              "numberOfRegistrationToAdvance",
+                                            ]}
+                                            label="Số lượng cá qua vòng"
+                                          >
+                                            <InputNumber
+                                              min={0}
+                                              max={100}
+                                              className="w-full"
+                                            />
+                                          </Form.Item>
+                                        )}
                                       </div>
 
                                       {/* <div>

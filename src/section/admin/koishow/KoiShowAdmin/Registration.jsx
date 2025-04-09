@@ -68,6 +68,8 @@ function Registration({ showId, statusShow }) {
     { value: "confirmed", label: "Đã xác nhận" },
     { value: "checkin", label: "Đã check-in" },
     { value: "rejected", label: "Từ chối" },
+    { value: "prizewinner", label: "Đạt giải" },
+    { value: "eliminated", label: "Bị loại" },
   ];
 
   // Cập nhật STATUS_CONFIG để chỉ bao gồm 4 trạng thái chính
@@ -78,6 +80,8 @@ function Registration({ showId, statusShow }) {
     competition: { color: "purple", label: "Thi đấu", order: 4 },
     rejected: { color: "red", label: "Từ chối", order: 5 },
     refunded: { color: "magenta", label: "Đã hoàn tiền", order: 6 },
+    prizewinner: { color: "gold", label: "Đạt giải", order: 7 },
+    eliminated: { color: "volcano", label: "Bị loại", order: 8 },
   };
 
   // Add back the renderStatus function

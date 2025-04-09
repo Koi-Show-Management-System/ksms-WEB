@@ -13,6 +13,7 @@ import {
   Divider,
   message,
   InputNumber,
+  Tag,
 } from "antd";
 import {
   PlusOutlined,
@@ -280,12 +281,12 @@ function CreateCategory({ showId, onCategoryCreated }) {
     );
 
     const newRound = {
-      name: `Vòng Nhỏ ${existingSubRounds.length + 1} - ${roundLabelMap[mainRound]}`,
+      name: `Vòng ${existingSubRounds.length + 1}`,
       roundOrder: existingSubRounds.length + 1,
       roundType: mainRound,
       startTime: dayjs().format(),
       endTime: dayjs().add(1, "day").format(),
-      numberOfRegistrationToAdvance: 100,
+      numberOfRegistrationToAdvance: null,
       status: "pending",
     };
 
@@ -296,12 +297,35 @@ function CreateCategory({ showId, onCategoryCreated }) {
   };
 
   const handleRemoveSubRound = (roundToRemove) => {
-    setCategory((prev) => ({
-      ...prev,
-      createRoundRequests: prev.createRoundRequests.filter(
+    setCategory((prev) => {
+      const updatedCategory = { ...prev };
+      // Lọc ra các vòng còn lại
+      const remainingRounds = updatedCategory.createRoundRequests.filter(
         (round) => round.name !== roundToRemove.name
-      ),
-    }));
+      );
+
+      // Cập nhật lại roundOrder cho các vòng cùng loại
+      const updatedRounds = remainingRounds.map((round) => {
+        if (round.roundType === roundToRemove.roundType) {
+          const sameTypeRounds = remainingRounds.filter(
+            (r) => r.roundType === round.roundType && r.name !== round.name
+          );
+          const newOrder =
+            sameTypeRounds.filter((r) => r.name < round.name).length + 1;
+          return {
+            ...round,
+            roundOrder: newOrder,
+            name: `${roundLabelMap[round.roundType]} ${newOrder}`,
+          };
+        }
+        return round;
+      });
+
+      return {
+        ...updatedCategory,
+        createRoundRequests: updatedRounds,
+      };
+    });
   };
 
   const validateCategory = () => {
@@ -346,6 +370,18 @@ function CreateCategory({ showId, onCategoryCreated }) {
     Object.entries(criteriaByRound).forEach(([roundType, criteriaList]) => {
       if (criteriaList.length < 3) {
         message.error(`${roundLabelMap[roundType]} cần ít nhất 3 tiêu chí`);
+        criteriaValid = false;
+      }
+
+      // Kiểm tra tổng trọng số
+      const totalWeight = criteriaList.reduce(
+        (total, c) => total + (c.weight * 100 || 0),
+        0
+      );
+      if (totalWeight !== 100) {
+        message.error(
+          `${roundLabelMap[roundType]} phải có tổng trọng số bằng 100% (hiện tại: ${totalWeight}%)`
+        );
         criteriaValid = false;
       }
     });
@@ -413,6 +449,24 @@ function CreateCategory({ showId, onCategoryCreated }) {
 
     console.log("Category data to submit:", categoryData);
     await createCategory(categoryData);
+  };
+
+  const getTotalWeightColor = (criteriaList) => {
+    const totalWeight = criteriaList.reduce(
+      (total, criteria) => total + criteria.weight,
+      0
+    );
+    if (totalWeight < 0.5) return "red";
+    if (totalWeight < 0.75) return "yellow";
+    return "green";
+  };
+
+  const calculateTotalWeight = (criteriaList) => {
+    const totalWeight = criteriaList.reduce(
+      (total, criteria) => total + criteria.weight,
+      0
+    );
+    return Math.round(totalWeight * 100);
   };
 
   return (
@@ -614,7 +668,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
 
           {/* Competition Rounds */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
               Các loại vòng thi
             </label>
             {mainRounds.map((round) => (
@@ -636,6 +690,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                   <Collapse className="mt-2">
                     {category.createRoundRequests
                       .filter((r) => r.roundType === round.value)
+                      .sort((a, b) => a.roundOrder - b.roundOrder)
                       .map((subRound, subIndex) => (
                         <Panel
                           header={subRound.name}
@@ -653,100 +708,54 @@ function CreateCategory({ showId, onCategoryCreated }) {
                           }
                         >
                           <Space direction="vertical" style={{ width: "100%" }}>
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Tên Vòng
-                              </label>
-                              <Input
-                                value={subRound.name}
-                                onChange={(e) => {
-                                  setCategory((prev) => {
-                                    const updatedRounds = [
-                                      ...prev.createRoundRequests,
-                                    ];
-                                    const roundIndex = updatedRounds.findIndex(
-                                      (r) => r.name === subRound.name
-                                    );
-                                    if (roundIndex !== -1) {
-                                      updatedRounds[roundIndex].name =
-                                        e.target.value;
+                            {!(
+                              // Vòng sơ khảo luôn ẩn
+                              (
+                                round.value === "Preliminary" ||
+                                // Vòng chung kết chỉ hiện khi có 2 vòng trở lên và là vòng 1
+                                (round.value === "Final" &&
+                                  (category.createRoundRequests.filter(
+                                    (r) => r.roundType === "Final"
+                                  ).length < 2 ||
+                                    subRound.roundOrder !== 1))
+                              )
+                            ) && (
+                              <>
+                                <div>
+                                  <label className="block text-sm font-medium text-gray-700">
+                                    Số cá qua vòng
+                                  </label>
+                                  <Input
+                                    type="number"
+                                    value={
+                                      subRound.numberOfRegistrationToAdvance
                                     }
-                                    return {
-                                      ...prev,
-                                      createRoundRequests: updatedRounds,
-                                    };
-                                  });
-                                }}
-                              />
-                            </div>
-
-                            {/* <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Thứ tự vòng
-                              </label>
-                              <Input value={subRound.roundOrder} disabled />
-                            </div> */}
-
-                            <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Số lượng cá để qua vòng
-                              </label>
-                              <Input
-                                type="number"
-                                value={subRound.numberOfRegistrationToAdvance}
-                                onChange={(e) => {
-                                  setCategory((prev) => {
-                                    const updatedRounds = [
-                                      ...prev.createRoundRequests,
-                                    ];
-                                    const roundIndex = updatedRounds.findIndex(
-                                      (r) => r.name === subRound.name
-                                    );
-                                    if (roundIndex !== -1) {
-                                      updatedRounds[
-                                        roundIndex
-                                      ].numberOfRegistrationToAdvance =
-                                        e.target.value;
-                                    }
-                                    return {
-                                      ...prev,
-                                      createRoundRequests: updatedRounds,
-                                    };
-                                  });
-                                }}
-                              />
-                            </div>
-
-                            {/* <div>
-                              <label className="block text-sm font-medium text-gray-700">
-                                Trạng thái
-                              </label>
-                              <Select
-                                value={subRound.status}
-                                onChange={(value) => {
-                                  setCategory((prev) => {
-                                    const updatedRounds = [
-                                      ...prev.createRoundRequests,
-                                    ];
-                                    const roundIndex = updatedRounds.findIndex(
-                                      (r) => r.name === subRound.name
-                                    );
-                                    if (roundIndex !== -1) {
-                                      updatedRounds[roundIndex].status = value;
-                                    }
-                                    return {
-                                      ...prev,
-                                      createRoundRequests: updatedRounds,
-                                    };
-                                  });
-                                }}
-                                className="w-full"
-                              >
-                                <Option value="ongoing">Đang diễn ra</Option>
-                                <Option value="completed">Hoàn thành</Option>
-                                <Option value="pending">Chờ duyệt</Option>
-                              </Select>
-                            </div> */}
+                                    onChange={(e) => {
+                                      setCategory((prev) => {
+                                        const updatedCategory = { ...prev };
+                                        if (
+                                          !updatedCategory.createRoundRequests
+                                        ) {
+                                          updatedCategory.createRoundRequests =
+                                            [];
+                                        }
+                                        const roundIndex =
+                                          updatedCategory.createRoundRequests.findIndex(
+                                            (r) => r.name === subRound.name
+                                          );
+                                        if (roundIndex !== -1) {
+                                          updatedCategory.createRoundRequests[
+                                            roundIndex
+                                          ].numberOfRegistrationToAdvance =
+                                            e.target.value;
+                                        }
+                                        return updatedCategory;
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              </>
+                            )}
                           </Space>
                         </Panel>
                       ))}
@@ -763,115 +772,217 @@ function CreateCategory({ showId, onCategoryCreated }) {
 
           {/* Criteria Selection */}
           <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Chọn tiêu chí
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Tiêu chí đánh giá
             </label>
-            <Select
-              mode="multiple"
-              placeholder="Chọn tiêu chí"
-              className="w-full mb-2"
-              value={
-                category.tempSelectedCriteria?.map((c) => c.criteriaId) || []
-              }
-              onChange={handleCriteriaSelection}
-            >
-              {criteria.map((item) => (
-                <Option key={item.id} value={item.id}>
-                  {item.name}
-                </Option>
-              ))}
-            </Select>
+            <Collapse defaultActiveKey={["preliminary", "evaluation", "final"]}>
+              {mainRounds.map((round) => {
+                const criteriaInRound =
+                  category.createCriteriaCompetitionCategoryRequests?.filter(
+                    (c) => c.roundType === round.value
+                  ) || [];
 
-            {/* Only show round selection when criteria are selected */}
-            {category.tempSelectedCriteria?.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Chọn vòng chính để gán tiêu chí đã chọn
-                </label>
-                <Select
-                  className="w-full mb-2"
-                  placeholder="Chọn vòng chính"
-                  onChange={handleMainRoundChange}
-                >
-                  {mainRounds.map((round) => (
-                    <Option key={round.value} value={round.value}>
-                      {round.label}
-                    </Option>
-                  ))}
-                </Select>
-              </div>
-            )}
-          </div>
-
-          {/* Criteria by Round */}
-          <Collapse className="mb-4">
-            {mainRounds.map((round) => {
-              const criteriaInRound =
-                category.createCriteriaCompetitionCategoryRequests.filter(
-                  (c) => c.roundType === round.value
-                );
-
-              return (
-                <Collapse.Panel
-                  key={round.value}
-                  header={`Tiêu chí - ${round.label}`}
-                >
-                  {criteriaInRound.length > 0 ? (
-                    criteriaInRound.map((criteriaItem) => (
-                      <div
-                        key={criteriaItem.criteriaId}
-                        className="flex items-center space-x-4 mb-2"
-                      >
-                        {/* Display criteria name */}
-                        <span className="text-sm font-medium flex-1">
-                          {criteria.find(
-                            (c) => c.id === criteriaItem.criteriaId
-                          )?.name || "Tiêu chí không xác định"}
-                        </span>
-
-                        {/* Weight input */}
-                        <Input
-                          type="number"
-                          suffix="%"
-                          placeholder="Nhập trọng số"
-                          value={criteriaItem.weight * 100}
-                          onChange={(e) =>
-                            handleWeightChange(
-                              criteriaItem.criteriaId,
-                              criteriaItem.roundType,
-                              e.target.value
-                            )
-                          }
-                          className="w-1/4"
-                        />
-
-                        {/* Remove criteria button */}
-                        <span
-                          className="text-red-500 cursor-pointer hover:text-red-700"
-                          onClick={() =>
-                            handleRemoveCriteria(criteriaItem.criteriaId)
-                          }
-                        >
-                          <DeleteOutlined />
-                        </span>
+                return (
+                  <Collapse.Panel
+                    key={round.value}
+                    header={`${round.label}`}
+                    extra={
+                      <div className="flex items-center">
+                        <Tag color="blue">
+                          {criteriaInRound.length} tiêu chí
+                        </Tag>
+                        {criteriaInRound.length > 0 && (
+                          <Tag
+                            color={getTotalWeightColor(criteriaInRound)}
+                            className="ml-2"
+                          >
+                            Tổng: {calculateTotalWeight(criteriaInRound)}%
+                          </Tag>
+                        )}
                       </div>
-                    ))
-                  ) : (
-                    <p className="text-gray-500 text-sm">
-                      Chưa có tiêu chí nào.
-                    </p>
-                  )}
+                    }
+                  >
+                    <div className="space-y-4">
+                      <div className="flex items-center space-x-2 mb-4">
+                        <Select
+                          mode="multiple"
+                          placeholder="Chọn tiêu chí"
+                          className="w-full"
+                          value={criteriaInRound.map((c) => {
+                            const criteriaDetail = criteria.find(
+                              (cr) => cr.id === c.criteriaId
+                            );
+                            return criteriaDetail?.name || c.criteriaId;
+                          })}
+                          onChange={(values) => {
+                            // Kiểm tra trùng lặp trong vòng hiện tại
+                            const hasDuplicates = values.some(
+                              (value, index) => values.indexOf(value) !== index
+                            );
 
-                  {/* Show error if round has less than 3 criteria */}
-                  {showErrors && criteriaInRound.length < 3 && (
-                    <p className="text-red-500 text-xs mt-2">
-                      Cần chọn ít nhất 3 tiêu chí cho {round.label}.
-                    </p>
-                  )}
-                </Collapse.Panel>
-              );
-            })}
-          </Collapse>
+                            if (hasDuplicates) {
+                              message.error(
+                                "Không được chọn trùng tiêu chí trong cùng một vòng"
+                              );
+                              return;
+                            }
+
+                            // Xóa các tiêu chí cũ của vòng này
+                            const otherCriteria =
+                              category.createCriteriaCompetitionCategoryRequests?.filter(
+                                (c) => c.roundType !== round.value
+                              ) || [];
+
+                            // Thêm các tiêu chí mới với weight mặc định là 0
+                            const newCriteria = values.map(
+                              (criteriaName, index) => {
+                                const criteriaDetail = criteria.find(
+                                  (cr) => cr.name === criteriaName
+                                );
+                                return {
+                                  criteriaId: criteriaDetail?.id,
+                                  roundType: round.value,
+                                  weight: 0,
+                                  order: index + 1,
+                                };
+                              }
+                            );
+
+                            setCategory((prev) => ({
+                              ...prev,
+                              createCriteriaCompetitionCategoryRequests: [
+                                ...otherCriteria,
+                                ...newCriteria,
+                              ],
+                            }));
+                          }}
+                        >
+                          {criteria
+                            .filter(
+                              (item) =>
+                                !criteriaInRound.some(
+                                  (c) => c.criteriaId === item.id
+                                )
+                            )
+                            .map((item) => (
+                              <Option key={item.id} value={item.name}>
+                                {item.name}
+                              </Option>
+                            ))}
+                        </Select>
+                      </div>
+
+                      {criteriaInRound.length > 0 && (
+                        <div className="space-y-2">
+                          {criteriaInRound.map((criteriaItem, idx) => {
+                            const criteriaDetail = criteria.find(
+                              (c) => c.id === criteriaItem.criteriaId
+                            );
+
+                            return (
+                              <div
+                                key={criteriaItem.criteriaId}
+                                className="flex items-center space-x-4 p-2 bg-gray-50 rounded"
+                              >
+                                <div className="flex-1">
+                                  <div className="font-medium">
+                                    {criteriaDetail?.name}
+                                  </div>
+                                </div>
+                                <div className="flex items-center space-x-2">
+                                  <Input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    suffix="%"
+                                    value={criteriaItem.weight * 100 || 0}
+                                    onChange={(e) => {
+                                      const newWeight =
+                                        parseFloat(e.target.value) / 100;
+                                      if (newWeight < 0 || newWeight > 1) {
+                                        message.error(
+                                          "Trọng số phải nằm trong khoảng 0-100%"
+                                        );
+                                        return;
+                                      }
+
+                                      // Kiểm tra trùng % với các tiêu chí khác
+                                      const hasDuplicateWeight =
+                                        criteriaInRound.some(
+                                          (c) =>
+                                            c.criteriaId !==
+                                              criteriaItem.criteriaId &&
+                                            c.weight === newWeight
+                                        );
+
+                                      if (hasDuplicateWeight) {
+                                        message.error(
+                                          "Không được đặt cùng một tỷ lệ % cho các tiêu chí khác nhau"
+                                        );
+                                        return;
+                                      }
+
+                                      setCategory((prev) => {
+                                        const updatedCategory = { ...prev };
+                                        const criteriaIndex =
+                                          updatedCategory.createCriteriaCompetitionCategoryRequests.findIndex(
+                                            (c) =>
+                                              c.criteriaId ===
+                                                criteriaItem.criteriaId &&
+                                              c.roundType === round.value
+                                          );
+
+                                        if (criteriaIndex !== -1) {
+                                          updatedCategory.createCriteriaCompetitionCategoryRequests[
+                                            criteriaIndex
+                                          ] = {
+                                            ...updatedCategory
+                                              .createCriteriaCompetitionCategoryRequests[
+                                              criteriaIndex
+                                            ],
+                                            weight: newWeight,
+                                          };
+                                        }
+
+                                        return updatedCategory;
+                                      });
+                                    }}
+                                    className="w-24"
+                                    placeholder="Nhập %"
+                                  />
+                                  <Button
+                                    type="text"
+                                    danger
+                                    icon={<DeleteOutlined />}
+                                    onClick={() => {
+                                      setCategory((prev) => {
+                                        const updatedCategory = { ...prev };
+                                        updatedCategory.createCriteriaCompetitionCategoryRequests =
+                                          updatedCategory.createCriteriaCompetitionCategoryRequests.filter(
+                                            (c) =>
+                                              !(
+                                                c.criteriaId ===
+                                                  criteriaItem.criteriaId &&
+                                                c.roundType === round.value
+                                              )
+                                          );
+
+                                        return updatedCategory;
+                                      });
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  </Collapse.Panel>
+                );
+              })}
+            </Collapse>
+          </div>
 
           {/* Awards */}
           <div className="mb-4">
@@ -1113,21 +1224,6 @@ function CreateCategory({ showId, onCategoryCreated }) {
           )}
 
           {/* Status */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Trạng thái
-            </label>
-            <Select
-              placeholder="Chọn trạng thái"
-              className="w-full"
-              value={category.status}
-              onChange={(value) => handleCategoryChange("status", value)}
-            >
-              <Option value="pending">Chờ duyệt</Option>
-              <Option value="approved">Đã duyệt</Option>
-              <Option value="upcoming">Sắp diễn ra</Option>
-            </Select>
-          </div>
         </div>
       </Modal>
     </>

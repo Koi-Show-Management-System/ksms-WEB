@@ -161,7 +161,7 @@ const useCategory = create((set, get) => ({
         notification.error({
           message: "Lỗi",
           description:
-            res?.data?.message || "Không thể tạo danh mục. Vui lòng thử lại.",
+            res?.data?.Error || "Không thể tạo danh mục. Vui lòng thử lại.",
           placement: "topRight",
         });
 
@@ -177,7 +177,8 @@ const useCategory = create((set, get) => ({
 
       notification.error({
         message: "Lỗi",
-        description: error.message || "Đã xảy ra lỗi khi tạo danh mục.",
+        description:
+          error?.response?.data?.Error || "Đã xảy ra lỗi khi tạo danh mục.",
         placement: "topRight",
       });
 
@@ -223,7 +224,7 @@ const useCategory = create((set, get) => ({
     } catch (error) {
       notification.error({
         message: "Lỗi cập nhật",
-        description: error.message,
+        description: error?.response?.data?.Error,
         placement: "topRight",
       });
 

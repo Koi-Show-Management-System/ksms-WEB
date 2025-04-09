@@ -42,50 +42,136 @@ function CreateShow() {
   };
 
   const validateStep = () => {
-    let hasError = false; // Biến để kiểm tra xem có lỗi không
+    let hasError = false;
 
     if (currentStep === 1) {
-      if (
-        !formData.name ||
-        !formData.description ||
-        !formData.startDate ||
-        !formData.endDate ||
-        !formData.startExhibitionDate ||
-        !formData.endExhibitionDate ||
-        !formData.minParticipants ||
-        !formData.maxParticipants ||
-        !formData.location ||
-        !formData.imgUrl
-      ) {
+      // Kiểm tra thông tin cơ bản
+      if (!formData.name?.trim()) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Tên chương trình là bắt buộc",
+          placement: "topRight",
+        });
+        hasError = true;
+      }
+      if (!formData.description?.trim()) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Mô tả chương trình là bắt buộc",
+          placement: "topRight",
+        });
+        hasError = true;
+      }
+      if (!formData.startDate || !formData.endDate) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Ngày bắt đầu và kết thúc đăng ký là bắt buộc",
+          placement: "topRight",
+        });
+        hasError = true;
+      }
+      if (!formData.startExhibitionDate || !formData.endExhibitionDate) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Ngày bắt đầu và kết thúc sự kiện là bắt buộc",
+          placement: "topRight",
+        });
+        hasError = true;
+      }
+      if (!formData.minParticipants || !formData.maxParticipants) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description:
+            "Số lượng người tham gia tối thiểu và tối đa là bắt buộc",
+          placement: "topRight",
+        });
+        hasError = true;
+      }
+      if (!formData.location?.trim()) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Địa điểm tổ chức là bắt buộc",
+          placement: "topRight",
+        });
+        hasError = true;
+      }
+      if (!formData.imgUrl) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Hình ảnh chương trình là bắt buộc",
+          placement: "topRight",
+        });
         hasError = true;
       }
 
-      // Kiểm tra danh sách nhà tài trợ
-      formData.createSponsorRequests.forEach((sponsor) => {
-        if (!sponsor.name || !sponsor.logoUrl || !sponsor.investMoney) {
-          hasError = true;
-        }
-      });
+      // Kiểm tra nhà tài trợ
+      if (formData.createSponsorRequests.length === 0) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Cần có ít nhất một nhà tài trợ",
+          placement: "topRight",
+        });
+        hasError = true;
+      } else {
+        formData.createSponsorRequests.forEach((sponsor, index) => {
+          if (
+            !sponsor.name?.trim() ||
+            !sponsor.logoUrl ||
+            !sponsor.investMoney
+          ) {
+            notification.error({
+              message: "Lỗi nhập liệu",
+              description: `Nhà tài trợ ${index + 1} thiếu thông tin bắt buộc`,
+              placement: "topRight",
+            });
+            hasError = true;
+          }
+        });
+      }
 
-      // Kiểm tra danh sách loại vé
-      formData.createTicketTypeRequests.forEach((ticket) => {
-        if (!ticket.name || !ticket.price || !ticket.availableQuantity) {
-          hasError = true;
-        }
-      });
+      // Kiểm tra loại vé
+      if (formData.createTicketTypeRequests.length === 0) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Cần có ít nhất một loại vé",
+          placement: "topRight",
+        });
+        hasError = true;
+      } else {
+        formData.createTicketTypeRequests.forEach((ticket, index) => {
+          if (
+            !ticket.name?.trim() ||
+            !ticket.price ||
+            !ticket.availableQuantity
+          ) {
+            notification.error({
+              message: "Lỗi nhập liệu",
+              description: `Loại vé ${index + 1} thiếu thông tin bắt buộc`,
+              placement: "topRight",
+            });
+            hasError = true;
+          }
+        });
+      }
     }
 
     if (currentStep === 2) {
-      // Make categories optional - only validate if categories exist
-      if (formData.createCategorieShowRequests.length > 0) {
+      // Kiểm tra hạng mục
+      if (formData.createCategorieShowRequests.length === 0) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Cần có ít nhất một hạng mục",
+          placement: "topRight",
+        });
+        hasError = true;
+      } else {
         formData.createCategorieShowRequests.forEach(
           (category, categoryIndex) => {
             let categoryHasError = false;
             let errorMessage = `Hạng mục "${category.name || `#${categoryIndex + 1}`}" thiếu thông tin: `;
             let errorDetails = [];
 
-            // Basic information validation
-            if (!category.name) {
+            if (!category.name?.trim()) {
               errorDetails.push("tên hạng mục");
               categoryHasError = true;
             }
@@ -97,7 +183,7 @@ function CreateShow() {
               errorDetails.push("kích thước tối đa");
               categoryHasError = true;
             }
-            if (!category.description) {
+            if (!category.description?.trim()) {
               errorDetails.push("mô tả");
               categoryHasError = true;
             }
@@ -117,7 +203,7 @@ function CreateShow() {
               categoryHasError = true;
             }
 
-            // Check rounds (Preliminary, Evaluation, Final)
+            // Kiểm tra vòng thi
             const roundTypes = ["Preliminary", "Evaluation", "Final"];
             const missingRoundTypes = roundTypes.filter(
               (type) =>
@@ -133,7 +219,7 @@ function CreateShow() {
               categoryHasError = true;
             }
 
-            // Check referees
+            // Kiểm tra trọng tài
             if (
               !category.createRefereeAssignmentRequests ||
               category.createRefereeAssignmentRequests.length === 0
@@ -142,7 +228,7 @@ function CreateShow() {
               categoryHasError = true;
             }
 
-            // Check awards (must have all 4 types)
+            // Kiểm tra giải thưởng
             if (
               !category.createAwardCateShowRequests ||
               category.createAwardCateShowRequests.length < 4
@@ -151,7 +237,7 @@ function CreateShow() {
               categoryHasError = true;
             }
 
-            // Criteria checks for each round
+            // Kiểm tra tiêu chí cho mỗi vòng
             roundTypes.forEach((roundType) => {
               const criteriaForRound =
                 category.createCriteriaCompetitionCategoryRequests?.filter(
@@ -166,12 +252,11 @@ function CreateShow() {
 
             if (categoryHasError) {
               hasError = true;
-              // Show notification with specific category errors
               notification.error({
                 message: `Lỗi ở hạng mục ${categoryIndex + 1}`,
                 description: errorMessage + errorDetails.join(", "),
                 placement: "topRight",
-                duration: 10, // Longer duration so user can read all errors
+                duration: 10,
               });
             }
           }
@@ -180,82 +265,59 @@ function CreateShow() {
     }
 
     if (currentStep === 3) {
-      // Stop showing the generic error notification
-      // hasError = true;
-
-      let step3HasErrors = false;
-
-      // Check rules
+      // Kiểm tra quy tắc
       if (formData.createShowRuleRequests.length < 3) {
-        step3HasErrors = true;
         notification.error({
           message: "Lỗi quy tắc",
-          description: "Cần có ít nhất 3 quy tắc cho chương trình.",
+          description: "Cần có ít nhất 3 quy tắc cho chương trình",
           placement: "topRight",
           duration: 6,
         });
+        hasError = true;
       }
 
-      // Check status count
+      // Kiểm tra trạng thái
       if (formData.createShowStatusRequests.length < 3) {
-        step3HasErrors = true;
         notification.error({
           message: "Lỗi trạng thái",
-          description: "Cần có ít nhất 3 trạng thái cho chương trình.",
+          description: "Cần có ít nhất 3 trạng thái cho chương trình",
           placement: "topRight",
           duration: 6,
         });
+        hasError = true;
       }
 
-      // Check invalid statuses
+      // Kiểm tra trạng thái không hợp lệ
       const invalidStatuses = formData.createShowStatusRequests.filter(
         (status) => !status.startDate || !status.endDate
       );
 
       if (invalidStatuses.length > 0) {
-        step3HasErrors = true;
         notification.error({
           message: "Lỗi trạng thái",
-          description: `${invalidStatuses.length} trạng thái chưa có đầy đủ ngày bắt đầu và kết thúc.`,
+          description: `${invalidStatuses.length} trạng thái chưa có đầy đủ ngày bắt đầu và kết thúc`,
           placement: "topRight",
           duration: 6,
         });
+        hasError = true;
       }
-
-      hasError = step3HasErrors;
     }
 
-    // Change the generic error message to only show if we don't have specific errors
-    if (hasError && currentStep !== 2 && currentStep !== 3) {
-      notification.error({
-        message: "Lỗi nhập liệu",
-        description: "Vui lòng điền đầy đủ thông tin trước khi tiếp tục.",
-        placement: "topRight",
-      });
-      return false;
-    }
-
-    // If we've shown specific errors for steps 2 or 3, just return false
-    if (hasError) {
-      return false;
-    }
-
-    return true;
+    return !hasError;
   };
 
   // const handleNext = () => {
-  //   setShowErrors(false); // Reset lỗi trước khi kiểm tra
+  //   setShowErrors(true);
 
-  //   if (validateStep()) {
-  //     setShowErrors(false);
+  //   if (!validateStep()) {
+  //     return;
+  //   }
 
-  //     if (currentStep === 3) {
-  //       setIsConfirmModalOpen(true); // Mở modal xác nhận
-  //     } else {
-  //       setCurrentStep((prev) => prev + 1);
-  //     }
+  //   if (currentStep === 3) {
+  //     setIsConfirmModalOpen(true);
   //   } else {
-  //     setShowErrors(true);
+  //     setCurrentStep((prev) => prev + 1);
+  //     setShowErrors(false);
   //   }
   // };
 
@@ -271,9 +333,15 @@ function CreateShow() {
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
+    setShowErrors(false);
   };
 
   const handleSubmit = async () => {
+    if (!validateStep()) {
+      setIsConfirmModalOpen(false);
+      return;
+    }
+
     setIsConfirmModalOpen(false);
     console.log("Submit button clicked - Form data:", formData);
 
@@ -284,16 +352,19 @@ function CreateShow() {
 
       if (response?.statusCode === 201) {
         console.log("Success! Status code 201 received");
+        message.success("Tạo chương trình thành công!");
 
         setTimeout(() => {
           navigate("/admin/showList");
         }, 2000);
       } else {
         console.error("API returned unexpected status:", response?.statusCode);
+        message.error("Có lỗi xảy ra khi tạo chương trình");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       console.error("Error details:", error.response?.data || error.message);
+      message.error("Có lỗi xảy ra khi tạo chương trình");
     }
   };
 
@@ -357,7 +428,7 @@ function CreateShow() {
           className="bg-blue-500 hover:bg-blue-600"
           loading={isLoading}
         >
-          {currentStep === 3 ? "Xác nhận & Gửi" : "Tiếp theo"}
+          {currentStep === 3 ? "Xác nhận" : "Tiếp theo"}
         </Button>
       </div>
 
@@ -373,12 +444,12 @@ function CreateShow() {
         <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
       </Modal>
       {/* Debug Panel */}
-      {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
+      <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
         <pre className="overflow-auto max-h-96">
           {JSON.stringify(formData, null, 2)}
         </pre>
-      </div> */}
+      </div>
     </div>
   );
 }
