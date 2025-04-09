@@ -351,13 +351,16 @@ const EvaluationScoreSheet = ({
               console.log(
                 `Debug percentage value: ${error.percentage}, type: ${typeof error.percentage}`
               );
-              const errorWeight = parseFloat(error.percentage) / 100;
-              console.log(`Calculated weight: ${errorWeight}`);
+              // Cố định weight là 0.01 (1%) để kiểm tra
+              const errorWeight = 0.01;
+              console.log(
+                `Fixed weight to: ${errorWeight} instead of calculating from percentage`
+              );
 
               createScoreDetailErrors.push({
                 errorTypeId: realErrorId,
                 severity: error.severity,
-                weight: errorWeight, // Sử dụng giá trị đã tính
+                weight: errorWeight,
                 pointMinus: error.pointMinus,
               });
 
@@ -370,13 +373,16 @@ const EvaluationScoreSheet = ({
             console.log(
               `Debug percentage value: ${error.percentage}, type: ${typeof error.percentage}`
             );
-            const errorWeight = parseFloat(error.percentage) / 100;
-            console.log(`Calculated weight: ${errorWeight}`);
+            // Cố định weight là 0.01 (1%) để kiểm tra
+            const errorWeight = 0.01;
+            console.log(
+              `Fixed weight to: ${errorWeight} instead of calculating from percentage`
+            );
 
             createScoreDetailErrors.push({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
-              weight: errorWeight, // Sử dụng giá trị đã tính
+              weight: errorWeight,
               pointMinus: error.pointMinus,
             });
           }
