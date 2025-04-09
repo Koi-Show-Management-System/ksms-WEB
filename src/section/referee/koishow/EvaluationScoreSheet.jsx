@@ -337,6 +337,32 @@ const EvaluationScoreSheet = ({
         for (const error of errors) {
           console.log("Processing error:", error);
 
+          // Tính weight từ percentage
+          let errorWeight;
+          try {
+            // Kiểm tra giá trị percentage
+            const percentageValue = parseFloat(error.percentage);
+            if (isNaN(percentageValue)) {
+              console.warn(
+                `Invalid percentage value: ${error.percentage}, using default 0.01`
+              );
+              errorWeight = 0.01;
+            } else {
+              // Tính weight từ percentage và giới hạn từ 0 đến 1
+              errorWeight = Math.min(Math.max(percentageValue / 100, 0), 1);
+              console.log(
+                `Calculated weight from percentage ${percentageValue}: ${errorWeight}`
+              );
+            }
+          } catch (e) {
+            console.error("Error calculating weight:", e);
+            errorWeight = 0.01; // Giá trị mặc định nếu có lỗi
+          }
+
+          // Format weight thành chuỗi với 2 chữ số thập phân
+          const formattedWeight = errorWeight.toFixed(2);
+          console.log(`Formatted weight: ${formattedWeight}`);
+
           // Nếu là lỗi cục bộ, cần tạo error type trên server trước
           if (error.isLocal) {
             const errorTypePromise = createErrorType(
@@ -355,15 +381,11 @@ const EvaluationScoreSheet = ({
                 );
               }
 
-              // Sử dụng chuỗi "0.01" thay vì số 0.01
-              const errorWeight = "0.01";
-              console.log(`Using fixed weight as string: "${errorWeight}"`);
-
               // Thêm lỗi với ID thực vào mảng để gửi
               const errorDetail = {
                 errorTypeId: realErrorId,
                 severity: error.severity,
-                weight: errorWeight,
+                weight: formattedWeight, // Sử dụng weight đã format
                 pointMinus: error.pointMinus,
               };
 
@@ -375,15 +397,11 @@ const EvaluationScoreSheet = ({
 
             errorTypePromises.push(errorTypePromise);
           } else {
-            // Sử dụng chuỗi "0.01" thay vì số 0.01
-            const errorWeight = "0.01";
-            console.log(`Using fixed weight as string: "${errorWeight}"`);
-
             // Thêm lỗi với ID có sẵn vào mảng để gửi
             const errorDetail = {
               errorTypeId: error.errorTypeId,
               severity: error.severity,
-              weight: errorWeight,
+              weight: formattedWeight, // Sử dụng weight đã format
               pointMinus: error.pointMinus,
             };
 
