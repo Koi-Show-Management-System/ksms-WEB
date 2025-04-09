@@ -217,6 +217,14 @@ const EvaluationScoreSheet = ({
         "calculatedPointMinus",
       ]);
 
+      console.log("DEBUG-CREATE-ERROR - Form values:", formValues);
+      console.log(
+        "DEBUG-CREATE-ERROR - percentage:",
+        formValues.percentage,
+        "type:",
+        typeof formValues.percentage
+      );
+
       // Tìm tiêu chí
       const criteria = criteriaList.find(
         (c) => (c.criteria?.id || c.id) === currentCriteriaId
@@ -234,6 +242,13 @@ const EvaluationScoreSheet = ({
         (weight * (formValues.percentage / 100)).toFixed(2)
       );
 
+      console.log(
+        "DEBUG-CREATE-ERROR - pointMinus:",
+        pointMinus,
+        "type:",
+        typeof pointMinus
+      );
+
       // Tạo object lỗi với điểm trừ đã tính
       const error = {
         errorTypeId: localErrorId, // Sử dụng ID cục bộ
@@ -244,6 +259,8 @@ const EvaluationScoreSheet = ({
         errorName: newErrorName,
         isLocal: true, // Đánh dấu lỗi này là cục bộ
       };
+
+      console.log("DEBUG-CREATE-ERROR - Object lỗi được tạo:", error);
 
       // Cập nhật state
       setCriteriaErrors((prevErrors) => {
@@ -282,6 +299,14 @@ const EvaluationScoreSheet = ({
     severity,
     percentage
   ) => {
+    // Debug trước khi tạo error
+    console.log(
+      "DEBUG-ADD-ERROR - Tạo lỗi với percentage:",
+      percentage,
+      "type:",
+      typeof percentage
+    );
+
     // Tạo object lỗi với điểm trừ đã nhập
     const error = {
       errorTypeId, // ID từ API createErrorType
@@ -289,20 +314,14 @@ const EvaluationScoreSheet = ({
       pointMinus: parseFloat(
         (criteriaList.find((c) => (c.criteria?.id || c.id) === criteriaId)
           .weight || 0) *
-          (percentage / 100) *
-          100
+          (percentage / 100)
       ),
       percentage, // % lỗi đã chọn
       weight: percentage / 100, // Thêm trường weight, % lỗi nhân với 100%
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
 
-    console.log(
-      "Adding error with custom point:",
-      error,
-      "to criteriaId:",
-      criteriaId
-    );
+    console.log("DEBUG-ADD-ERROR - Object lỗi được tạo:", error);
 
     // Cập nhật state
     setCriteriaErrors((prevErrors) => {
@@ -326,13 +345,23 @@ const EvaluationScoreSheet = ({
       const errorTypePromises = [];
 
       // Thêm debug: In ra tất cả criteriaErrors
-      console.log("DEBUG - Tất cả criteriaErrors:", criteriaErrors);
+      console.log(
+        "DEBUG-SUBMIT - Tất cả criteriaErrors:",
+        JSON.stringify(criteriaErrors, null, 2)
+      );
 
       // Lặp qua tất cả các tiêu chí và lỗi
       for (const [criteriaId, errors] of Object.entries(criteriaErrors)) {
+        console.log(
+          `DEBUG-SUBMIT - Xử lý tiêu chí ${criteriaId} với ${errors.length} lỗi`
+        );
+
         for (const error of errors) {
           // Debug: In ra lỗi trước khi xử lý
-          console.log("DEBUG - Lỗi gốc:", error);
+          console.log(
+            "DEBUG-SUBMIT - Lỗi gốc:",
+            JSON.stringify(error, null, 2)
+          );
           console.log(
             "DEBUG - percentage:",
             error.percentage,
