@@ -141,7 +141,9 @@ const EvaluationScoreSheet = ({
     const weight = criteria.weight || 0;
 
     // Tính điểm trừ theo công thức: Trọng số × Mức độ lỗi (%)
-    const pointMinus = parseFloat((weight * (percentage / 100)).toFixed(2));
+    const pointMinus = parseFloat(
+      (weight * (percentage / 100) * 100).toFixed(2)
+    );
 
     // Tạo object lỗi
     const error = {
@@ -149,7 +151,6 @@ const EvaluationScoreSheet = ({
       severity, // Mức độ lỗi (eb, mb, sb)
       pointMinus, // Điểm trừ đã tính
       percentage, // % lỗi đã chọn
-      weight: percentage / 100, // Thêm trường weight, % lỗi nhân với 100%
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
 
@@ -217,14 +218,6 @@ const EvaluationScoreSheet = ({
         "calculatedPointMinus",
       ]);
 
-      console.log("DEBUG-CREATE-ERROR - Form values:", formValues);
-      console.log(
-        "DEBUG-CREATE-ERROR - percentage:",
-        formValues.percentage,
-        "type:",
-        typeof formValues.percentage
-      );
-
       // Tìm tiêu chí
       const criteria = criteriaList.find(
         (c) => (c.criteria?.id || c.id) === currentCriteriaId
@@ -237,16 +230,9 @@ const EvaluationScoreSheet = ({
       // Lấy trọng số
       const weight = criteria.weight || 0;
 
-      // Tính điểm trừ theo công thức chính xác: Trọng số × (Mức độ lỗi/100)
+      // Tính điểm trừ theo công thức chính xác: Trọng số × (Mức độ lỗi/100) × 100
       const pointMinus = parseFloat(
-        (weight * (formValues.percentage / 100)).toFixed(2)
-      );
-
-      console.log(
-        "DEBUG-CREATE-ERROR - pointMinus:",
-        pointMinus,
-        "type:",
-        typeof pointMinus
+        (weight * (formValues.percentage / 100) * 100).toFixed(2)
       );
 
       // Tạo object lỗi với điểm trừ đã tính
@@ -255,12 +241,9 @@ const EvaluationScoreSheet = ({
         severity: formValues.severity,
         pointMinus: pointMinus,
         percentage: formValues.percentage,
-        weight: formValues.percentage / 100, // Thêm trường weight, % lỗi nhân với 100%
         errorName: newErrorName,
         isLocal: true, // Đánh dấu lỗi này là cục bộ
       };
-
-      console.log("DEBUG-CREATE-ERROR - Object lỗi được tạo:", error);
 
       // Cập nhật state
       setCriteriaErrors((prevErrors) => {
@@ -299,14 +282,6 @@ const EvaluationScoreSheet = ({
     severity,
     percentage
   ) => {
-    // Debug trước khi tạo error
-    console.log(
-      "DEBUG-ADD-ERROR - Tạo lỗi với percentage:",
-      percentage,
-      "type:",
-      typeof percentage
-    );
-
     // Tạo object lỗi với điểm trừ đã nhập
     const error = {
       errorTypeId, // ID từ API createErrorType
@@ -314,14 +289,19 @@ const EvaluationScoreSheet = ({
       pointMinus: parseFloat(
         (criteriaList.find((c) => (c.criteria?.id || c.id) === criteriaId)
           .weight || 0) *
-          (percentage / 100)
+          (percentage / 100) *
+          100
       ),
       percentage, // % lỗi đã chọn
-      weight: percentage / 100, // Thêm trường weight, % lỗi nhân với 100%
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
 
-    console.log("DEBUG-ADD-ERROR - Object lỗi được tạo:", error);
+    console.log(
+      "Adding error with custom point:",
+      error,
+      "to criteriaId:",
+      criteriaId
+    );
 
     // Cập nhật state
     setCriteriaErrors((prevErrors) => {
@@ -344,31 +324,9 @@ const EvaluationScoreSheet = ({
       // Tạo mảng để lưu trữ các promise tạo error type
       const errorTypePromises = [];
 
-      // Thêm debug: In ra tất cả criteriaErrors
-      console.log(
-        "DEBUG-SUBMIT - Tất cả criteriaErrors:",
-        JSON.stringify(criteriaErrors, null, 2)
-      );
-
       // Lặp qua tất cả các tiêu chí và lỗi
       for (const [criteriaId, errors] of Object.entries(criteriaErrors)) {
-        console.log(
-          `DEBUG-SUBMIT - Xử lý tiêu chí ${criteriaId} với ${errors.length} lỗi`
-        );
-
         for (const error of errors) {
-          // Debug: In ra lỗi trước khi xử lý
-          console.log(
-            "DEBUG-SUBMIT - Lỗi gốc:",
-            JSON.stringify(error, null, 2)
-          );
-          console.log(
-            "DEBUG - percentage:",
-            error.percentage,
-            "type:",
-            typeof error.percentage
-          );
-
           // Nếu là lỗi cục bộ, cần tạo error type trên server trước
           if (error.isLocal) {
             const errorTypePromise = createErrorType(
@@ -388,19 +346,11 @@ const EvaluationScoreSheet = ({
               }
 
               // Thêm lỗi với ID thực vào mảng để gửi
-              const weightValue = error.percentage / 100;
-              console.log(
-                "DEBUG - weight được tính:",
-                weightValue,
-                "từ percentage:",
-                error.percentage
-              );
-
               createScoreDetailErrors.push({
                 errorTypeId: realErrorId,
                 severity: error.severity,
+                weight: error.percentage / 100,
                 pointMinus: error.pointMinus,
-                weight: weightValue, // Chuyển từ % sang decimal (10% -> 0.1)
               });
 
               return realErrorId;
@@ -409,19 +359,10 @@ const EvaluationScoreSheet = ({
             errorTypePromises.push(errorTypePromise);
           } else {
             // Nếu không phải lỗi cục bộ, sử dụng errorTypeId có sẵn
-            const weightValue = error.percentage / 100;
-            console.log(
-              "DEBUG - weight được tính:",
-              weightValue,
-              "từ percentage:",
-              error.percentage
-            );
-
             createScoreDetailErrors.push({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
               pointMinus: error.pointMinus,
-              weight: weightValue, // Chuyển từ % sang decimal (10% -> 0.1)
             });
           }
         }
@@ -430,8 +371,7 @@ const EvaluationScoreSheet = ({
       // Đợi tất cả các error type được tạo xong
       await Promise.all(errorTypePromises);
 
-      // In ra dữ liệu cuối cùng trước khi gửi đi
-      console.log("DEBUG - Dữ liệu cuối cùng gửi đi:", {
+      console.log("Submitting data to API:", {
         refereeAccountId,
         registrationRoundId,
         initialScore,
@@ -506,13 +446,13 @@ const EvaluationScoreSheet = ({
         if (criteria) {
           const weight = criteria.weight || 0;
           const calculatedPoint = parseFloat(
-            (weight * (value / 100)).toFixed(2)
+            (weight * (defaultPercentage / 100) * 100).toFixed(2)
           );
 
           // Cập nhật công thức hiển thị
           setCalculatedFormula({
             weight: (weight * 100).toFixed(0),
-            percentage: value,
+            percentage: defaultPercentage,
             result: calculatedPoint,
           });
         }
@@ -584,7 +524,7 @@ const EvaluationScoreSheet = ({
       // Tính điểm trừ
       const weight = criteria.weight || 0;
       const pointMinus = parseFloat(
-        (weight * (formValues.percentage / 100)).toFixed(2)
+        (weight * (formValues.percentage / 100) * 100).toFixed(2)
       );
 
       // Cập nhật lỗi đang chỉnh sửa
@@ -593,7 +533,6 @@ const EvaluationScoreSheet = ({
         errorName: newErrorName,
         severity: formValues.severity,
         percentage: formValues.percentage,
-        weight: formValues.percentage / 100, // Thêm trường weight, % lỗi nhân với 100%
         pointMinus: pointMinus,
       };
 
@@ -651,7 +590,7 @@ const EvaluationScoreSheet = ({
 
       // Tính điểm trừ ban đầu
       const initialPointMinus = parseFloat(
-        (weight * (defaultPercentage / 100)).toFixed(2)
+        (weight * (defaultPercentage / 100) * 100).toFixed(2)
       );
 
       // Cập nhật công thức hiển thị với giá trị ban đầu
@@ -966,7 +905,7 @@ const EvaluationScoreSheet = ({
                   if (criteria) {
                     const weight = criteria.weight || 0;
                     const calculatedPoint = parseFloat(
-                      (weight * (value / 100)).toFixed(2)
+                      (weight * (value / 100) * 100).toFixed(2)
                     );
 
                     // Cập nhật trường ẩn điểm trừ
