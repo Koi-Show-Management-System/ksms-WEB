@@ -325,9 +325,21 @@ const EvaluationScoreSheet = ({
       // Tạo mảng để lưu trữ các promise tạo error type
       const errorTypePromises = [];
 
+      // Thêm debug: In ra tất cả criteriaErrors
+      console.log("DEBUG - Tất cả criteriaErrors:", criteriaErrors);
+
       // Lặp qua tất cả các tiêu chí và lỗi
       for (const [criteriaId, errors] of Object.entries(criteriaErrors)) {
         for (const error of errors) {
+          // Debug: In ra lỗi trước khi xử lý
+          console.log("DEBUG - Lỗi gốc:", error);
+          console.log(
+            "DEBUG - percentage:",
+            error.percentage,
+            "type:",
+            typeof error.percentage
+          );
+
           // Nếu là lỗi cục bộ, cần tạo error type trên server trước
           if (error.isLocal) {
             const errorTypePromise = createErrorType(
@@ -347,11 +359,19 @@ const EvaluationScoreSheet = ({
               }
 
               // Thêm lỗi với ID thực vào mảng để gửi
+              const weightValue = error.percentage / 100;
+              console.log(
+                "DEBUG - weight được tính:",
+                weightValue,
+                "từ percentage:",
+                error.percentage
+              );
+
               createScoreDetailErrors.push({
                 errorTypeId: realErrorId,
                 severity: error.severity,
                 pointMinus: error.pointMinus,
-                weight: error.percentage / 100, // Chuyển từ % sang decimal (10% -> 0.1)
+                weight: weightValue, // Chuyển từ % sang decimal (10% -> 0.1)
               });
 
               return realErrorId;
@@ -360,11 +380,19 @@ const EvaluationScoreSheet = ({
             errorTypePromises.push(errorTypePromise);
           } else {
             // Nếu không phải lỗi cục bộ, sử dụng errorTypeId có sẵn
+            const weightValue = error.percentage / 100;
+            console.log(
+              "DEBUG - weight được tính:",
+              weightValue,
+              "từ percentage:",
+              error.percentage
+            );
+
             createScoreDetailErrors.push({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
               pointMinus: error.pointMinus,
-              weight: error.percentage / 100, // Chuyển từ % sang decimal (10% -> 0.1)
+              weight: weightValue, // Chuyển từ % sang decimal (10% -> 0.1)
             });
           }
         }
@@ -373,7 +401,8 @@ const EvaluationScoreSheet = ({
       // Đợi tất cả các error type được tạo xong
       await Promise.all(errorTypePromises);
 
-      console.log("Submitting data to API:", {
+      // In ra dữ liệu cuối cùng trước khi gửi đi
+      console.log("DEBUG - Dữ liệu cuối cùng gửi đi:", {
         refereeAccountId,
         registrationRoundId,
         initialScore,
