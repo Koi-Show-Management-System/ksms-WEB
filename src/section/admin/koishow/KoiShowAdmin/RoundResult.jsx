@@ -23,7 +23,7 @@ import useRoundResult from "../../../../hooks/useRoundResult";
 
 function RoundResult({ showId }) {
   const { categories, fetchCategories } = useCategory();
-  const { isLoading, fetchGGetRoundResult } = useRoundResult();
+  const { isLoading, fetchGetRoundResult } = useRoundResult();
 
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [resultData, setResultData] = useState([]);
@@ -38,10 +38,33 @@ function RoundResult({ showId }) {
   const handleCategoryChange = async (value) => {
     setSelectedCategory(value);
     if (value) {
-      const response = await fetchGGetRoundResult(value);
+      const response = await fetchGetRoundResult(value);
+      console.log("API response:", response);
+
       if (response && response.statusCode === 200) {
-        setResultData(response.data || []);
+        // Kiểm tra cấu trúc của dữ liệu trả về
+        if (Array.isArray(response.data)) {
+          console.log("Dữ liệu kết quả:", response.data);
+          setResultData(response.data);
+        } else if (response.data && Array.isArray(response.data.data)) {
+          console.log("Dữ liệu kết quả từ data.data:", response.data.data);
+          setResultData(response.data.data);
+        } else if (
+          response.data &&
+          response.data.data &&
+          Array.isArray(response.data.data[0])
+        ) {
+          console.log(
+            "Dữ liệu kết quả từ data.data[0]:",
+            response.data.data[0]
+          );
+          setResultData(response.data.data[0]);
+        } else {
+          console.log("Không tìm thấy mảng dữ liệu trong response");
+          setResultData([]);
+        }
       } else {
+        console.log("Không có dữ liệu hoặc lỗi:", response);
         setResultData([]);
       }
     } else {

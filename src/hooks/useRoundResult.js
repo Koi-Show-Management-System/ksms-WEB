@@ -108,13 +108,17 @@ const useRoundResult = create((set, get) => ({
       };
     }
   },
-  fetchGGetRoundResult: async (categoryId) => {
+  fetchGetRoundResult: async (categoryId) => {
     set({ isLoading: true, error: null });
     try {
       const res = await getRoundResult(categoryId);
       console.log("API Response when getting round result:", res);
       set({ isLoading: false });
       if (res && (res.statusCode === 201 || res.statusCode === 200)) {
+        console.log("Cấu trúc data trong API response:", res.data);
+        if (res.data && res.data.data) {
+          console.log("Cấu trúc data.data trong API response:", res.data.data);
+        }
         return res;
       } else {
         set({
@@ -126,6 +130,11 @@ const useRoundResult = create((set, get) => ({
     } catch (error) {
       set({ isLoading: false, error: error.message || "An error occurred" });
       console.error("API Error in catch:", error);
+      return {
+        statusCode: error.response?.status || 500,
+        message: error.message || "An error occurred",
+        error: true,
+      };
     }
   },
 }));
