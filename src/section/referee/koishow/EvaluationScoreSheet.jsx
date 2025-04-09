@@ -138,11 +138,11 @@ const EvaluationScoreSheet = ({
     }
 
     // Lấy trọng số
-    const weight = criteria.weight || 0;
+    const criteriaWeight = criteria.weight || 0;
 
     // Tính điểm trừ theo công thức: Trọng số × Mức độ lỗi (%)
     const pointMinus = parseFloat(
-      (weight * (percentage / 100) * 100).toFixed(2)
+      (criteriaWeight * (percentage / 100) * 100).toFixed(2)
     );
 
     // Tạo object lỗi
@@ -228,11 +228,11 @@ const EvaluationScoreSheet = ({
       }
 
       // Lấy trọng số
-      const weight = criteria.weight || 0;
+      const criteriaWeight = criteria.weight || 0;
 
       // Tính điểm trừ theo công thức chính xác: Trọng số × (Mức độ lỗi/100) × 100
       const pointMinus = parseFloat(
-        (weight * (formValues.percentage / 100) * 100).toFixed(2)
+        (criteriaWeight * (formValues.percentage / 100) * 100).toFixed(2)
       );
 
       // Tạo object lỗi với điểm trừ đã tính
@@ -283,14 +283,16 @@ const EvaluationScoreSheet = ({
     percentage
   ) => {
     // Tạo object lỗi với điểm trừ đã nhập
+    const criteria = criteriaList.find(
+      (c) => (c.criteria?.id || c.id) === criteriaId
+    );
+    const criteriaWeight = criteria ? criteria.weight || 0 : 0;
+
     const error = {
       errorTypeId, // ID từ API createErrorType
       severity, // Mức độ lỗi (eb, mb, sb)
       pointMinus: parseFloat(
-        (criteriaList.find((c) => (c.criteria?.id || c.id) === criteriaId)
-          .weight || 0) *
-          (percentage / 100) *
-          100
+        (criteriaWeight * (percentage / 100) * 100).toFixed(2)
       ),
       percentage, // % lỗi đã chọn
       errorName: newErrorName, // Tên lỗi (để hiển thị)
@@ -349,7 +351,7 @@ const EvaluationScoreSheet = ({
               createScoreDetailErrors.push({
                 errorTypeId: realErrorId,
                 severity: error.severity,
-                weight: error.percentage / 100,
+                weight: error.percentage / 100, // Lưu ý: Đây là weight cho API, khác với criteriaWeight
                 pointMinus: error.pointMinus,
               });
 
@@ -362,7 +364,7 @@ const EvaluationScoreSheet = ({
             createScoreDetailErrors.push({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
-              weight: error.percentage / 100,
+              weight: error.percentage / 100, // Lưu ý: Đây là weight cho API, khác với criteriaWeight
               pointMinus: error.pointMinus,
             });
           }
@@ -445,14 +447,14 @@ const EvaluationScoreSheet = ({
           (c) => (c.criteria?.id || c.id) === currentCriteriaId
         );
         if (criteria) {
-          const weight = criteria.weight || 0;
+          const criteriaWeight = criteria.weight || 0;
           const calculatedPoint = parseFloat(
-            (weight * (defaultPercentage / 100) * 100).toFixed(2)
+            (criteriaWeight * (defaultPercentage / 100) * 100).toFixed(2)
           );
 
           // Cập nhật công thức hiển thị
           setCalculatedFormula({
-            weight: (weight * 100).toFixed(0),
+            weight: (criteriaWeight * 100).toFixed(0),
             percentage: defaultPercentage,
             result: calculatedPoint,
           });
@@ -482,11 +484,11 @@ const EvaluationScoreSheet = ({
     );
 
     if (criteria) {
-      const weight = criteria.weight || 0;
+      const criteriaWeight = criteria.weight || 0;
 
       // Cập nhật công thức hiển thị
       setCalculatedFormula({
-        weight: (weight * 100).toFixed(0),
+        weight: (criteriaWeight * 100).toFixed(0),
         percentage: error.percentage,
         result: error.pointMinus,
       });
@@ -523,9 +525,9 @@ const EvaluationScoreSheet = ({
       }
 
       // Tính điểm trừ
-      const weight = criteria.weight || 0;
+      const criteriaWeight = criteria.weight || 0;
       const pointMinus = parseFloat(
-        (weight * (formValues.percentage / 100) * 100).toFixed(2)
+        (criteriaWeight * (formValues.percentage / 100) * 100).toFixed(2)
       );
 
       // Cập nhật lỗi đang chỉnh sửa
@@ -587,16 +589,16 @@ const EvaluationScoreSheet = ({
     );
 
     if (criteria) {
-      const weight = criteria.weight || 0;
+      const criteriaWeight = criteria.weight || 0;
 
       // Tính điểm trừ ban đầu
       const initialPointMinus = parseFloat(
-        (weight * (defaultPercentage / 100) * 100).toFixed(2)
+        (criteriaWeight * (defaultPercentage / 100) * 100).toFixed(2)
       );
 
       // Cập nhật công thức hiển thị với giá trị ban đầu
       setCalculatedFormula({
-        weight: (weight * 100).toFixed(0),
+        weight: (criteriaWeight * 100).toFixed(0),
         percentage: defaultPercentage,
         result: initialPointMinus,
       });
@@ -904,9 +906,9 @@ const EvaluationScoreSheet = ({
                     (c) => (c.criteria?.id || c.id) === currentCriteriaId
                   );
                   if (criteria) {
-                    const weight = criteria.weight || 0;
+                    const criteriaWeight = criteria.weight || 0;
                     const calculatedPoint = parseFloat(
-                      (weight * (value / 100) * 100).toFixed(2)
+                      (criteriaWeight * (value / 100) * 100).toFixed(2)
                     );
 
                     // Cập nhật trường ẩn điểm trừ
@@ -916,7 +918,7 @@ const EvaluationScoreSheet = ({
 
                     // Cập nhật công thức hiển thị
                     setCalculatedFormula({
-                      weight: (weight * 100).toFixed(0),
+                      weight: (criteriaWeight * 100).toFixed(0),
                       percentage: value,
                       result: calculatedPoint,
                     });
