@@ -516,8 +516,13 @@ function CompetitionRound({ showId }) {
                                             error.severity === "eb"
                                               ? "Nặng"
                                               : error.severity === "mb"
-                                                ? "trung bình"
-                                                : "nhẹ";
+                                                ? "Trung bình"
+                                                : "Nhẹ";
+
+                                          // Thêm phần trăm vào text hiển thị
+                                          const displayText = error.weight
+                                            ? `${severityText} (${(error.weight * 100).toFixed(0)}%)`
+                                            : severityText;
 
                                           return (
                                             <div
@@ -535,7 +540,7 @@ function CompetitionRound({ showId }) {
                                                   <Typography.Text>
                                                     Mức độ:{" "}
                                                     <Tag color={severityColor}>
-                                                      {severityText}
+                                                      {displayText}
                                                     </Tag>
                                                   </Typography.Text>
                                                 </div>

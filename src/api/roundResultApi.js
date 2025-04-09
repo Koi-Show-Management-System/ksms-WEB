@@ -6,4 +6,7 @@ const createRoundResult = (roundId) => {
 const publishRoundResult = (roundId) => {
   return axiosClient.put(`/round-result/publish-round-result/${roundId}`);
 };
-export { createRoundResult, publishRoundResult };
+const getRoundResult = (categoryId) => {
+  return axiosClient.get(`/round-result/final-result/${categoryId}`);
+};
+export { createRoundResult, publishRoundResult, getRoundResult };

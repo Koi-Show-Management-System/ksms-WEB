@@ -38,6 +38,7 @@ import CompetitionRound from "./CompetitionRound";
 import Registration from "./Registration";
 import Tank from "./Tank";
 import Ticket from "./Ticket";
+import RoundResult from "./RoundResult";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -302,6 +303,11 @@ function KoiShowDetail() {
       key: "competitionRound",
       label: "Vòng Thi",
       children: <CompetitionRound showId={id} />,
+    },
+    {
+      key: "roundResult",
+      label: "Kết Quả Cuối Cùng",
+      children: <RoundResult showId={id} />,
     },
     {
       key: "votes",

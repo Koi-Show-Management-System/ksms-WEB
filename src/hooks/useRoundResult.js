@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { createRoundResult, publishRoundResult } from "../api/roundResultApi";
+import {
+  createRoundResult,
+  getRoundResult,
+  publishRoundResult,
+} from "../api/roundResultApi";
 
 const useRoundResult = create((set, get) => ({
   isLoading: false,
@@ -102,6 +106,26 @@ const useRoundResult = create((set, get) => ({
         message: error.message || "An error occurred",
         error: true,
       };
+    }
+  },
+  fetchGGetRoundResult: async (categoryId) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await getRoundResult(categoryId);
+      console.log("API Response when getting round result:", res);
+      set({ isLoading: false });
+      if (res && (res.statusCode === 201 || res.statusCode === 200)) {
+        return res;
+      } else {
+        set({
+          isLoading: false,
+          error: res?.message || "Failed to get round result",
+        });
+        return res;
+      }
+    } catch (error) {
+      set({ isLoading: false, error: error.message || "An error occurred" });
+      console.error("API Error in catch:", error);
     }
   },
 }));
