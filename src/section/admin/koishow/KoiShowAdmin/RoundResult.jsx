@@ -39,32 +39,11 @@ function RoundResult({ showId }) {
     setSelectedCategory(value);
     if (value) {
       const response = await fetchGetRoundResult(value);
-      console.log("API response:", response);
+      console.log("API response:", response.data.data);
 
       if (response && response.statusCode === 200) {
-        // Kiểm tra cấu trúc của dữ liệu trả về
-        if (Array.isArray(response.data)) {
-          console.log("Dữ liệu kết quả:", response.data);
-          setResultData(response.data);
-        } else if (response.data && Array.isArray(response.data.data)) {
-          console.log("Dữ liệu kết quả từ data.data:", response.data.data);
-          setResultData(response.data.data);
-        } else if (
-          response.data &&
-          response.data.data &&
-          Array.isArray(response.data.data[0])
-        ) {
-          console.log(
-            "Dữ liệu kết quả từ data.data[0]:",
-            response.data.data[0]
-          );
-          setResultData(response.data.data[0]);
-        } else {
-          console.log("Không tìm thấy mảng dữ liệu trong response");
-          setResultData([]);
-        }
+        setResultData(response.data.data);
       } else {
-        console.log("Không có dữ liệu hoặc lỗi:", response);
         setResultData([]);
       }
     } else {
