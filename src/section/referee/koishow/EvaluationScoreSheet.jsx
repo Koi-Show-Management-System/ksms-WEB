@@ -362,6 +362,7 @@ const EvaluationScoreSheet = ({
             createScoreDetailErrors.push({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
+              weight: error.percentage / 100,
               pointMinus: error.pointMinus,
             });
           }
