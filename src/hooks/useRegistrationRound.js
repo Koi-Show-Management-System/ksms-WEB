@@ -30,6 +30,8 @@ const useRegistrationRound = create((set, get) => ({
         let registrationRound = [];
         let total = 0;
         let totalPages = 1;
+        let currentPage = page;
+        let pageSize = size;
 
         if (
           res.data &&
@@ -40,6 +42,8 @@ const useRegistrationRound = create((set, get) => ({
           registrationRound = res.data.data.items;
           total = res.data.data.total || registrationRound.length;
           totalPages = res.data.data.totalPages || 1;
+          currentPage = res.data.data.page || page;
+          pageSize = res.data.data.size || size;
         } else if (
           res.data &&
           res.data.items &&
@@ -48,6 +52,8 @@ const useRegistrationRound = create((set, get) => ({
           registrationRound = res.data.items;
           total = res.data.total || registrationRound.length;
           totalPages = res.data.totalPages || 1;
+          currentPage = res.data.page || page;
+          pageSize = res.data.size || size;
         } else if (res.data && Array.isArray(res.data)) {
           registrationRound = res.data;
           total = registrationRound.length;
@@ -59,6 +65,8 @@ const useRegistrationRound = create((set, get) => ({
           registrationRound: registrationRound,
           totalItems: total,
           totalPages: totalPages,
+          currentPage: currentPage,
+          pageSize: pageSize,
           isLoading: false,
         });
       } else {

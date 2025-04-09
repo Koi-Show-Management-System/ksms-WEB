@@ -1467,8 +1467,8 @@ function CompetitionRound({ showId }) {
             pageSize: pageSize,
             total: registrationTotalItems,
             showSizeChanger: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} trong ${total} mục`,
+            showQuickJumper: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
           }}
           onChange={handleTableChange}
           loading={registrationLoading}
