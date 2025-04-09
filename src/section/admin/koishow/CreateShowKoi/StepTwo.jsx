@@ -349,7 +349,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
         roundType: mainRound,
         startTime: dayjs().format(),
         endTime: dayjs().add(1, "day").format(),
-        numberOfRegistrationToAdvance: null,
+        numberOfRegistrationToAdvance: 0,
         status: "pending",
       };
 
@@ -794,7 +794,10 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                           </label>
                                           <Input
                                             type="number"
-                                            value={subRound.minScoreToAdvance}
+                                            min={0}
+                                            value={
+                                              subRound.numberOfRegistrationToAdvance
+                                            }
                                             onChange={(e) => {
                                               setCategories((prev) => {
                                                 const updatedCategories = [
@@ -808,12 +811,47 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                                     index
                                                   ].createRoundRequests = [];
                                                 }
-                                                updatedCategories[
-                                                  index
-                                                ].createRoundRequests[
-                                                  subIndex
-                                                ].minScoreToAdvance =
-                                                  e.target.value;
+
+                                                const subRounds =
+                                                  updatedCategories[
+                                                    index
+                                                  ].createRoundRequests.filter(
+                                                    (r) =>
+                                                      r.roundType ===
+                                                      subRound.roundType
+                                                  );
+
+                                                // Tìm vị trí của vòng nhỏ trong mảng
+                                                const subRoundIndex =
+                                                  subRounds.findIndex(
+                                                    (r) =>
+                                                      r.name === subRound.name
+                                                  );
+
+                                                // Tìm vị trí của vòng nhỏ trong mảng tổng
+                                                const actualIndex =
+                                                  updatedCategories[
+                                                    index
+                                                  ].createRoundRequests.findIndex(
+                                                    (r) =>
+                                                      r.name ===
+                                                        subRound.name &&
+                                                      r.roundType ===
+                                                        subRound.roundType
+                                                  );
+
+                                                if (actualIndex !== -1) {
+                                                  updatedCategories[
+                                                    index
+                                                  ].createRoundRequests[
+                                                    actualIndex
+                                                  ].numberOfRegistrationToAdvance =
+                                                    parseInt(
+                                                      e.target.value,
+                                                      10
+                                                    ) || 0;
+                                                }
+
                                                 return updatedCategories;
                                               });
                                             }}

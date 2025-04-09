@@ -83,6 +83,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
     startTime: null,
     endTime: null,
     koiShowId: showId,
+    hasTank: undefined,
     createAwardCateShowRequests: [],
     createCompetionCategoryVarieties: [],
     createRoundRequests: [],
@@ -121,6 +122,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
       status: "pending",
       startTime: null,
       endTime: null,
+      hasTank: undefined,
       createAwardCateShowRequests: [],
       createCompetionCategoryVarieties: [],
       createRoundRequests: [],
@@ -286,7 +288,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
       roundType: mainRound,
       startTime: dayjs().format(),
       endTime: dayjs().add(1, "day").format(),
-      numberOfRegistrationToAdvance: null,
+      numberOfRegistrationToAdvance: 0,
       status: "pending",
     };
 
@@ -336,7 +338,8 @@ function CreateCategory({ showId, onCategoryCreated }) {
       !category.name ||
       !category.sizeMin ||
       !category.sizeMax ||
-      !category.description
+      !category.description ||
+      category.hasTank === undefined
     ) {
       message.error("Vui lòng điền đầy đủ thông tin cơ bản");
       return false;
@@ -438,13 +441,31 @@ function CreateCategory({ showId, onCategoryCreated }) {
         prizeValue: parseFloat(award.prizeValue) || 0,
       }));
 
-    // Ensure round numberOfRegistrationToAdvance values are numbers
+    // Ensure round numberOfRegistrationToAdvance values are processed correctly
     categoryData.createRoundRequests = categoryData.createRoundRequests.map(
-      (round) => ({
-        ...round,
-        numberOfRegistrationToAdvance:
-          parseInt(round.numberOfRegistrationToAdvance) || 100,
-      })
+      (round) => {
+        // Với vòng Preliminary hoặc vòng Final không đủ điều kiện, đặt giá trị là null
+        if (
+          round.roundType === "Preliminary" ||
+          (round.roundType === "Final" &&
+            (categoryData.createRoundRequests.filter(
+              (r) => r.roundType === "Final"
+            ).length < 2 ||
+              round.roundOrder !== 1))
+        ) {
+          return {
+            ...round,
+            numberOfRegistrationToAdvance: null,
+          };
+        }
+
+        // Các vòng khác, giữ giá trị hoặc convert sang số
+        return {
+          ...round,
+          numberOfRegistrationToAdvance:
+            parseInt(round.numberOfRegistrationToAdvance) || 0,
+        };
+      }
     );
 
     console.log("Category data to submit:", categoryData);
@@ -517,6 +538,35 @@ function CreateCategory({ showId, onCategoryCreated }) {
               </p>
             )}
           </div>
+          <div className="mb-4">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Chọn giống cá Koi
+            </label>
+            {isLoadingVariety ? (
+              <Spin size="small" />
+            ) : (
+              <Select
+                mode="multiple"
+                placeholder="Chọn giống cá koi"
+                className="w-full"
+                value={category.createCompetionCategoryVarieties}
+                onChange={handleVarietyChange}
+              >
+                {variety.map((item) => (
+                  <Option key={item.id} value={item.id}>
+                    {item.name}
+                  </Option>
+                ))}
+              </Select>
+            )}
+            {showErrors &&
+              (!category.createCompetionCategoryVarieties ||
+                category.createCompetionCategoryVarieties.length === 0) && (
+                <p className="text-red-500 text-xs mt-1">
+                  Chọn ít nhất một giống.
+                </p>
+              )}
+          </div>
 
           <div className="flex space-x-4 mb-4">
             <div className="flex-1">
@@ -579,6 +629,25 @@ function CreateCategory({ showId, onCategoryCreated }) {
                   </p>
                 )}
             </div>
+            <div className="flex-1">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Có bể trưng bày
+              </label>
+              <Select
+                placeholder="Chọn có/không"
+                className="w-full"
+                value={category.hasTank}
+                onChange={(value) => handleCategoryChange("hasTank", value)}
+              >
+                <Option value={true}>Có</Option>
+                <Option value={false}>Không</Option>
+              </Select>
+              {showErrors && category.hasTank === undefined && (
+                <p className="text-red-500 text-xs mt-1">
+                  Vui lòng chọn có hoặc không
+                </p>
+              )}
+            </div>
           </div>
 
           <div className="mb-4">
@@ -599,35 +668,6 @@ function CreateCategory({ showId, onCategoryCreated }) {
           </div>
 
           <div className="flex space-x-4 mb-4">
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Chọn giống cá Koi
-              </label>
-              {isLoadingVariety ? (
-                <Spin size="small" />
-              ) : (
-                <Select
-                  mode="multiple"
-                  placeholder="Chọn giống cá koi"
-                  className="w-full"
-                  value={category.createCompetionCategoryVarieties}
-                  onChange={handleVarietyChange}
-                >
-                  {variety.map((item) => (
-                    <Option key={item.id} value={item.id}>
-                      {item.name}
-                    </Option>
-                  ))}
-                </Select>
-              )}
-              {showErrors &&
-                (!category.createCompetionCategoryVarieties ||
-                  category.createCompetionCategoryVarieties.length === 0) && (
-                  <p className="text-red-500 text-xs mt-1">
-                    Chọn ít nhất một giống.
-                  </p>
-                )}
-            </div>
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Số lượng tham gia tối thiểu
@@ -707,7 +747,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                             </span>
                           }
                         >
-                          <Space direction="vertical" style={{ width: "100%" }}>
+                          <div>
                             {!(
                               // Vòng sơ khảo luôn ẩn
                               (
@@ -720,43 +760,51 @@ function CreateCategory({ showId, onCategoryCreated }) {
                                     subRound.roundOrder !== 1))
                               )
                             ) && (
-                              <>
-                                <div>
-                                  <label className="block text-sm font-medium text-gray-700">
-                                    Số cá qua vòng
-                                  </label>
-                                  <Input
-                                    type="number"
-                                    value={
-                                      subRound.numberOfRegistrationToAdvance
-                                    }
-                                    onChange={(e) => {
-                                      setCategory((prev) => {
-                                        const updatedCategory = { ...prev };
-                                        if (
-                                          !updatedCategory.createRoundRequests
-                                        ) {
-                                          updatedCategory.createRoundRequests =
-                                            [];
-                                        }
-                                        const roundIndex =
-                                          updatedCategory.createRoundRequests.findIndex(
-                                            (r) => r.name === subRound.name
-                                          );
-                                        if (roundIndex !== -1) {
-                                          updatedCategory.createRoundRequests[
-                                            roundIndex
-                                          ].numberOfRegistrationToAdvance =
-                                            e.target.value;
-                                        }
-                                        return updatedCategory;
-                                      });
-                                    }}
-                                  />
-                                </div>
-                              </>
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                  Số cá qua vòng
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  value={subRound.numberOfRegistrationToAdvance}
+                                  onChange={(e) => {
+                                    const value =
+                                      parseInt(e.target.value, 10) || 0;
+                                    console.log(
+                                      `Cập nhật số cá qua vòng cho ${subRound.name} thành ${value}`
+                                    );
+
+                                    setCategory((prev) => {
+                                      const updatedCategory = { ...prev };
+                                      if (
+                                        !updatedCategory.createRoundRequests
+                                      ) {
+                                        updatedCategory.createRoundRequests =
+                                          [];
+                                      }
+
+                                      // Tìm vị trí của vòng nhỏ trong mảng tổng
+                                      const actualIndex =
+                                        updatedCategory.createRoundRequests.findIndex(
+                                          (r) =>
+                                            r.name === subRound.name &&
+                                            r.roundType === subRound.roundType
+                                        );
+
+                                      if (actualIndex !== -1) {
+                                        updatedCategory.createRoundRequests[
+                                          actualIndex
+                                        ].numberOfRegistrationToAdvance = value;
+                                      }
+
+                                      return updatedCategory;
+                                    });
+                                  }}
+                                />
+                              </div>
                             )}
-                          </Space>
+                          </div>
                         </Panel>
                       ))}
                   </Collapse>

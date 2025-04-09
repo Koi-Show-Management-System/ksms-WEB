@@ -153,17 +153,43 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
         createRefereeAssignmentRequests: refereeAssignments,
 
-        createRoundRequests: (formData.rounds || []).map((round) => ({
-          id: round.id,
-          name: round.name,
-          roundOrder: parseInt(round.roundOrder) || 0,
-          roundType: round.roundType,
-          startTime: round.startTime || null,
-          endTime: round.endTime || null,
-          numberOfRegistrationToAdvance:
-            parseInt(round.numberOfRegistrationToAdvance) || 100,
-          status: round.status || "pending",
-        })),
+        createRoundRequests: (formData.rounds || []).map((round) => {
+          // Xử lý giá trị numberOfRegistrationToAdvance
+          let numberOfRegistrationToAdvance =
+            round.numberOfRegistrationToAdvance;
+
+          // Với vòng Preliminary hoặc vòng Final không đủ điều kiện, đặt giá trị là null
+          if (
+            round.roundType === "Preliminary" ||
+            (round.roundType === "Final" &&
+              (formData.rounds.filter((r) => r?.roundType === "Final").length <
+                2 ||
+                round.roundOrder !== 1))
+          ) {
+            numberOfRegistrationToAdvance = null;
+          }
+          // Với các vòng khác, đảm bảo giá trị là số
+          else if (typeof numberOfRegistrationToAdvance === "string") {
+            numberOfRegistrationToAdvance =
+              parseInt(numberOfRegistrationToAdvance, 10) || 0;
+          } else if (
+            numberOfRegistrationToAdvance === null ||
+            numberOfRegistrationToAdvance === undefined
+          ) {
+            numberOfRegistrationToAdvance = 0;
+          }
+
+          return {
+            id: round.id,
+            name: round.name,
+            roundOrder: parseInt(round.roundOrder) || 0,
+            roundType: round.roundType,
+            startTime: round.startTime || null,
+            endTime: round.endTime || null,
+            numberOfRegistrationToAdvance: numberOfRegistrationToAdvance,
+            status: round.status || "pending",
+          };
+        }),
 
         hasTank: values.hasTank,
       };
@@ -464,11 +490,28 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       0
     );
 
+    // Xác định giá trị mặc định cho numberOfRegistrationToAdvance
+    let defaultNumberToAdvance = 0;
+
+    // Với vòng Preliminary luôn đặt null
+    if (mainRound === "Preliminary") {
+      defaultNumberToAdvance = null;
+    }
+    // Với vòng Final, chỉ vòng đầu tiên khi có từ 2 vòng trở lên mới cần nhập
+    else if (mainRound === "Final") {
+      const finalRoundsCount = roundsOfType.length + 1; // +1 vì đang thêm vòng mới
+      const isFirstRound = maxOrder + 1 === 1;
+
+      if (finalRoundsCount < 2 || !isFirstRound) {
+        defaultNumberToAdvance = null;
+      }
+    }
+
     const newRound = {
-      name: `Vòng Nhỏ ${maxOrder + 1} - ${roundLabelMap[mainRound]}`,
+      name: `Vòng ${maxOrder + 1}`,
       roundOrder: maxOrder + 1,
       roundType: mainRound,
-      numberOfRegistrationToAdvance: 100, // Giá trị mặc định
+      numberOfRegistrationToAdvance: defaultNumberToAdvance,
       status: "pending",
     };
 
@@ -674,46 +717,63 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                           <>
                             {roundsOfType.length > 0 ? (
                               <Collapse className="mt-2">
-                                {roundsOfType.map((field) => (
-                                  <Panel
-                                    header={form.getFieldValue([
-                                      "rounds",
-                                      field.name,
-                                      "name",
-                                    ])}
-                                    key={field.key}
-                                    extra={
-                                      <span
-                                        className="text-red-500 cursor-pointer hover:text-red-700"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRemoveRound(field.name);
-                                        }}
-                                      >
-                                        <DeleteOutlined />
-                                      </span>
-                                    }
-                                  >
-                                    <Space
-                                      direction="vertical"
-                                      style={{ width: "100%" }}
-                                    >
-                                      <div>
-                                        <Form.Item
-                                          name={[field.name, "name"]}
-                                          label="Tên Vòng"
-                                          rules={[
-                                            {
-                                              required: true,
-                                              message: "Vui lòng nhập tên vòng",
-                                            },
-                                          ]}
+                                {roundsOfType
+                                  .sort((a, b) => {
+                                    const orderA =
+                                      form.getFieldValue([
+                                        "rounds",
+                                        a.name,
+                                        "roundOrder",
+                                      ]) || 0;
+                                    const orderB =
+                                      form.getFieldValue([
+                                        "rounds",
+                                        b.name,
+                                        "roundOrder",
+                                      ]) || 0;
+                                    return orderA - orderB;
+                                  })
+                                  .map((field) => (
+                                    <Panel
+                                      header={form.getFieldValue([
+                                        "rounds",
+                                        field.name,
+                                        "name",
+                                      ])}
+                                      key={field.key}
+                                      extra={
+                                        <span
+                                          className="text-red-500 cursor-pointer hover:text-red-700"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleRemoveRound(field.name);
+                                          }}
                                         >
-                                          <Input placeholder="Nhập tên vòng" />
-                                        </Form.Item>
-                                      </div>
+                                          <DeleteOutlined />
+                                        </span>
+                                      }
+                                    >
+                                      <Space
+                                        direction="vertical"
+                                        style={{ width: "100%" }}
+                                      >
+                                        <div>
+                                          <Form.Item
+                                            name={[field.name, "name"]}
+                                            label="Tên Vòng"
+                                            rules={[
+                                              {
+                                                required: true,
+                                                message:
+                                                  "Vui lòng nhập tên vòng",
+                                              },
+                                            ]}
+                                          >
+                                            <Input placeholder="Nhập tên vòng" />
+                                          </Form.Item>
+                                        </div>
 
-                                      {/* <div>
+                                        {/* <div>
                                         <Form.Item
                                           name={[field.name, "roundOrder"]}
                                           label="Thứ tự vòng"
@@ -732,29 +792,60 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                         </Form.Item>
                                       </div> */}
 
-                                      <div>
-                                        {form.getFieldValue([
-                                          "rounds",
-                                          field.name,
-                                          "numberOfRegistrationToAdvance",
-                                        ]) !== null && (
-                                          <Form.Item
-                                            name={[
-                                              field.name,
-                                              "numberOfRegistrationToAdvance",
-                                            ]}
-                                            label="Số lượng cá qua vòng"
-                                          >
-                                            <InputNumber
-                                              min={0}
-                                              max={100}
-                                              className="w-full"
-                                            />
-                                          </Form.Item>
-                                        )}
-                                      </div>
+                                        <div>
+                                          {!(
+                                            // Vòng sơ khảo luôn ẩn
+                                            (
+                                              form.getFieldValue([
+                                                "rounds",
+                                                field.name,
+                                                "roundType",
+                                              ]) === "Preliminary" ||
+                                              // Vòng chung kết chỉ hiện khi có 2 vòng trở lên và là vòng 1
+                                              (form.getFieldValue([
+                                                "rounds",
+                                                field.name,
+                                                "roundType",
+                                              ]) === "Final" &&
+                                                (form
+                                                  .getFieldValue("rounds")
+                                                  ?.filter(
+                                                    (r) =>
+                                                      r?.roundType === "Final"
+                                                  )?.length < 2 ||
+                                                  form.getFieldValue([
+                                                    "rounds",
+                                                    field.name,
+                                                    "roundOrder",
+                                                  ]) !== 1))
+                                            )
+                                          ) && (
+                                            <Form.Item
+                                              name={[
+                                                field.name,
+                                                "numberOfRegistrationToAdvance",
+                                              ]}
+                                              label="Số lượng cá qua vòng"
+                                            >
+                                              <InputNumber
+                                                min={0}
+                                                max={100}
+                                                className="w-full"
+                                                parser={(value) => {
+                                                  const parsed = parseInt(
+                                                    value,
+                                                    10
+                                                  );
+                                                  return isNaN(parsed)
+                                                    ? 0
+                                                    : parsed;
+                                                }}
+                                              />
+                                            </Form.Item>
+                                          )}
+                                        </div>
 
-                                      {/* <div>
+                                        {/* <div>
                                         <Form.Item
                                           name={[field.name, "status"]}
                                           label="Trạng thái"
@@ -772,9 +863,9 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                           </Select>
                                         </Form.Item>
                                       </div> */}
-                                    </Space>
-                                  </Panel>
-                                ))}
+                                      </Space>
+                                    </Panel>
+                                  ))}
                               </Collapse>
                             ) : (
                               <div className="text-center text-gray-500 py-4 mt-2 border border-dashed rounded-md">
