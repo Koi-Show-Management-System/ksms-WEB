@@ -326,9 +326,17 @@ const EvaluationScoreSheet = ({
       // Tạo mảng để lưu trữ các promise tạo error type
       const errorTypePromises = [];
 
+      console.log("Before processing, criteriaErrors:", criteriaErrors);
+
       // Lặp qua tất cả các tiêu chí và lỗi
       for (const [criteriaId, errors] of Object.entries(criteriaErrors)) {
+        console.log(
+          `Processing criteriaId ${criteriaId} with ${errors.length} errors`
+        );
+
         for (const error of errors) {
+          console.log("Processing error:", error);
+
           // Nếu là lỗi cục bộ, cần tạo error type trên server trước
           if (error.isLocal) {
             const errorTypePromise = createErrorType(
@@ -347,44 +355,40 @@ const EvaluationScoreSheet = ({
                 );
               }
 
-              // Thêm lỗi với ID thực vào mảng để gửi
-              console.log(
-                `Debug percentage value: ${error.percentage}, type: ${typeof error.percentage}`
-              );
-              // Cố định weight là 0.01 (1%) để kiểm tra
-              const errorWeight = 0.01;
-              console.log(
-                `Fixed weight to: ${errorWeight} instead of calculating from percentage`
-              );
+              // Sử dụng chuỗi "0.01" thay vì số 0.01
+              const errorWeight = "0.01";
+              console.log(`Using fixed weight as string: "${errorWeight}"`);
 
-              createScoreDetailErrors.push({
+              // Thêm lỗi với ID thực vào mảng để gửi
+              const errorDetail = {
                 errorTypeId: realErrorId,
                 severity: error.severity,
                 weight: errorWeight,
                 pointMinus: error.pointMinus,
-              });
+              };
+
+              console.log("Adding error detail to array:", errorDetail);
+              createScoreDetailErrors.push(errorDetail);
 
               return realErrorId;
             });
 
             errorTypePromises.push(errorTypePromise);
           } else {
-            // Nếu không phải lỗi cục bộ, sử dụng errorTypeId có sẵn
-            console.log(
-              `Debug percentage value: ${error.percentage}, type: ${typeof error.percentage}`
-            );
-            // Cố định weight là 0.01 (1%) để kiểm tra
-            const errorWeight = 0.01;
-            console.log(
-              `Fixed weight to: ${errorWeight} instead of calculating from percentage`
-            );
+            // Sử dụng chuỗi "0.01" thay vì số 0.01
+            const errorWeight = "0.01";
+            console.log(`Using fixed weight as string: "${errorWeight}"`);
 
-            createScoreDetailErrors.push({
+            // Thêm lỗi với ID có sẵn vào mảng để gửi
+            const errorDetail = {
               errorTypeId: error.errorTypeId,
               severity: error.severity,
               weight: errorWeight,
               pointMinus: error.pointMinus,
-            });
+            };
+
+            console.log("Adding error detail to array:", errorDetail);
+            createScoreDetailErrors.push(errorDetail);
           }
         }
       }
@@ -392,30 +396,30 @@ const EvaluationScoreSheet = ({
       // Đợi tất cả các error type được tạo xong
       await Promise.all(errorTypePromises);
 
-      console.log("Submitting data to API:", {
+      const requestBody = {
         refereeAccountId,
         registrationRoundId,
         initialScore,
         totalPointMinus: totalDeduction,
         comment: comments,
         createScoreDetailErrors,
-      });
+      };
+
+      console.log("Final request body:", JSON.stringify(requestBody, null, 2));
 
       // Gọi API với dữ liệu đã tính
-      const result = await createScoreEvaluation({
-        refereeAccountId,
-        registrationRoundId,
-        initialScore,
-        totalPointMinus: totalDeduction,
-        comment: comments,
-        createScoreDetailErrors,
-      });
+      const result = await createScoreEvaluation(requestBody);
 
       console.log("Score submission result:", result);
 
       // Kiểm tra nếu result.success hoặc đúng status code
       if (result.success || result.status === 201 || result.status === 200) {
         console.log("result", result);
+
+        notification.success({
+          message: "Chấm điểm thành công",
+          description: "Điểm đánh giá đã được lưu",
+        });
 
         // Gọi callback nếu có
         if (onScoreSubmitted && typeof onScoreSubmitted === "function") {
