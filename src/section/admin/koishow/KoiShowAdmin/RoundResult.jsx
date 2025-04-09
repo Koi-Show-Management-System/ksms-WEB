@@ -41,42 +41,16 @@ function RoundResult({ showId }) {
       const response = await fetchGetRoundResult(value);
       console.log("API response:", response);
 
-      // Kiểm tra từng trường hợp cấu trúc dữ liệu có thể xảy ra
-      if (response && response.statusCode === 200) {
-        // Trường hợp 1: Dữ liệu nằm trong response.data.data (cấu trúc mảng)
-        if (response.data && Array.isArray(response.data.data)) {
-          console.log("Trường hợp 1: Dữ liệu nằm trong response.data.data");
-          setResultData(response.data.data);
-        }
-        // Trường hợp 2: Dữ liệu nằm trực tiếp trong response.data (cấu trúc mảng)
-        else if (response.data && Array.isArray(response.data)) {
-          console.log(
-            "Trường hợp 2: Dữ liệu nằm trực tiếp trong response.data"
-          );
-          setResultData(response.data);
-        }
-        // Trường hợp 3: Dữ liệu nằm trong response.data.data[0] (mảng bên trong object)
-        else if (
-          response.data &&
-          response.data.data &&
-          Array.isArray(response.data.data[0])
-        ) {
-          console.log("Trường hợp 3: Dữ liệu nằm trong response.data.data[0]");
-          setResultData(response.data.data[0]);
-        }
-        // Trường hợp 4: Dữ liệu là một object duy nhất
-        else if (
-          response.data &&
-          response.data.data &&
-          typeof response.data.data === "object"
-        ) {
-          console.log("Trường hợp 4: Dữ liệu là một object duy nhất");
-          setResultData([response.data.data]);
-        } else {
-          console.log("Không tìm thấy cấu trúc dữ liệu hợp lệ", response);
-          setResultData([]);
-        }
+      if (
+        response &&
+        response.statusCode === 200 &&
+        response.data &&
+        response.data.data
+      ) {
+        console.log("Đã tìm thấy dữ liệu:", response.data.data);
+        setResultData(response.data.data);
       } else {
+        console.log("Không tìm thấy dữ liệu hợp lệ", response);
         setResultData([]);
       }
     } else {
