@@ -348,10 +348,16 @@ const EvaluationScoreSheet = ({
               }
 
               // Thêm lỗi với ID thực vào mảng để gửi
+              console.log(
+                `Debug percentage value: ${error.percentage}, type: ${typeof error.percentage}`
+              );
+              const errorWeight = parseFloat(error.percentage) / 100;
+              console.log(`Calculated weight: ${errorWeight}`);
+
               createScoreDetailErrors.push({
                 errorTypeId: realErrorId,
                 severity: error.severity,
-                weight: error.percentage / 100, // Lưu ý: Đây là weight cho API, khác với criteriaWeight
+                weight: errorWeight, // Sử dụng giá trị đã tính
                 pointMinus: error.pointMinus,
               });
 
@@ -361,10 +367,16 @@ const EvaluationScoreSheet = ({
             errorTypePromises.push(errorTypePromise);
           } else {
             // Nếu không phải lỗi cục bộ, sử dụng errorTypeId có sẵn
+            console.log(
+              `Debug percentage value: ${error.percentage}, type: ${typeof error.percentage}`
+            );
+            const errorWeight = parseFloat(error.percentage) / 100;
+            console.log(`Calculated weight: ${errorWeight}`);
+
             createScoreDetailErrors.push({
               errorTypeId: error.errorTypeId,
               severity: error.severity,
-              weight: error.percentage / 100, // Lưu ý: Đây là weight cho API, khác với criteriaWeight
+              weight: errorWeight, // Sử dụng giá trị đã tính
               pointMinus: error.pointMinus,
             });
           }
