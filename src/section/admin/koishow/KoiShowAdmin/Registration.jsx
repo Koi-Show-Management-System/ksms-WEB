@@ -496,20 +496,9 @@ function Registration({ showId, statusShow }) {
           {/* <Typography.Title level={4} style={{ margin: 0 }}>
             Quản lý đăng ký
           </Typography.Title> */}
-          {filteredData.some(
-            (item) => item.status?.toLowerCase() === "checkin"
-          ) && (
-            <Button
-              type="primary"
-              icon={<SendOutlined />}
-              onClick={showAssignModal}
-            >
-              Gán vòng
-            </Button>
-          )}
         </Flex>
         {/* Thêm bộ lọc category và status */}
-        <div className="mb-4">
+        <Flex justify="space-between" align="center" className="mb-4">
           <Select
             style={{ width: "25%" }}
             placeholder="Chọn hạng mục"
@@ -523,7 +512,19 @@ function Registration({ showId, statusShow }) {
               </Select.Option>
             ))}
           </Select>
-        </div>
+
+          {filteredData.some(
+            (item) => item.status?.toLowerCase() === "checkin"
+          ) && (
+            <Button
+              type="primary"
+              icon={<SendOutlined />}
+              onClick={showAssignModal}
+            >
+              Gán vòng
+            </Button>
+          )}
+        </Flex>
         <Table
           columns={columns}
           dataSource={filteredData}

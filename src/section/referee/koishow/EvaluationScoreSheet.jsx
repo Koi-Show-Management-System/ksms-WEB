@@ -151,7 +151,7 @@ const EvaluationScoreSheet = ({
       severity, // Mức độ lỗi (eb, mb, sb)
       pointMinus, // Điểm trừ đã tính
       percentage, // % lỗi đã chọn
-      weight: percentage * 100, // Thêm trường weight, % lỗi nhân với 100%
+      weight: percentage / 100, // Thêm trường weight, % lỗi nhân với 100%
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
 
