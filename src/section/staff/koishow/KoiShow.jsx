@@ -89,14 +89,16 @@ function KoiShow() {
       render: (date) => new Date(date).toLocaleDateString("vi-VN"), // Hiển thị dạng DD/MM/YYYY
     },
     {
-      title: "Phí Đăng Kí",
-      dataIndex: "registrationFee",
-      key: "registrationFee",
-      sorter: (a, b) => a.registrationFee - b.registrationFee,
-      render: (fee) =>
-        fee
-          ? fee.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-          : "Miễn phí",
+      title: "Số lượng tối thiểu",
+      dataIndex: "minParticipants",
+      key: "minParticipants",
+      render: (value) => value || "0",
+    },
+    {
+      title: "Số lượng tối đa",
+      dataIndex: "maxParticipants",
+      key: "maxParticipants",
+      render: (value) => value || "0",
     },
 
     {
@@ -171,6 +173,8 @@ function KoiShow() {
           startExhibitionDate: item.startExhibitionDate,
           registrationFee: item.registrationFee,
           location: item.location,
+          minParticipants: item.minParticipants,
+          maxParticipants: item.maxParticipants,
           status: item.status,
         }))}
         pagination={false}

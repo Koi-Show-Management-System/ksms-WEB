@@ -534,7 +534,7 @@ function Registration({ showId, statusShow }) {
               ? {
                   current: currentPage,
                   pageSize: pageSize,
-                  total: filteredData.length, // Sử dụng độ dài của dữ liệu đã lọc
+                  total: totalItems, // Sử dụng tổng số mục từ API thay vì chiều dài dữ liệu đã lọc
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,
