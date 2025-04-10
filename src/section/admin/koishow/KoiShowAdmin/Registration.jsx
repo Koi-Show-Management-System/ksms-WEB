@@ -135,7 +135,7 @@ function Registration({ showId, statusShow }) {
     setSelectedStatus(null);
 
     // Fetch lại dữ liệu với category mới
-    fetchRegistration(1, 10, showId, value ? [value] : undefined);
+    fetchRegistration(1, 10, showId, value ? [value] : undefined, null);
   };
 
   const handleRoundSelect = (roundId, roundName) => {
@@ -191,13 +191,15 @@ function Registration({ showId, statusShow }) {
     console.log("Pagination:", pagination);
     console.log("Filters:", filters);
     console.log("CategoryId:", selectedCategory);
+    console.log("Selected statuses:", filteredStatuses);
 
     // Fetch data with filters
     fetchRegistration(
       pagination.current,
       pagination.pageSize,
       showId,
-      selectedCategory ? [selectedCategory] : undefined
+      selectedCategory ? [selectedCategory] : undefined,
+      filteredStatuses // Truyền trạng thái đã chọn để lọc từ API
     );
   };
 
@@ -293,16 +295,9 @@ function Registration({ showId, statusShow }) {
 
     if (!registration || registration.length === 0) return [];
 
+    // Không cần lọc theo status nữa vì đã lọc từ API
     return registration.filter((item) => {
-      const categoryMatches = item.competitionCategory?.id === selectedCategory;
-
-      // Handle multiple status filtering
-      const statusMatches =
-        selectedStatus && selectedStatus.length > 0
-          ? selectedStatus.includes(item.status?.toLowerCase())
-          : true;
-
-      return categoryMatches && statusMatches;
+      return item.competitionCategory?.id === selectedCategory;
     });
   };
   const handleViewDetails = (record) => {

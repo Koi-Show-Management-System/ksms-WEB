@@ -1,8 +1,8 @@
 import axiosClient from "../config/axiosClient";
 
-const getRegistration = (page, size, showIds, categoryIds) => {
+const getRegistration = (page, size, showIds, categoryIds, statuses) => {
   // Log để debug
-  console.log("Input params:", { page, size, showIds, categoryIds });
+  console.log("Input params:", { page, size, showIds, categoryIds, statuses });
 
   // Truyền tham số theo đúng cách mà Swagger đang sử dụng
   const params = {
@@ -26,6 +26,12 @@ const getRegistration = (page, size, showIds, categoryIds) => {
     } else {
       params.CategoryIds = categoryIds;
     }
+  }
+
+  // Thêm Statuses nếu có
+  if (statuses && statuses.length > 0) {
+    // Sử dụng phương thức join để chuyển mảng thành chuỗi các giá trị cách nhau bởi dấu phẩy
+    params.Status = statuses.join(",");
   }
 
   console.log("Request params:", params);
