@@ -306,30 +306,30 @@ function CreateShow() {
     return !hasError;
   };
 
-  // const handleNext = () => {
-  //   setShowErrors(true);
-
-  //   if (!validateStep()) {
-  //     return;
-  //   }
-
-  //   if (currentStep === 3) {
-  //     setIsConfirmModalOpen(true);
-  //   } else {
-  //     setCurrentStep((prev) => prev + 1);
-  //     setShowErrors(false);
-  //   }
-  // };
-
   const handleNext = () => {
     setShowErrors(true);
+
+    if (!validateStep()) {
+      return;
+    }
 
     if (currentStep === 3) {
       setIsConfirmModalOpen(true);
     } else {
       setCurrentStep((prev) => prev + 1);
+      setShowErrors(false);
     }
   };
+
+  // const handleNext = () => {
+  //   setShowErrors(true);
+
+  //   if (currentStep === 3) {
+  //     setIsConfirmModalOpen(true);
+  //   } else {
+  //     setCurrentStep((prev) => prev + 1);
+  //   }
+  // };
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
@@ -443,12 +443,12 @@ function CreateShow() {
         <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
       </Modal>
       {/* Debug Panel */}
-      <div className="mt-6 p-4 bg-gray-100 rounded-md">
+      {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
         <pre className="overflow-auto max-h-96">
           {JSON.stringify(formData, null, 2)}
         </pre>
-      </div>
+      </div> */}
     </div>
   );
 }

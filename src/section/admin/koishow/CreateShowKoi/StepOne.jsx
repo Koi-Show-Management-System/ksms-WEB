@@ -355,7 +355,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       <div className="flex space-x-4">
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700">
-            Ngày bắt đầu đăng ký
+            Ngày bắt đầu triễn lãm
           </label>
           <DatePicker
             showTime
@@ -376,7 +376,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700">
-            Ngày kết thúc đăng ký
+            Ngày kết thúc triễn lãm
           </label>
           <DatePicker
             showTime
@@ -394,53 +394,9 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         </div>
       </div>
 
-      <div className="flex space-x-4">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700">
-            Ngày bắt đầu sự kiện
-          </label>
-          <DatePicker
-            showTime
-            className="w-full"
-            value={
-              data.startExhibitionDate
-                ? dayjs(data.startExhibitionDate).tz("Asia/Ho_Chi_Minh")
-                : null
-            }
-            onChange={(value) => handleDateChange("startExhibitionDate", value)}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder="Chọn ngày bắt đầu sự kiện"
-          />
-          {timeErrors.startExhibitionDate && (
-            <p className="text-red-500 text-xs mt-1">
-              {timeErrors.startExhibitionDate}
-            </p>
-          )}
-        </div>
-
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700">
-            Ngày kết thúc sự kiện
-          </label>
-          <DatePicker
-            showTime
-            className="w-full"
-            value={
-              data.endExhibitionDate
-                ? dayjs(data.endExhibitionDate).tz("Asia/Ho_Chi_Minh")
-                : null
-            }
-            onChange={(value) => handleDateChange("endExhibitionDate", value)}
-            format="YYYY-MM-DD HH:mm:ss"
-            placeholder="Chọn ngày kết thúc sự kiện"
-          />
-          {timeErrors.endExhibitionDate && (
-            <p className="text-red-500 text-xs mt-1">
-              {timeErrors.endExhibitionDate}
-            </p>
-          )}
-        </div>
-      </div>
+      {/* Trường startExhibitionDate và endExhibitionDate ẩn nhưng vẫn truyền dữ liệu */}
+      <input type="hidden" value={data.startExhibitionDate || ""} />
+      <input type="hidden" value={data.endExhibitionDate || ""} />
 
       <div className="flex space-x-4">
         <div className="flex-1">

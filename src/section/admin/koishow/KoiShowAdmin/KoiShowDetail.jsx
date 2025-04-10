@@ -478,7 +478,7 @@ function KoiShowDetail() {
                             {new Date(
                               koiShowDetail.data.startDate
                             ).toLocaleDateString("vi-VN")}{" "}
-                            - Mở Đăng Ký
+                            - Ngày bắt đầu triễn lãm
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -486,24 +486,16 @@ function KoiShowDetail() {
                             {new Date(
                               koiShowDetail.data.endDate
                             ).toLocaleDateString("vi-VN")}{" "}
-                            - Đóng Đăng Ký
+                            - Ngày kết thúc triễn lãm
                           </span>
                         </div>
-                        <div className="flex justify-between">
-                          <span>
-                            {new Date(
-                              koiShowDetail.data.startExhibitionDate
-                            ).toLocaleDateString("vi-VN")}{" "}
-                            - Ngày Bắt Đầu Giải Đấu & Triển Lãm
-                          </span>
+
+                        <div>
+                          Tham gia tối thiểu:{" "}
+                          {koiShowDetail.data.minParticipants}
                         </div>
-                        <div className="flex justify-between">
-                          <span>
-                            {new Date(
-                              koiShowDetail.data.endExhibitionDate
-                            ).toLocaleDateString("vi-VN")}{" "}
-                            - Ngày Kết Thúc Giải Đấu & Triễn Lãm
-                          </span>
+                        <div>
+                          Tham gia tối đa: {koiShowDetail.data.maxParticipants}
                         </div>
                         <div className="flex justify-between">
                           <span>Địa điểm: {koiShowDetail.data.location}</span>
@@ -536,14 +528,6 @@ function KoiShowDetail() {
                             </div>
                           </div>
                         ))}
-
-                        <div>
-                          Tham gia tối thiểu:{" "}
-                          {koiShowDetail.data.minParticipants}
-                        </div>
-                        <div>
-                          Tham gia tối đa: {koiShowDetail.data.maxParticipants}
-                        </div>
                       </div>
                     ),
                     extra: !isEditDisabled && (
@@ -766,7 +750,7 @@ function KoiShowDetail() {
               <InputNumber min={0} style={{ width: "100%" }} />
             </Form.Item>
 
-            <Form.Item name="startDate" label="Ngày Bắt Đầu">
+            <Form.Item name="startDate" label="Ngày Bắt Đầu Triễn Lãm">
               <DatePicker
                 showTime
                 format="YYYY-MM-DD HH:mm:ss"
@@ -774,7 +758,7 @@ function KoiShowDetail() {
               />
             </Form.Item>
 
-            <Form.Item name="endDate" label="Ngày Kết Thúc">
+            <Form.Item name="endDate" label="Ngày Kết Thúc Triễn Lãm">
               <DatePicker
                 showTime
                 format="YYYY-MM-DD HH:mm:ss"
@@ -782,23 +766,13 @@ function KoiShowDetail() {
               />
             </Form.Item>
 
-            <Form.Item
-              name="startExhibitionDate"
-              label="Ngày Bắt Đầu Triển Lãm"
-            >
-              <DatePicker
-                showTime
-                format="YYYY-MM-DD HH:mm:ss"
-                style={{ width: "100%" }}
-              />
+            {/* Ẩn trường startExhibitionDate và endExhibitionDate */}
+            <Form.Item name="startExhibitionDate" hidden>
+              <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" />
             </Form.Item>
 
-            <Form.Item name="endExhibitionDate" label="Ngày Kết Thúc Triển Lãm">
-              <DatePicker
-                showTime
-                format="YYYY-MM-DD HH:mm:ss"
-                style={{ width: "100%" }}
-              />
+            <Form.Item name="endExhibitionDate" hidden>
+              <DatePicker showTime format="YYYY-MM-DD HH:mm:ss" />
             </Form.Item>
 
             {/* Hidden field to store the image URL */}
