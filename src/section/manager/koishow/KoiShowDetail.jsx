@@ -5,7 +5,6 @@ import {
   Card,
   Image,
   Tabs,
-  Spin,
   notification,
   Modal,
   Button,
@@ -15,8 +14,6 @@ import {
   InputNumber,
   message,
   Upload,
-  Table,
-  Space,
   Popconfirm,
 } from "antd";
 import dayjs from "dayjs";
@@ -28,22 +25,27 @@ import {
 } from "@ant-design/icons";
 import koiFishImage from "../../../assets/koiFishImage.png";
 import sponsorLogo1 from "../../../assets/sponsorLogo1.png";
-import Category from "./Category";
-import KoiList from "./KoiList";
+import Category from "../../admin/koishow/KoiShowAdmin/Category";
 import ManageShow from "./ManageShow";
-import Votes from "./Votes";
-import Rules from "./Rules";
-import Sponsor from "./Sponsor";
-import CompetitionRound from "./CompetitionRound";
-import { useParams } from "react-router-dom";
+import Votes from "../../admin/koishow/KoiShowAdmin/Votes";
+import Rules from "../../admin/koishow/KoiShowAdmin/Rules";
+import Sponsor from "../../admin/koishow/KoiShowAdmin/Sponsor";
+import { useParams, useSearchParams } from "react-router-dom";
 import useKoiShow from "../../../hooks/useKoiShow";
 import { Loading } from "../../../components";
 import useTicketType from "../../../hooks/useTicketType";
-import Tank from "./Tank";
+import CompetitionRound from "../../admin/koishow/KoiShowAdmin/CompetitionRound";
+import Registration from "../../admin/koishow/KoiShowAdmin/Registration";
+import Tank from "../../admin/koishow/KoiShowAdmin/Tank";
+import Ticket from "../../admin/koishow/KoiShowAdmin/Ticket";
+import RoundResult from "../../admin/koishow/KoiShowAdmin/RoundResult";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const showStatus = searchParams.get("status");
+  const isEditDisabled = showStatus === "published";
   const { koiShowDetail, isLoading, fetchKoiShowDetail, updateKoiShow } =
     useKoiShow();
   const [form] = Form.useForm();
@@ -276,12 +278,19 @@ function KoiShowDetail() {
     {
       key: "category",
       label: "Danh Mục",
-      children: <Category showId={id} />,
+      children: <Category showId={id} statusShow={showStatus} />,
     },
     {
       key: "koiList",
       label: "Đơn Đăng Ký",
-      children: <KoiList showId={id} />,
+      children: (
+        <Registration showId={id} statusShow={koiShowDetail.data.status} />
+      ),
+    },
+    {
+      key: "ticket",
+      label: "Quản lý vé",
+      children: <Ticket showId={id} statusShow={koiShowDetail.data.status} />,
     },
     {
       key: "manageShow",
@@ -299,9 +308,14 @@ function KoiShowDetail() {
       children: <CompetitionRound showId={id} />,
     },
     {
+      key: "roundResult",
+      label: "Kết Quả Cuối Cùng",
+      children: <RoundResult showId={id} />,
+    },
+    {
       key: "votes",
       label: "Bình Chọn",
-      children: <Votes />,
+      children: <Votes showId={id} />,
     },
     {
       key: "rules",
@@ -429,12 +443,14 @@ function KoiShowDetail() {
       <div className="mb-8">
         <div className="flex justify-between">
           <h1 className="text-3xl font-bold mb-4">{koiShowDetail.data.name}</h1>
-          <div
-            onClick={openEditModal}
-            className="text-blue-500 hover:text-blue-700 cursor-pointer"
-          >
-            <EditOutlined style={{ fontSize: "18px" }} />
-          </div>
+          {!isEditDisabled && (
+            <div
+              onClick={openEditModal}
+              className="text-blue-500 hover:text-blue-700 cursor-pointer"
+            >
+              <EditOutlined style={{ fontSize: "18px" }} />
+            </div>
+          )}
         </div>
         <p className="text-gray-600">{koiShowDetail.data.description}</p>
       </div>
@@ -530,7 +546,7 @@ function KoiShowDetail() {
                         </div>
                       </div>
                     ),
-                    extra: (
+                    extra: !isEditDisabled && (
                       <InfoCircleOutlined
                         style={{
                           fontSize: "16px",
@@ -739,10 +755,6 @@ function KoiShowDetail() {
               <Input />
             </Form.Item>
 
-            <Form.Item name="registrationFee" label="Phí Đăng Ký">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-
             <Form.Item
               name="minParticipants"
               label="Số Người Tham Gia Tối Thiểu"
@@ -822,14 +834,16 @@ function KoiShowDetail() {
         title={
           <div className="flex items-center justify-between py-5">
             <span className="text-xl font-semibold">Quản lý vé</span>
-            <PlusOutlined
-              className="text-blue-500 text-xl cursor-pointer hover:text-blue-700"
-              onClick={() => {
-                setShowTicketForm(true);
-                ticketForm.resetFields();
-                setEditingTicket(null);
-              }}
-            />
+            {!isEditDisabled && (
+              <PlusOutlined
+                className="text-blue-500 text-xl cursor-pointer hover:text-blue-700"
+                onClick={() => {
+                  setShowTicketForm(true);
+                  ticketForm.resetFields();
+                  setEditingTicket(null);
+                }}
+              />
+            )}
           </div>
         }
         open={ticketModalVisible}
@@ -842,7 +856,13 @@ function KoiShowDetail() {
         footer={null}
         width={800}
       >
-        {showTicketForm && !editingTicket && (
+        {isEditDisabled && (
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-600 rounded-md">
+            <p>Không thể chỉnh sửa vé khi triển lãm đã công bố</p>
+          </div>
+        )}
+
+        {showTicketForm && !editingTicket && !isEditDisabled && (
           <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h3 className="text-lg font-medium mb-4 border-b pb-2">
               Tạo vé mới
@@ -998,19 +1018,23 @@ function KoiShowDetail() {
                         }).format(ticket.price)}
                       </div>
                       <div className="flex justify-end mt-2 space-x-2">
-                        <EditOutlined
-                          className="text-blue-500 cursor-pointer hover:text-blue-700 mr-3"
-                          onClick={() => handleEditTicket(ticket)}
-                        />
-                        <Popconfirm
-                          title="Bạn có chắc chắn muốn xóa vé này?"
-                          onConfirm={() => handleDeleteTicket(ticket.id)}
-                          okText="Có"
-                          cancelText="Không"
-                          placement="left"
-                        >
-                          <DeleteOutlined className="text-red-500 cursor-pointer hover:text-red-700" />
-                        </Popconfirm>
+                        {!isEditDisabled && (
+                          <>
+                            <EditOutlined
+                              className="text-blue-500 cursor-pointer hover:text-blue-700 mr-3"
+                              onClick={() => handleEditTicket(ticket)}
+                            />
+                            <Popconfirm
+                              title="Bạn có chắc chắn muốn xóa vé này?"
+                              onConfirm={() => handleDeleteTicket(ticket.id)}
+                              okText="Có"
+                              cancelText="Không"
+                              placement="left"
+                            >
+                              <DeleteOutlined className="text-red-500 cursor-pointer hover:text-red-700" />
+                            </Popconfirm>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
