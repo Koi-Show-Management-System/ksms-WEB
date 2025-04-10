@@ -187,13 +187,17 @@ function Registration({ showId, statusShow }) {
     // Update selectedStatus state to handle multiple selections
     setSelectedStatus(filteredStatuses);
 
+    // Log thông tin phân trang và filter
+    console.log("Pagination:", pagination);
+    console.log("Filters:", filters);
+    console.log("CategoryId:", selectedCategory);
+
     // Fetch data with filters
     fetchRegistration(
       pagination.current,
       pagination.pageSize,
       showId,
-      selectedCategory ? [selectedCategory] : undefined,
-      filteredStatuses // Pass the array of selected statuses
+      selectedCategory ? [selectedCategory] : undefined
     );
   };
 
@@ -586,7 +590,6 @@ function Registration({ showId, statusShow }) {
                   current: currentPage,
                   pageSize: pageSize,
                   total: totalItems,
-                  pageCount: totalPages,
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,

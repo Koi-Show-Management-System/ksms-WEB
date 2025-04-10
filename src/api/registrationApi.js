@@ -1,16 +1,38 @@
 import axiosClient from "../config/axiosClient";
 
 const getRegistration = (page, size, showIds, categoryIds) => {
+  // Log để debug
+  console.log("Input params:", { page, size, showIds, categoryIds });
+
+  // Truyền tham số theo đúng cách mà Swagger đang sử dụng
+  const params = {
+    page,
+    size,
+  };
+
+  // Thêm ShowIds nếu có
+  if (showIds) {
+    if (Array.isArray(showIds)) {
+      params.ShowIds = showIds[0]; // Chỉ lấy phần tử đầu tiên của mảng
+    } else {
+      params.ShowIds = showIds;
+    }
+  }
+
+  // Thêm CategoryIds nếu có
+  if (categoryIds) {
+    if (Array.isArray(categoryIds)) {
+      params.CategoryIds = categoryIds[0]; // Chỉ lấy phần tử đầu tiên của mảng
+    } else {
+      params.CategoryIds = categoryIds;
+    }
+  }
+
+  console.log("Request params:", params);
+
   return axiosClient.get(
     "/registration/get-paging-registration-for-current-account",
-    {
-      params: {
-        page: page,
-        size: size,
-        showIds: showIds,
-        categoryIds: categoryIds,
-      },
-    }
+    { params }
   );
 };
 

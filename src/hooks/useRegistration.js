@@ -20,11 +20,15 @@ const useRegistration = create((set, get) => ({
   fetchRegistration: async (page = 1, size = 10, showIds, categoryIds) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
+    console.log("Request params:", { page, size, showIds, categoryIds });
+
     try {
       const res = await getRegistration(page, size, showIds, categoryIds);
 
       if (res && res.status === 200) {
         console.log("Registration API Response:", res.data);
+        console.log("API URL:", res.config?.url);
+        console.log("API Params:", res.config?.params);
 
         let registration = [];
         let total = 0;
