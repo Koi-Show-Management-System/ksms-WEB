@@ -22,7 +22,7 @@ const getItem = (label, key, icon, children, path) => {
     children,
     label: path ? <Link to={path}>{label}</Link> : label,
   };
-  
+
   return item;
 };
 
@@ -36,10 +36,13 @@ const AdminDashboard = ({ children }) => {
   const items = useMemo(
     () => [
       getItem("Tổng Quan", "1", <HomeOutlined />, null, "/admin/overview"),
-      getItem("Cuộc Thi Koi", "sub1", <CalendarOutlined />, [
-        getItem("Danh Sách Triển Lãm", "2", null, null, "/admin/showList"),
-        getItem("Triển Lãm Của Tôi", "3", null, null, "/admin/myShow"),
-      ]),
+      getItem(
+        "Danh Sách Triển Lãm",
+        "2",
+        <CalendarOutlined />,
+        null,
+        "/admin/showList"
+      ),
       getItem("Người Dùng", "sub2", <UserAddOutlined />, null, "/admin/users"),
       getItem(
         "Quản Lý Nhóm",
@@ -72,9 +75,9 @@ const AdminDashboard = ({ children }) => {
 
   const renderMenuItems = (items) => {
     return items.map((item) =>
-      item.items && item.items.length > 0 ? ( 
+      item.items && item.items.length > 0 ? (
         <Menu.SubMenu key={item.key} icon={item.icon} title={item.label}>
-          {renderMenuItems(item.items)} 
+          {renderMenuItems(item.items)}
         </Menu.SubMenu>
       ) : (
         <Menu.Item key={item.key} icon={item.icon}>

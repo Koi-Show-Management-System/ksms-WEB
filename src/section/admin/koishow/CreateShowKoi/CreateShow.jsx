@@ -150,11 +150,7 @@ function CreateShow() {
     if (currentStep === 2) {
       // Kiểm tra hạng mục
       if (formData.createCategorieShowRequests.length === 0) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Cần có ít nhất một hạng mục",
-          placement: "topRight",
-        });
+        // Đã xóa thông báo lỗi ở đây
         hasError = true;
       } else {
         formData.createCategorieShowRequests.forEach(
