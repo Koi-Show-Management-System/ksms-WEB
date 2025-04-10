@@ -1283,6 +1283,16 @@ function CompetitionRound({ showId }) {
     pageSize,
   ]);
 
+  // Thêm state để theo dõi xem fish đã được chuyển sang vòng tiếp theo chưa
+  const [fishMoved, setFishMoved] = useState(false);
+  const [isNoNextRound, setIsNoNextRound] = useState(false);
+
+  // Xử lý khi NextRound cập nhật trạng thái chuyển cá
+  const handleFishMoveStatus = useCallback((moved, noNextRound) => {
+    setFishMoved(moved);
+    setIsNoNextRound(noNextRound);
+  }, []);
+
   return (
     <Card className="overflow-hidden">
       <div className="mb-4">
@@ -1401,11 +1411,12 @@ function CompetitionRound({ showId }) {
                     </Button>
                   )}
 
-                {/* New button for publishing round results - now showing for all round types */}
+                {/* New button for publishing round results - now checking fish moved status */}
                 {selectedRoundType &&
                   isRoundPublished() &&
                   allEntriesHaveScores &&
-                  !areResultsPublished && (
+                  !areResultsPublished &&
+                  (fishMoved || isNoNextRound) && (
                     <Button
                       type="primary"
                       size="middle"
@@ -1416,6 +1427,30 @@ function CompetitionRound({ showId }) {
                       disabled={isPublishingScores}
                     >
                       Công Khai Điểm
+                    </Button>
+                  )}
+
+                {/* Hiển thị thông báo nếu cần phải chuyển cá trước khi công khai điểm */}
+                {selectedRoundType &&
+                  isRoundPublished() &&
+                  allEntriesHaveScores &&
+                  !areResultsPublished &&
+                  !fishMoved &&
+                  !isNoNextRound && (
+                    <Button
+                      type="dashed"
+                      size="middle"
+                      className="w-full mt-2"
+                      onClick={() =>
+                        notification.info({
+                          message: "Yêu cầu chuyển cá",
+                          description:
+                            "Bạn cần chuyển cá sang vòng tiếp theo trước khi công khai điểm.",
+                        })
+                      }
+                      icon={<InfoCircleOutlined />}
+                    >
+                      Cần chuyển cá trước khi công khai điểm
                     </Button>
                   )}
               </div>
@@ -1435,6 +1470,7 @@ function CompetitionRound({ showId }) {
                 fetchRegistrationRound={fetchRegistrationRound}
                 currentPage={currentPage}
                 pageSize={pageSize}
+                onFishMoveStatusChange={handleFishMoveStatus}
               />
             </div>
           )}

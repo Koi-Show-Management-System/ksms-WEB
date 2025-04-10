@@ -33,6 +33,7 @@ function NextRound({
   fetchRegistrationRound,
   currentPage,
   pageSize,
+  onFishMoveStatusChange,
 }) {
   const [isMovingToNextRound, setIsMovingToNextRound] = useState(false);
   const [processingError, setProcessingError] = useState(null);
@@ -44,6 +45,10 @@ function NextRound({
   const [lastPrefetch, setLastPrefetch] = useState(null);
   // Add state to track whether fish have been moved
   const [fishAlreadyMoved, setFishAlreadyMoved] = useState(false);
+  // Thêm state để lưu trữ tất cả cá pass từ tất cả các trang
+  const [allPassingFish, setAllPassingFish] = useState([]);
+  // State để theo dõi quá trình tải dữ liệu
+  const [isLoadingAllFish, setIsLoadingAllFish] = useState(false);
 
   // State để lưu trữ các vòng đã được xử lý theo category
   const [processedRounds, setProcessedRounds] = useState([]);
@@ -53,12 +58,16 @@ function NextRound({
   const { fetchNextRound, nextRound } = useRound();
   const actionInProgressRef = useRef(false);
 
-  const { createNextRoundRegistrations, isLoading: registrationLoading } =
-    useRegistrationRound();
+  const {
+    createNextRoundRegistrations,
+    isLoading: registrationLoading,
+    fetchAllRegistrationRoundByStatus, // Thêm hàm mới lấy tất cả fish pass
+  } = useRegistrationRound();
+
   const { createRoundResultsForAll, isLoading: resultLoading } =
     useRoundResult();
 
-  // Lọc danh sách cá đạt yêu cầu
+  // Lọc danh sách cá đạt yêu cầu trang hiện tại (chỉ để hiển thị)
   const passingFish = useMemo(() => {
     if (!Array.isArray(registrationRound) || registrationRound.length === 0) {
       return [];
@@ -72,6 +81,44 @@ function NextRound({
         item.roundResults[0]?.status === "Pass"
     );
   }, [registrationRound]);
+
+  // Thêm useEffect mới để lấy tất cả cá pass từ tất cả các trang
+  useEffect(() => {
+    const fetchAllPassingFish = async () => {
+      if (!selectedSubRound) return;
+
+      try {
+        setIsLoadingAllFish(true);
+        // Giả sử API này trả về tất cả cá pass từ tất cả các trang
+        const response = await fetchAllRegistrationRoundByStatus(
+          selectedSubRound,
+          "Pass"
+        );
+        if (response && Array.isArray(response)) {
+          setAllPassingFish(response);
+        } else if (response && response.data && Array.isArray(response.data)) {
+          setAllPassingFish(response.data);
+        } else {
+          console.error(
+            "Invalid response format for all passing fish:",
+            response
+          );
+          // Fallback: Sử dụng danh sách cá pass từ trang hiện tại
+          setAllPassingFish(passingFish);
+        }
+      } catch (error) {
+        console.error("Error fetching all passing fish:", error);
+        // Fallback: Sử dụng danh sách cá pass từ trang hiện tại
+        setAllPassingFish(passingFish);
+      } finally {
+        setIsLoadingAllFish(false);
+      }
+    };
+
+    if (selectedSubRound) {
+      fetchAllPassingFish();
+    }
+  }, [selectedSubRound, fetchAllRegistrationRoundByStatus]);
 
   // Thêm biến kiểm tra xem có cá nào có kết quả chưa
   const hasAnyResults = useMemo(() => {
@@ -88,7 +135,8 @@ function NextRound({
     );
   }, [registrationRound]);
 
-  const hasPassingRegistrations = passingFish.length > 0;
+  // Thay đổi từ passingFish.length thành allPassingFish.length
+  const hasPassingRegistrations = allPassingFish.length > 0;
 
   // Kiểm tra xem vòng hiện tại đã được xử lý chưa
   const isCurrentRoundProcessed = useMemo(() => {
@@ -147,6 +195,7 @@ function NextRound({
       setProcessingError(null);
       setCachedNextRoundId(null);
       setLastPrefetch(null);
+      setAllPassingFish([]);
 
       // Refresh data when round selection changes
       fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
@@ -195,7 +244,7 @@ function NextRound({
   useEffect(() => {
     if (
       selectedSubRound &&
-      passingFish.length > 0 &&
+      allPassingFish.length > 0 &&
       !cachedNextRoundId &&
       !isPrefetching &&
       (!lastPrefetch || Date.now() - lastPrefetch > 60000)
@@ -204,11 +253,11 @@ function NextRound({
     }
   }, [
     selectedSubRound,
-    passingFish.length,
+    allPassingFish.length,
     cachedNextRoundId,
     isPrefetching,
     lastPrefetch,
-    prefetchNextRound, // Thêm prefetchNextRound vào dependency array
+    prefetchNextRound,
   ]);
 
   // Xác định trạng thái hiển thị nút
@@ -268,6 +317,16 @@ function NextRound({
     }
   }, [selectedSubRound, isCurrentRoundMoved]);
 
+  // Thêm useEffect để gửi trạng thái của việc chuyển cá về component cha
+  useEffect(() => {
+    if (
+      onFishMoveStatusChange &&
+      typeof onFishMoveStatusChange === "function"
+    ) {
+      onFishMoveStatusChange(fishAlreadyMoved, noNextRound);
+    }
+  }, [fishAlreadyMoved, noNextRound, onFishMoveStatusChange]);
+
   // Cập nhật hàm handleMoveToNextRound để thực sự chuyển cá
   const handleMoveToNextRound = async () => {
     if (isCurrentRoundMoved) return;
@@ -298,8 +357,8 @@ function NextRound({
         throw new Error("Không tìm thấy thông tin vòng tiếp theo.");
       }
 
-      // Lấy danh sách ID của các cá đạt yêu cầu
-      const passingFishIds = passingFish
+      // Lấy danh sách ID của tất cả các cá đạt yêu cầu từ state allPassingFish
+      const passingFishIds = allPassingFish
         .map((fish) => {
           // In ra console để xem cấu trúc thực tế của đối tượng cá
           console.log("Fish object:", fish);
@@ -314,6 +373,9 @@ function NextRound({
         })
         .filter((id) => id); // Lọc bỏ các ID null/undefined
 
+      // Hiển thị thông tin về số lượng cá sẽ được chuyển
+      console.log(`Moving ${passingFishIds.length} fish to next round`);
+
       // Call assignToRound (which now handles notifications internally)
       const registrationResult = await assignToRound(
         targetRoundId,
@@ -322,6 +384,11 @@ function NextRound({
 
       // If successful, update state
       if (registrationResult && registrationResult.success) {
+        notification.success({
+          message: "Thành công",
+          description: `Đã chuyển thành công ${passingFishIds.length} cá sang vòng tiếp theo.`,
+        });
+
         // Update state to mark this round as processed
         setProcessedRounds((prev) => {
           if (!prev.includes(selectedSubRound)) {
@@ -332,12 +399,24 @@ function NextRound({
 
         setFishAlreadyMoved(true);
 
+        // Thông báo cho component cha biết trạng thái đã thay đổi
+        if (
+          onFishMoveStatusChange &&
+          typeof onFishMoveStatusChange === "function"
+        ) {
+          onFishMoveStatusChange(true, noNextRound);
+        }
+
         // Refresh data
         fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
       }
     } catch (error) {
       console.error("Error moving fish to next round:", error);
       setProcessingError(error.message);
+      notification.error({
+        message: "Lỗi",
+        description: `Không thể chuyển cá sang vòng tiếp theo: ${error.message || "Lỗi không xác định"}`,
+      });
     } finally {
       setIsMovingToNextRound(false);
       actionInProgressRef.current = false;
@@ -360,7 +439,7 @@ function NextRound({
             width: "100%",
           }}
         >
-          Đã chuyển {passingFish.length} cá sang vòng
+          Đã chuyển {allPassingFish.length} cá sang vòng
         </Button>
       </Tooltip>
     );
@@ -395,15 +474,20 @@ function NextRound({
           width: "100%",
         }}
       >
-        Đã chuyển {passingFish.length} cá sang vòng
+        Đã chuyển {allPassingFish.length} cá sang vòng
       </Button>
     );
   } else {
     buttonContent = (
       <Button
         onClick={handleMoveToNextRound}
-        loading={isMovingToNextRound}
-        disabled={isMovingToNextRound || !nextRoundType}
+        loading={isMovingToNextRound || isLoadingAllFish}
+        disabled={
+          isMovingToNextRound ||
+          isLoadingAllFish ||
+          !nextRoundType ||
+          allPassingFish.length === 0
+        }
         style={{
           backgroundColor: "#52c41a",
           color: "white",
@@ -411,7 +495,7 @@ function NextRound({
           width: "100%",
         }}
       >
-        Chuyển {passingFish.length} cá sang vòng tiếp theo
+        Chuyển {allPassingFish.length} cá sang vòng tiếp theo
       </Button>
     );
   }

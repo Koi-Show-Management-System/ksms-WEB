@@ -4,15 +4,23 @@ import {
   Input,
   Button,
   Tag,
+  Select,
   Typography,
+  Form,
+  Modal,
   message,
   Drawer,
   Descriptions,
+  Divider,
   List,
   Card,
   Tabs,
+  Collapse,
 } from "antd";
 import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
   EyeOutlined,
   UserOutlined,
   TrophyOutlined,
@@ -20,8 +28,10 @@ import {
   FieldTimeOutlined,
 } from "@ant-design/icons";
 import useCategory from "../../../hooks/useCategory";
+import EditCategory from "../../../section/admin/koishow/KoiShowAdmin/EditCategory";
 
 const { Search } = Input;
+const { Option } = Select;
 const { TabPane } = Tabs;
 
 function Category({ showId }) {
@@ -29,6 +39,14 @@ function Category({ showId }) {
   const [filterVariety, setFilterVariety] = useState("");
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [form] = Form.useForm();
+  const [isEditModalVisible, setIsEditModalVisible] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+
+  const closeEditModal = () => {
+    setEditingCategoryId(null);
+    setIsEditModalVisible(false);
+  };
 
   const { categories, isLoading, error, fetchCategories, getCategoryDetail } =
     useCategory();
@@ -36,8 +54,6 @@ function Category({ showId }) {
   useEffect(() => {
     fetchCategories(showId, 1, 10);
   }, [showId]);
-
-
 
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
@@ -92,45 +108,84 @@ function Category({ showId }) {
         </span>
       ),
     },
+    // {
+    //   title: "Giống",
+    //   key: "variety",
+    //   render: (_, record) => {
+    //     // Check if varieties exists and has items
+    //     if (
+    //       !record.varieties ||
+    //       !Array.isArray(record.varieties) ||
+    //       record.varieties.length === 0
+    //     ) {
+    //       return <span>N/A</span>;
+    //     }
 
+    //     // Join all variety names
+    //     return <span>{record.varieties.join(", ")}</span>;
+    //   },
+    //   filters: [
+    //     { text: "Kohaku", value: "Kohaku" },
+    //     { text: "Showa", value: "Showa" },
+    //     { text: "Sanke", value: "Sanke" },
+    //     { text: "Showa Sanshoku", value: "Showa Sanshoku" },
+    //   ],
+    //   onFilter: (value, record) => {
+    //     if (
+    //       !record.varieties ||
+    //       !Array.isArray(record.varieties) ||
+    //       record.varieties.length === 0
+    //     ) {
+    //       return false;
+    //     }
+
+    //     return record.varieties.some((variety) => variety === value);
+    //   },
+    // },
+    {
+      title: "SL Koi tối thiểu",
+      dataIndex: "minEntries",
+      key: "minEntries",
+      sorter: (a, b) => (a.minEntries || 0) - (b.minEntries || 0),
+    },
     {
       title: "SL Koi tối đa",
       dataIndex: "maxEntries",
       key: "maxEntries",
       sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
     },
-    {
-      title: "Trạng Thái",
-      dataIndex: "status",
-      key: "status",
-      render: (status) => (
-        <Tag
-          color={
-            status === "pending"
-              ? "orange"
-              : status === "approved"
-                ? "green"
-                : status === "upcoming"
-                  ? "blue"
-                  : "default"
-          }
-        >
-          {status === "pending"
-            ? "Chờ duyệt"
-            : status === "approved"
-              ? "Đã duyệt"
-              : status === "upcoming"
-                ? "Sắp diễn ra"
-                : status}
-        </Tag>
-      ),
-      filters: [
-        { text: "Chờ duyệt", value: "pending" },
-        { text: "Đã duyệt", value: "approved" },
-        { text: "Sắp diễn ra", value: "upcoming" },
-      ],
-      onFilter: (value, record) => record.status === value,
-    },
+    // {
+    //   title: "Trạng Thái",
+    //   dataIndex: "status",
+    //   key: "status",
+    //   render: (status) => (
+    //     <Tag
+    //       color={
+    //         status === "pending"
+    //           ? "orange"
+    //           : status === "approved"
+    //             ? "green"
+    //             : status === "upcoming"
+    //               ? "blue"
+    //               : "default"
+    //       }
+    //     >
+    //       {status === "pending"
+    //         ? "Chờ duyệt"
+    //         : status === "approved"
+    //           ? "Đã duyệt"
+    //           : status === "upcoming"
+    //             ? "Sắp diễn ra"
+    //             : status}
+    //     </Tag>
+    //   ),
+    //   filters: [
+    //     { text: "Chờ duyệt", value: "pending" },
+    //     { text: "Đã duyệt", value: "approved" },
+    //     { text: "Sắp diễn ra", value: "upcoming" },
+    //   ],
+    //   onFilter: (value, record) => record.status === value,
+    // },
     {
       title: "Hành Động",
       key: "actions",
@@ -194,7 +249,10 @@ function Category({ showId }) {
                 <Descriptions.Item label="Số lượng tối đa">
                   {selectedCategory.maxEntries}
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
+                <Descriptions.Item label="Số lượng tối thiểu ">
+                  {selectedCategory.minEntries}
+                </Descriptions.Item>
+                {/* <Descriptions.Item label="Trạng thái">
                   <Tag
                     color={
                       selectedCategory.status === "pending"
@@ -214,47 +272,89 @@ function Category({ showId }) {
                           ? "Sắp diễn ra"
                           : selectedCategory.status}
                   </Tag>
+                </Descriptions.Item> */}
+                <Descriptions.Item label="Bể trưng bày">
+                  {selectedCategory.hasTank ? "Có" : "Không"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Mô tả">
                   {selectedCategory.description}
+                </Descriptions.Item>
+                <Descriptions.Item label="Giống">
+                  <div className="flex flex-wrap gap-2">
+                    {selectedCategory.categoryVarieties?.map((item) => (
+                      <Tag
+                        key={item.id}
+                        color="blue"
+                        className="text-sm py-1 px-3 rounded-full border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
+                      >
+                        {item.variety?.name}
+                      </Tag>
+                    ))}
+                  </div>
                 </Descriptions.Item>
               </Descriptions>
             </TabPane>
 
             <TabPane tab="Giải thưởng" key="2" icon={<TrophyOutlined />}>
-              <List
-                grid={{ gutter: 16, column: 1 }}
-                dataSource={selectedCategory.awards || []}
-                renderItem={(award) => (
-                  <List.Item>
-                    <Card title={award.name}>
-                      <p>
-                        <strong>Loại giải:</strong> {award.awardType}
-                      </p>
-                      <p>
-                        <strong>Giá trị:</strong>{" "}
-                        {award.prizeValue.toLocaleString()} VND
-                      </p>
-                      <p>
-                        <strong>Mô tả:</strong> {award.description}
-                      </p>
-                    </Card>
-                  </List.Item>
-                )}
-              />
-            </TabPane>
+              <Collapse>
+                {selectedCategory.awards
+                  ?.sort((a, b) => {
+                    const order = {
+                      first: 1,
+                      second: 2,
+                      third: 3,
+                      honorable: 4,
+                    };
+                    return order[a.awardType] - order[b.awardType];
+                  })
+                  .map((award) => {
+                    const awardTypeMap = {
+                      first: {
+                        name: "Giải Nhất",
+                        icon: <TrophyOutlined style={{ color: "#FFD700" }} />,
+                      },
+                      second: {
+                        name: "Giải Nhì",
+                        icon: <TrophyOutlined style={{ color: "#B4B4B4" }} />,
+                      },
+                      third: {
+                        name: "Giải Ba",
+                        icon: <TrophyOutlined style={{ color: "#CD7F32" }} />,
+                      },
+                      honorable: {
+                        name: "Giải Khuyến Khích",
+                        icon: <TrophyOutlined style={{ color: "#4A90E2" }} />,
+                      },
+                    };
 
-            <TabPane tab="Giống" key="3" icon={<ApartmentOutlined />}>
-              <List
-                dataSource={selectedCategory.categoryVarieties || []}
-                renderItem={(item) => (
-                  <List.Item>
-                    <Card title={item.variety?.name}>
-                      <p>{item.variety?.description}</p>
-                    </Card>
-                  </List.Item>
-                )}
-              />
+                    return (
+                      <Collapse.Panel
+                        key={award.id}
+                        header={
+                          <div className="flex items-center">
+                            {awardTypeMap[award.awardType].icon}
+                            <span className="ml-2 font-medium">
+                              {awardTypeMap[award.awardType].name}
+                            </span>
+                          </div>
+                        }
+                      >
+                        <div className="p-4">
+                          <div className="mb-2">
+                            <strong>Tên giải:</strong> {award.name}
+                          </div>
+                          <div className="mb-2">
+                            <strong>Giá trị:</strong>{" "}
+                            {award.prizeValue.toLocaleString()} VND
+                          </div>
+                          <div>
+                            <strong>Mô tả:</strong> {award.description}
+                          </div>
+                        </div>
+                      </Collapse.Panel>
+                    );
+                  })}
+              </Collapse>
             </TabPane>
 
             <TabPane tab="Tiêu chí đánh giá" key="4">
@@ -378,16 +478,17 @@ function Category({ showId }) {
                 };
 
                 return (
-                  <List
-                    dataSource={groupedReferees}
-                    renderItem={(item) => (
-                      <List.Item>
-                        <div className="w-full">
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="font-medium">
+                  <Collapse>
+                    {groupedReferees.map((item) => (
+                      <Collapse.Panel
+                        key={item.referee?.email}
+                        header={
+                          <div className="flex items-center">
+                            <UserOutlined style={{ color: "#1890ff" }} />
+                            <span className="ml-2 font-medium">
                               {item.referee?.fullName}
-                            </div>
-                            <div>
+                            </span>
+                            <div className="ml-auto">
                               {item.roundTypes.map((type) => (
                                 <Tag
                                   key={type}
@@ -407,77 +508,102 @@ function Category({ showId }) {
                               ))}
                             </div>
                           </div>
-                          <p>
+                        }
+                      >
+                        <div className="p-4">
+                          <div className="mb-2">
                             <strong>Email:</strong> {item.referee?.email}
-                          </p>
-                          <p>
-                            <strong>Vai trò:</strong> {item.referee?.role}
-                          </p>
-                          <p>
+                          </div>
+
+                          <div className="mb-2">
                             <strong>Được phân công bởi:</strong>{" "}
                             {item.assignedBy?.fullName}
-                          </p>
-                          <p>
-                            <strong>Thời gian phân công:</strong>{" "}
-                            {new Date(item.assignedAt).toLocaleString()}
-                          </p>
+                          </div>
                         </div>
-                      </List.Item>
-                    )}
-                  />
+                      </Collapse.Panel>
+                    ))}
+                  </Collapse>
                 );
               })()}
             </TabPane>
 
             <TabPane tab="Vòng thi" key="6" icon={<FieldTimeOutlined />}>
-              <List
-                dataSource={selectedCategory.rounds || []}
-                renderItem={(round) => (
-                  <List.Item>
-                    <Card
-                      title={round.name}
-                      extra={
-                        <Tag
-                          color={
-                            round.status === "pending"
-                              ? "orange"
-                              : round.status === "active"
-                                ? "green"
-                                : round.status === "completed"
-                                  ? "blue"
-                                  : "default"
-                          }
-                        >
-                          {round.status}
-                        </Tag>
-                      }
-                    >
-                      <p>
-                        <strong>Loại vòng:</strong> {round.roundType}
-                      </p>
-                      <p>
-                        <strong>Thứ tự:</strong> {round.roundOrder}
-                      </p>
-                      <p>
-                        <strong>Thời gian bắt đầu:</strong>{" "}
-                        {round.startTime
-                          ? new Date(round.startTime).toLocaleString()
-                          : "Chưa xác định"}
-                      </p>
-                      <p>
-                        <strong>Thời gian kết thúc:</strong>{" "}
-                        {round.endTime
-                          ? new Date(round.endTime).toLocaleString()
-                          : "Chưa xác định"}
-                      </p>
-                      <p>
-                        <strong>Điểm tối thiểu để vào vòng sau:</strong>{" "}
-                        {round.minScoreToAdvance}
-                      </p>
-                    </Card>
-                  </List.Item>
-                )}
-              />
+              {(() => {
+                // Group rounds by roundType
+                const roundsByType = {};
+
+                // Process and group rounds
+                (selectedCategory.rounds || []).forEach((round) => {
+                  const type = round.roundType;
+                  if (!roundsByType[type]) {
+                    roundsByType[type] = [];
+                  }
+                  roundsByType[type].push(round);
+                });
+
+                // Translate roundType to Vietnamese
+                const translateRoundType = (type) => {
+                  switch (type) {
+                    case "Preliminary":
+                      return "Vòng Sơ Khảo";
+                    case "Evaluation":
+                      return "Vòng Đánh Giá";
+                    case "Final":
+                      return "Vòng Chung Kết";
+                    default:
+                      return type;
+                  }
+                };
+
+                // Convert to array for rendering
+                const groupedRounds = Object.entries(roundsByType)
+                  .map(([type, rounds]) => ({
+                    type,
+                    translatedType: translateRoundType(type),
+                    rounds: rounds.sort((a, b) => a.roundOrder - b.roundOrder),
+                  }))
+                  .sort((a, b) => {
+                    const order = { Preliminary: 1, Evaluation: 2, Final: 3 };
+                    return order[a.type] - order[b.type];
+                  });
+
+                return (
+                  <div>
+                    {groupedRounds.map((group) => (
+                      <div key={group.type} className="mb-6">
+                        <h3 className="text-lg font-medium mb-3">
+                          {group.translatedType}
+                        </h3>
+                        <Collapse>
+                          {group.rounds.map((round) => (
+                            <Collapse.Panel
+                              key={round.id}
+                              header={
+                                <div className="flex justify-between items-center">
+                                  <span>
+                                    Vòng Nhỏ {round.roundOrder} -{" "}
+                                    {group.translatedType}
+                                  </span>
+                                </div>
+                              }
+                            >
+                              <div className="p-2">
+                                {round.numberOfRegistrationToAdvance !==
+                                  null && (
+                                  <p>
+                                    <strong>Số lượng cá qua vòng:</strong>{" "}
+                                    {round.numberOfRegistrationToAdvance}
+                                  </p>
+                                )}
+                              </div>
+                            </Collapse.Panel>
+                          ))}
+                        </Collapse>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
             </TabPane>
           </Tabs>
         )}

@@ -226,6 +226,10 @@ const useRegistrationRound = create((set, get) => ({
     } catch (error) {
       // Handle network errors or other exceptions
       console.error("Fetch Referee Round Error:", error);
+
+      let errorMessage = error.message || "Lỗi không xác định";
+      let statusCode = error.response?.status || 500;
+
       notification.error({
         message: "Lỗi",
         description:
@@ -250,6 +254,66 @@ const useRegistrationRound = create((set, get) => ({
           data: error.response?.data,
         },
       };
+    }
+  },
+
+  // Thêm hàm mới để lấy tất cả cá có status nhất định (Pass/Fail) từ một vòng, bất kể phân trang
+  fetchAllRegistrationRoundByStatus: async (roundId, status = "Pass") => {
+    set({ isLoading: true, error: null });
+
+    try {
+      // Gọi API với size lớn để lấy tất cả trong một lần
+      const res = await getRegistrationRound(roundId, 1, 1000);
+
+      if (res && (res.status === 200 || res.status === 201)) {
+        console.log("All fish data response:", res.data);
+
+        let allRegistrations = [];
+
+        // Xử lý các dạng response khác nhau
+        if (
+          res.data &&
+          res.data.data &&
+          res.data.data.items &&
+          Array.isArray(res.data.data.items)
+        ) {
+          allRegistrations = res.data.data.items;
+        } else if (
+          res.data &&
+          res.data.items &&
+          Array.isArray(res.data.items)
+        ) {
+          allRegistrations = res.data.items;
+        } else if (res.data && Array.isArray(res.data)) {
+          allRegistrations = res.data;
+        } else {
+          console.error("No valid array data found in API response:", res.data);
+          set({ isLoading: false });
+          return [];
+        }
+
+        // Lọc các cá có status tương ứng
+        const filteredRegistrations = allRegistrations.filter(
+          (item) =>
+            item.roundResults &&
+            item.roundResults.length > 0 &&
+            item.roundResults[0]?.status === status
+        );
+
+        console.log(
+          `Found ${filteredRegistrations.length} fish with status ${status}`
+        );
+        set({ isLoading: false });
+        return filteredRegistrations;
+      } else {
+        console.error("API Error:", res);
+        set({ error: res, isLoading: false });
+        return [];
+      }
+    } catch (error) {
+      console.error("Fetch All Registrations Error:", error);
+      set({ error: error, isLoading: false });
+      return [];
     }
   },
 }));
