@@ -246,19 +246,6 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       value.isBefore(data.startDate)
     ) {
       newTimeErrors[field] = "Ngày kết thúc phải sau ngày bắt đầu.";
-    } else if (
-      field === "endExhibitionDate" &&
-      data.startExhibitionDate &&
-      value.isBefore(data.startExhibitionDate)
-    ) {
-      newTimeErrors[field] = "Ngày kết thúc sự kiện phải sau ngày bắt đầu.";
-    } else if (
-      field === "startExhibitionDate" &&
-      data.endDate &&
-      value.isBefore(data.endDate)
-    ) {
-      newTimeErrors[field] =
-        "Ngày bắt đầu sự kiện phải sau ngày kết thúc đăng ký.";
     } else {
       newTimeErrors[field] = "";
     }

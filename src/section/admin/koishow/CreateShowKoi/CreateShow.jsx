@@ -70,14 +70,6 @@ function CreateShow() {
         });
         hasError = true;
       }
-      if (!formData.startExhibitionDate || !formData.endExhibitionDate) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Ngày bắt đầu và kết thúc sự kiện là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
-      }
       if (!formData.minParticipants || !formData.maxParticipants) {
         notification.error({
           message: "Lỗi nhập liệu",
