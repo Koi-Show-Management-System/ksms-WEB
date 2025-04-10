@@ -1259,6 +1259,9 @@ function CompetitionRound({ showId }) {
           description: "Đã công khai điểm vòng thi thành công",
         });
 
+        // Cập nhật trạng thái để ẩn nút ngay lập tức
+        setAreResultsPublished(true);
+
         // Cập nhật dữ liệu từ API để cập nhật UI
         fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
       } else {
@@ -1415,8 +1418,7 @@ function CompetitionRound({ showId }) {
                 {selectedRoundType &&
                   isRoundPublished() &&
                   allEntriesHaveScores &&
-                  !areResultsPublished &&
-                  (fishMoved || isNoNextRound) && (
+                  !areResultsPublished && (
                     <Button
                       type="primary"
                       size="middle"
@@ -1427,30 +1429,6 @@ function CompetitionRound({ showId }) {
                       disabled={isPublishingScores}
                     >
                       Công Khai Điểm
-                    </Button>
-                  )}
-
-                {/* Hiển thị thông báo nếu cần phải chuyển cá trước khi công khai điểm */}
-                {selectedRoundType &&
-                  isRoundPublished() &&
-                  allEntriesHaveScores &&
-                  !areResultsPublished &&
-                  !fishMoved &&
-                  !isNoNextRound && (
-                    <Button
-                      type="dashed"
-                      size="middle"
-                      className="w-full mt-2"
-                      onClick={() =>
-                        notification.info({
-                          message: "Yêu cầu chuyển cá",
-                          description:
-                            "Bạn cần chuyển cá sang vòng tiếp theo trước khi công khai điểm.",
-                        })
-                      }
-                      icon={<InfoCircleOutlined />}
-                    >
-                      Cần chuyển cá trước khi công khai điểm
                     </Button>
                   )}
               </div>
