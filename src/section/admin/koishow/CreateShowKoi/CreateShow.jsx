@@ -149,10 +149,7 @@ function CreateShow() {
 
     if (currentStep === 2) {
       // Kiểm tra hạng mục
-      if (formData.createCategorieShowRequests.length === 0) {
-        // Đã xóa thông báo lỗi ở đây
-        hasError = true;
-      } else {
+      if (formData.createCategorieShowRequests.length > 0) {
         formData.createCategorieShowRequests.forEach(
           (category, categoryIndex) => {
             let categoryHasError = false;
