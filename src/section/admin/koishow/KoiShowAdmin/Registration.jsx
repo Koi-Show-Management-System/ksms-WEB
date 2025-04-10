@@ -586,6 +586,7 @@ function Registration({ showId, statusShow }) {
                   current: currentPage,
                   pageSize: pageSize,
                   total: totalItems,
+                  pageCount: totalPages,
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,
