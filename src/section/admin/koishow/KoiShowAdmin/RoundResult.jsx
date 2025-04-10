@@ -162,11 +162,6 @@ function RoundResult({ showId }) {
       key: "registrationNumber",
     },
     {
-      title: "Tên người đăng ký",
-      dataIndex: "registerName",
-      key: "registerName",
-    },
-    {
       title: "Tên Koi",
       dataIndex: "koiName",
       key: "koiName",
@@ -181,44 +176,6 @@ function RoundResult({ showId }) {
       dataIndex: "koiSize",
       key: "koiSize",
       render: (size) => `${size} cm`,
-    },
-    {
-      title: "Hình ảnh",
-      key: "image",
-      render: (_, record) => {
-        const imageUrl = getFirstImageUrl(record.media);
-        return imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt="Koi"
-            style={{
-              width: 120,
-              objectFit: "cover",
-              borderRadius: "4px",
-            }}
-            preview={false}
-            placeholder={
-              <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                <Spin size="small" />
-              </div>
-            }
-          />
-        ) : (
-          <div
-            style={{
-              width: 100,
-              height: 70,
-              background: "#f0f0f0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "4px",
-            }}
-          >
-            Không có ảnh
-          </div>
-        );
-      },
     },
     {
       title: "Điểm",
