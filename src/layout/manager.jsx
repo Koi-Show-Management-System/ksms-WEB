@@ -27,10 +27,13 @@ function getItem(label, key, icon, children, path) {
 // Modified items array to only include required menu items
 const items = [
   getItem("Tổng Quan", "1", <HomeOutlined />, null, "/manager/overview"),
-  getItem("Cuộc Thi Koi", "sub1", <CalendarOutlined />, [
-    getItem("Danh Sách Triển Lãm", "2", null, null, "/manager/showList"),
-    getItem("Triển Lãm Của Tôi", "3", null, null, "/manager/myShow"),
-  ]),
+  getItem(
+    "Danh Sách Triển Lãm",
+    "2",
+    <CalendarOutlined />,
+    null,
+    "/manager/showList"
+  ),
   getItem(
     "Quản Lý Nhóm",
     "sub3",

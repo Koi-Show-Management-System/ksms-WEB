@@ -62,10 +62,13 @@ const StaffDashboard = ({ children }) => {
   const items = useMemo(
     () => [
       getItem("Tổng Quan", "1", <HomeOutlined />, null, "/staff/overview"),
-      getItem("Cuộc Thi Koi", "sub1", <CalendarOutlined />, [
-        getItem("Danh Sách Triển Lãm", "2", null, null, "/staff/showList"),
-        getItem("Triển Lãm Của Tôi", "3", null, null, "/staff/myShow"),
-      ]),
+      getItem(
+        "Danh Sách Triển Lãm",
+        "2",
+        <CalendarOutlined />,
+        null,
+        "/staff/showList"
+      ),
       getItem("Tin Tức", "sub4", <ReadOutlined />, null, "/staff/news"),
     ],
     []

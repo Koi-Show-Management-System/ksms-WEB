@@ -15,6 +15,7 @@ import CompetitionRound from "../../admin/koishow/KoiShowAdmin/CompetitionRound"
 import Ticket from "../../admin/koishow/KoiShowAdmin/Ticket";
 import ScanQrWrapper from "./ScanQrWrapper";
 import LiveStream from "./LiveStream";
+import RoundResult from "../../admin/koishow/KoiShowAdmin/RoundResult";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -52,6 +53,11 @@ function KoiShowDetail() {
         key: "competitionRound",
         label: "Vòng Thi",
         children: <CompetitionRound showId={id} />,
+      },
+      {
+        key: "roundResult",
+        label: "Kết Quả Cuối Cùng",
+        children: <RoundResult showId={id} />,
       },
       {
         key: "tank",

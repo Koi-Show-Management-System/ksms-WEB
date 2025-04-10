@@ -1344,10 +1344,10 @@ function CompetitionRound({ showId }) {
                 value={selectedSubRound}
                 onChange={handleSubRoundChange}
                 className="w-full"
-                placeholder={roundLoading ? "Đang tải..." : "Chọn vòng phụ"}
+                placeholder={roundLoading ? "Đang tải..." : "Chọn vòng "}
                 loading={roundLoading}
                 notFoundContent={
-                  roundLoading ? <Spin size="small" /> : "Không có vòng phụ"
+                  roundLoading ? <Spin size="small" /> : "Không có vòng "
                 }
               >
                 {round?.map((item) => (

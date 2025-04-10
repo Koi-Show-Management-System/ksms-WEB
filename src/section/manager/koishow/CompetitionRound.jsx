@@ -278,7 +278,7 @@ function CompetitionRound({ showId }) {
 
         <Col xs={24} sm={8}>
           <div>
-            <div className="block text-lg font-medium mb-2">Vòng Chính:</div>
+            <div className="block text-lg font-medium mb-2">Loại Vòng:</div>
             <Select
               value={selectedRoundType}
               onChange={handleRoundTypeChange}
@@ -298,13 +298,13 @@ function CompetitionRound({ showId }) {
 
         <Col xs={24} sm={8}>
           <div>
-            <div className="block text-lg font-medium mb-2">Vòng Phụ:</div>
+            <div className="block text-lg font-medium mb-2">Vòng</div>
             <Select
               value={selectedSubRound}
               onChange={handleSubRoundChange}
               style={{ width: "100%" }}
               className="w-full"
-              placeholder={roundLoading ? "Đang tải..." : "Chọn vòng phụ"}
+              placeholder={roundLoading ? "Đang tải..." : "Chọn vòng "}
               disabled={
                 !selectedRoundType ||
                 roundLoading ||
@@ -313,7 +313,7 @@ function CompetitionRound({ showId }) {
               }
               loading={roundLoading}
               notFoundContent={
-                roundLoading ? <Spin size="small" /> : "Không có vòng phụ"
+                roundLoading ? <Spin size="small" /> : "Không có vòng"
               }
             >
               {round?.map((item) => (

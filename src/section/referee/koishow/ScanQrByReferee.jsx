@@ -380,7 +380,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         {categoryId && (
           <Col xs={24} sm={8}>
             <div className="mb-4">
-              <span className="block text-lg font-medium">Vòng Chính:</span>
+              <span className="block text-lg font-medium">Loại Vòng</span>
               <Select
                 value={selectedRoundType}
                 onChange={handleRoundTypeChange}
@@ -403,7 +403,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         {selectedRoundType && (
           <Col xs={24} sm={8}>
             <div className="mb-4">
-              <span className="block text-lg font-medium">Vòng Phụ:</span>
+              <span className="block text-lg font-medium">Vòng:</span>
               <Select
                 value={selectedSubRound}
                 onChange={handleSubRoundChange}
