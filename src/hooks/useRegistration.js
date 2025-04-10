@@ -80,8 +80,9 @@ const useRegistration = create((set, get) => ({
       );
 
       if (response && response.status === 200) {
-        const { currentPage, pageSize, showIds } = get();
-        get().fetchRegistration(currentPage, pageSize, showIds);
+        // Không tự động gọi fetchRegistration ở đây nữa
+        // const { currentPage, pageSize, showIds } = get();
+        // get().fetchRegistration(currentPage, pageSize, showIds);
 
         // Display success notification with message from response if available
         notification.success({

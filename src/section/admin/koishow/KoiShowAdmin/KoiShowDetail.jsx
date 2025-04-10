@@ -278,7 +278,7 @@ function KoiShowDetail() {
     {
       key: "category",
       label: "Danh Mục",
-      children: <Category showId={id} />,
+      children: <Category showId={id} statusShow={showStatus} />,
     },
     {
       key: "koiList",

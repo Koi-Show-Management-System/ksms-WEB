@@ -61,6 +61,10 @@ function Registration({ showId, statusShow }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentKoi, setCurrentKoi] = useState(null);
   const [updatedStatus, setUpdatedStatus] = useState(null);
+  // Thêm state cho phân trang trong modal
+  const [assignModalPage, setAssignModalPage] = useState(1);
+  const [assignModalPageSize, setAssignModalPageSize] = useState(10);
+  const [checkinRegistrations, setCheckinRegistrations] = useState([]);
   const { confirm } = Modal;
   const roundSelectorRef = useRef(null);
   const statusOptions = [
@@ -70,6 +74,7 @@ function Registration({ showId, statusShow }) {
     { value: "rejected", label: "Từ chối" },
     { value: "prizewinner", label: "Đạt giải" },
     { value: "eliminated", label: "Bị loại" },
+    { value: "waittopaid", label: "Chờ thanh toán" },
   ];
 
   // Cập nhật STATUS_CONFIG để chỉ bao gồm 4 trạng thái chính
@@ -82,6 +87,7 @@ function Registration({ showId, statusShow }) {
     refunded: { color: "magenta", label: "Đã hoàn tiền", order: 6 },
     prizewinner: { color: "gold", label: "Đạt giải", order: 7 },
     eliminated: { color: "volcano", label: "Bị loại", order: 8 },
+    waittopaid: { color: "gold", label: "Chờ thanh toán", order: 9 },
   };
 
   // Add back the renderStatus function
@@ -147,6 +153,15 @@ function Registration({ showId, statusShow }) {
       return;
     }
 
+    // Lọc các con cá đã check-in trong hạng mục đã chọn
+    const checkedInFish = registration.filter(
+      (reg) =>
+        reg.status?.toLowerCase() === "checkin" &&
+        reg.competitionCategory?.id === selectedCategory
+    );
+
+    setCheckinRegistrations(checkedInFish);
+    setAssignModalPage(1); // Reset về trang 1 khi mở modal
     setIsAssignModalVisible(true);
     clearSelectedRegistrations();
   };
@@ -157,6 +172,7 @@ function Registration({ showId, statusShow }) {
     setSelectedRoundId(null);
     setSelectedRoundName("");
     clearSelectedRegistrations();
+    setAssignModalPage(1);
 
     // Reset RoundSelector thông qua ref
     if (roundSelectorRef.current) {
@@ -224,7 +240,14 @@ function Registration({ showId, statusShow }) {
 
         if (result.success) {
           closeAssignModal();
-          fetchRegistration(currentPage, pageSize, showId);
+          // Tải lại dữ liệu trang hiện tại với các bộ lọc hiện tại
+          fetchRegistration(
+            currentPage,
+            pageSize,
+            showId,
+            selectedCategory ? [selectedCategory] : undefined,
+            selectedStatus
+          );
         }
       },
     });
@@ -329,6 +352,15 @@ function Registration({ showId, statusShow }) {
           setUpdatedStatus(status);
         }
 
+        // Tải lại dữ liệu trang hiện tại sau khi cập nhật thành công
+        fetchRegistration(
+          currentPage,
+          pageSize,
+          showId,
+          selectedCategory ? [selectedCategory] : undefined,
+          selectedStatus
+        );
+
         // Close the modal after successful update
         setIsModalVisible(false);
       }
@@ -372,11 +404,30 @@ function Registration({ showId, statusShow }) {
       if (result.success) {
         setIsRefundModalVisible(false);
         setRefundType(null);
-        fetchRegistration(currentPage, pageSize, showId);
+        // Tải lại dữ liệu trang hiện tại
+        fetchRegistration(
+          currentPage,
+          pageSize,
+          showId,
+          selectedCategory ? [selectedCategory] : undefined,
+          selectedStatus
+        );
       }
     } catch (error) {
       console.error(error);
     }
+  };
+
+  // Thêm hàm xử lý khi thay đổi trang trong modal gán vòng
+  const handleAssignModalTableChange = (pagination) => {
+    setAssignModalPage(pagination.current);
+    setAssignModalPageSize(pagination.pageSize);
+  };
+
+  // Thêm hàm chọn tất cả cá trong modal
+  const handleSelectAllInModal = () => {
+    const allIds = checkinRegistrations.map((item) => item.id);
+    setSelectedRegistrations(allIds);
   };
 
   // Lấy dữ liệu đã lọc
@@ -534,7 +585,7 @@ function Registration({ showId, statusShow }) {
               ? {
                   current: currentPage,
                   pageSize: pageSize,
-                  total: totalItems, // Sử dụng tổng số mục từ API thay vì chiều dài dữ liệu đã lọc
+                  total: totalItems,
                   showTotal: (total, range) =>
                     `${range[0]}-${range[1]} trong ${total}`,
                   showSizeChanger: true,
@@ -629,6 +680,14 @@ function Registration({ showId, statusShow }) {
                       Danh sách cá đăng ký
                     </Typography.Text>
                   </div>
+
+                  <Button
+                    type="primary"
+                    onClick={handleSelectAllInModal}
+                    disabled={checkinRegistrations.length === 0}
+                  >
+                    Chọn tất cả
+                  </Button>
                 </div>
 
                 {selectedRegistrations?.length > 0 && (
@@ -649,23 +708,18 @@ function Registration({ showId, statusShow }) {
                 <Table
                   rowSelection={rowSelection}
                   columns={columns.filter((col) => col.key !== "actions")}
-                  dataSource={registration.filter(
-                    (reg) =>
-                      reg.status?.toLowerCase() === "checkin" &&
-                      reg.competitionCategory?.id === selectedCategory
-                  )}
+                  dataSource={checkinRegistrations}
                   loading={isLoading}
                   pagination={{
-                    current: currentPage,
-                    pageSize: pageSize,
-                    total: registration.filter(
-                      (reg) => reg.status?.toLowerCase() === "checkin"
-                    ).length,
+                    current: assignModalPage,
+                    pageSize: assignModalPageSize,
+                    total: checkinRegistrations.length,
                     showTotal: (total, range) =>
                       `${range[0]}-${range[1]} trong ${total}`,
                     showSizeChanger: true,
                     pageSizeOptions: ["10", "20", "50"],
                   }}
+                  onChange={handleAssignModalTableChange}
                   rowKey="id"
                   size="small"
                   bordered={false}

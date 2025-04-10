@@ -35,7 +35,7 @@ const { Search } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
 
-function Category({ showId }) {
+function Category({ showId, statusShow }) {
   const [searchText, setSearchText] = useState("");
   const [filterVariety, setFilterVariety] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -44,6 +44,7 @@ function Category({ showId }) {
   const [form] = Form.useForm();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const isEditDisabled = statusShow === "published";
 
   const showEditModal = (categoryId) => {
     setEditingCategoryId(categoryId);
@@ -209,12 +210,14 @@ function Category({ showId }) {
             className="text-gray-500 hover:text-blue-500"
             onClick={() => showCategoryDetail(record.id)}
           />
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            className="text-gray-500 hover:text-blue-500"
-            onClick={() => showEditModal(record.id)}
-          />
+          {!isEditDisabled && (
+            <Button
+              type="text"
+              icon={<EditOutlined />}
+              className="text-gray-500 hover:text-blue-500"
+              onClick={() => showEditModal(record.id)}
+            />
+          )}
         </div>
       ),
     },
@@ -232,10 +235,12 @@ function Category({ showId }) {
         </div>
 
         {/* Create Category Modal */}
-        <CreateCategory
-          showId={showId}
-          onCategoryCreated={handleCategoryCreated}
-        />
+        {!isEditDisabled && (
+          <CreateCategory
+            showId={showId}
+            onCategoryCreated={handleCategoryCreated}
+          />
+        )}
       </div>
 
       <Table

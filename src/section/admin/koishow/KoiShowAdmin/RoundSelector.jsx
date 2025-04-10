@@ -40,13 +40,13 @@ const RoundSelector = forwardRef(
     useEffect(() => {
       if (categoryId) {
         setSelectedCategory(categoryId);
-        // Luôn fetch vòng sơ khảo
-        fetchRound(categoryId, "Preliminary");
+        // Luôn fetch tất cả vòng sơ khảo (pageSize=100 để lấy tất cả)
+        fetchRound(categoryId, "Preliminary", 1, 100);
       } else if (showId) {
         // Chỉ fetch categories nếu không có categoryId được truyền vào
         fetchCategories(showId);
       }
-    }, [showId, categoryId]);
+    }, [showId, categoryId, fetchRound, fetchCategories]);
 
     // Tự động chọn vòng đầu tiên khi có danh sách round
     useEffect(() => {
@@ -69,8 +69,8 @@ const RoundSelector = forwardRef(
       setSelectedCategory(categoryId);
       setSelectedRound(null);
 
-      // Luôn fetch vòng sơ khảo khi thay đổi category
-      fetchRound(categoryId, "Preliminary");
+      // Luôn fetch tất cả vòng sơ khảo khi thay đổi category (pageSize=100 để lấy tất cả)
+      fetchRound(categoryId, "Preliminary", 1, 100);
     };
 
     const handleSpecificRoundSelect = (roundId) => {
@@ -84,6 +84,9 @@ const RoundSelector = forwardRef(
         onRoundSelect(roundId, roundName);
       }
     };
+
+    // Lọc các vòng có roundOrder = 1
+    const filteredRounds = round.filter((r) => r.roundOrder === 1);
 
     return (
       <Space direction="horizontal" size="middle" className="mb-4">
@@ -112,15 +115,19 @@ const RoundSelector = forwardRef(
               onChange={handleSpecificRoundSelect}
               value={selectedRound}
               loading={roundLoading}
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children ?? "")
+                  .toLowerCase()
+                  .includes(input.toLowerCase())
+              }
             >
-              {round
-                // Chỉ hiển thị các vòng có roundOrder = 1
-                .filter((r) => r.roundOrder === 1)
-                .map((r) => (
-                  <Select.Option key={r.id} value={r.id}>
-                    {r.name}
-                  </Select.Option>
-                ))}
+              {filteredRounds.map((r) => (
+                <Select.Option key={r.id} value={r.id}>
+                  {r.name}
+                </Select.Option>
+              ))}
             </Select>
           </>
         )}
