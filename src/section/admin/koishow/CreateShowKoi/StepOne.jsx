@@ -240,7 +240,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       ...prevData,
       createTicketTypeRequests: [
         ...prevData.createTicketTypeRequests,
-        { name: "", price: 0, availableQuantity: 0 }, // Mỗi loại vé có 3 mục
+        { name: "Vé Thường", price: 0, availableQuantity: 0 }, // Mặc định là Vé Thường
       ],
     }));
   };
@@ -272,59 +272,90 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
   const handleDateChange = (field, value) => {
     const newTimeErrors = { ...timeErrors };
+    const newData = { ...data };
 
     if (!value) {
       newTimeErrors[field] = "Vui lòng chọn ngày.";
-    } else if (
-      field === "endDate" &&
-      data.startDate &&
-      value.isBefore(data.startDate)
-    ) {
-      newTimeErrors[field] = "Ngày kết thúc phải sau ngày bắt đầu.";
     } else {
+      // Lưu giá trị mới vào newData
+      newData[field] = value.tz("Asia/Ho_Chi_Minh").format();
+
+      // Xóa lỗi cho trường hiện tại
       newTimeErrors[field] = "";
+
+      // Nếu đang cập nhật ngày bắt đầu
+      if (field === "startDate") {
+        // Kiểm tra nếu ngày kết thúc hiện tại trước ngày bắt đầu mới
+        if (data.endDate && value.isAfter(dayjs(data.endDate))) {
+          // Tự động cập nhật ngày kết thúc thành ngày bắt đầu + 1 ngày
+          const newEndDate = value.add(1, "day");
+          newData.endDate = newEndDate.tz("Asia/Ho_Chi_Minh").format();
+
+          // Xóa lỗi cho ngày kết thúc
+          newTimeErrors.endDate = "";
+        }
+      }
+      // Nếu đang cập nhật ngày kết thúc
+      else if (field === "endDate") {
+        // Kiểm tra xem ngày kết thúc có trước ngày bắt đầu không
+        if (data.startDate && value.isBefore(dayjs(data.startDate))) {
+          newTimeErrors[field] = "Ngày kết thúc phải sau ngày bắt đầu.";
+        }
+      }
     }
 
     setTimeErrors(newTimeErrors);
-    setData({ ...data, [field]: value.tz("Asia/Ho_Chi_Minh").format() });
+    setData(newData);
   };
 
   const handleNumberChange = (field, value) => {
-    // Kiểm tra xem value có phải là số hợp lệ không
+    // Nếu giá trị rỗng, cập nhật dữ liệu và xóa lỗi
+    if (value === "" || value === null || value === undefined) {
+      setData({ ...data, [field]: "" });
+      setParticipantErrors({
+        ...participantErrors,
+        [field]: "",
+      });
+      return;
+    }
+
+    // Chuyển đổi thành số
     const numValue = Number(value);
 
     // Tạo bản sao của state lỗi
     const newParticipantErrors = { ...participantErrors };
 
+    // Luôn cập nhật giá trị vào state, ngay cả khi có lỗi
+    const newData = { ...data, [field]: value };
+
     // Kiểm tra xem giá trị có hợp lệ không (phải là số và lớn hơn hoặc bằng 0)
     if (isNaN(numValue) || numValue < 0) {
-      newParticipantErrors[field] = "Giá trị phải là số và lớn hơn hoặc bằng 0";
-      setParticipantErrors(newParticipantErrors);
-      return;
+      newParticipantErrors[field] = "Giá trị phải là số và lớn hơn 0";
     } else {
+      // Xóa lỗi cho trường hiện tại
       newParticipantErrors[field] = "";
-    }
 
-    // Tạo bản sao của data với giá trị mới
-    const newData = { ...data, [field]: numValue };
-
-    // Nếu đang cập nhật minParticipants
-    if (field === "minParticipants") {
-      if (newData.maxParticipants && numValue >= newData.maxParticipants) {
-        newParticipantErrors.minParticipants =
-          "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa";
-      } else {
-        newParticipantErrors.minParticipants = "";
+      // Kiểm tra logic so sánh giữa hai trường
+      // Nếu đang cập nhật minParticipants
+      if (field === "minParticipants") {
+        if (
+          newData.maxParticipants &&
+          numValue >= Number(newData.maxParticipants)
+        ) {
+          newParticipantErrors.minParticipants =
+            "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa";
+        }
       }
-    }
 
-    // Nếu đang cập nhật maxParticipants
-    if (field === "maxParticipants") {
-      if (newData.minParticipants && numValue <= newData.minParticipants) {
-        newParticipantErrors.maxParticipants =
-          "Số lượng tối đa phải lớn hơn số lượng tối thiểu";
-      } else {
-        newParticipantErrors.maxParticipants = "";
+      // Nếu đang cập nhật maxParticipants
+      if (field === "maxParticipants") {
+        if (
+          newData.minParticipants &&
+          numValue <= Number(newData.minParticipants)
+        ) {
+          newParticipantErrors.maxParticipants =
+            "Số lượng tối đa phải lớn hơn số lượng tối thiểu";
+        }
       }
     }
 
@@ -409,6 +440,12 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             onChange={(value) => handleDateChange("endDate", value)}
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="Chọn ngày kết thúc"
+            disabledDate={(current) => {
+              // Vô hiệu hóa tất cả các ngày trước ngày bắt đầu
+              return data.startDate
+                ? current && current < dayjs(data.startDate)
+                : false;
+            }}
           />
           {timeErrors.endDate && (
             <p className="text-red-500 text-xs mt-1">{timeErrors.endDate}</p>
@@ -681,15 +718,20 @@ function StepOne({ updateFormData, initialData, showErrors }) {
               {/* Tên Loại Vé */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Tên Loại Vé
+                  Loại Vé
                 </label>
-                <Input
+                <Select
+                  style={{ width: "100%" }}
                   value={ticket.name}
-                  onChange={(e) =>
-                    handleTicketTypeChange(index, "name", e.target.value)
+                  onChange={(value) =>
+                    handleTicketTypeChange(index, "name", value)
                   }
-                  placeholder="Nhập tên loại vé"
-                />
+                  placeholder="Chọn loại vé"
+                >
+                  <Option value="Vé Thường">Vé Thường</Option>
+                  <Option value="Vé Cao Cấp">Vé Cao Cấp</Option>
+                  <Option value="Vé Triễn Lãm">Vé Triễn Lãm</Option>
+                </Select>
                 {showErrors && !ticket.name && (
                   <p className="text-red-500 text-xs mt-1">
                     Tên loại vé là bắt buộc.

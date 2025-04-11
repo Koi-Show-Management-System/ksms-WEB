@@ -14,6 +14,7 @@ import {
   message,
   InputNumber,
   Tag,
+  notification,
 } from "antd";
 import {
   PlusOutlined,
@@ -160,19 +161,47 @@ function CreateCategory({ showId, onCategoryCreated }) {
 
   const handleAddAward = () => {
     // Kiểm tra nếu đã có đủ 4 loại giải thưởng
-    if (
-      category.createAwardCateShowRequests?.length >= 4 ||
-      hasAllRequiredAwardTypes(category.createAwardCateShowRequests || [])
-    ) {
-      message.warning("Đã có đủ 4 loại giải thưởng!");
+    if (category.createAwardCateShowRequests?.length >= 4) {
+      message.warning("Đã có đủ 4 giải thưởng!");
       return;
+    }
+
+    // Xác định loại giải thưởng tiếp theo dựa vào những loại giải đã có
+    const existingAwardTypes =
+      category.createAwardCateShowRequests?.map((a) => a.awardType) || [];
+
+    let nextAwardType = "";
+    let awardName = "";
+
+    // Ưu tiên thêm giải theo thứ tự, nhưng không bắt buộc
+    if (!existingAwardTypes.includes("first")) {
+      nextAwardType = "first";
+      awardName = "Giải Nhất";
+    } else if (!existingAwardTypes.includes("second")) {
+      nextAwardType = "second";
+      awardName = "Giải Nhì";
+    } else if (!existingAwardTypes.includes("third")) {
+      nextAwardType = "third";
+      awardName = "Giải Ba";
+    } else if (!existingAwardTypes.includes("honorable")) {
+      nextAwardType = "honorable";
+      awardName = "Giải Khuyến Khích";
+    } else {
+      // Nếu đã có đủ 4 loại, chọn loại giải mặc định là "first"
+      nextAwardType = "first";
+      awardName = "Giải Nhất";
     }
 
     setCategory((prev) => ({
       ...prev,
       createAwardCateShowRequests: [
         ...prev.createAwardCateShowRequests,
-        { name: "", awardType: "", prizeValue: "", description: "" },
+        {
+          name: awardName,
+          awardType: nextAwardType,
+          prizeValue: "",
+          description: "",
+        },
       ],
     }));
   };
@@ -187,6 +216,75 @@ function CreateCategory({ showId, onCategoryCreated }) {
   };
 
   const handleAwardChange = (awardIndex, field, value) => {
+    // Kiểm tra giá trị giải thưởng
+    if (field === "prizeValue" && value < 0) {
+      message.error("Giá trị giải thưởng không được nhỏ hơn 0");
+      return;
+    }
+
+    // Kiểm tra thứ tự khi chọn loại giải
+    if (field === "awardType") {
+      const awards = [...category.createAwardCateShowRequests];
+
+      // Kiểm tra thứ tự giải thưởng
+      if (
+        value === "second" &&
+        !awards.some((a) => a.awardType === "first" && a !== awards[awardIndex])
+      ) {
+        message.error("Bạn phải chọn giải Nhất trước khi chọn giải Nhì");
+        return;
+      }
+
+      if (
+        value === "third" &&
+        !awards.some(
+          (a) => a.awardType === "second" && a !== awards[awardIndex]
+        )
+      ) {
+        message.error("Bạn phải chọn giải Nhì trước khi chọn giải Ba");
+        return;
+      }
+
+      if (
+        value === "honorable" &&
+        !awards.some((a) => a.awardType === "third" && a !== awards[awardIndex])
+      ) {
+        message.error("Bạn phải chọn giải Ba trước khi chọn giải Khuyến Khích");
+        return;
+      }
+
+      // Tự động điền tên giải thưởng dựa vào loại giải
+      let awardName = "";
+      switch (value) {
+        case "first":
+          awardName = "Giải Nhất";
+          break;
+        case "second":
+          awardName = "Giải Nhì";
+          break;
+        case "third":
+          awardName = "Giải Ba";
+          break;
+        case "honorable":
+          awardName = "Giải Khuyến Khích";
+          break;
+        default:
+          awardName = "";
+      }
+
+      // Cập nhật cả awardType và name
+      setCategory((prev) => ({
+        ...prev,
+        createAwardCateShowRequests: prev.createAwardCateShowRequests.map(
+          (award, i) =>
+            i === awardIndex
+              ? { ...award, awardType: value, name: awardName }
+              : award
+        ),
+      }));
+      return;
+    }
+
     setCategory((prev) => ({
       ...prev,
       createAwardCateShowRequests: prev.createAwardCateShowRequests.map(
@@ -351,30 +449,47 @@ function CreateCategory({ showId, onCategoryCreated }) {
   const validateCategory = () => {
     setShowErrors(true);
 
+    let hasError = false;
+    let errorDetails = [];
+
     // Basic validation
-    if (
-      !category.name ||
-      !category.sizeMin ||
-      !category.sizeMax ||
-      !category.description ||
-      category.hasTank === undefined
-    ) {
-      message.error("Vui lòng điền đầy đủ thông tin cơ bản");
-      return false;
+    if (!category.name) {
+      errorDetails.push("tên hạng mục");
+      hasError = true;
+    }
+
+    if (!category.sizeMin) {
+      errorDetails.push("kích thước tối thiểu");
+      hasError = true;
+    }
+
+    if (!category.sizeMax) {
+      errorDetails.push("kích thước tối đa");
+      hasError = true;
+    }
+
+    if (!category.description) {
+      errorDetails.push("mô tả hạng mục");
+      hasError = true;
+    }
+
+    if (category.hasTank === undefined) {
+      errorDetails.push("thông tin bể trưng bày");
+      hasError = true;
     }
 
     // Kiểm tra kích thước tối đa phải lớn hơn kích thước tối thiểu
     if (parseFloat(category.sizeMax) <= parseFloat(category.sizeMin)) {
-      message.error("Kích thước tối đa phải lớn hơn kích thước tối thiểu");
-      return false;
+      errorDetails.push("kích thước tối đa phải lớn hơn kích thước tối thiểu");
+      hasError = true;
     }
 
     // Kiểm tra số lượng tham gia tối đa phải lớn hơn số lượng tham gia tối thiểu
     if (parseInt(category.maxEntries) < parseInt(category.minEntries)) {
-      message.error(
-        "Số lượng tham gia tối đa phải lớn hơn số lượng tham gia tối thiểu"
+      errorDetails.push(
+        "số lượng tham gia tối đa phải lớn hơn số lượng tham gia tối thiểu"
       );
-      return false;
+      hasError = true;
     }
 
     // Variety validation
@@ -382,14 +497,14 @@ function CreateCategory({ showId, onCategoryCreated }) {
       !category.createCompetionCategoryVarieties ||
       category.createCompetionCategoryVarieties.length === 0
     ) {
-      message.error("Vui lòng chọn ít nhất một giống cá");
-      return false;
+      errorDetails.push("chọn ít nhất một giống cá");
+      hasError = true;
     }
 
     // Rounds validation
     if (category.createRoundRequests.length === 0) {
-      message.error("Vui lòng thêm ít nhất một vòng thi");
-      return false;
+      errorDetails.push("thêm ít nhất một vòng thi");
+      hasError = true;
     }
 
     // Kiểm tra số cá qua vòng
@@ -411,10 +526,10 @@ function CreateCategory({ showId, onCategoryCreated }) {
       const invalidRoundNames = invalidRounds
         .map((round) => round.name)
         .join(", ");
-      message.error(
-        `Vui lòng nhập số cá qua vòng từ 1 trở lên cho vòng: ${invalidRoundNames}`
+      errorDetails.push(
+        `vui lòng nhập số cá qua vòng từ 1 trở lên cho vòng: ${invalidRoundNames}`
       );
-      return false;
+      hasError = true;
     }
 
     // Criteria validation
@@ -426,11 +541,10 @@ function CreateCategory({ showId, onCategoryCreated }) {
         );
     });
 
-    let criteriaValid = true;
     Object.entries(criteriaByRound).forEach(([roundType, criteriaList]) => {
-      if (criteriaList.length < 3) {
-        message.error(`${roundLabelMap[roundType]} cần ít nhất 3 tiêu chí`);
-        criteriaValid = false;
+      if (criteriaList.length < 1) {
+        errorDetails.push(`${roundLabelMap[roundType]} cần ít nhất 1 tiêu chí`);
+        hasError = true;
       }
 
       // Kiểm tra tổng trọng số
@@ -439,33 +553,40 @@ function CreateCategory({ showId, onCategoryCreated }) {
         0
       );
       if (totalWeight !== 100) {
-        message.error(
+        errorDetails.push(
           `${roundLabelMap[roundType]} phải có tổng trọng số bằng 100% (hiện tại: ${totalWeight}%)`
         );
-        criteriaValid = false;
+        hasError = true;
       }
     });
 
-    if (!criteriaValid) return false;
-
     // Awards validation
     if (category.createAwardCateShowRequests.length === 0) {
-      message.error("Vui lòng thêm ít nhất một giải thưởng");
-      return false;
+      errorDetails.push("thêm ít nhất một giải thưởng");
+      hasError = true;
     }
 
-    // Kiểm tra có đủ 4 loại giải hay không
-    if (!hasAllRequiredAwardTypes(category.createAwardCateShowRequests)) {
-      message.error(
-        "Bắt buộc phải có đủ 4 loại giải: Giải Nhất, Giải Nhì, Giải Ba, và Giải Khuyến Khích"
+    // Kiểm tra thông tin chi tiết của từng giải thưởng
+    const invalidAwards = category.createAwardCateShowRequests.filter(
+      (award) =>
+        !award.name?.trim() ||
+        !award.awardType ||
+        !award.prizeValue ||
+        award.prizeValue <= 0 ||
+        !award.description?.trim()
+    );
+
+    if (invalidAwards.length > 0) {
+      errorDetails.push(
+        `${invalidAwards.length} giải thưởng chưa điền đầy đủ thông tin (loại giải, giá trị, mô tả)`
       );
-      return false;
+      hasError = true;
     }
 
     // Referee validation
     if (category.createRefereeAssignmentRequests.length === 0) {
-      message.error("Vui lòng chọn ít nhất một trọng tài");
-      return false;
+      errorDetails.push("chọn ít nhất một trọng tài");
+      hasError = true;
     }
 
     // Check if all referees have assigned rounds
@@ -475,7 +596,27 @@ function CreateCategory({ showId, onCategoryCreated }) {
       );
 
     if (refereesWithoutRounds.length > 0) {
-      message.error("Vui lòng chọn vòng chấm điểm cho tất cả trọng tài");
+      errorDetails.push("chọn vòng chấm điểm cho tất cả trọng tài");
+      hasError = true;
+    }
+
+    // Hiển thị thông báo lỗi nếu có
+    if (hasError) {
+      notification.error({
+        message: "Thông tin hạng mục không hợp lệ",
+        description: (
+          <div>
+            <p>Thông tin cần bổ sung hoặc chỉnh sửa:</p>
+            <ul className="list-disc pl-4 mt-2">
+              {errorDetails.map((detail, idx) => (
+                <li key={idx}>{detail}</li>
+              ))}
+            </ul>
+          </div>
+        ),
+        placement: "topRight",
+        duration: 3,
+      });
       return false;
     }
 
@@ -1149,12 +1290,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
               onClick={handleAddAward}
               icon={<PlusOutlined />}
               className="mb-2"
-              disabled={
-                category.createAwardCateShowRequests?.length >= 4 ||
-                hasAllRequiredAwardTypes(
-                  category.createAwardCateShowRequests || []
-                )
-              }
+              disabled={category.createAwardCateShowRequests?.length >= 4}
             >
               Thêm Giải Thưởng
             </Button>
@@ -1164,19 +1300,9 @@ function CreateCategory({ showId, onCategoryCreated }) {
               <>
                 {category.createAwardCateShowRequests.length === 0 && (
                   <p className="text-red-500 text-xs mt-1">
-                    Bắt buộc phải có đủ 4 loại giải{" "}
+                    Cần có ít nhất một giải thưởng
                   </p>
                 )}
-
-                {category.createAwardCateShowRequests.length > 0 &&
-                  !hasAllRequiredAwardTypes(
-                    category.createAwardCateShowRequests
-                  ) && (
-                    <p className="text-red-500 text-xs mt-1">
-                      Bắt buộc phải có đủ 4 loại giải: Giải Nhất, Giải Nhì, Giải
-                      Ba, và Giải Khuyến Khích.
-                    </p>
-                  )}
               </>
             )}
 
@@ -1202,28 +1328,6 @@ function CreateCategory({ showId, onCategoryCreated }) {
                       }
                     >
                       <Space direction="vertical" style={{ width: "100%" }}>
-                        <div>
-                          <label className="block text-sm font-medium text-gray-700">
-                            Tên Giải Thưởng
-                          </label>
-                          <Input
-                            placeholder="Nhập tên giải thưởng"
-                            value={award.name}
-                            onChange={(e) =>
-                              handleAwardChange(
-                                awardIndex,
-                                "name",
-                                e.target.value
-                              )
-                            }
-                          />
-                          {showErrors && !award.name && (
-                            <p className="text-red-500 text-xs mt-1">
-                              Tên giải thưởng là bắt buộc.
-                            </p>
-                          )}
-                        </div>
-
                         <div>
                           <div>
                             <label className="block text-sm font-medium text-gray-700">

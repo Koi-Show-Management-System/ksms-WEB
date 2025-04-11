@@ -166,8 +166,29 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
       category.createAwardCateShowRequests?.length >= 4 ||
       hasAllRequiredAwardTypes(category.createAwardCateShowRequests || [])
     ) {
-      message.warning("Đã có đủ 4 loại giải thưởng!");
+      message.warning("Đã có đủ 1 loại giải thưởng!");
       return;
+    }
+
+    // Xác định loại giải thưởng tiếp theo dựa vào những loại giải đã có
+    const existingAwardTypes =
+      category.createAwardCateShowRequests?.map((a) => a.awardType) || [];
+
+    let nextAwardType = "";
+    let awardName = "";
+
+    if (!existingAwardTypes.includes("first")) {
+      nextAwardType = "first";
+      awardName = "Giải Nhất";
+    } else if (!existingAwardTypes.includes("second")) {
+      nextAwardType = "second";
+      awardName = "Giải Nhì";
+    } else if (!existingAwardTypes.includes("third")) {
+      nextAwardType = "third";
+      awardName = "Giải Ba";
+    } else {
+      nextAwardType = "honorable";
+      awardName = "Giải Khuyến Khích";
     }
 
     setCategories((prevCategories) => {
@@ -178,8 +199,8 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
               createAwardCateShowRequests: [
                 ...(category.createAwardCateShowRequests || []),
                 {
-                  name: "",
-                  awardType: "",
+                  name: awardName,
+                  awardType: nextAwardType,
                   prizeValue: "",
                   description: "",
                 },
@@ -209,6 +230,75 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   const handleAwardChange = (categoryIndex, awardIndex, field, value) => {
     if (field === "prizeValue" && value < 0) {
       message.error("Giá trị giải thưởng không được nhỏ hơn 0");
+      return;
+    }
+
+    // Kiểm tra thứ tự khi chọn loại giải
+    if (field === "awardType") {
+      const awards = [...categories[categoryIndex].createAwardCateShowRequests];
+
+      // Kiểm tra thứ tự giải thưởng
+      if (
+        value === "second" &&
+        !awards.some((a) => a.awardType === "first" && a !== awards[awardIndex])
+      ) {
+        message.error("Bạn phải chọn giải Nhất trước khi chọn giải Nhì");
+        return;
+      }
+
+      if (
+        value === "third" &&
+        !awards.some(
+          (a) => a.awardType === "second" && a !== awards[awardIndex]
+        )
+      ) {
+        message.error("Bạn phải chọn giải Nhì trước khi chọn giải Ba");
+        return;
+      }
+
+      if (
+        value === "honorable" &&
+        !awards.some((a) => a.awardType === "third" && a !== awards[awardIndex])
+      ) {
+        message.error("Bạn phải chọn giải Ba trước khi chọn giải Khuyến Khích");
+        return;
+      }
+
+      // Tự động điền tên giải thưởng dựa vào loại giải
+      let awardName = "";
+      switch (value) {
+        case "first":
+          awardName = "Giải Nhất";
+          break;
+        case "second":
+          awardName = "Giải Nhì";
+          break;
+        case "third":
+          awardName = "Giải Ba";
+          break;
+        case "honorable":
+          awardName = "Giải Khuyến Khích";
+          break;
+        default:
+          awardName = "";
+      }
+
+      // Cập nhật cả awardType và name
+      setCategories((prevCategories) =>
+        prevCategories.map((category, i) =>
+          i === categoryIndex
+            ? {
+                ...category,
+                createAwardCateShowRequests:
+                  category.createAwardCateShowRequests.map((award, j) =>
+                    j === awardIndex
+                      ? { ...award, awardType: value, name: awardName }
+                      : award
+                  ),
+              }
+            : category
+        )
+      );
       return;
     }
 
@@ -459,16 +549,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     });
   };
 
-  // Hàm kiểm tra xem có đủ 4 loại giải thưởng hay không
-  const hasAllRequiredAwardTypes = (awards) => {
-    const requiredTypes = ["first", "second", "third", "honorable"];
-    const awardTypes = awards.map((award) => award.awardType);
-
-    // Kiểm tra xem mỗi loại giải bắt buộc có trong danh sách không
-    return requiredTypes.every((type) => awardTypes.includes(type));
-  };
-
-  // Thêm các hàm helper mới
+  // Thêm các hàm helper
   const calculateTotalWeight = (criteriaList) => {
     return Math.round(
       criteriaList.reduce((total, c) => total + (c.weight * 100 || 0), 0)
@@ -1290,34 +1371,19 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                   <Button
                     onClick={() => handleAddAward(index)}
                     icon={<PlusOutlined />}
-                    disabled={
-                      category.createAwardCateShowRequests?.length >= 4 ||
-                      hasAllRequiredAwardTypes(
-                        category.createAwardCateShowRequests || []
-                      )
-                    }
+                    disabled={false}
                   >
                     Thêm Giải Thưởng
                   </Button>
 
-                  {/* Hiển thị lỗi nếu không có giải thưởng hoặc thiếu loại giải */}
+                  {/* Hiển thị lỗi nếu không có giải thưởng */}
                   {showErrors && (
                     <>
                       {category.createAwardCateShowRequests.length === 0 && (
                         <p className="text-red-500 text-xs mt-1">
-                          Bắt buộc phải có đủ 4 loại giải{" "}
+                          Bắt buộc phải có ít nhất 1 giải thưởng
                         </p>
                       )}
-
-                      {category.createAwardCateShowRequests.length > 0 &&
-                        !hasAllRequiredAwardTypes(
-                          category.createAwardCateShowRequests
-                        ) && (
-                          <p className="text-red-500 text-xs mt-1">
-                            Bắt buộc phải có đủ 4 loại giải: Giải Nhất, Giải
-                            Nhì, Giải Ba, và Giải Khuyến Khích.
-                          </p>
-                        )}
                     </>
                   )}
 
@@ -1346,7 +1412,8 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                               direction="vertical"
                               style={{ width: "100%" }}
                             >
-                              <div>
+                              {/* Ẩn phần tên giải thưởng */}
+                              {/* <div>
                                 <label className="block text-sm font-medium text-gray-700">
                                   Tên Giải Thưởng
                                 </label>
@@ -1367,7 +1434,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                     Tên giải thưởng là bắt buộc.
                                   </p>
                                 )}
-                              </div>
+                              </div> */}
 
                               <div>
                                 <label className="block text-sm font-medium text-gray-700">
@@ -1386,7 +1453,6 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                   }
                                   style={{ width: "100%" }}
                                 >
-                                  {/* Chỉ hiển thị các loại giải chưa được chọn hoặc đang được chọn bởi giải thưởng này */}
                                   {!category.createAwardCateShowRequests.some(
                                     (a) =>
                                       a.awardType === "first" && a !== award

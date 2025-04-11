@@ -58,7 +58,7 @@ function KoiShow() {
         key: item.id,
         id: item.id,
         name: item.name,
-        startExhibitionDate: item.startExhibitionDate,
+        startDate: item.startDate,
         registrationFee: item.registrationFee,
         location: item.location,
         status: item.status,
@@ -308,10 +308,10 @@ function KoiShow() {
     },
     {
       title: "Ngày Bắt Đầu",
-      dataIndex: "startExhibitionDate",
-      key: "startExhibitionDate",
+      dataIndex: "startDate",
+      key: "startDate",
       sorter: (a, b) =>
-        new Date(a.startExhibitionDate) - new Date(b.startExhibitionDate),
+        new Date(a.startDate) - new Date(b.startDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
     },
     // {

@@ -239,7 +239,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         currentStatus.startDate &&
         value.isBefore(currentStatus.startDate)
       ) {
-        message.error("Ngày kết thúc phải sau ngày bắt đầu");
+        message.error("Giờ kết thúc phải sau giờ bắt đầu");
         return;
       }
 
@@ -253,12 +253,58 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         return;
       }
 
-      // Kiểm tra thứ tự các trạng thái
+      // Lấy danh sách các trạng thái đã được chọn và sắp xếp theo thời gian
+      const selectedStatuses = updatedStatuses.filter(
+        (s) => s.selected && s.startDate && s !== currentStatus
+      );
+
+      // Kiểm tra thứ tự thời gian
+      if (dateType === "startDate") {
+        // Kiểm tra thời gian bắt đầu của trạng thái hiện tại không được trước thời gian kết thúc của trạng thái trước đó
+        for (const status of selectedStatuses) {
+          if (status.endDate && status.selected) {
+            // Nếu thời gian bắt đầu của trạng thái hiện tại trước thời gian kết thúc của một trạng thái khác
+            // và đồng thời thời gian kết thúc của trạng thái hiện tại sau thời gian bắt đầu của trạng thái đó
+            // => có chồng chéo
+            if (
+              value.isBefore(status.endDate) &&
+              currentStatus.endDate &&
+              currentStatus.endDate.isAfter(status.startDate)
+            ) {
+              message.error(
+                `Thời gian không được chồng chéo với trạng thái khác (${status.label})`
+              );
+              return;
+            }
+          }
+        }
+      } else if (dateType === "endDate") {
+        // Kiểm tra thời gian kết thúc không tạo ra chồng chéo
+        for (const status of selectedStatuses) {
+          if (status.startDate && status.selected) {
+            // Nếu thời gian kết thúc của trạng thái hiện tại sau thời gian bắt đầu của một trạng thái khác
+            // và đồng thời thời gian bắt đầu của trạng thái hiện tại trước thời gian kết thúc của trạng thái đó
+            // => có chồng chéo
+            if (
+              value.isAfter(status.startDate) &&
+              currentStatus.startDate &&
+              currentStatus.startDate.isBefore(status.endDate)
+            ) {
+              message.error(
+                `Thời gian không được chồng chéo với trạng thái khác (${status.label})`
+              );
+              return;
+            }
+          }
+        }
+      }
+
+      // Kiểm tra thứ tự các trạng thái đặc biệt
       if (statusName === "RegistrationOpen") {
         // Ngày bắt đầu đăng ký phải trước ngày kết thúc đăng ký
         if (dateType === "startDate") {
           const checkInStatus = availableStatuses.find(
-            (s) => s.statusName === "CheckIn"
+            (s) => s.statusName === "CheckIn" && s.selected
           );
           if (
             checkInStatus?.startDate &&
@@ -271,7 +317,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       } else if (statusName === "CheckIn") {
         // Ngày điểm danh phải sau ngày kết thúc đăng ký
         const registrationStatus = availableStatuses.find(
-          (s) => s.statusName === "RegistrationOpen"
+          (s) => s.statusName === "RegistrationOpen" && s.selected
         );
         if (
           registrationStatus?.endDate &&
@@ -283,7 +329,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       } else if (statusName === "Finished") {
         // Ngày kết thúc phải sau tất cả các ngày khác
         const otherStatuses = availableStatuses.filter(
-          (s) => s.statusName !== "Finished"
+          (s) => s.statusName !== "Finished" && s.selected
         );
         for (const status of otherStatuses) {
           if (status.endDate && value.isBefore(status.endDate)) {
@@ -597,12 +643,11 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       Ngày diễn ra
                     </label>
                     <DatePicker
-                      showTime={{ defaultValue: null }}
                       className="w-full"
                       disabled={!status.selected}
                       value={status.startDate}
                       onChange={(value) => {
-                        // Chỉ cập nhật phần ngày, không tự động thiết lập giờ
+                        // Chỉ cập nhật phần ngày, giữ nguyên giờ nếu đã có
                         let newValue = value;
                         if (value && status.startDate) {
                           // Giữ lại thời gian từ startDate nếu đã có
@@ -621,16 +666,9 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                             .second(status.endDate.second());
                           handleDateChange(index, "endDate", newEndDate);
                         }
-                        // Bỏ tự động tạo endDate với giờ +1
                       }}
                       format="YYYY-MM-DD"
                       placeholder="Chọn ngày"
-                      popupClassName="timezone-popup"
-                      renderExtraFooter={() => (
-                        <div className="text-xs text-gray-500 text-right">
-                          Giờ Việt Nam (UTC+7)
-                        </div>
-                      )}
                     />
                     {getDateError(status, "startDate") && (
                       <p className="text-red-500 text-xs mt-1">
@@ -657,6 +695,19 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                                 .hour(value.hour())
                                 .minute(value.minute())
                                 .second(value.second());
+
+                              // Kiểm tra xem giờ bắt đầu có trước giờ kết thúc không nếu đã có giờ kết thúc
+                              if (
+                                status.endDate &&
+                                (newDate.isAfter(status.endDate) ||
+                                  newDate.isSame(status.endDate))
+                              ) {
+                                message.error(
+                                  "Giờ bắt đầu phải trước giờ kết thúc"
+                                );
+                                return;
+                              }
+
                               handleDateChange(index, "startDate", newDate);
                             } else if (status.startDate) {
                               // Trường hợp xoá giờ
@@ -676,6 +727,107 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                             </div>
                           )}
                           allowClear={true}
+                          disabledHours={() => {
+                            const hoursDisabled = [];
+
+                            // Vô hiệu hóa giờ đã qua trong ngày hiện tại
+                            const now = dayjs().tz("Asia/Ho_Chi_Minh");
+                            const isToday =
+                              status.startDate &&
+                              now.date() === status.startDate.date() &&
+                              now.month() === status.startDate.month() &&
+                              now.year() === status.startDate.year();
+
+                            if (isToday) {
+                              // Vô hiệu hóa tất cả các giờ đã qua trong ngày hiện tại
+                              for (let i = 0; i < now.hour(); i++) {
+                                hoursDisabled.push(i);
+                              }
+                            }
+
+                            // Kiểm tra tất cả các trạng thái có cùng ngày
+                            if (status.startDate) {
+                              const sameDay = availableStatuses.filter(
+                                (s) =>
+                                  s.selected &&
+                                  s.endDate &&
+                                  s.statusName !== status.statusName &&
+                                  s.endDate.format("YYYY-MM-DD") ===
+                                    status.startDate.format("YYYY-MM-DD")
+                              );
+
+                              // Vô hiệu hóa các giờ đã được sử dụng bởi các trạng thái khác
+                              sameDay.forEach((otherStatus) => {
+                                // Thời gian kết thúc của trạng thái khác là thời gian sớm nhất có thể bắt đầu trạng thái hiện tại
+                                // Vô hiệu hóa tất cả các giờ TRƯỚC giờ kết thúc của trạng thái khác
+                                for (
+                                  let i = 0;
+                                  i < otherStatus.endDate.hour();
+                                  i++
+                                ) {
+                                  if (!hoursDisabled.includes(i)) {
+                                    hoursDisabled.push(i);
+                                  }
+                                }
+
+                                // Nếu giờ kết thúc của trạng thái khác trùng với giờ bắt đầu hiện tại
+                                // thì sẽ kiểm tra phút ở hàm disabledMinutes
+                              });
+                            }
+
+                            return hoursDisabled;
+                          }}
+                          disabledMinutes={(selectedHour) => {
+                            const minutesDisabled = [];
+
+                            // Vô hiệu hóa phút đã qua trong giờ hiện tại
+                            const now = dayjs().tz("Asia/Ho_Chi_Minh");
+                            const isToday =
+                              status.startDate &&
+                              now.date() === status.startDate.date() &&
+                              now.month() === status.startDate.month() &&
+                              now.year() === status.startDate.year();
+
+                            if (isToday && selectedHour === now.hour()) {
+                              // Vô hiệu hóa tất cả các phút đã qua trong giờ hiện tại
+                              for (let i = 0; i < now.minute(); i++) {
+                                minutesDisabled.push(i);
+                              }
+                            }
+
+                            // Kiểm tra tất cả các trạng thái có cùng ngày
+                            if (status.startDate) {
+                              const sameDay = availableStatuses.filter(
+                                (s) =>
+                                  s.selected &&
+                                  s.endDate &&
+                                  s.statusName !== status.statusName &&
+                                  s.endDate.format("YYYY-MM-DD") ===
+                                    status.startDate.format("YYYY-MM-DD")
+                              );
+
+                              // Với mỗi trạng thái cùng ngày, kiểm tra
+                              sameDay.forEach((otherStatus) => {
+                                // Nếu đang xem giờ trùng với giờ kết thúc của trạng thái khác
+                                if (
+                                  selectedHour === otherStatus.endDate.hour()
+                                ) {
+                                  // Vô hiệu hóa tất cả các phút <= phút kết thúc của trạng thái đó
+                                  for (
+                                    let i = 0;
+                                    i <= otherStatus.endDate.minute();
+                                    i++
+                                  ) {
+                                    if (!minutesDisabled.includes(i)) {
+                                      minutesDisabled.push(i);
+                                    }
+                                  }
+                                }
+                              });
+                            }
+
+                            return minutesDisabled;
+                          }}
                         />
                       </div>
                       <div>
@@ -693,6 +845,17 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                                 .hour(value.hour())
                                 .minute(value.minute())
                                 .second(value.second());
+
+                              // Kiểm tra xem giờ kết thúc có sau giờ bắt đầu không
+                              if (
+                                newEndDate.isBefore(status.startDate) ||
+                                newEndDate.isSame(status.startDate)
+                              ) {
+                                message.error(
+                                  "Giờ kết thúc phải sau giờ bắt đầu"
+                                );
+                                return;
+                              }
 
                               handleDateChange(index, "endDate", newEndDate);
                             } else if (status.startDate) {
@@ -713,6 +876,107 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                             </div>
                           )}
                           allowClear={true}
+                          disabledHours={() => {
+                            const hoursDisabled = [];
+
+                            // Vô hiệu hóa giờ đã qua trong ngày hiện tại
+                            const now = dayjs().tz("Asia/Ho_Chi_Minh");
+                            const isToday =
+                              status.startDate &&
+                              now.date() === status.startDate.date() &&
+                              now.month() === status.startDate.month() &&
+                              now.year() === status.startDate.year();
+
+                            if (isToday) {
+                              // Vô hiệu hóa tất cả các giờ đã qua trong ngày hiện tại
+                              for (let i = 0; i < now.hour(); i++) {
+                                hoursDisabled.push(i);
+                              }
+                            }
+
+                            // Kiểm tra tất cả các trạng thái có cùng ngày
+                            if (status.startDate) {
+                              const sameDay = availableStatuses.filter(
+                                (s) =>
+                                  s.selected &&
+                                  s.endDate &&
+                                  s.statusName !== status.statusName &&
+                                  s.endDate.format("YYYY-MM-DD") ===
+                                    status.startDate.format("YYYY-MM-DD")
+                              );
+
+                              // Vô hiệu hóa các giờ đã được sử dụng bởi các trạng thái khác
+                              sameDay.forEach((otherStatus) => {
+                                // Thời gian kết thúc của trạng thái khác là thời gian sớm nhất có thể bắt đầu trạng thái hiện tại
+                                // Vô hiệu hóa tất cả các giờ TRƯỚC giờ kết thúc của trạng thái khác
+                                for (
+                                  let i = 0;
+                                  i < otherStatus.endDate.hour();
+                                  i++
+                                ) {
+                                  if (!hoursDisabled.includes(i)) {
+                                    hoursDisabled.push(i);
+                                  }
+                                }
+
+                                // Nếu giờ kết thúc của trạng thái khác trùng với giờ bắt đầu hiện tại
+                                // thì sẽ kiểm tra phút ở hàm disabledMinutes
+                              });
+                            }
+
+                            return hoursDisabled;
+                          }}
+                          disabledMinutes={(selectedHour) => {
+                            const minutesDisabled = [];
+
+                            // Vô hiệu hóa phút đã qua trong giờ hiện tại
+                            const now = dayjs().tz("Asia/Ho_Chi_Minh");
+                            const isToday =
+                              status.startDate &&
+                              now.date() === status.startDate.date() &&
+                              now.month() === status.startDate.month() &&
+                              now.year() === status.startDate.year();
+
+                            if (isToday && selectedHour === now.hour()) {
+                              // Vô hiệu hóa tất cả các phút đã qua trong giờ hiện tại
+                              for (let i = 0; i < now.minute(); i++) {
+                                minutesDisabled.push(i);
+                              }
+                            }
+
+                            // Kiểm tra tất cả các trạng thái có cùng ngày
+                            if (status.startDate) {
+                              const sameDay = availableStatuses.filter(
+                                (s) =>
+                                  s.selected &&
+                                  s.endDate &&
+                                  s.statusName !== status.statusName &&
+                                  s.endDate.format("YYYY-MM-DD") ===
+                                    status.startDate.format("YYYY-MM-DD")
+                              );
+
+                              // Với mỗi trạng thái cùng ngày, kiểm tra
+                              sameDay.forEach((otherStatus) => {
+                                // Nếu đang xem giờ trùng với giờ kết thúc của trạng thái khác
+                                if (
+                                  selectedHour === otherStatus.endDate.hour()
+                                ) {
+                                  // Vô hiệu hóa tất cả các phút <= phút kết thúc của trạng thái đó
+                                  for (
+                                    let i = 0;
+                                    i <= otherStatus.endDate.minute();
+                                    i++
+                                  ) {
+                                    if (!minutesDisabled.includes(i)) {
+                                      minutesDisabled.push(i);
+                                    }
+                                  }
+                                }
+                              });
+                            }
+
+                            return minutesDisabled;
+                          }}
                         />
                         {status.startDate &&
                           status.endDate &&

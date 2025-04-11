@@ -221,7 +221,7 @@ function CreateShow() {
             if (category.minEntries && category.maxEntries) {
               if (Number(category.minEntries) > Number(category.maxEntries)) {
                 errorDetails.push(
-                  "số lượng tham gia tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa"
+                  "số lượng tham gia tối thiểu phải nhỏ hơn số lượng tối đa"
                 );
                 categoryHasError = true;
               }
@@ -298,42 +298,14 @@ function CreateShow() {
             // Kiểm tra giải thưởng
             if (
               !category.createAwardCateShowRequests ||
-              category.createAwardCateShowRequests.length < 4
+              category.createAwardCateShowRequests.length < 1
             ) {
-              errorDetails.push("đủ 4 loại giải thưởng");
+              errorDetails.push("đủ 1 loại giải thưởng");
               categoryHasError = true;
             }
 
             // Kiểm tra chi tiết giải thưởng
             if (category.createAwardCateShowRequests?.length > 0) {
-              // Kiểm tra các loại giải thưởng bắt buộc
-              const requiredAwardTypes = [
-                "first",
-                "second",
-                "third",
-                "honorable",
-              ];
-              const awardTypes = category.createAwardCateShowRequests.map(
-                (award) => award.awardType
-              );
-              const missingAwardTypes = requiredAwardTypes.filter(
-                (type) => !awardTypes.includes(type)
-              );
-
-              if (missingAwardTypes.length > 0) {
-                const missingLabels = {
-                  first: "Giải Nhất",
-                  second: "Giải Nhì",
-                  third: "Giải Ba",
-                  honorable: "Giải Khuyến Khích",
-                };
-                const missingNames = missingAwardTypes
-                  .map((type) => missingLabels[type])
-                  .join(", ");
-                errorDetails.push(`thiếu các loại giải: ${missingNames}`);
-                categoryHasError = true;
-              }
-
               // Kiểm tra thông tin của các giải thưởng
               const invalidAwards = category.createAwardCateShowRequests.filter(
                 (award) =>
@@ -462,18 +434,19 @@ function CreateShow() {
       return;
     }
 
-    // Kiểm tra thêm điều kiện số lượng người tham gia
+    // Kiểm tra và hiển thị cảnh báo về số lượng người tham gia, nhưng vẫn cho phép chuyển bước
     if (currentStep === 1) {
       const min = parseInt(formData.minParticipants);
       const max = parseInt(formData.maxParticipants);
 
       if (min >= max) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa",
+        notification.warning({
+          message: "Cảnh báo nhập liệu",
+          description:
+            "Số lượng tối thiểu đang lớn hơn hoặc bằng số lượng tối đa. Vui lòng kiểm tra lại.",
           placement: "topRight",
         });
-        return;
+        // Không return ở đây để vẫn cho phép chuyển bước
       }
     }
 
