@@ -10,6 +10,7 @@ import {
   Spin,
   message,
   Tag,
+  InputNumber,
 } from "antd";
 import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import { DatePicker, TimePicker } from "antd";
@@ -54,6 +55,9 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
       ? initialData.createCategorieShowRequests
       : []
   );
+  // Thêm state để quản lý lỗi cho kích thước và số lượng tham gia
+  const [sizeErrors, setSizeErrors] = useState({});
+  const [entriesErrors, setEntriesErrors] = useState({});
 
   useEffect(() => {
     updateFormData({ createCategorieShowRequests: categories });
@@ -65,33 +69,81 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   }, []);
 
   const handleCategoryChange = (index, field, value) => {
-    if (
-      field === "sizeMin" ||
-      field === "sizeMax" ||
-      field === "registrationFee"
-    ) {
+    if (field === "registrationFee") {
       if (value < 0) {
         message.error(`${field} không được nhỏ hơn 0`);
         return;
       }
     }
 
-    if (
-      field === "sizeMax" &&
-      categories[index].sizeMin &&
-      value < categories[index].sizeMin
-    ) {
-      message.error("Kích thước tối đa phải lớn hơn kích thước tối thiểu");
-      return;
+    // Xử lý các trường liên quan đến kích thước
+    if (field === "sizeMin" || field === "sizeMax") {
+      // Lấy giá trị hiện tại
+      const updatedCategories = [...categories];
+      const category = updatedCategories[index] || {};
+      const currentSizeMin = field === "sizeMin" ? value : category.sizeMin;
+      const currentSizeMax = field === "sizeMax" ? value : category.sizeMax;
+
+      // Cập nhật state lỗi
+      const newSizeErrors = { ...sizeErrors };
+
+      if (!newSizeErrors[index]) {
+        newSizeErrors[index] = {};
+      }
+
+      // Kiểm tra kích thước tối thiểu
+      if (
+        currentSizeMin &&
+        currentSizeMax &&
+        Number(currentSizeMin) >= Number(currentSizeMax)
+      ) {
+        newSizeErrors[index].sizeMin =
+          "Kích thước tối thiểu phải nhỏ hơn kích thước tối đa";
+        newSizeErrors[index].sizeMax =
+          "Kích thước tối đa phải lớn hơn kích thước tối thiểu";
+      } else {
+        // Xóa lỗi nếu hợp lệ
+        newSizeErrors[index].sizeMin = "";
+        newSizeErrors[index].sizeMax = "";
+      }
+
+      setSizeErrors(newSizeErrors);
     }
 
-    if (
-      field === "sizeMin" &&
-      categories[index].sizeMax &&
-      value > categories[index].sizeMax
-    ) {
-      message.error("Kích thước tối thiểu phải nhỏ hơn kích thước tối đa");
-      return;
+    // Xử lý các trường liên quan đến số lượng tham gia
+    if (field === "minEntries" || field === "maxEntries") {
+      // Lấy giá trị hiện tại
+      const updatedCategories = [...categories];
+      const category = updatedCategories[index] || {};
+      const currentMinEntries =
+        field === "minEntries" ? value : category.minEntries;
+      const currentMaxEntries =
+        field === "maxEntries" ? value : category.maxEntries;
+
+      // Cập nhật state lỗi
+      const newEntriesErrors = { ...entriesErrors };
+
+      if (!newEntriesErrors[index]) {
+        newEntriesErrors[index] = {};
+      }
+
+      // Kiểm tra số lượng tham gia
+      if (
+        currentMinEntries &&
+        currentMaxEntries &&
+        Number(currentMinEntries) > Number(currentMaxEntries)
+      ) {
+        newEntriesErrors[index].minEntries =
+          "Số lượng tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa";
+        newEntriesErrors[index].maxEntries =
+          "Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu";
+      } else {
+        // Xóa lỗi nếu hợp lệ
+        newEntriesErrors[index].minEntries = "";
+        newEntriesErrors[index].maxEntries = "";
+      }
+
+      setEntriesErrors(newEntriesErrors);
     }
 
     setCategories((prevCategories) => {
@@ -108,6 +160,16 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   };
 
   const handleAddAward = (categoryIndex) => {
+    // Kiểm tra nếu đã có đủ 4 loại giải thưởng
+    const category = categories[categoryIndex];
+    if (
+      category.createAwardCateShowRequests?.length >= 4 ||
+      hasAllRequiredAwardTypes(category.createAwardCateShowRequests || [])
+    ) {
+      message.warning("Đã có đủ 4 loại giải thưởng!");
+      return;
+    }
+
     setCategories((prevCategories) => {
       return prevCategories.map((category, i) =>
         i === categoryIndex
@@ -349,7 +411,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
         roundType: mainRound,
         startTime: dayjs().format(),
         endTime: dayjs().add(1, "day").format(),
-        numberOfRegistrationToAdvance: 0,
+        numberOfRegistrationToAdvance: null,
         status: "pending",
       };
 
@@ -480,6 +542,38 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         Địa điểm tổ chức là bắt buộc.{" "}
                       </p>
                     )}
+                    <div className="flex-1 mt-4 ">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Chọn giống cá Koi
+                      </label>
+                      {isLoading ? (
+                        <Spin size="small" />
+                      ) : (
+                        <Select
+                          mode="multiple"
+                          placeholder="Chọn giống cá koi"
+                          className="w-full"
+                          value={category.createCompetionCategoryVarieties}
+                          onChange={(values) =>
+                            handleVarietyChange(index, values)
+                          }
+                        >
+                          {variety.map((item) => (
+                            <Option key={item.id} value={item.id}>
+                              {item.name}
+                            </Option>
+                          ))}
+                        </Select>
+                      )}
+                      {showErrors &&
+                        (!category.createCompetionCategoryVarieties ||
+                          category.createCompetionCategoryVarieties.length ===
+                            0) && (
+                          <p className="text-red-500 text-xs mt-1">
+                            Chọn ít nhất một giống.
+                          </p>
+                        )}
+                    </div>
                   </div>
 
                   {/* <div className="flex space-x-4">
@@ -542,20 +636,30 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         type="number"
                         placeholder="Nhập kích thước tối thiểu"
                         value={category.sizeMin || ""}
-                        onChange={(e) =>
-                          handleCategoryChange(
-                            index,
-                            "sizeMin",
-                            parseInt(e.target.value)
-                          )
-                        }
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (e.target.value === "" || value >= 0) {
+                            handleCategoryChange(
+                              index,
+                              "sizeMin",
+                              e.target.value
+                            );
+                          }
+                        }}
                         min={0}
                       />
-                      {showErrors && !category.sizeMin && (
+                      {sizeErrors[index]?.sizeMin && (
                         <p className="text-red-500 text-xs mt-1">
-                          Kích thước tối thiểu là bắt buộc.{" "}
+                          {sizeErrors[index].sizeMin}
                         </p>
                       )}
+                      {showErrors &&
+                        !category.sizeMin &&
+                        !sizeErrors[index]?.sizeMin && (
+                          <p className="text-red-500 text-xs mt-1">
+                            Kích thước tối thiểu là bắt buộc.{" "}
+                          </p>
+                        )}
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -565,20 +669,30 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         type="number"
                         placeholder="Nhập kích thước tối đa"
                         value={category.sizeMax || ""}
-                        onChange={(e) =>
-                          handleCategoryChange(
-                            index,
-                            "sizeMax",
-                            parseInt(e.target.value)
-                          )
-                        }
+                        onChange={(e) => {
+                          const value = parseFloat(e.target.value);
+                          if (e.target.value === "" || value >= 0) {
+                            handleCategoryChange(
+                              index,
+                              "sizeMax",
+                              e.target.value
+                            );
+                          }
+                        }}
                         min={0}
                       />
-                      {showErrors && !category.sizeMax && (
+                      {sizeErrors[index]?.sizeMax && (
                         <p className="text-red-500 text-xs mt-1">
-                          Kích thước tối đa là bắt buộc.{" "}
+                          {sizeErrors[index].sizeMax}
                         </p>
                       )}
+                      {showErrors &&
+                        !category.sizeMax &&
+                        !sizeErrors[index]?.sizeMax && (
+                          <p className="text-red-500 text-xs mt-1">
+                            Kích thước tối đa là bắt buộc.{" "}
+                          </p>
+                        )}
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -606,7 +720,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         Có bể trưng bày
                       </label>
                       <Select
-                        placeholder="Chọn có/không"
+                        placeholder="Có/Không"
                         className="w-full"
                         value={category.hasTank}
                         onChange={(value) =>
@@ -628,83 +742,28 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                   <div className="flex mb-4 space-x-3">
                     <div className="flex-1 ">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Chọn giống cá Koi
-                      </label>
-                      {isLoading ? (
-                        <Spin size="small" />
-                      ) : (
-                        <Select
-                          mode="multiple"
-                          placeholder="Chọn giống cá koi"
-                          className="w-full"
-                          value={category.createCompetionCategoryVarieties}
-                          onChange={(values) =>
-                            handleVarietyChange(index, values)
-                          }
-                        >
-                          {variety.map((item) => (
-                            <Option key={item.id} value={item.id}>
-                              {item.name}
-                            </Option>
-                          ))}
-                        </Select>
-                      )}
-                      {showErrors &&
-                        (!category.createCompetionCategoryVarieties ||
-                          category.createCompetionCategoryVarieties.length ===
-                            0) && (
-                          <p className="text-red-500 text-xs mt-1">
-                            Chọn ít nhất một giống.
-                          </p>
-                        )}
-                    </div>
-                    <div className="flex-1 ">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
                         Phí đăng ký (VND)
                       </label>
 
-                      <Input
-                        type="number"
+                      <InputNumber
                         min={0}
+                        style={{ width: "100%" }}
+                        formatter={(value) =>
+                          `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                        }
+                        parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                         placeholder="Nhập phí đăng ký"
                         value={category.registrationFee || ""}
-                        onChange={(e) =>
-                          handleCategoryChange(
-                            index,
-                            "registrationFee",
-                            parseInt(e.target.value)
-                          )
+                        onChange={(value) =>
+                          handleCategoryChange(index, "registrationFee", value)
                         }
+                        addonAfter="VND"
                       />
                       {showErrors && !category.registrationFee && (
                         <p className="text-red-500 text-xs mt-1">
                           Phí đăng ký là bắt buộc.{" "}
                         </p>
                       )}
-                    </div>
-                    <div className="flex-1">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Số lượng tham gia tối đa
-                      </label>
-                      <Input
-                        type="number"
-                        min={1}
-                        placeholder="Nhập số lượng tối đa"
-                        value={category.maxEntries || ""}
-                        onChange={(e) =>
-                          handleCategoryChange(
-                            index,
-                            "maxEntries",
-                            e.target.value
-                          )
-                        }
-                      />
-                      {showErrors &&
-                        (!category.maxEntries || category.maxEntries < 1) && (
-                          <p className="text-red-500 text-xs mt-1">
-                            Số lượng tham gia tối đa phải lớn hơn 0.
-                          </p>
-                        )}
                     </div>
                     <div className="flex-1">
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -715,18 +774,60 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         min={1}
                         placeholder="Nhập số lượng tối thiểu"
                         value={category.minEntries || ""}
-                        onChange={(e) =>
-                          handleCategoryChange(
-                            index,
-                            "minEntries",
-                            e.target.value
-                          )
-                        }
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (e.target.value === "" || value >= 1) {
+                            handleCategoryChange(
+                              index,
+                              "minEntries",
+                              e.target.value
+                            );
+                          }
+                        }}
                       />
+                      {entriesErrors[index]?.minEntries && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {entriesErrors[index].minEntries}
+                        </p>
+                      )}
                       {showErrors &&
-                        (!category.minEntries || category.minEntries < 1) && (
+                        (!category.minEntries || category.minEntries < 1) &&
+                        !entriesErrors[index]?.minEntries && (
                           <p className="text-red-500 text-xs mt-1">
                             Số lượng tham gia tối thiểu phải lớn hơn 0.
+                          </p>
+                        )}
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">
+                        Số lượng tham gia tối đa
+                      </label>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Nhập số lượng tối đa"
+                        value={category.maxEntries || ""}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value);
+                          if (e.target.value === "" || value >= 1) {
+                            handleCategoryChange(
+                              index,
+                              "maxEntries",
+                              e.target.value
+                            );
+                          }
+                        }}
+                      />
+                      {entriesErrors[index]?.maxEntries && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {entriesErrors[index].maxEntries}
+                        </p>
+                      )}
+                      {showErrors &&
+                        (!category.maxEntries || category.maxEntries < 1) &&
+                        !entriesErrors[index]?.maxEntries && (
+                          <p className="text-red-500 text-xs mt-1">
+                            Số lượng tham gia tối đa phải lớn hơn 0.
                           </p>
                         )}
                     </div>
@@ -794,11 +895,58 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                           </label>
                                           <Input
                                             type="number"
-                                            min={0}
+                                            min={1}
+                                            placeholder="Tối thiểu 1 cá"
                                             value={
                                               subRound.numberOfRegistrationToAdvance
                                             }
                                             onChange={(e) => {
+                                              // Cho phép giá trị rỗng tạm thời để người dùng có thể xóa và nhập lại
+                                              if (e.target.value === "") {
+                                                setCategories((prev) => {
+                                                  const updatedCategories = [
+                                                    ...prev,
+                                                  ];
+                                                  if (
+                                                    !updatedCategories[index]
+                                                      .createRoundRequests
+                                                  ) {
+                                                    updatedCategories[
+                                                      index
+                                                    ].createRoundRequests = [];
+                                                  }
+
+                                                  const actualIndex =
+                                                    updatedCategories[
+                                                      index
+                                                    ].createRoundRequests.findIndex(
+                                                      (r) =>
+                                                        r.name ===
+                                                          subRound.name &&
+                                                        r.roundType ===
+                                                          subRound.roundType
+                                                    );
+
+                                                  if (actualIndex !== -1) {
+                                                    updatedCategories[
+                                                      index
+                                                    ].createRoundRequests[
+                                                      actualIndex
+                                                    ].numberOfRegistrationToAdvance =
+                                                      null;
+                                                  }
+
+                                                  return updatedCategories;
+                                                });
+                                                return;
+                                              }
+
+                                              const value = parseInt(
+                                                e.target.value,
+                                                10
+                                              );
+                                              // Chỉ kiểm tra giá trị khi không phải là rỗng
+
                                               setCategories((prev) => {
                                                 const updatedCategories = [
                                                   ...prev,
@@ -846,16 +994,22 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                                   ].createRoundRequests[
                                                     actualIndex
                                                   ].numberOfRegistrationToAdvance =
-                                                    parseInt(
-                                                      e.target.value,
-                                                      10
-                                                    ) || 0;
+                                                    value;
                                                 }
 
                                                 return updatedCategories;
                                               });
                                             }}
                                           />
+                                          {showErrors &&
+                                            (!subRound.numberOfRegistrationToAdvance ||
+                                              subRound.numberOfRegistrationToAdvance <
+                                                1) && (
+                                              <p className="text-red-500 text-xs mt-1">
+                                                Số cá qua vòng phải từ 1 trở
+                                                lên.
+                                              </p>
+                                            )}
                                         </div>
                                       )}
                                     </Space>
@@ -1015,9 +1169,6 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                                 newWeight < 0 ||
                                                 newWeight > 1
                                               ) {
-                                                message.error(
-                                                  "Trọng số phải nằm trong khoảng 0-100%"
-                                                );
                                                 return;
                                               }
 
@@ -1139,6 +1290,12 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                   <Button
                     onClick={() => handleAddAward(index)}
                     icon={<PlusOutlined />}
+                    disabled={
+                      category.createAwardCateShowRequests?.length >= 4 ||
+                      hasAllRequiredAwardTypes(
+                        category.createAwardCateShowRequests || []
+                      )
+                    }
                   >
                     Thêm Giải Thưởng
                   </Button>
@@ -1229,12 +1386,30 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                   }
                                   style={{ width: "100%" }}
                                 >
-                                  <Option value="first">Giải Nhất</Option>
-                                  <Option value="second">Giải Nhì</Option>
-                                  <Option value="third">Giải Ba</Option>
-                                  <Option value="honorable">
-                                    Giải Khuyến Khích
-                                  </Option>
+                                  {/* Chỉ hiển thị các loại giải chưa được chọn hoặc đang được chọn bởi giải thưởng này */}
+                                  {!category.createAwardCateShowRequests.some(
+                                    (a) =>
+                                      a.awardType === "first" && a !== award
+                                  ) && <Option value="first">Giải Nhất</Option>}
+
+                                  {!category.createAwardCateShowRequests.some(
+                                    (a) =>
+                                      a.awardType === "second" && a !== award
+                                  ) && <Option value="second">Giải Nhì</Option>}
+
+                                  {!category.createAwardCateShowRequests.some(
+                                    (a) =>
+                                      a.awardType === "third" && a !== award
+                                  ) && <Option value="third">Giải Ba</Option>}
+
+                                  {!category.createAwardCateShowRequests.some(
+                                    (a) =>
+                                      a.awardType === "honorable" && a !== award
+                                  ) && (
+                                    <Option value="honorable">
+                                      Giải Khuyến Khích
+                                    </Option>
+                                  )}
                                 </Select>
                                 {showErrors && !award.awardType && (
                                   <p className="text-red-500 text-xs font-medium mt-1">
@@ -1248,19 +1423,29 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                 <label className="block text-sm font-medium text-gray-700">
                                   Giá Trị Giải Thưởng
                                 </label>
-                                <Input
-                                  type="number"
+                                <InputNumber
+                                  min={0}
+                                  style={{ width: "100%" }}
+                                  formatter={(value) =>
+                                    `${value}`.replace(
+                                      /\B(?=(\d{3})+(?!\d))/g,
+                                      ","
+                                    )
+                                  }
+                                  parser={(value) =>
+                                    value.replace(/\$\s?|(,*)/g, "")
+                                  }
                                   placeholder="Nhập giá trị (VND)"
                                   value={award.prizeValue}
-                                  onChange={(e) =>
+                                  onChange={(value) =>
                                     handleAwardChange(
                                       index,
                                       awardIndex,
                                       "prizeValue",
-                                      parseInt(e.target.value)
+                                      value
                                     )
                                   }
-                                  min={0}
+                                  addonAfter="VND"
                                 />
                                 {showErrors &&
                                   (!award.prizeValue ||

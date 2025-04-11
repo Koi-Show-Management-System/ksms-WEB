@@ -45,104 +45,123 @@ function CreateShow() {
     let hasError = false;
 
     if (currentStep === 1) {
+      // Kiểm tra thông tin cuộc thi theo nhóm
+      let stepOneHasError = false;
+      let errorDetails = [];
+
       // Kiểm tra thông tin cơ bản
       if (!formData.name?.trim()) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Tên chương trình là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("tên chương trình");
+        stepOneHasError = true;
       }
       if (!formData.description?.trim()) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Mô tả chương trình là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("mô tả chương trình");
+        stepOneHasError = true;
       }
       if (!formData.startDate || !formData.endDate) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Ngày bắt đầu và kết thúc đăng ký là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("ngày bắt đầu và kết thúc");
+        stepOneHasError = true;
       }
       if (!formData.minParticipants || !formData.maxParticipants) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description:
-            "Số lượng người tham gia tối thiểu và tối đa là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("số lượng người tham gia tối thiểu và tối đa");
+        stepOneHasError = true;
       }
       if (!formData.location?.trim()) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Địa điểm tổ chức là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("địa điểm tổ chức");
+        stepOneHasError = true;
       }
       if (!formData.imgUrl) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Hình ảnh chương trình là bắt buộc",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("hình ảnh chương trình");
+        stepOneHasError = true;
+      }
+
+      // Kiểm tra số lượng tham gia
+      if (formData.minParticipants && formData.maxParticipants) {
+        const min = parseInt(formData.minParticipants);
+        const max = parseInt(formData.maxParticipants);
+        if (min >= max) {
+          errorDetails.push("số lượng tối thiểu phải nhỏ hơn số lượng tối đa");
+          stepOneHasError = true;
+        }
       }
 
       // Kiểm tra nhà tài trợ
       if (formData.createSponsorRequests.length === 0) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Cần có ít nhất một nhà tài trợ",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("cần có ít nhất một nhà tài trợ");
+        stepOneHasError = true;
       } else {
-        formData.createSponsorRequests.forEach((sponsor, index) => {
-          if (
+        const invalidSponsors = formData.createSponsorRequests.filter(
+          (sponsor) =>
             !sponsor.name?.trim() ||
             !sponsor.logoUrl ||
-            !sponsor.investMoney
-          ) {
-            notification.error({
-              message: "Lỗi nhập liệu",
-              description: `Nhà tài trợ ${index + 1} thiếu thông tin bắt buộc`,
-              placement: "topRight",
-            });
-            hasError = true;
-          }
-        });
+            !sponsor.investMoney ||
+            sponsor.investMoney <= 0
+        );
+
+        if (invalidSponsors.length > 0) {
+          errorDetails.push(
+            `${invalidSponsors.length} nhà tài trợ thiếu thông tin hoặc có thông tin không hợp lệ`
+          );
+          stepOneHasError = true;
+        }
       }
 
       // Kiểm tra loại vé
       if (formData.createTicketTypeRequests.length === 0) {
-        notification.error({
-          message: "Lỗi nhập liệu",
-          description: "Cần có ít nhất một loại vé",
-          placement: "topRight",
-        });
-        hasError = true;
+        errorDetails.push("cần có ít nhất một loại vé");
+        stepOneHasError = true;
       } else {
-        formData.createTicketTypeRequests.forEach((ticket, index) => {
-          if (
+        const invalidTickets = formData.createTicketTypeRequests.filter(
+          (ticket) =>
             !ticket.name?.trim() ||
             !ticket.price ||
-            !ticket.availableQuantity
-          ) {
-            notification.error({
-              message: "Lỗi nhập liệu",
-              description: `Loại vé ${index + 1} thiếu thông tin bắt buộc`,
-              placement: "topRight",
-            });
-            hasError = true;
-          }
+            ticket.price <= 0 ||
+            !ticket.availableQuantity ||
+            ticket.availableQuantity <= 0
+        );
+
+        if (invalidTickets.length > 0) {
+          errorDetails.push(
+            `${invalidTickets.length} loại vé thiếu thông tin hoặc có thông tin không hợp lệ`
+          );
+          stepOneHasError = true;
+        }
+      }
+
+      // Kiểm tra quản lý và nhân viên
+      if (
+        !formData.assignManagerRequests ||
+        formData.assignManagerRequests.length === 0
+      ) {
+        errorDetails.push("cần chọn ít nhất một quản lý");
+        stepOneHasError = true;
+      }
+
+      if (
+        !formData.assignStaffRequests ||
+        formData.assignStaffRequests.length === 0
+      ) {
+        errorDetails.push("cần chọn ít nhất một nhân viên");
+        stepOneHasError = true;
+      }
+
+      // Hiển thị thông báo lỗi nếu có
+      if (stepOneHasError) {
+        hasError = true;
+        notification.error({
+          message: "Thông tin cuộc thi không hợp lệ",
+          description: (
+            <div>
+              <p>Thông tin cần bổ sung hoặc chỉnh sửa:</p>
+              <ul className="list-disc pl-4 mt-2">
+                {errorDetails.map((detail, idx) => (
+                  <li key={idx}>{detail}</li>
+                ))}
+              </ul>
+            </div>
+          ),
+          placement: "topRight",
+          duration: 15,
         });
       }
     }
@@ -188,6 +207,26 @@ function CreateShow() {
               categoryHasError = true;
             }
 
+            // Kiểm tra kích thước tối thiểu/tối đa
+            if (category.sizeMin && category.sizeMax) {
+              if (Number(category.sizeMin) >= Number(category.sizeMax)) {
+                errorDetails.push(
+                  "kích thước tối thiểu phải nhỏ hơn kích thước tối đa"
+                );
+                categoryHasError = true;
+              }
+            }
+
+            // Kiểm tra số lượng tham gia tối thiểu/tối đa
+            if (category.minEntries && category.maxEntries) {
+              if (Number(category.minEntries) > Number(category.maxEntries)) {
+                errorDetails.push(
+                  "số lượng tham gia tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa"
+                );
+                categoryHasError = true;
+              }
+            }
+
             // Kiểm tra vòng thi
             const roundTypes = ["Preliminary", "Evaluation", "Final"];
             const missingRoundTypes = roundTypes.filter(
@@ -204,6 +243,34 @@ function CreateShow() {
               categoryHasError = true;
             }
 
+            // Kiểm tra số cá qua vòng
+            if (category.createRoundRequests?.length > 0) {
+              const invalidRounds = category.createRoundRequests.filter(
+                (round) =>
+                  // Chỉ kiểm tra với vòng có hiển thị trường số cá qua vòng
+                  !(
+                    round.roundType === "Preliminary" ||
+                    (round.roundType === "Final" &&
+                      (category.createRoundRequests.filter(
+                        (r) => r.roundType === "Final"
+                      ).length < 2 ||
+                        round.roundOrder !== 1))
+                  ) &&
+                  (!round.numberOfRegistrationToAdvance ||
+                    round.numberOfRegistrationToAdvance < 1)
+              );
+
+              if (invalidRounds.length > 0) {
+                const invalidRoundNames = invalidRounds
+                  .map((round) => round.name)
+                  .join(", ");
+                errorDetails.push(
+                  `số cá qua vòng phải từ 1 trở lên cho: ${invalidRoundNames}`
+                );
+                categoryHasError = true;
+              }
+            }
+
             // Kiểm tra trọng tài
             if (
               !category.createRefereeAssignmentRequests ||
@@ -213,6 +280,21 @@ function CreateShow() {
               categoryHasError = true;
             }
 
+            // Kiểm tra các trọng tài đã được chọn vòng chấm điểm chưa
+            if (category.createRefereeAssignmentRequests?.length > 0) {
+              const refereesWithoutRounds =
+                category.createRefereeAssignmentRequests.filter(
+                  (ref) => !ref.roundTypes || ref.roundTypes.length === 0
+                );
+
+              if (refereesWithoutRounds.length > 0) {
+                errorDetails.push(
+                  `${refereesWithoutRounds.length} trọng tài chưa được chọn vòng chấm điểm`
+                );
+                categoryHasError = true;
+              }
+            }
+
             // Kiểm tra giải thưởng
             if (
               !category.createAwardCateShowRequests ||
@@ -220,6 +302,53 @@ function CreateShow() {
             ) {
               errorDetails.push("đủ 4 loại giải thưởng");
               categoryHasError = true;
+            }
+
+            // Kiểm tra chi tiết giải thưởng
+            if (category.createAwardCateShowRequests?.length > 0) {
+              // Kiểm tra các loại giải thưởng bắt buộc
+              const requiredAwardTypes = [
+                "first",
+                "second",
+                "third",
+                "honorable",
+              ];
+              const awardTypes = category.createAwardCateShowRequests.map(
+                (award) => award.awardType
+              );
+              const missingAwardTypes = requiredAwardTypes.filter(
+                (type) => !awardTypes.includes(type)
+              );
+
+              if (missingAwardTypes.length > 0) {
+                const missingLabels = {
+                  first: "Giải Nhất",
+                  second: "Giải Nhì",
+                  third: "Giải Ba",
+                  honorable: "Giải Khuyến Khích",
+                };
+                const missingNames = missingAwardTypes
+                  .map((type) => missingLabels[type])
+                  .join(", ");
+                errorDetails.push(`thiếu các loại giải: ${missingNames}`);
+                categoryHasError = true;
+              }
+
+              // Kiểm tra thông tin của các giải thưởng
+              const invalidAwards = category.createAwardCateShowRequests.filter(
+                (award) =>
+                  !award.name?.trim() ||
+                  !award.prizeValue ||
+                  !award.description?.trim() ||
+                  !award.awardType
+              );
+
+              if (invalidAwards.length > 0) {
+                errorDetails.push(
+                  `${invalidAwards.length} giải thưởng thiếu thông tin`
+                );
+                categoryHasError = true;
+              }
             }
 
             // Kiểm tra tiêu chí cho mỗi vòng
@@ -233,15 +362,50 @@ function CreateShow() {
                 errorDetails.push(`ít nhất 3 tiêu chí cho ${roundType}`);
                 categoryHasError = true;
               }
+
+              // Kiểm tra tổng trọng số phải bằng 100%
+              const totalWeight = Math.round(
+                criteriaForRound.reduce(
+                  (total, c) => total + (c.weight * 100 || 0),
+                  0
+                )
+              );
+
+              if (criteriaForRound.length > 0 && totalWeight !== 100) {
+                errorDetails.push(
+                  `tổng trọng số của ${roundType} phải bằng 100% (hiện tại: ${totalWeight}%)`
+                );
+                categoryHasError = true;
+              }
+
+              // Kiểm tra không có tiêu chí nào có trọng số = 0%
+              const zeroCriteria = criteriaForRound.filter(
+                (c) => c.weight === 0
+              );
+              if (zeroCriteria.length > 0) {
+                errorDetails.push(
+                  `${zeroCriteria.length} tiêu chí của ${roundType} có trọng số bằng 0%`
+                );
+                categoryHasError = true;
+              }
             });
 
             if (categoryHasError) {
               hasError = true;
               notification.error({
-                message: `Lỗi ở hạng mục ${categoryIndex + 1}`,
-                description: errorMessage + errorDetails.join(", "),
+                message: `Lỗi ở hạng mục ${categoryIndex + 1}${category.name ? `: ${category.name}` : ""}`,
+                description: (
+                  <div>
+                    <p>Hạng mục thiếu thông tin hoặc có lỗi:</p>
+                    <ul className="list-disc pl-4 mt-2">
+                      {errorDetails.map((detail, idx) => (
+                        <li key={idx}>{detail}</li>
+                      ))}
+                    </ul>
+                  </div>
+                ),
                 placement: "topRight",
-                duration: 10,
+                duration: 15,
               });
             }
           }
@@ -298,6 +462,21 @@ function CreateShow() {
       return;
     }
 
+    // Kiểm tra thêm điều kiện số lượng người tham gia
+    if (currentStep === 1) {
+      const min = parseInt(formData.minParticipants);
+      const max = parseInt(formData.maxParticipants);
+
+      if (min >= max) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa",
+          placement: "topRight",
+        });
+        return;
+      }
+    }
+
     if (currentStep === 3) {
       setIsConfirmModalOpen(true);
     } else {
@@ -305,16 +484,6 @@ function CreateShow() {
       setShowErrors(false);
     }
   };
-
-  // const handleNext = () => {
-  //   setShowErrors(true);
-
-  //   if (currentStep === 3) {
-  //     setIsConfirmModalOpen(true);
-  //   } else {
-  //     setCurrentStep((prev) => prev + 1);
-  //   }
-  // };
 
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));

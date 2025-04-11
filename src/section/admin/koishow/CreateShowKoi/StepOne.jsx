@@ -10,6 +10,7 @@ import {
   Card,
   Space,
   Collapse,
+  InputNumber,
 } from "antd";
 import {
   DeleteOutlined,
@@ -53,6 +54,24 @@ function StepOne({ updateFormData, initialData, showErrors }) {
   useEffect(() => {
     if (JSON.stringify(data) !== JSON.stringify(initialData)) {
       setData(initialData);
+
+      // Cập nhật lỗi khi dữ liệu thay đổi
+      const newParticipantErrors = { ...participantErrors };
+
+      if (initialData.minParticipants && initialData.maxParticipants) {
+        const min = Number(initialData.minParticipants);
+        const max = Number(initialData.maxParticipants);
+
+        if (min < max) {
+          newParticipantErrors.minParticipants = "";
+          newParticipantErrors.maxParticipants = "";
+        } else if (min >= max) {
+          newParticipantErrors.minParticipants =
+            "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa";
+        }
+      }
+
+      setParticipantErrors(newParticipantErrors);
     }
   }, [initialData]);
 
@@ -70,6 +89,22 @@ function StepOne({ updateFormData, initialData, showErrors }) {
   useEffect(() => {
     fetchAccountTeam(1, 100);
   }, []);
+
+  useEffect(() => {
+    // Kiểm tra và cập nhật lại thông báo lỗi khi data thay đổi
+    if (data.minParticipants && data.maxParticipants) {
+      const min = Number(data.minParticipants);
+      const max = Number(data.maxParticipants);
+      const newErrors = { ...participantErrors };
+
+      if (min < max) {
+        // Nếu hợp lệ, xóa cả hai thông báo lỗi
+        newErrors.minParticipants = "";
+        newErrors.maxParticipants = "";
+        setParticipantErrors(newErrors);
+      }
+    }
+  }, [data.minParticipants, data.maxParticipants]);
 
   const handleImageUpload = async ({ fileList }) => {
     try {
@@ -509,7 +544,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       <Collapse>
         {data.createSponsorRequests.map((sponsor, index) => (
           <Panel
-            header={`Sponsor ${index + 1}`}
+            header={`Nhà tài trợ ${index + 1}`}
             key={index}
             extra={
               <Button
@@ -529,14 +564,14 @@ function StepOne({ updateFormData, initialData, showErrors }) {
               {/* Tên Sponsor */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Tên Sponsor
+                  Tên Nhà Tài Trợ
                 </label>
                 <Input
                   value={sponsor.name}
                   onChange={(e) =>
                     handleSponsorChange(index, "name", e.target.value)
                   }
-                  placeholder="Nhập tên sponsor"
+                  placeholder="Nhập tên nhà tài trợ"
                 />
                 {showErrors && !sponsor.name && (
                   <p className="text-red-500 text-xs mt-1">
@@ -548,7 +583,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
               {/* Logo Sponsor */}
               <div>
                 <label className="block text-sm font-medium text-gray-700">
-                  Logo Sponsor
+                  Logo Nhà Tài Trợ
                 </label>
                 <Upload
                   accept=".jpg,.jpeg,.png"
@@ -570,7 +605,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                 >
                   <div>
                     <UploadOutlined />
-                    <div className="mt-2">Upload Logo</div>
+                    <div className="mt-2">Tải lên Logo</div>
                   </div>
                 </Upload>
                 {showErrors && !sponsor.logoUrl && (
@@ -585,19 +620,21 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                 <label className="block text-sm font-medium text-gray-700">
                   Số Tiền Đầu Tư
                 </label>
-                <Input
-                  type="number"
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                   value={sponsor.investMoney}
-                  onChange={(e) =>
-                    handleSponsorChange(
-                      index,
-                      "investMoney",
-                      parseInt(e.target.value)
-                    )
+                  onChange={(value) =>
+                    handleSponsorChange(index, "investMoney", value)
                   }
                   placeholder="Nhập số tiền tài trợ"
-                  min={0}
+                  addonAfter="VND"
                 />
+
                 {showErrors &&
                   (!sponsor.investMoney || sponsor.investMoney <= 0) && (
                     <p className="text-red-500 text-xs mt-1">
@@ -665,18 +702,19 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                 <label className="block text-sm font-medium text-gray-700">
                   Giá Vé
                 </label>
-                <Input
-                  type="number"
+                <InputNumber
+                  min={0}
+                  style={{ width: "100%" }}
+                  formatter={(value) =>
+                    `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                  }
+                  parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                   value={ticket.price}
-                  onChange={(e) =>
-                    handleTicketTypeChange(
-                      index,
-                      "price",
-                      parseInt(e.target.value)
-                    )
+                  onChange={(value) =>
+                    handleTicketTypeChange(index, "price", value)
                   }
                   placeholder="Nhập giá vé"
-                  min={0}
+                  addonAfter="VND"
                 />
                 {showErrors && (!ticket.price || ticket.price <= 0) && (
                   <p className="text-red-500 text-xs mt-1">
@@ -720,7 +758,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         {/* Select Manager */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn quản lý
+            Chọn Quản Lý
           </label>
           <Select
             mode="multiple"
@@ -740,7 +778,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
           {/* Hiển thị lỗi nếu chưa chọn Manager */}
           {showErrors && data.assignManagerRequests.length === 0 && (
             <p className="text-red-500 text-xs mt-1">
-              Bạn phải chọn ít nhất một Manager.
+              Bạn phải chọn ít nhất một Quản Lý.
             </p>
           )}
         </div>
@@ -748,7 +786,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         {/* Select Staff */}
         <div className="flex-1">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn nhân viên
+            Chọn Nhân Viên
           </label>
           <Select
             mode="multiple"
@@ -768,7 +806,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
           {/* Hiển thị lỗi nếu chưa chọn Staff */}
           {showErrors && data.assignStaffRequests.length === 0 && (
             <p className="text-red-500 text-xs mt-1">
-              Bạn phải chọn ít nhất một Staff.
+              Bạn phải chọn ít nhất một Nhân Viên.
             </p>
           )}
         </div>

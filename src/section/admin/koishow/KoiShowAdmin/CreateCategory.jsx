@@ -149,7 +149,25 @@ function CreateCategory({ showId, onCategoryCreated }) {
     }));
   };
 
+  // Thêm hàm kiểm tra có đủ 4 loại giải thưởng hay không
+  const hasAllRequiredAwardTypes = (awards) => {
+    const requiredTypes = ["first", "second", "third", "honorable"];
+    const awardTypes = awards.map((award) => award.awardType);
+
+    // Kiểm tra xem mỗi loại giải bắt buộc có trong danh sách không
+    return requiredTypes.every((type) => awardTypes.includes(type));
+  };
+
   const handleAddAward = () => {
+    // Kiểm tra nếu đã có đủ 4 loại giải thưởng
+    if (
+      category.createAwardCateShowRequests?.length >= 4 ||
+      hasAllRequiredAwardTypes(category.createAwardCateShowRequests || [])
+    ) {
+      message.warning("Đã có đủ 4 loại giải thưởng!");
+      return;
+    }
+
     setCategory((prev) => ({
       ...prev,
       createAwardCateShowRequests: [
@@ -288,7 +306,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
       roundType: mainRound,
       startTime: dayjs().format(),
       endTime: dayjs().add(1, "day").format(),
-      numberOfRegistrationToAdvance: 0,
+      numberOfRegistrationToAdvance: null,
       status: "pending",
     };
 
@@ -345,6 +363,20 @@ function CreateCategory({ showId, onCategoryCreated }) {
       return false;
     }
 
+    // Kiểm tra kích thước tối đa phải lớn hơn kích thước tối thiểu
+    if (parseFloat(category.sizeMax) <= parseFloat(category.sizeMin)) {
+      message.error("Kích thước tối đa phải lớn hơn kích thước tối thiểu");
+      return false;
+    }
+
+    // Kiểm tra số lượng tham gia tối đa phải lớn hơn số lượng tham gia tối thiểu
+    if (parseInt(category.maxEntries) < parseInt(category.minEntries)) {
+      message.error(
+        "Số lượng tham gia tối đa phải lớn hơn số lượng tham gia tối thiểu"
+      );
+      return false;
+    }
+
     // Variety validation
     if (
       !category.createCompetionCategoryVarieties ||
@@ -357,6 +389,31 @@ function CreateCategory({ showId, onCategoryCreated }) {
     // Rounds validation
     if (category.createRoundRequests.length === 0) {
       message.error("Vui lòng thêm ít nhất một vòng thi");
+      return false;
+    }
+
+    // Kiểm tra số cá qua vòng
+    const invalidRounds = category.createRoundRequests.filter(
+      (round) =>
+        // Chỉ kiểm tra với vòng có hiển thị trường số cá qua vòng
+        !(
+          round.roundType === "Preliminary" ||
+          (round.roundType === "Final" &&
+            (category.createRoundRequests.filter((r) => r.roundType === "Final")
+              .length < 2 ||
+              round.roundOrder !== 1))
+        ) &&
+        (!round.numberOfRegistrationToAdvance ||
+          round.numberOfRegistrationToAdvance < 1)
+    );
+
+    if (invalidRounds.length > 0) {
+      const invalidRoundNames = invalidRounds
+        .map((round) => round.name)
+        .join(", ");
+      message.error(
+        `Vui lòng nhập số cá qua vòng từ 1 trở lên cho vòng: ${invalidRoundNames}`
+      );
       return false;
     }
 
@@ -394,6 +451,14 @@ function CreateCategory({ showId, onCategoryCreated }) {
     // Awards validation
     if (category.createAwardCateShowRequests.length === 0) {
       message.error("Vui lòng thêm ít nhất một giải thưởng");
+      return false;
+    }
+
+    // Kiểm tra có đủ 4 loại giải hay không
+    if (!hasAllRequiredAwardTypes(category.createAwardCateShowRequests)) {
+      message.error(
+        "Bắt buộc phải có đủ 4 loại giải: Giải Nhất, Giải Nhì, Giải Ba, và Giải Khuyến Khích"
+      );
       return false;
     }
 
@@ -463,7 +528,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
         return {
           ...round,
           numberOfRegistrationToAdvance:
-            parseInt(round.numberOfRegistrationToAdvance) || 0,
+            parseInt(round.numberOfRegistrationToAdvance) || null,
         };
       }
     );
@@ -538,34 +603,61 @@ function CreateCategory({ showId, onCategoryCreated }) {
               </p>
             )}
           </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Chọn giống cá Koi
-            </label>
-            {isLoadingVariety ? (
-              <Spin size="small" />
-            ) : (
-              <Select
-                mode="multiple"
-                placeholder="Chọn giống cá koi"
-                className="w-full"
-                value={category.createCompetionCategoryVarieties}
-                onChange={handleVarietyChange}
-              >
-                {variety.map((item) => (
-                  <Option key={item.id} value={item.id}>
-                    {item.name}
-                  </Option>
-                ))}
-              </Select>
-            )}
-            {showErrors &&
-              (!category.createCompetionCategoryVarieties ||
-                category.createCompetionCategoryVarieties.length === 0) && (
-                <p className="text-red-500 text-xs mt-1">
-                  Chọn ít nhất một giống.
-                </p>
+          <div className="flex ">
+            <div className="mb-4 flex-1 ">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Chọn giống cá Koi
+              </label>
+              {isLoadingVariety ? (
+                <Spin size="small" />
+              ) : (
+                <Select
+                  mode="multiple"
+                  placeholder="Chọn giống cá koi"
+                  className="w-full"
+                  value={category.createCompetionCategoryVarieties}
+                  onChange={handleVarietyChange}
+                >
+                  {variety.map((item) => (
+                    <Option key={item.id} value={item.id}>
+                      {item.name}
+                    </Option>
+                  ))}
+                </Select>
               )}
+              {showErrors &&
+                (!category.createCompetionCategoryVarieties ||
+                  category.createCompetionCategoryVarieties.length === 0) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Chọn ít nhất một giống.
+                  </p>
+                )}
+            </div>
+            <div className="flex-1 mx-3">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Phí tham gia (VND)
+              </label>
+              <InputNumber
+                min={0}
+                placeholder="Nhập phí tham gia"
+                value={category.registrationFee}
+                onChange={(value) =>
+                  handleCategoryChange("registrationFee", value)
+                }
+                addonAfter="VND"
+                className="w-full"
+                formatter={(value) =>
+                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                }
+                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
+              />
+              {showErrors &&
+                (!category.registrationFee || category.registrationFee < 0) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Phí đăng ký là bắt buộc.
+                  </p>
+                )}
+            </div>
           </div>
 
           <div className="flex space-x-4 mb-4">
@@ -575,11 +667,14 @@ function CreateCategory({ showId, onCategoryCreated }) {
               </label>
               <Input
                 type="number"
+                min={0}
                 placeholder="Nhập kích thước tối thiểu"
                 value={category.sizeMin}
-                onChange={(e) =>
-                  handleCategoryChange("sizeMin", e.target.value)
-                }
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (value < 0) return;
+                  handleCategoryChange("sizeMin", e.target.value);
+                }}
               />
               {showErrors && !category.sizeMin && (
                 <p className="text-red-500 text-xs mt-1">
@@ -593,48 +688,37 @@ function CreateCategory({ showId, onCategoryCreated }) {
               </label>
               <Input
                 type="number"
+                min={0}
                 placeholder="Nhập kích thước tối đa"
                 value={category.sizeMax}
-                onChange={(e) =>
-                  handleCategoryChange("sizeMax", e.target.value)
-                }
+                onChange={(e) => {
+                  const value = parseFloat(e.target.value);
+                  if (value < 0) return;
+                  handleCategoryChange("sizeMax", e.target.value);
+                }}
               />
               {showErrors && !category.sizeMax && (
                 <p className="text-red-500 text-xs mt-1">
                   Kích thước tối đa là bắt buộc.
                 </p>
               )}
-            </div>
-            <div className="flex-1">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Phí tham gia (VND)
-              </label>
-              <InputNumber
-                min={0}
-                placeholder="Nhập phí tham gia"
-                value={category.registrationFee}
-                onChange={(value) =>
-                  handleCategoryChange("registrationFee", value)
-                }
-                className="w-full"
-                formatter={(value) =>
-                  `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                }
-                parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-              />
               {showErrors &&
-                (!category.registrationFee || category.registrationFee < 0) && (
+                category.sizeMax &&
+                category.sizeMin &&
+                parseFloat(category.sizeMax) <=
+                  parseFloat(category.sizeMin) && (
                   <p className="text-red-500 text-xs mt-1">
-                    Phí đăng ký không được âm.
+                    Kích thước tối đa phải lớn hơn kích thước tối thiểu.
                   </p>
                 )}
             </div>
+
             <div className="flex-1">
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Có bể trưng bày
               </label>
               <Select
-                placeholder="Chọn có/không"
+                placeholder="Có/Không"
                 className="w-full"
                 value={category.hasTank}
                 onChange={(value) => handleCategoryChange("hasTank", value)}
@@ -703,6 +787,15 @@ function CreateCategory({ showId, onCategoryCreated }) {
                     Số lượng tham gia tối đa phải lớn hơn 0.
                   </p>
                 )}
+              {showErrors &&
+                category.maxEntries &&
+                category.minEntries &&
+                parseInt(category.maxEntries) <
+                  parseInt(category.minEntries) && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Số lượng tối đa phải lớn hơn số lượng tối thiểu.
+                  </p>
+                )}
             </div>
           </div>
 
@@ -766,11 +859,18 @@ function CreateCategory({ showId, onCategoryCreated }) {
                                 </label>
                                 <Input
                                   type="number"
-                                  min={0}
+                                  min={1}
+                                  placeholder="Tối thiểu 1 cá"
                                   value={subRound.numberOfRegistrationToAdvance}
                                   onChange={(e) => {
-                                    const value =
-                                      parseInt(e.target.value, 10) || 0;
+                                    const value = parseInt(e.target.value, 10);
+                                    // Đảm bảo giá trị là số nguyên và >= 1
+                                    if (isNaN(value) || value < 1) {
+                                      message.error(
+                                        "Số cá qua vòng phải từ 1 trở lên"
+                                      );
+                                      return;
+                                    }
                                     console.log(
                                       `Cập nhật số cá qua vòng cho ${subRound.name} thành ${value}`
                                     );
@@ -802,6 +902,14 @@ function CreateCategory({ showId, onCategoryCreated }) {
                                     });
                                   }}
                                 />
+                                {showErrors &&
+                                  (!subRound.numberOfRegistrationToAdvance ||
+                                    subRound.numberOfRegistrationToAdvance <
+                                      1) && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      Số cá qua vòng phải từ 1 trở lên.
+                                    </p>
+                                  )}
                               </div>
                             )}
                           </div>
@@ -1041,17 +1149,36 @@ function CreateCategory({ showId, onCategoryCreated }) {
               onClick={handleAddAward}
               icon={<PlusOutlined />}
               className="mb-2"
+              disabled={
+                category.createAwardCateShowRequests?.length >= 4 ||
+                hasAllRequiredAwardTypes(
+                  category.createAwardCateShowRequests || []
+                )
+              }
             >
               Thêm Giải Thưởng
             </Button>
 
             {/* Show error if no awards */}
-            {showErrors &&
-              category.createAwardCateShowRequests.length === 0 && (
-                <p className="text-red-500 text-xs mt-1">
-                  Cần thêm ít nhất một giải thưởng.
-                </p>
-              )}
+            {showErrors && (
+              <>
+                {category.createAwardCateShowRequests.length === 0 && (
+                  <p className="text-red-500 text-xs mt-1">
+                    Bắt buộc phải có đủ 4 loại giải{" "}
+                  </p>
+                )}
+
+                {category.createAwardCateShowRequests.length > 0 &&
+                  !hasAllRequiredAwardTypes(
+                    category.createAwardCateShowRequests
+                  ) && (
+                    <p className="text-red-500 text-xs mt-1">
+                      Bắt buộc phải có đủ 4 loại giải: Giải Nhất, Giải Nhì, Giải
+                      Ba, và Giải Khuyến Khích.
+                    </p>
+                  )}
+              </>
+            )}
 
             {category.createAwardCateShowRequests.length > 0 && (
               <Collapse className="mt-3">
@@ -1114,16 +1241,32 @@ function CreateCategory({ showId, onCategoryCreated }) {
                               }
                               className="w-full"
                             >
-                              <Option value="first">Giải Nhất</Option>
-                              <Option value="second">Giải Nhì</Option>
-                              <Option value="third">Giải Ba</Option>
-                              <Option value="honorable">
-                                Giải Khuyến Khích
-                              </Option>
+                              {/* Chỉ hiển thị các loại giải chưa được chọn hoặc đang được chọn bởi giải thưởng này */}
+                              {!category.createAwardCateShowRequests.some(
+                                (a) => a.awardType === "first" && a !== award
+                              ) && <Option value="first">Giải Nhất</Option>}
+
+                              {!category.createAwardCateShowRequests.some(
+                                (a) => a.awardType === "second" && a !== award
+                              ) && <Option value="second">Giải Nhì</Option>}
+
+                              {!category.createAwardCateShowRequests.some(
+                                (a) => a.awardType === "third" && a !== award
+                              ) && <Option value="third">Giải Ba</Option>}
+
+                              {!category.createAwardCateShowRequests.some(
+                                (a) =>
+                                  a.awardType === "honorable" && a !== award
+                              ) && (
+                                <Option value="honorable">
+                                  Giải Khuyến Khích
+                                </Option>
+                              )}
                             </Select>
                             {showErrors && !award.awardType && (
-                              <p className="text-red-500 text-xs mt-1">
-                                Loại giải thưởng là bắt buộc.
+                              <p className="text-red-500 text-xs font-medium mt-1">
+                                Loại giải thưởng là bắt buộc. Mỗi hạng mục phải
+                                có đủ 4 loại giải.
                               </p>
                             )}
                           </div>
@@ -1134,11 +1277,18 @@ function CreateCategory({ showId, onCategoryCreated }) {
                             Giá Trị Giải Thưởng
                           </label>
                           <InputNumber
+                            min={0}
+                            style={{ width: "100%" }}
+                            formatter={(value) =>
+                              `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
+                            }
+                            parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
                             placeholder="Nhập giá trị (VND)"
                             value={award.prizeValue}
                             onChange={(value) =>
                               handleAwardChange(awardIndex, "prizeValue", value)
                             }
+                            addonAfter="VND"
                             className="w-full"
                           />
                           {showErrors &&
