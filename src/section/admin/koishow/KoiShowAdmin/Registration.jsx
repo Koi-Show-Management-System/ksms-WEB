@@ -32,6 +32,9 @@ import useRegistration from "../../../../hooks/useRegistration";
 import useCategory from "../../../../hooks/useCategory";
 import RoundSelector from "./RoundSelector";
 
+// Placeholder image for missing images
+const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
+
 function Registration({ showId, statusShow }) {
   const {
     registration,
@@ -144,21 +147,19 @@ function Registration({ showId, statusShow }) {
   };
 
   const showAssignModal = () => {
-    if (!selectedCategory) {
+    // Lọc các con cá đã check-in
+    const checkedInFish = registration.filter(
+      (reg) => reg.status?.toLowerCase() === "checkin"
+    );
+
+    if (checkedInFish.length === 0) {
       notification.warning({
-        message: "Chưa đủ thông tin",
-        description: "Vui lòng chọn hạng mục trước khi gán vòng",
+        message: "Không có đăng ký",
+        description: "Không có đăng ký nào đã check-in để gán vòng",
         placement: "topRight",
       });
       return;
     }
-
-    // Lọc các con cá đã check-in trong hạng mục đã chọn
-    const checkedInFish = registration.filter(
-      (reg) =>
-        reg.status?.toLowerCase() === "checkin" &&
-        reg.competitionCategory?.id === selectedCategory
-    );
 
     setCheckinRegistrations(checkedInFish);
     setAssignModalPage(1); // Reset về trang 1 khi mở modal
@@ -186,12 +187,6 @@ function Registration({ showId, statusShow }) {
 
     // Update selectedStatus state to handle multiple selections
     setSelectedStatus(filteredStatuses);
-
-    // Log thông tin phân trang và filter
-    console.log("Pagination:", pagination);
-    console.log("Filters:", filters);
-    console.log("CategoryId:", selectedCategory);
-    console.log("Selected statuses:", filteredStatuses);
 
     // Fetch data with filters
     fetchRegistration(
@@ -288,14 +283,15 @@ function Registration({ showId, statusShow }) {
     return null;
   };
   const getFilteredData = () => {
-    // If no category selected, return empty array
-    if (!selectedCategory) {
-      return [];
-    }
-
+    // Chỉnh sửa phần này để hiển thị dữ liệu khi chưa chọn category
     if (!registration || registration.length === 0) return [];
 
-    // Không cần lọc theo status nữa vì đã lọc từ API
+    // Nếu không có category được chọn, hiển thị tất cả dữ liệu
+    if (!selectedCategory) {
+      return registration;
+    }
+
+    // Lọc theo category nếu đã chọn
     return registration.filter((item) => {
       return item.competitionCategory?.id === selectedCategory;
     });
@@ -445,9 +441,48 @@ function Registration({ showId, statusShow }) {
       key: "registerName",
     },
     {
+      title: "Hình ảnh",
+      key: "image",
+      render: (_, record) => {
+        const imageMedia =
+          record.koiMedia && record.koiMedia.length > 0
+            ? record.koiMedia.find((media) => media.mediaType === "Image")
+            : null;
+
+        const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
+
+        return (
+          <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
+            <Image
+              src={imageUrl}
+              alt="Hình cá"
+              width={80}
+              height={50}
+              className="object-cover"
+              preview={{
+                src: imageMedia?.mediaUrl,
+                mask: <div className="text-xs"><EyeOutlined /></div>,
+              }}
+              placeholder={
+                <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                  <Spin size="small" />
+                </div>
+              }
+              fallback={PLACEHOLDER_IMAGE}
+            />
+          </div>
+        );
+      },
+    },
+    {
       title: "Tên Koi",
       key: "koiName",
       render: (_, record) => record.koiProfile?.name || "N/A",
+    },
+    {
+      title: "Kích thước",
+      key: "koiSize",
+      render: (_, record) => (record.koiSize ? `${record.koiSize} cm` : "N/A"),
     },
     {
       title: "Hạng mục",
@@ -455,44 +490,7 @@ function Registration({ showId, statusShow }) {
       key: "category",
       render: (category) => category?.name || "N/A",
     },
-    {
-      title: "Hình ảnh",
-      key: "image",
-      render: (_, record) => {
-        const imageUrl = getFirstImageUrl(record);
-        return imageUrl ? (
-          <Image
-            src={imageUrl}
-            alt="Koi"
-            style={{
-              width: 120,
-              objectFit: "cover",
-              borderRadius: "4px",
-            }}
-            preview={false}
-            placeholder={
-              <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                <Spin size="small" />
-              </div>
-            }
-          />
-        ) : (
-          <div
-            style={{
-              width: 100,
-              height: 70,
-              background: "#f0f0f0",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: "4px",
-            }}
-          >
-            Không có ảnh
-          </div>
-        );
-      },
-    },
+
     {
       title: "Trạng thái",
       dataIndex: "status",

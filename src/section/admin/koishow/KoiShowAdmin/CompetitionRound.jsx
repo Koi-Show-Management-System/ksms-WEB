@@ -690,7 +690,11 @@ function CompetitionRound({ showId }) {
                 className="object-cover"
                 preview={{
                   src: imageMedia?.mediaUrl,
-                  mask: <div className="text-xs">Xem</div>,
+                  mask: (
+                    <div className="text-xs">
+                      <EyeOutlined />
+                    </div>
+                  ),
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">

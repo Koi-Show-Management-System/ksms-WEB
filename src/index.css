@@ -18,6 +18,24 @@
   }
 }
 
+/* CSS cho Table */
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar-thumb {
+  background-color: #eaeaea;
+  border-radius: 3px;
+}
+.custom-scrollbar-table .ant-table-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+.custom-scrollbar-table .ant-table-body {
+  scrollbar-width: thin;
+  scrollbar-color: #eaeaea transparent;
+  scrollbar-gutter: stable;
+}
+
 * {
   font-family: "Josefin Sans", sans-serif !important;
   font-family: "Montserrat", sans-serif !important;
@@ -44,11 +62,11 @@
   overflow: hidden;
 }
 
-.ant-table-wrapper .ant-table {
+/* .ant-table-wrapper .ant-table {
   width: 100%;
   overflow-x: auto;
   max-height: 80vh;
-}
+} */
 
 @media (max-width: 768px) {
   .ant-table-wrapper .ant-table {

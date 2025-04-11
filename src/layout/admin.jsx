@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import { Layout, Menu, notification } from "antd";
 import {
   UsergroupAddOutlined,
@@ -26,7 +26,7 @@ const getItem = (label, key, icon, children, path) => {
   return item;
 };
 
-const AdminDashboard = ({ children }) => {
+const AdminDashboard = React.memo(({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const { infoUser, fetchUserInfo, logout } = useAuth();
   const navigate = useNavigate();
@@ -57,11 +57,15 @@ const AdminDashboard = ({ children }) => {
     []
   );
 
-  useEffect(() => {
+  const fetchUserCallback = useCallback(() => {
     if (userId) {
       fetchUserInfo(userId);
     }
   }, [fetchUserInfo, userId]);
+
+  useEffect(() => {
+    fetchUserCallback();
+  }, [fetchUserCallback]);
 
   const handleLogout = () => {
     logout();
@@ -140,7 +144,7 @@ const AdminDashboard = ({ children }) => {
       </Layout>
     </Layout>
   );
-};
+});
 
 AdminDashboard.propTypes = {
   children: PropTypes.node.isRequired,

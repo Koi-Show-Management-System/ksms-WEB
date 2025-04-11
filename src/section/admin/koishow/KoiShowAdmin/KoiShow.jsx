@@ -283,11 +283,6 @@ function KoiShow() {
 
   if (isLoading && localData.length === 0) return <Loading />;
   if (error && localData.length === 0) {
-    notification.error({
-      message: "Lỗi",
-      description: "Không thể tải dữ liệu triển lãm",
-      placement: "topRight",
-    });
     return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
   }
 
@@ -310,8 +305,7 @@ function KoiShow() {
       title: "Ngày Bắt Đầu",
       dataIndex: "startDate",
       key: "startDate",
-      sorter: (a, b) =>
-        new Date(a.startDate) - new Date(b.startDate),
+      sorter: (a, b) => new Date(a.startDate) - new Date(b.startDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
     },
     // {

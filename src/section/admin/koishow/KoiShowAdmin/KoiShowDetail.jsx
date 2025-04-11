@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   Collapse,
   Timeline,
@@ -83,9 +83,16 @@ function KoiShowDetail() {
   const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
   const formatTime = (date) => dayjs(date).format("hh:mm A");
 
+  // Sử dụng useCallback để đảm bảo hàm không bị tạo lại mỗi lần render
+  const fetchDetailCallback = useCallback(() => {
+    if (id) {
+      fetchKoiShowDetail(id);
+    }
+  }, [id, fetchKoiShowDetail]);
+
   useEffect(() => {
-    fetchKoiShowDetail(id);
-  }, [id]);
+    fetchDetailCallback();
+  }, [fetchDetailCallback]);
 
   // Function to open edit modal
   const openEditModal = () => {
@@ -1036,4 +1043,4 @@ function KoiShowDetail() {
   );
 }
 
-export default KoiShowDetail;
+export default React.memo(KoiShowDetail);
