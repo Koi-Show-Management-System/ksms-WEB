@@ -18,6 +18,8 @@ import { useNavigate } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
 import dayjs from "dayjs";
 import { Loading } from "../../../../components";
+import Cookies from "js-cookie";
+import useAuth from "../../../../hooks/useAuth";
 
 function KoiShow() {
   const navigate = useNavigate();
@@ -31,6 +33,8 @@ function KoiShow() {
   const [selectedShowId, setSelectedShowId] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [currentStatus, setCurrentStatus] = useState(null);
+  const { checkRole } = useAuth();
+  const userRole = Cookies.get("__role");
 
   const {
     koiShows,
@@ -262,6 +266,21 @@ function KoiShow() {
     return option ? option.label : status;
   };
 
+  const handleNavigation = (recordId, recordStatus) => {
+    if (userRole === "Admin") {
+      navigate(`/admin/koiShow/detail/${recordId}?status=${recordStatus}`);
+    } else if (userRole === "Manager") {
+      navigate(`/manager/koiShow/detail/${recordId}?status=${recordStatus}`);
+    } else {
+      // Fallback hoặc thông báo lỗi
+      notification.error({
+        message: "Lỗi phân quyền",
+        description: "Bạn không có quyền truy cập trang này",
+        placement: "topRight",
+      });
+    }
+  };
+
   if (isLoading && localData.length === 0) return <Loading />;
   if (error && localData.length === 0) {
     notification.error({
@@ -281,11 +300,7 @@ function KoiShow() {
       render: (text, record) => (
         <span
           className="text-blue-600 cursor-pointer hover:underline"
-          onClick={() =>
-            navigate(
-              `/admin/koiShow/detail/${record.id}?status=${record.status}`
-            )
-          }
+          onClick={() => handleNavigation(record.id, record.status)}
         >
           {text}
         </span>

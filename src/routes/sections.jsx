@@ -10,24 +10,12 @@ import StaffDashboard from "../layout/staff";
 import Livestream from "../section/staff/koishow/LiveStream";
 import StreamRoom from "../section/staff/koishow/StreamRoom";
 
-export const KoiShowPageAdmin = lazy(
-  () => import("../pages/AdminPage/KoiShowPage")
-);
-export const MyShowPage = lazy(() => import("../pages/AdminPage/MyShowPage"));
-export const KoiShowDetailAdmin = lazy(
+export const KoiShowPage = lazy(() => import("../pages/AdminPage/KoiShowPage"));
+export const KoiShowDetail = lazy(
   () => import("../pages/AdminPage/KoiShowDetailPage")
 );
 export const CreateShow = lazy(
   () => import("../pages/AdminPage/CreateShowPage")
-);
-export const KoiShowPageManager = lazy(
-  () => import("../pages/ManagerPage/KoiShowPage")
-);
-export const KoiShowDetailManager = lazy(
-  () => import("../pages/ManagerPage/KoiShowDetailPage")
-);
-export const KoiShowPageReferee = lazy(
-  () => import("../pages/RefereePage/KoiShowPage")
 );
 export const KoiShowDetailReferee = lazy(
   () => import("../pages/RefereePage/KoiShowDetailPage")
@@ -41,13 +29,7 @@ export const NewsPage = lazy(() => import("../pages/AdminPage/NewsPage"));
 export const CriteriaPage = lazy(
   () => import("../pages/AdminPage/CriteriaPage")
 );
-export const MyShowRefereePage = lazy(
-  () => import("../pages/RefereePage/MyShowPage")
-);
 
-export const MyShowManagerPage = lazy(
-  () => import("../pages/ManagerPage/MyShowPage")
-);
 export const TeamManagerPage = lazy(
   () => import("../pages/ManagerPage/TeamPage")
 );
@@ -61,9 +43,7 @@ export const KoiShowStaffPage = lazy(
 export const KoiShowDetailStaffPage = lazy(
   () => import("../pages/StaffPage/KoiShowDetailPage")
 );
-export const MyShowStaffPage = lazy(
-  () => import("../pages/StaffPage/MyShowPage")
-);
+
 export const NewStaffPage = lazy(() => import("../pages/StaffPage/NewPage"));
 
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
@@ -94,14 +74,13 @@ export const Router = () => {
       path: "/admin",
       children: [
         { element: <OverviewAdmin />, path: "overview" },
-        { element: <KoiShowPageAdmin />, path: "showList" },
-        { element: <MyShowPage />, path: "myShow" },
+        { element: <KoiShowPage />, path: "showList" },
         { element: <CreateShow />, path: "create-Show" },
         { element: <UserPage />, path: "users" },
         { element: <TeamPage />, path: "teams" },
         { element: <NewsPage />, path: "news" },
         { element: <CriteriaPage />, path: "criteria" },
-        { element: <KoiShowDetailAdmin />, path: "koiShow/detail/:id" },
+        { element: <KoiShowDetail />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/admin/overview" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],
@@ -118,11 +97,10 @@ export const Router = () => {
       ),
       path: "/manager",
       children: [
-        { element: <KoiShowPageManager />, path: "showList" },
-        { element: <MyShowManagerPage />, path: "myShow" },
+        { element: <KoiShowPage />, path: "showList" },
         { element: <TeamManagerPage />, path: "teams" },
         { element: <NewManagerPage />, path: "news" },
-        { element: <KoiShowDetailManager />, path: "koiShow/detail/:id" },
+        { element: <KoiShowDetail />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/manager/showList" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],
@@ -140,7 +118,6 @@ export const Router = () => {
       path: "/staff",
       children: [
         { element: <KoiShowStaffPage />, path: "showList" },
-        { element: <MyShowStaffPage />, path: "myShow" },
         { element: <NewStaffPage />, path: "news" },
         { element: <KoiShowDetailStaffPage />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/staff/showList" replace />, index: true },
@@ -161,8 +138,7 @@ export const Router = () => {
       ),
       path: "/referee",
       children: [
-        { element: <KoiShowPageReferee />, path: "showList" },
-        { element: <MyShowRefereePage />, path: "myShow" },
+        { element: <KoiShowStaffPage />, path: "showList" },
         { element: <KoiShowDetailReferee />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/referee/showList" replace />, index: true },
         { element: <Error404 />, path: "*" },

@@ -478,7 +478,8 @@ function KoiShowDetail() {
                             {new Date(
                               koiShowDetail.data.startDate
                             ).toLocaleDateString("vi-VN")}{" "}
-                            - Ngày bắt đầu triễn lãm
+                            {formatTime(koiShowDetail.data.startDate)} : Thời
+                            gian bắt đầu
                           </span>
                         </div>
                         <div className="flex justify-between">
@@ -486,16 +487,13 @@ function KoiShowDetail() {
                             {new Date(
                               koiShowDetail.data.endDate
                             ).toLocaleDateString("vi-VN")}{" "}
-                            - Ngày kết thúc triễn lãm
+                            {formatTime(koiShowDetail.data.endDate)} : Thời gian
+                            kết thúc
                           </span>
                         </div>
-
                         <div>
-                          Tham gia tối thiểu:{" "}
-                          {koiShowDetail.data.minParticipants}
-                        </div>
-                        <div>
-                          Tham gia tối đa: {koiShowDetail.data.maxParticipants}
+                          Tham gia: {koiShowDetail.data.minParticipants} -{" "}
+                          {koiShowDetail.data.maxParticipants} người
                         </div>
                         <div className="flex justify-between">
                           <span>Địa điểm: {koiShowDetail.data.location}</span>
@@ -600,31 +598,31 @@ function KoiShowDetail() {
 
             <div className="bg-black/[0.02] p-4 rounded-lg">
               <h3 className="font-bold mb-4 text-lg">Tiêu Chí Đánh Giá </h3>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-2 gap-8">
                 {/* Cột 1: Chứa 5 phần tử đầu tiên */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {koiShowDetail.data.criteria
                     .slice(0, 5)
                     .map((criteriaList, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                      <div key={index} className="flex items-center">
+                        <div className="w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0">
                           {index + 1}
-                        </span>
-                        <span>{criteriaList}</span>
+                        </div>
+                        <div className="text-sm">{criteriaList}</div>
                       </div>
                     ))}
                 </div>
 
                 {/* Cột 2: Chứa các phần tử còn lại */}
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {koiShowDetail.data.criteria
                     .slice(5)
                     .map((criteriaList, index) => (
-                      <div key={index + 5} className="flex items-center gap-2">
-                        <span className="w-6 h-6 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm">
+                      <div key={index + 5} className="flex items-center">
+                        <div className="w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0">
                           {index + 6}
-                        </span>
-                        <span>{criteriaList}</span>
+                        </div>
+                        <div className="text-sm">{criteriaList}</div>
                       </div>
                     ))}
                 </div>

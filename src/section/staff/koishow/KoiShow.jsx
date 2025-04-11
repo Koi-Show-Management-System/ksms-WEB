@@ -15,12 +15,16 @@ import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
 import useKoiShow from "../../../hooks/useKoiShow";
 import { Loading } from "../../../components";
+import Cookies from "js-cookie";
+import useAuth from "../../../hooks/useAuth";
 
 function KoiShow() {
   const navigate = useNavigate();
   const [searchText, setSearchText] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [filteredData, setFilteredData] = useState([]);
+  const { checkRole } = useAuth();
+  const userRole = Cookies.get("__role");
   const {
     koiShows,
     isLoading,
@@ -59,6 +63,21 @@ function KoiShow() {
     fetchKoiShowList(page, size);
   };
 
+  const handleNavigation = (recordId) => {
+    if (userRole === "Staff") {
+      navigate(`/staff/koiShow/detail/${recordId}`);
+    } else if (userRole === "Referee") {
+      navigate(`/referee/koiShow/detail/${recordId}`);
+    } else {
+      // Fallback hoặc thông báo lỗi
+      notification.error({
+        message: "Lỗi phân quyền",
+        description: "Bạn không có quyền truy cập trang này",
+        placement: "topRight",
+      });
+    }
+  };
+
   if (isLoading) return <Loading />;
   if (error) {
     message.error("Lỗi tải dữ liệu!");
@@ -74,7 +93,7 @@ function KoiShow() {
       render: (text, record) => (
         <span
           className="text-blue-600 cursor-pointer hover:underline"
-          onClick={() => navigate(`/staff/koiShow/detail/${record.id}`)}
+          onClick={() => handleNavigation(record.id, record.status)}
         >
           {text}
         </span>
