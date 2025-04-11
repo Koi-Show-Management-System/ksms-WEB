@@ -15,7 +15,7 @@
     "@ant-design/icons": "^5.6.1",
     "@cloudinary/url-gen": "^1.21.0",
     "@microsoft/signalr": "^8.0.7",
-    "@stream-io/video-react-sdk": "^1.14.0",
+    "@stream-io/video-react-sdk": "^1.14.2",
     "@tailwindcss/forms": "^0.5.10",
     "@tailwindcss/vite": "^4.0.0",
     "@zegocloud/zego-uikit-prebuilt": "^2.14.3-beta",

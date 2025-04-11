@@ -1,372 +1,664 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Card, Spin, Alert, Typography, Input, Button, List, Space, message } from 'antd';
-import { SendOutlined, UserOutlined, EyeOutlined, PlayCircleOutlined } from '@ant-design/icons';
-import axiosClient from '../../../config/axiosClient';
-import { useLocation } from 'react-router-dom';
-// Import GetStream.io SDK
+import React, { useState, useEffect, useRef } from "react";
+import PropTypes from "prop-types";
 import {
-  StreamVideoClient
-} from '@stream-io/video-react-sdk';
-import '@stream-io/video-react-sdk/dist/css/styles.css';
-// Import Stream Chat SDK separately
-import { StreamChat } from 'stream-chat';
+  Button,
+  Card,
+  Typography,
+  Flex,
+  Spin,
+  message,
+  Row,
+  Col,
+  Tag,
+  Divider,
+  Space,
+  Avatar,
+} from "antd";
+import {
+  StreamVideo,
+  StreamCall,
+  CallControls,
+  DeviceSettings,
+  LivestreamLayout,
+  useCallStateHooks,
+  StreamVideoClient,
+  PaginatedGridLayout,
+  SpeakerLayout,
+  ParticipantView,
+  CallingState,
+} from "@stream-io/video-react-sdk";
+import "@stream-io/video-react-sdk/dist/css/styles.css";
+import useLiveStream from "../../../hooks/useLiveStream";
+import { GetHostToken } from "../../../api/liveStreamApi";
+import Cookies from "js-cookie";
+import {
+  VideoCameraOutlined,
+  AudioOutlined,
+  CloseCircleOutlined,
+  PlayCircleOutlined,
+  PauseCircleOutlined,
+  SettingOutlined,
+  UserOutlined,
+  ClockCircleOutlined,
+} from "@ant-design/icons";
 
 const { Title, Text } = Typography;
 
-function Livestream({showId}) {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [streamData, setStreamData] = useState(null);
-  const [viewerCount, setViewerCount] = useState(0);
-  const [chatMessages, setChatMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  
-  const videoRef = useRef(null);
-  const location = useLocation();
-  const navigate = useLocation().pathname;
-  const streamClientRef = useRef(null);
-  const callRef = useRef(null);
-  const chatClientRef = useRef(null);
-  const channelRef = useRef(null);
-  
-  // Lấy streamId từ URL
-  const searchParams = new URLSearchParams(location.search);
-  const streamId = searchParams.get('streamId');
-  
-  useEffect(() => {
-    const loadStream = async () => {
-      if (!streamId) {
-        setError('Không tìm thấy ID stream');
-        setLoading(false);
+function LiveStream({ showId }) {
+  const koiShowId = showId;
+  const { createLiveStream, endLiveStream, liveStream, loading, error } =
+    useLiveStream();
+  const [client, setClient] = useState(null);
+  const [call, setCall] = useState(null);
+  const [localLoading, setLocalLoading] = useState(false);
+
+  const handleCreateLiveStream = async () => {
+    if (!koiShowId) {
+      message.error("Không tìm thấy ID cho koi show");
+      return;
+    }
+
+    setLocalLoading(true);
+
+    try {
+      // Lấy userId trực tiếp từ cookies với key __id
+      const userId = Cookies.get("__id");
+
+      if (!userId) {
+        console.warn("Không tìm thấy userId trong cookies");
+        message.warning(
+          "Không tìm thấy thông tin đăng nhập, vui lòng đăng nhập lại"
+        );
         return;
       }
-      
+
+      console.log("Đã lấy userId từ cookies:", userId);
+
+      // Gọi API backend để tạo livestream từ useLiveStream hook
+      const result = await createLiveStream(koiShowId);
+
+      if (!result || !result.data) {
+        throw new Error(result?.message || "Không thể tạo livestream");
+      }
+
+      // API trả về thông tin cho GetStream SDK
+      const { callId, id, token } = result.data;
+
+      // Lưu livestream ID vào localStorage để có thể sử dụng sau này
+      localStorage.setItem("currentLivestreamId", id);
+
       try {
-        // Bước 1: Lấy thông tin livestream từ API
-        const response = await axiosClient.get(`/livestream/${streamId}`);
-        
-        if (!response?.data?.data) {
-          throw new Error('Không nhận được dữ liệu livestream từ server');
+        // Nếu token đã được trả về từ createLiveStream, sử dụng nó
+        // Nếu không, gọi GetHostToken để lấy token mới
+        let streamToken = token;
+
+        if (!streamToken) {
+          const tokenResponse = await GetHostToken(id);
+          if (!tokenResponse?.data?.data?.token) {
+            throw new Error("Không thể lấy token cho livestream");
+          }
+          streamToken = tokenResponse.data.data.token;
         }
-        
-        const livestreamData = response.data.data;
-        
-        if (!livestreamData.isActive) {
-          setStreamData({
-            ...livestreamData,
-            isLive: false
-          });
-          setLoading(false);
-          return;
-        }
-        
-        // Bước 2: Lấy token người xem từ API
-        const tokenResponse = await axiosClient.get(`/livestream/viewer-token/${streamId}`);
-        
-        if (!tokenResponse?.data?.data) {
-          throw new Error('Không nhận được token người xem từ server');
-        }
-        
-        const viewerToken = tokenResponse.data.data;
-        
-        // Bước 3: Khởi tạo Stream.io Client
-        const client = new StreamVideoClient({
-          apiKey: livestreamData.apiKey,
-          user: {
-            id: `viewer_${localStorage.getItem('userId') || Date.now()}`,
-            name: localStorage.getItem('username') || 'Khách',
-            image: 'https://getstream.io/random_svg/?name=Viewer',
-          },
-          token: viewerToken,
-        });
-        
-        // Bước 4: Kết nối đến phiên livestream với callId tương ứng
-        const callId = `livestream_${streamId}`;
-        const call = client.call('livestream', callId);
-        await call.join({ create: false }); // Chỉ tham gia, không tạo mới
-        
-        // Thiết lập chat nếu có
-        let channel = null;
-        let chatClient = null;
-        
+
+        console.log("Host token:", streamToken);
+
+        // Kiểm tra token để xem ID của nó là gì
         try {
-          // Thiết lập chat (không bắt buộc)
-          chatClient = new StreamChat(livestreamData.apiKey, viewerToken);
-          await chatClient.connectUser({
-            id: `viewer_${localStorage.getItem('userId') || Date.now()}`,
-            name: localStorage.getItem('username') || 'Khách',
-          }, viewerToken);
-          
-          // Kết nối vào kênh chat của livestream
-          channel = chatClient.channel('livestream', callId, {
-            name: livestreamData.title
-          });
-          
-          await channel.watch();
-          
-          // Lắng nghe tin nhắn chat
-          channel.on('message.new', event => {
-            const newMsg = {
-              id: event.message.id,
-              user: event.user.name,
-              content: event.message.text,
-              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-            };
-            
-            setChatMessages(prev => [...prev, newMsg]);
-          });
-        } catch (chatError) {
-          console.warn('Không thể kết nối chat:', chatError);
-          // Không ảnh hưởng đến việc xem livestream
+          console.log("Phân tích token để kiểm tra ID...");
+
+          // Nếu token là JWT, thử phân tích nó
+          if (streamToken.split(".").length === 3) {
+            const payload = JSON.parse(atob(streamToken.split(".")[1]));
+            console.log("Payload từ token:", payload);
+
+            // Nếu payload chứa user_id dạng chuỗi JSON
+            if (payload.payload && typeof payload.payload === "string") {
+              try {
+                const tokenData = JSON.parse(payload.payload);
+                console.log("ID người dùng từ token:", tokenData.user_id);
+
+                if (tokenData.user_id !== userId) {
+                  console.warn(
+                    `ID không khớp: token có ID ${tokenData.user_id}, nhưng cookies có ID ${userId}`
+                  );
+                  // Ưu tiên sử dụng ID từ token
+                  userId = tokenData.user_id;
+                  console.log("Sử dụng ID từ token:", userId);
+                }
+              } catch (e) {
+                console.error("Lỗi khi phân tích payload:", e);
+              }
+            }
+          }
+        } catch (e) {
+          console.error("Lỗi khi phân tích token:", e);
         }
-        
-        // Lắng nghe số người xem
-        call.on('call.participant_joined', () => {
-          setViewerCount(prev => prev + 1);
+
+        // Sử dụng API key từ biến môi trường
+        const apiKey = import.meta.env.VITE_GETSTREAM_API_KEY || "z87auffz2r8y";
+
+        // Khởi tạo client
+        const videoClient = new StreamVideoClient({
+          apiKey,
         });
-        
-        call.on('call.participant_left', () => {
-          setViewerCount(prev => Math.max(0, prev - 1));
-        });
-        
-        // Lưu references để sử dụng sau này
-        streamClientRef.current = client;
-        callRef.current = call;
-        chatClientRef.current = chatClient;
-        channelRef.current = channel;
-        
-        // Lưu thông tin vào state
-        setStreamData({
-          title: livestreamData.title,
-          description: livestreamData.description,
-          playbackUrl: livestreamData.playbackUrl,
-          isLive: true,
-          viewerCount: call.state.participants.length - 1 // Trừ người phát sóng
-        });
-        
-        setLoading(false);
-      } catch (error) {
-        console.error('Lỗi khi tải stream:', error);
-        setError(error.message || 'Không thể tải stream. Vui lòng thử lại sau.');
-        setLoading(false);
+
+        // Đảm bảo userId có đúng định dạng mà GetStream mong đợi
+        const cleanUserId = userId.trim();
+        console.log("ID người dùng đã làm sạch để kết nối:", cleanUserId);
+
+        // Kết nối user với userId đã làm sạch
+        await videoClient.connectUser(
+          {
+            id: cleanUserId,
+            name: "Host",
+            image: "https://getstream.io/random_svg/?name=Host",
+          },
+          streamToken
+        );
+
+        console.log("Đã kết nối người dùng thành công với ID:", cleanUserId);
+
+        // Tạo đối tượng cuộc gọi
+        const livestreamCall = videoClient.call("livestream", callId);
+
+        // Tham gia cuộc gọi và tạo nếu chưa tồn tại
+        await livestreamCall.join({ create: true });
+
+        // Kiểm tra camera và microphone
+        console.log("Danh sách thiết bị:", livestreamCall.devices);
+        console.log(
+          "Trạng thái camera trước khi bật:",
+          livestreamCall.camera.state
+        );
+
+        // Tự động bật camera và microphone khi tham gia cuộc gọi
+        try {
+          // Kiểm tra xem camera có sẵn sàng không trước khi bật
+          const devices = await livestreamCall.camera.listInputDevices();
+          console.log("Danh sách camera:", devices);
+
+          if (devices && devices.length > 0) {
+            try {
+              await livestreamCall.camera.enable();
+              console.log("Đã bật camera tự động", livestreamCall.camera.state);
+            } catch (cameraError) {
+              console.error("Không thể bật camera:", cameraError);
+
+              // Hiển thị thông báo chi tiết về lỗi camera
+              if (cameraError.name === "NotReadableError") {
+                message.error(
+                  "Không thể truy cập camera! Camera đang được sử dụng bởi ứng dụng khác hoặc không hoạt động."
+                );
+                console.log("Hướng dẫn khắc phục lỗi camera:");
+                console.log(
+                  "1. Đóng tất cả các ứng dụng khác đang sử dụng camera (Zoom, Teams, ...)"
+                );
+                console.log("2. Tải lại trang web");
+                console.log(
+                  "3. Kiểm tra camera có hoạt động trong ứng dụng khác không"
+                );
+                console.log("4. Khởi động lại máy tính");
+              } else if (cameraError.name === "NotAllowedError") {
+                message.error(
+                  "Trình duyệt chưa được cấp quyền truy cập camera!"
+                );
+              } else {
+                message.error(`Lỗi camera: ${cameraError.message}`);
+              }
+            }
+          } else {
+            message.warning(
+              "Không tìm thấy thiết bị camera nào trên máy tính của bạn"
+            );
+          }
+
+          // Bật microphone
+          try {
+            await livestreamCall.microphone.enable();
+            console.log(
+              "Đã bật microphone tự động",
+              livestreamCall.microphone.state
+            );
+          } catch (micError) {
+            console.error("Không thể bật microphone:", micError);
+            message.warning(
+              "Không thể bật microphone, nhưng bạn vẫn có thể tiếp tục livestream"
+            );
+          }
+        } catch (mediaError) {
+          console.error("Lỗi thiết bị media:", mediaError);
+          message.error(
+            "Không thể truy cập thiết bị âm thanh và hình ảnh. Vui lòng kiểm tra quyền truy cập và thử lại."
+          );
+        }
+
+        setClient(videoClient);
+        setCall(livestreamCall);
+
+        message.success(result.message || "Đã tạo livestream thành công!");
+      } catch (streamError) {
+        console.error("Lỗi kết nối với GetStream:", streamError);
+        message.error("Lỗi kết nối với GetStream: " + streamError.message);
       }
-    };
-    
-    loadStream();
-    
-    // Cleanup khi unmount
-    return () => {
-      // Đóng các kết nối
-      if (callRef.current) {
-        callRef.current.leave();
-      }
-      
-      if (streamClientRef.current) {
-        streamClientRef.current.disconnectUser();
-      }
-      
-      if (channelRef.current) {
-        channelRef.current.stopWatching();
-      }
-      
-      if (chatClientRef.current) {
-        chatClientRef.current.disconnectUser();
-      }
-    };
-  }, [streamId]);
-  
-  // Gửi tin nhắn chat
-  const handleSendMessage = async () => {
-    if (!newMessage.trim() || !channelRef.current) return;
-    
+    } catch (err) {
+      console.error("Lỗi khi tạo livestream:", err);
+      message.error(
+        "Không thể tạo livestream: " + (err.message || "Lỗi không xác định")
+      );
+    } finally {
+      setLocalLoading(false);
+    }
+  };
+
+  const handleEndLiveStream = async () => {
+    if (!call || !client) return;
+
     try {
-      // Gửi tin nhắn tới GetStream.io chat
-      await channelRef.current.sendMessage({
-        text: newMessage,
-      });
-      
-      // Không cần thêm tin nhắn vào state, vì sẽ nhận được sự kiện message.new
-      setNewMessage('');
-    } catch (error) {
-      console.error('Lỗi khi gửi tin nhắn:', error);
-      message.error('Không thể gửi tin nhắn.');
-    }
-  };
+      setLocalLoading(true);
 
-  // Hàm để chuyển đến trang tạo livestream
-  const handleCreateLivestream = () => {
-    // Lấy koiShowId từ URL hiện tại (giả sử URL có dạng /koishow/:id/livestream)
-    const pathSegments = location.pathname.split('/');
-    // let koiShowId = null;
-    
-    // Tìm id của koishow trong URL
-    for (let i = 0; i < pathSegments.length; i++) {
-      if (pathSegments[i] === 'koishow' && i + 1 < pathSegments.length) {
-        showId = pathSegments[i + 1];
-        break;
+      // Kết thúc cuộc gọi trên GetStream
+      if (call.state.isLive) {
+        await call.stopLive();
       }
-    }
-    
-    if (showId) {
-      // Chuyển hướng đến trang tạo livestream với koiShowId
-      window.location.href = `/staff/koishow/${showId}/livestream/create`;
-    } else {
-      // Nếu không tìm thấy koiShowId, hiển thị thông báo lỗi
-      message.error('Không thể xác định ID triển lãm cá Koi. Vui lòng thử lại.');
+      await call.leave();
+
+      // Lấy livestream ID từ state hoặc localStorage
+      const livestreamId =
+        liveStream?.id || localStorage.getItem("currentLivestreamId");
+
+      if (!livestreamId) {
+        throw new Error("Không tìm thấy ID livestream");
+      }
+
+      // Ngắt kết nối người dùng
+      try {
+        await client.disconnectUser();
+        console.log("Đã ngắt kết nối người dùng");
+      } catch (disconnectError) {
+        console.error("Lỗi khi ngắt kết nối:", disconnectError);
+      }
+
+      setClient(null);
+      setCall(null);
+
+      // Gọi API để kết thúc cuộc gọi sử dụng useLiveStream hook
+      const success = await endLiveStream(livestreamId);
+
+      if (success) {
+        message.success("Đã kết thúc livestream");
+        localStorage.removeItem("currentLivestreamId");
+      }
+    } catch (err) {
+      console.error("Lỗi khi kết thúc livestream:", err);
+      message.error(
+        "Không thể kết thúc livestream: " +
+          (err.message || "Lỗi không xác định")
+      );
+
+      // Cleanup ngay cả khi có lỗi
+      if (client) {
+        try {
+          await client.disconnectUser();
+        } catch (disconnectError) {
+          console.error("Lỗi khi ngắt kết nối:", disconnectError);
+        }
+        setClient(null);
+        setCall(null);
+      }
+    } finally {
+      setLocalLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center h-screen bg-gray-100">
-        <Card style={{ width: 400 }}>
-          <div className="text-center">
-            <Spin size="large" />
-            <p className="mt-4">Đang tải livestream...</p>
-          </div>
-        </Card>
-      </div>
-    );
-  }
+  // Custom component để hiển thị video người dùng
+  const UserVideoPreview = () => {
+    const { useLocalParticipant } = useCallStateHooks();
+    const localParticipant = useLocalParticipant();
 
-  if (error) {
-    return (
-      <div className="flex flex-col items-center h-screen bg-gray-100 p-4">
-        <div className="w-full max-w-4xl mb-4 flex justify-between items-center">
-          <div>
-            <Title level={3}>Livestream</Title>
-          </div>
-          <Button 
-            type="primary" 
-            icon={<PlayCircleOutlined />} 
-            onClick={handleCreateLivestream}
-          >
-            Tạo Livestream Mới
-          </Button>
-        </div>
-        
-        <Card style={{ width: '100%', maxWidth: '800px' }}>
-          <Alert
-            message="Lỗi"
-            description={error}
-            type="error"
-            showIcon
-          />
-        </Card>
-      </div>
-    );
-  }
+    if (!localParticipant) {
+      return (
+        <Flex
+          align="center"
+          justify="center"
+          style={{
+            width: "100%",
+            height: "300px",
+            background: "#f0f2f5",
+            borderRadius: "8px",
+          }}
+        >
+          <Space direction="vertical" align="center">
+            <Avatar size={64} icon={<UserOutlined />} />
+            <Text>Không tìm thấy camera hoặc người dùng cục bộ</Text>
+          </Space>
+        </Flex>
+      );
+    }
 
-  if (!streamData?.isLive) {
     return (
-      <div className="flex flex-col items-center h-screen bg-gray-100 p-4">
-        <div className="w-full max-w-4xl mb-4 flex justify-between items-center">
-          <div>
-            <Title level={3}>Livestream</Title>
-          </div>
-          <Button 
-            type="primary" 
-            icon={<PlayCircleOutlined />} 
-            onClick={handleCreateLivestream}
-          >
-            Tạo Livestream Mới
-          </Button>
+      <div
+        style={{
+          width: "100%",
+          height: "300px",
+          position: "relative",
+          borderRadius: "12px",
+          overflow: "hidden",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
+        }}
+      >
+        <ParticipantView participant={localParticipant} />
+        <div
+          style={{
+            position: "absolute",
+            top: "10px",
+            left: "10px",
+            padding: "4px 8px",
+            background: "rgba(0,0,0,0.6)",
+            borderRadius: "4px",
+          }}
+        >
+          <Text style={{ color: "white", fontSize: "12px" }}>
+            <UserOutlined /> Bạn (Host)
+          </Text>
         </div>
-        
-        <Card style={{ width: '100%', maxWidth: '800px' }}>
-          <Alert
-            message="Thông báo"
-            description="Livestream này hiện không hoạt động hoặc đã kết thúc. Bạn có thể tạo phiên livestream mới."
-            type="info"
-            showIcon
-          />
-        </Card>
       </div>
     );
-  }
+  };
+
+  // Custom LiveStreamControls Component
+  const LiveStreamControls = ({ call }) => {
+    const {
+      useCameraState,
+      useMicrophoneState,
+      useParticipantCount,
+      useIsCallLive,
+      useCallCallingState,
+    } = useCallStateHooks();
+
+    const { camera, isEnabled: isCamEnabled } = useCameraState();
+    const { microphone, isEnabled: isMicEnabled } = useMicrophoneState();
+    const participantCount = useParticipantCount();
+    const isLive = useIsCallLive();
+    const callingState = useCallCallingState();
+
+    // Tạo đồng hồ đếm thời gian thay vì sử dụng useCallDuration
+    const [duration, setDuration] = useState(0);
+    const intervalRef = useRef(null);
+
+    // Bắt đầu và dừng đồng hồ đếm thời gian dựa trên trạng thái isLive
+    useEffect(() => {
+      if (isLive) {
+        // Bắt đầu đếm thời gian khi livestream đang chạy
+        intervalRef.current = setInterval(() => {
+          setDuration((prev) => prev + 1);
+        }, 1000);
+      } else {
+        // Dừng đếm thời gian và đặt lại về 0 khi không livestream
+        clearInterval(intervalRef.current);
+        if (!isLive && callingState === "joined") {
+          setDuration(0);
+        }
+      }
+
+      // Cleanup khi component unmount
+      return () => {
+        if (intervalRef.current) {
+          clearInterval(intervalRef.current);
+        }
+      };
+    }, [isLive, callingState]);
+
+    // Format duration
+    const formatDuration = (seconds) => {
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+    };
+
+    // Hiển thị trạng thái cuộc gọi để debug
+    console.log("Trạng thái cuộc gọi:", callingState);
+    console.log("Camera có bật không:", isCamEnabled);
+    console.log("Micro có bật không:", isMicEnabled);
+
+    const handleCameraToggle = async () => {
+      try {
+        await camera.toggle();
+        console.log("Đã nhấn nút bật/tắt camera:", !isCamEnabled);
+      } catch (cameraError) {
+        console.error("Lỗi khi bật/tắt camera:", cameraError);
+
+        if (cameraError.name === "NotReadableError") {
+          message.error(
+            "Không thể truy cập camera! Camera có thể đang được sử dụng bởi ứng dụng khác."
+          );
+        } else if (cameraError.name === "NotAllowedError") {
+          message.error("Trình duyệt chưa được cấp quyền truy cập camera!");
+        } else {
+          message.error(`Lỗi camera: ${cameraError.message}`);
+        }
+      }
+    };
+
+    return (
+      <div
+        style={{
+          padding: "16px",
+          backgroundColor: "#f9f9f9",
+          borderRadius: "8px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
+        }}
+      >
+        <Row gutter={16} align="middle">
+          <Col span={8}>
+            <Flex align="center" gap="small">
+              <ClockCircleOutlined />
+              <Text strong>{formatDuration(duration)}</Text>
+
+              {isLive && (
+                <Tag color="red" style={{ marginLeft: "8px" }}>
+                  LIVE
+                </Tag>
+              )}
+            </Flex>
+          </Col>
+
+          <Col span={8}>
+            <Flex justify="center" gap="middle">
+              <Button
+                type={isCamEnabled ? "default" : "primary"}
+                shape="circle"
+                icon={<VideoCameraOutlined />}
+                onClick={handleCameraToggle}
+                size="large"
+                danger={!isCamEnabled}
+              />
+
+              <Button
+                type={isMicEnabled ? "default" : "primary"}
+                shape="circle"
+                icon={<AudioOutlined />}
+                onClick={() => {
+                  microphone.toggle();
+                  console.log("Đã nhấn nút bật/tắt micro:", !isMicEnabled);
+                }}
+                size="large"
+                danger={!isMicEnabled}
+              />
+
+              <Button
+                type={isLive ? "primary" : "default"}
+                danger={isLive}
+                shape="round"
+                icon={isLive ? <PauseCircleOutlined /> : <PlayCircleOutlined />}
+                onClick={() => (isLive ? call.stopLive() : call.goLive())}
+                size="large"
+              >
+                {isLive ? "Dừng phát sóng" : "Phát sóng"}
+              </Button>
+            </Flex>
+          </Col>
+
+          <Col span={8}>
+            <Flex justify="end" align="middle" gap="small">
+              <UserOutlined />
+              <Text>{participantCount} người xem</Text>
+              <Tag color={callingState === "joined" ? "green" : "orange"}>
+                {callingState === "joined" ? "Đã kết nối" : callingState}
+              </Tag>
+            </Flex>
+          </Col>
+        </Row>
+      </div>
+    );
+  };
+
+  // Cleanup khi component unmount
+  useEffect(() => {
+    return () => {
+      if (client) {
+        client
+          .disconnectUser()
+          .catch((err) => console.error("Lỗi khi ngắt kết nối:", err));
+      }
+    };
+  }, [client]);
+
+  const isLoading = loading || localLoading;
 
   return (
-    <div className="p-4 bg-gray-100 min-h-screen">
-      <div className="w-full mb-4 flex justify-between items-center">
-        <Title level={3}>{streamData.title}</Title>
-        <Button 
-          type="primary" 
-          icon={<PlayCircleOutlined />} 
-          onClick={handleCreateLivestream}
+    <Card
+      title={<Title level={3}>Quản lý Livestream</Title>}
+      style={{ width: "100%" }}
+      bodyStyle={{ padding: "24px" }}
+    >
+      {isLoading ? (
+        <Flex justify="center" align="center" style={{ minHeight: "400px" }}>
+          <Spin size="large" tip="Đang xử lý..." />
+        </Flex>
+      ) : call && client ? (
+        <StreamVideo client={client}>
+          <StreamCall call={call}>
+            <Flex vertical gap="middle" style={{ height: "100%" }}>
+              <Row gutter={[16, 16]}>
+                <Col span={24} md={12}>
+                  {/* Hiển thị video của chính người dùng */}
+                  <Card
+                    title="Camera của bạn"
+                    bordered={false}
+                    style={{ height: "100%" }}
+                  >
+                    <UserVideoPreview />
+                  </Card>
+                </Col>
+
+                <Col span={24} md={12}>
+                  {/* Hiển thị chế độ livestream */}
+                  <Card
+                    title="Chế độ xem trực tiếp"
+                    bordered={false}
+                    style={{ height: "100%" }}
+                  >
+                    <div
+                      style={{
+                        height: "300px",
+                        position: "relative",
+                        overflow: "hidden",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      <LivestreamLayout />
+                    </div>
+                  </Card>
+                </Col>
+              </Row>
+
+              <Divider />
+
+              <LiveStreamControls call={call} />
+
+              <Divider />
+
+              <Row gutter={16}>
+                <Col span={24} md={16}>
+                  <Card title="Cài đặt thiết bị" bordered={false}>
+                    <DeviceSettings />
+                  </Card>
+                </Col>
+
+                <Col span={24} md={8}>
+                  <Flex vertical gap="middle" style={{ height: "100%" }}>
+                    <Button
+                      danger
+                      type="primary"
+                      icon={<CloseCircleOutlined />}
+                      onClick={handleEndLiveStream}
+                      size="large"
+                      block
+                      style={{ height: "50px" }}
+                    >
+                      Kết thúc Livestream
+                    </Button>
+
+                    <Text type="secondary" style={{ textAlign: "center" }}>
+                      Kết thúc phiên livestream sẽ ngắt kết nối tất cả người xem
+                    </Text>
+                  </Flex>
+                </Col>
+              </Row>
+            </Flex>
+          </StreamCall>
+        </StreamVideo>
+      ) : (
+        <Flex
+          vertical
+          gap="middle"
+          align="center"
+          justify="center"
+          style={{
+            minHeight: "400px",
+            padding: "40px",
+            backgroundColor: "#f7f9fc",
+            borderRadius: "8px",
+          }}
         >
-          Tạo Livestream Mới
-        </Button>
-      </div>
-      
-      <Card className="mb-4">
-        <Space>
-          <EyeOutlined /> <Text>{viewerCount} người xem</Text>
-        </Space>
-        <Text type="secondary" style={{ display: 'block', marginTop: 8 }}>
-          {streamData.description}
-        </Text>
-      </Card>
-      
-      <div className="flex flex-col md:flex-row gap-4">
-        <div className="w-full md:w-2/3">
-          <Card>
-            <div className="bg-black rounded overflow-hidden" style={{ aspectRatio: '16/9' }}>
-              <video
-                ref={videoRef}
-                className="w-full h-full"
-                controls
-                autoPlay
-                poster="/path/to/placeholder-image.jpg"
-              >
-                <source src={streamData.playbackUrl} type="application/x-mpegURL" />
-                Trình duyệt của bạn không hỗ trợ thẻ video.
-              </video>
-            </div>
-          </Card>
-        </div>
-        
-        <div className="w-full md:w-1/3">
-          <Card title={`Chat (${chatMessages.length})`} style={{ height: '100%' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100% - 40px)' }}>
-              <div style={{ flexGrow: 1, overflowY: 'auto', marginBottom: 16 }}>
-                <List
-                  dataSource={chatMessages}
-                  renderItem={item => (
-                    <List.Item key={item.id}>
-                      <Space>
-                        <UserOutlined />
-                        <Text strong>{item.user}:</Text>
-                        <Text>{item.content}</Text>
-                        <Text type="secondary" style={{ fontSize: 12 }}>{item.timestamp}</Text>
-                      </Space>
-                    </List.Item>
-                  )}
-                />
-              </div>
-              
-              <div>
-                <Input.Group compact>
-                  <Input
-                    style={{ width: 'calc(100% - 40px)' }}
-                    placeholder="Nhập tin nhắn..."
-                    value={newMessage}
-                    onChange={e => setNewMessage(e.target.value)}
-                    onPressEnter={handleSendMessage}
-                  />
-                  <Button 
-                    type="primary" 
-                    icon={<SendOutlined />}
-                    onClick={handleSendMessage}
-                  />
-                </Input.Group>
-              </div>
-            </div>
-          </Card>
-        </div>
-      </div>
-    </div>
+          <VideoCameraOutlined style={{ fontSize: "48px", color: "#1890ff" }} />
+          <Title level={3}>Bắt đầu livestream cho buổi triển lãm Koi</Title>
+          <Text
+            style={{
+              maxWidth: "600px",
+              textAlign: "center",
+              marginBottom: "20px",
+            }}
+          >
+            Tạo một buổi livestream để chia sẻ sự kiện với mọi người. Bạn có thể
+            bật/tắt camera và micro, cũng như kết thúc buổi phát sóng bất cứ lúc
+            nào.
+          </Text>
+
+          {error && (
+            <Text type="danger" style={{ marginBottom: "20px" }}>
+              {error}
+            </Text>
+          )}
+
+          <Button
+            type="primary"
+            size="large"
+            icon={<PlayCircleOutlined />}
+            onClick={handleCreateLiveStream}
+            loading={isLoading}
+            style={{ height: "50px", minWidth: "200px" }}
+          >
+            Tạo Livestream mới
+          </Button>
+        </Flex>
+      )}
+    </Card>
   );
 }
 
-export default Livestream;
+LiveStream.propTypes = {
+  showId: PropTypes.string.isRequired,
+};
+
+export default LiveStream;
