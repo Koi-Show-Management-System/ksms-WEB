@@ -121,6 +121,7 @@ function Votes({ showId }) {
   const [customMinutes, setCustomMinutes] = useState(5);
   const [previousVotes, setPreviousVotes] = useState({});
   const unsubscribeRef = useRef(null);
+  const [signalRConnected, setSignalRConnected] = useState(false);
 
   const {
     votes,
@@ -138,6 +139,10 @@ function Votes({ showId }) {
           // Kết nối với vote hub
           await SignalRService.startVoteConnection();
 
+          // Kiểm tra trạng thái kết nối
+          const connectionState = SignalRService.getVoteConnectionState();
+          setSignalRConnected(connectionState === "Connected");
+
           // Đăng ký nhận cập nhật phiếu bầu
           const unsubscribe = SignalRService.subscribeToVoteUpdates((data) => {
             // Cập nhật UI khi có phiếu bầu mới
@@ -150,6 +155,7 @@ function Votes({ showId }) {
           unsubscribeRef.current = unsubscribe;
         } catch (error) {
           console.error("Failed to connect to SignalR:", error);
+          setSignalRConnected(false);
         }
       }
     };
@@ -166,6 +172,7 @@ function Votes({ showId }) {
       // Ngắt kết nối nếu không còn active
       if (!votingActive) {
         SignalRService.stopVoteConnection();
+        setSignalRConnected(false);
       }
     };
   }, [showId, votingActive]);
@@ -226,17 +233,7 @@ function Votes({ showId }) {
     }
   }, [votes]);
 
-  // Thiết lập polling để cập nhật số phiếu tự động (backup khi SignalR không hoạt động)
-  useEffect(() => {
-    if (showId && votingActive) {
-      const interval = setInterval(() => {
-        fetchVotes(showId);
-      }, 30000); // Cập nhật mỗi 30 giây
-
-      return () => clearInterval(interval);
-    }
-  }, [showId, votingActive, fetchVotes]);
-
+  // Đảm bảo dữ liệu ban đầu được tải khi mở component
   useEffect(() => {
     if (showId) {
       fetchVotes(showId).then((data) => {
@@ -248,7 +245,7 @@ function Votes({ showId }) {
         }
       });
     }
-  }, [showId]);
+  }, [showId, fetchVotes]);
 
   // Check if voting period has ended and update state
   useEffect(() => {
@@ -466,6 +463,21 @@ function Votes({ showId }) {
     },
   ];
 
+  const renderConnectionStatus = () => {
+    if (votingActive) {
+      return (
+        <div className="text-xs ml-2">
+          {signalRConnected ? (
+            <Tag color="green" className="ml-1">
+              Realtime
+            </Tag>
+          ) : null}
+        </div>
+      );
+    }
+    return null;
+  };
+
   // Render voting control buttons based on state
   const renderVotingControls = () => {
     if (votingActive) {
@@ -482,6 +494,7 @@ function Votes({ showId }) {
               />
             </div>
           )}
+          {renderConnectionStatus()}
         </div>
       );
     } else if (

@@ -14,7 +14,7 @@ class SignalRService {
       .withAutomaticReconnect()
       .build();
 
-    // Kết nối cho vote hub - không cần token
+    // Kết nối cho vote hub - cấu hình giống notificationHub
     this.voteConnection = new signalR.HubConnectionBuilder()
       .withUrl("https://api.ksms.news/voteHub")
       .withAutomaticReconnect()
@@ -41,6 +41,19 @@ class SignalRService {
 
     this.connection.onclose((error) => {
       console.log("SignalR connection closed:", error);
+    });
+
+    // Log cho vote connection
+    this.voteConnection.onreconnecting((error) => {
+      console.log("Vote SignalR reconnecting:", error);
+    });
+
+    this.voteConnection.onreconnected((connectionId) => {
+      console.log("Vote SignalR reconnected. ConnectionId:", connectionId);
+    });
+
+    this.voteConnection.onclose((error) => {
+      console.log("Vote SignalR connection closed:", error);
     });
 
     this.connection.on("ReceiveNotification", (data) => {
@@ -114,12 +127,16 @@ class SignalRService {
   // Hủy kết nối vote hub
   async stopVoteConnection() {
     if (this.voteConnection.state !== "Disconnected") {
-      await this.voteConnection.stop();
-      console.log("Vote SignalR connection stopped");
+      try {
+        await this.voteConnection.stop();
+        console.log("Vote SignalR connection stopped");
+      } catch (err) {
+        console.error("Error stopping vote connection:", err);
+      }
     }
   }
 
-  // Thêm phương thức để kiểm tra trạng thái kết nối
+  // Kiểm tra trạng thái kết nối
   getConnectionState() {
     return this.connection.state;
   }
