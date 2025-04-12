@@ -28,6 +28,32 @@ const { Panel } = Collapse;
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Thêm hàm kiểm tra loại giải thưởng cần thiết
+const hasAllRequiredAwardTypes = (awards) => {
+  // Kiểm tra xem đã có đủ 4 loại giải thưởng khác nhau chưa
+  const types = new Set(awards.map((a) => a.awardType));
+
+  // Phải có đủ 4 loại giải thưởng
+  if (types.size >= 4) return true;
+
+  // Hoặc phải tuân theo thứ tự: Nhất -> Nhì -> Ba -> Khuyến Khích
+  const hasFirst = types.has("first");
+  const hasSecond = types.has("second");
+  const hasThird = types.has("third");
+  const hasHonorable = types.has("honorable");
+
+  // Nếu có Khuyến Khích phải có đủ Ba loại còn lại
+  if (hasHonorable && !(hasFirst && hasSecond && hasThird)) return false;
+
+  // Nếu có Ba phải có Nhất và Nhì
+  if (hasThird && !(hasFirst && hasSecond)) return false;
+
+  // Nếu có Nhì phải có Nhất
+  if (hasSecond && !hasFirst) return false;
+
+  return false; // Không đủ các giải theo thứ tự
+};
+
 function StepTwo({ updateFormData, initialData, showErrors }) {
   const { variety, fetchVariety, isLoading } = useVariety();
   const { accountManage, fetchAccountTeam } = useAccountTeam();
@@ -166,7 +192,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
       category.createAwardCateShowRequests?.length >= 4 ||
       hasAllRequiredAwardTypes(category.createAwardCateShowRequests || [])
     ) {
-      message.warning("Đã có đủ 1 loại giải thưởng!");
+      message.warning("Đã có đủ các loại giải thưởng!");
       return;
     }
 
@@ -174,6 +200,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     const existingAwardTypes =
       category.createAwardCateShowRequests?.map((a) => a.awardType) || [];
 
+    // Kiểm tra theo thứ tự đúng: Nhất -> Nhì -> Ba -> Khuyến Khích
     let nextAwardType = "";
     let awardName = "";
 
@@ -186,9 +213,15 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     } else if (!existingAwardTypes.includes("third")) {
       nextAwardType = "third";
       awardName = "Giải Ba";
-    } else {
+    } else if (!existingAwardTypes.includes("honorable")) {
       nextAwardType = "honorable";
       awardName = "Giải Khuyến Khích";
+    }
+
+    // Kiểm tra nếu không có loại giải tiếp theo hợp lệ
+    if (!nextAwardType) {
+      message.warning("Không thể thêm giải thưởng mới!");
+      return;
     }
 
     setCategories((prevCategories) => {
@@ -236,31 +269,72 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     // Kiểm tra thứ tự khi chọn loại giải
     if (field === "awardType") {
       const awards = [...categories[categoryIndex].createAwardCateShowRequests];
+      const otherAwards = awards.filter((_, i) => i !== awardIndex);
+      const currentAward = awards[awardIndex];
 
-      // Kiểm tra thứ tự giải thưởng
-      if (
-        value === "second" &&
-        !awards.some((a) => a.awardType === "first" && a !== awards[awardIndex])
-      ) {
-        message.error("Bạn phải chọn giải Nhất trước khi chọn giải Nhì");
+      // Tạo danh sách giải thưởng mới sau khi thay đổi
+      const newAwards = [...otherAwards, { ...currentAward, awardType: value }];
+
+      // Kiểm tra xem các loại giải đã có
+      const hasFirst = newAwards.some((a) => a.awardType === "first");
+      const hasSecond = newAwards.some((a) => a.awardType === "second");
+      const hasThird = newAwards.some((a) => a.awardType === "third");
+      const hasHonorable = newAwards.some((a) => a.awardType === "honorable");
+
+      // Không cho phép chọn Giải Ba nếu không có Giải Nhất hoặc Giải Nhì
+      if (value === "third" && (!hasFirst || !hasSecond)) {
+        message.error(
+          "Không thể chọn Giải Ba khi không có Giải Nhất hoặc Giải Nhì"
+        );
         return;
       }
 
-      if (
-        value === "third" &&
-        !awards.some(
-          (a) => a.awardType === "second" && a !== awards[awardIndex]
-        )
-      ) {
-        message.error("Bạn phải chọn giải Nhì trước khi chọn giải Ba");
+      // Không cho phép chọn Giải Nhì nếu không có Giải Nhất
+      if (value === "second" && !hasFirst) {
+        message.error("Không thể chọn Giải Nhì khi không có Giải Nhất");
         return;
       }
 
+      // Không cho phép chọn Giải Khuyến Khích nếu không có Giải Nhất, Giải Nhì hoặc Giải Ba
+      if (value === "honorable" && (!hasFirst || !hasSecond || !hasThird)) {
+        message.error(
+          "Không thể chọn Giải Khuyến Khích khi không có đủ Giải Nhất, Nhì và Ba"
+        );
+        return;
+      }
+
+      // Không cho phép thay đổi loại giải làm mất tính hợp lệ của các giải khác
+      // Không thể bỏ Giải Nhất nếu đã có Giải Nhì hoặc cao hơn
       if (
-        value === "honorable" &&
-        !awards.some((a) => a.awardType === "third" && a !== awards[awardIndex])
+        currentAward.awardType === "first" &&
+        value !== "first" &&
+        (hasSecond || hasThird || hasHonorable)
       ) {
-        message.error("Bạn phải chọn giải Ba trước khi chọn giải Khuyến Khích");
+        message.error(
+          "Không thể đổi Giải Nhất khi đã có Giải Nhì, Ba hoặc Khuyến Khích"
+        );
+        return;
+      }
+
+      // Không thể bỏ Giải Nhì nếu đã có Giải Ba hoặc cao hơn
+      if (
+        currentAward.awardType === "second" &&
+        value !== "second" &&
+        (hasThird || hasHonorable)
+      ) {
+        message.error(
+          "Không thể đổi Giải Nhì khi đã có Giải Ba hoặc Khuyến Khích"
+        );
+        return;
+      }
+
+      // Không thể bỏ Giải Ba nếu đã có Giải Khuyến Khích
+      if (
+        currentAward.awardType === "third" &&
+        value !== "third" &&
+        hasHonorable
+      ) {
+        message.error("Không thể đổi Giải Ba khi đã có Giải Khuyến Khích");
         return;
       }
 
@@ -1453,6 +1527,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                   }
                                   style={{ width: "100%" }}
                                 >
+                                  {/* Chỉ hiển thị các loại giải chưa được chọn hoặc đang được chọn bởi giải thưởng này */}
                                   {!category.createAwardCateShowRequests.some(
                                     (a) =>
                                       a.awardType === "first" && a !== award

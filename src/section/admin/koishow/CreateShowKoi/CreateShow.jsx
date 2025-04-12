@@ -458,6 +458,14 @@ function CreateShow() {
     }
   };
 
+  const handleQuickNext = () => {
+    if (currentStep === 3) {
+      setIsConfirmModalOpen(true);
+    } else {
+      setCurrentStep((prev) => prev + 1);
+    }
+  };
+
   const handlePrevious = () => {
     setCurrentStep((prev) => Math.max(prev - 1, 1));
     setShowErrors(false);
@@ -548,14 +556,22 @@ function CreateShow() {
             Quay lại
           </Button>
         )}
-        <Button
-          type="primary"
-          onClick={handleNext}
-          className="bg-blue-500 hover:bg-blue-600"
-          loading={isLoading}
-        >
-          {currentStep === 3 ? "Xác nhận" : "Tiếp theo"}
-        </Button>
+        <div className="flex gap-2">
+          {/* <Button
+            onClick={handleQuickNext}
+            className="bg-green-500 hover:bg-green-600 text-white"
+          >
+            Test Nhanh
+          </Button> */}
+          <Button
+            type="primary"
+            onClick={handleNext}
+            className="bg-blue-500 hover:bg-blue-600"
+            loading={isLoading}
+          >
+            {currentStep === 3 ? "Xác nhận" : "Tiếp theo"}
+          </Button>
+        </div>
       </div>
 
       <Modal
