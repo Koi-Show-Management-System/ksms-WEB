@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   Table,
   Tag,
@@ -34,7 +34,6 @@ import moment from "moment";
 import { Loading } from "../../../../components";
 import CountUp from "react-countup";
 import SignalRService from "../../../../config/signalRService";
-import FlipMove from "react-flip-move";
 import styled from "styled-components";
 
 const { TabPane } = Tabs;
@@ -43,31 +42,34 @@ const { TabPane } = Tabs;
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/150?text=No+Image";
 
 // Styled components
-const VoteListItem = styled.div`
+const VoteListItem = styled.div.attrs((props) => ({
+  className: props.className || "",
+}))`
   padding: 16px;
   background: ${(props) =>
-    props.isTopVote ? "linear-gradient(to right, #f6ffed, #white)" : "white"};
+    props.$isTopVote ? "linear-gradient(to right, #f6ffed, #white)" : "white"};
   border-radius: 8px;
   margin-bottom: 8px;
   box-shadow: ${(props) =>
-    props.isTopVote
+    props.$isTopVote
       ? "0 4px 12px rgba(82, 196, 26, 0.15)"
       : "0 2px 8px rgba(0, 0, 0, 0.05)"};
   display: flex;
   align-items: center;
   transition: all 0.3s ease;
-  border-left: 4px solid ${(props) => (props.isTopVote ? "#52c41a" : "#f0f0f0")};
+  border-left: 4px solid
+    ${(props) => (props.$isTopVote ? "#52c41a" : "#f0f0f0")};
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: ${(props) =>
-      props.isTopVote
+      props.$isTopVote
         ? "0 6px 16px rgba(82, 196, 26, 0.2)"
         : "0 4px 12px rgba(0, 0, 0, 0.1)"};
   }
 
   ${(props) =>
-    props.isTopVote &&
+    props.$isTopVote &&
     `
     &::after {
       content: '';
@@ -91,7 +93,7 @@ const ImageWrapper = styled.div`
   flex-shrink: 0;
   margin-right: 16px;
   ${(props) =>
-    props.isTopVote &&
+    props.$isTopVote &&
     `
     box-shadow: 0 0 0 2px #52c41a;
   `}
@@ -108,7 +110,7 @@ const VoteCountWrapper = styled.div`
   font-weight: bold;
   font-size: 18px;
   flex-shrink: 0;
-  color: ${(props) => (props.highlighted ? "#1890ff" : "#000")};
+  color: ${(props) => (props.highlighted === "true" ? "#1890ff" : "#000")};
 `;
 
 const RankBadge = styled.div`
@@ -158,8 +160,8 @@ const TopVoteIcon = styled(TrophyOutlined)`
 const VoteItem = React.forwardRef(
   ({ item, previousVotes, onDetails, highlighted, isTopVote }, ref) => (
     <div ref={ref} style={{ position: "relative" }}>
-      <VoteListItem isTopVote={isTopVote}>
-        <ImageWrapper isTopVote={isTopVote}>
+      <VoteListItem $isTopVote={isTopVote}>
+        <ImageWrapper $isTopVote={isTopVote}>
           {item.koiMedia && item.koiMedia.length > 0 ? (
             <Image
               src={
@@ -211,7 +213,7 @@ const VoteItem = React.forwardRef(
           </div>
         </InfoWrapper>
 
-        <VoteCountWrapper highlighted={highlighted}>
+        <VoteCountWrapper highlighted={highlighted ? "true" : "false"}>
           {highlighted ? (
             <AnimatedVoteCount
               value={item.voteCount}
@@ -330,6 +332,7 @@ function Votes({ showId }) {
   const [lastUpdatedId, setLastUpdatedId] = useState(null);
   const [viewMode, setViewMode] = useState("cards"); // 'cards' or 'table'
   const [maxVotes, setMaxVotes] = useState(0);
+  const isDisablingRef = useRef(false);
 
   const {
     votes,
@@ -339,6 +342,36 @@ function Votes({ showId }) {
     UpdateDisableVoting,
     updateLocalVoteCount,
   } = useVote();
+
+  // Xử lý khi hết thời gian bình chọn - định nghĩa với useCallback
+  const handleVotingTimeout = useCallback(async () => {
+    // Kiểm tra điều kiện và tránh chạy nhiều lần
+    if (votingActive && !isDisablingRef.current) {
+      try {
+        // Đánh dấu đang trong quá trình tắt
+        isDisablingRef.current = true;
+        setVotingExpired(true);
+
+        // Gọi API tắt bình chọn và thông báo rằng đây là tắt tự động
+        await UpdateDisableVoting(showId, true);
+
+        // Cập nhật trạng thái UI
+        setVotingActive(false);
+        setVotingEndTime(null);
+
+        // Tải lại dữ liệu bình chọn mới từ server
+        await fetchVotes(showId);
+      } catch (error) {
+        // Nếu có lỗi, reset flag để cho phép thử lại
+        setVotingExpired(false);
+      } finally {
+        // Luôn reset flag khi hoàn thành
+        setTimeout(() => {
+          isDisablingRef.current = false;
+        }, 500);
+      }
+    }
+  }, [votingActive, UpdateDisableVoting, showId, fetchVotes]);
 
   // Sắp xếp phiếu bầu theo số phiếu
   useEffect(() => {
@@ -440,8 +473,25 @@ function Votes({ showId }) {
       fetchVotes(showId).then((data) => {
         // Kiểm tra trạng thái bình chọn từ API response
         if (data && data.length > 0 && data[0].votingStatus) {
-          setVotingActive(data[0].votingStatus.isActive || false);
-          setVotingEndTime(data[0].votingStatus.endTime || null);
+          const isActive = data[0].votingStatus.isActive || false;
+          const endTime = data[0].votingStatus.endTime || null;
+
+          console.log(
+            "Initial voting status:",
+            "isActive:",
+            isActive,
+            "endTime:",
+            endTime
+          );
+
+          setVotingActive(isActive);
+          setVotingEndTime(endTime);
+
+          // Reset expired flag when loading initial status
+          if (!isActive) {
+            setVotingExpired(false);
+            isDisablingRef.current = false;
+          }
         }
       });
     }
@@ -450,12 +500,15 @@ function Votes({ showId }) {
   // Check if voting period has ended and update state
   useEffect(() => {
     if (votingActive && votingEndTime) {
+      // Lưu trữ thời điểm kết thúc để so sánh
+      const endTimeValue = new Date(votingEndTime).getTime();
+
       const checkTime = () => {
-        const now = new Date();
-        const end = new Date(votingEndTime);
-        if (now >= end) {
+        const now = new Date().getTime();
+        const remaining = endTimeValue - now;
+
+        if (now >= endTimeValue && !isDisablingRef.current) {
           // Khi hết thời gian, gọi hàm handleVotingTimeout để tắt bình chọn
-          // Hàm này sẽ gọi API updateDisableVote trên server để tắt bình chọn
           handleVotingTimeout();
         }
       };
@@ -465,9 +518,11 @@ function Votes({ showId }) {
       // Thiết lập interval để kiểm tra mỗi giây
       const interval = setInterval(checkTime, 1000);
 
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+      };
     }
-  }, [votingActive, votingEndTime]);
+  }, [votingActive, votingEndTime, handleVotingTimeout]);
 
   // Lưu giá trị phiếu bầu trước đó để so sánh
   useEffect(() => {
@@ -515,23 +570,29 @@ function Votes({ showId }) {
       const finalEndTime = moment().add(customMinutes, "minutes");
 
       await UpdateEnableVoting(showId, finalEndTime.toISOString());
-      notification.success({
-        message: "Thành công",
-        description: "Bật bình chọn thành công",
-        placement: "topRight",
-      });
+
       setEnableModal(false);
+
+      // Reset tất cả các flag khi bật bình chọn
+      setVotingExpired(false);
+      isDisablingRef.current = false;
+
+      // Thiết lập trạng thái bình chọn
       setVotingActive(true);
       setVotingEndTime(finalEndTime);
 
       // Khi bật bình chọn, kết nối SignalR
       try {
         await SignalRService.startVoteConnection();
+        setSignalRConnected(true);
       } catch (error) {
         console.error("Failed to connect to SignalR on vote enable:", error);
+        setSignalRConnected(false);
       }
 
+      // Tải lại dữ liệu bình chọn
       fetchVotes(showId);
+      console.log("Voting enabled successfully with end time:", finalEndTime);
     } catch (error) {
       notification.error({
         message: "Lỗi",
@@ -543,57 +604,32 @@ function Votes({ showId }) {
 
   const handleDisableVoting = async () => {
     try {
+      // Đánh dấu đang trong quá trình tắt
+      isDisablingRef.current = true;
+
       await UpdateDisableVoting(showId);
-      notification.success({
-        message: "Thành công",
-        description: "Tắt bình chọn thành công",
-        placement: "topRight",
-      });
+
+      // Cập nhật trạng thái
       setVotingActive(false);
       setVotingEndTime(null);
       setVotingExpired(false);
 
       // Đóng kết nối SignalR khi tắt bình chọn
       SignalRService.stopVoteConnection();
+      setSignalRConnected(false);
 
-      fetchVotes(showId);
+      // Tải lại dữ liệu
+      await fetchVotes(showId);
+      console.log("Voting disabled manually");
     } catch (error) {
       notification.error({
         message: "Lỗi",
         description: "Lỗi khi tắt bình chọn",
         placement: "topRight",
       });
-    }
-  };
-
-  // Xử lý khi hết thời gian bình chọn
-  const handleVotingTimeout = async () => {
-    if (votingActive) {
-      try {
-        // Gọi API tắt bình chọn thông qua useVote
-        // API này sẽ gửi request đến server để tắt bình chọn
-        await UpdateDisableVoting(showId);
-
-        notification.success({
-          message: "Thành công",
-          description: "Đã tự động tắt bình chọn do hết thời gian",
-          placement: "topRight",
-        });
-
-        // Cập nhật trạng thái UI để hiển thị đã tắt bình chọn
-        setVotingActive(false);
-        setVotingEndTime(null);
-        setVotingExpired(true);
-
-        // Tải lại dữ liệu bình chọn mới từ server
-        fetchVotes(showId);
-      } catch (error) {
-        notification.error({
-          message: "Lỗi",
-          description: "Lỗi khi tự động tắt bình chọn",
-          placement: "topRight",
-        });
-      }
+    } finally {
+      // Luôn reset flag khi hoàn thành
+      isDisablingRef.current = false;
     }
   };
 
@@ -685,22 +721,6 @@ function Votes({ showId }) {
     },
   ];
 
-  // Chuyển đổi giữa chế độ hiển thị
-  const toggleViewMode = () => {
-    setViewMode(viewMode === "cards" ? "table" : "cards");
-  };
-
-  const renderConnectionStatus = () => {
-    if (votingActive) {
-      return signalRConnected ? (
-        <Tag color="green" className="ml-1">
-          Realtime
-        </Tag>
-      ) : null;
-    }
-    return null;
-  };
-
   // Render voting control buttons based on state
   const renderVotingControls = () => {
     if (votingActive) {
@@ -717,24 +737,10 @@ function Votes({ showId }) {
               />
             </div>
           )}
-          {renderConnectionStatus()}
         </div>
       );
-    } else if (
-      votingExpired ||
-      (votingEndTime && new Date() > new Date(votingEndTime))
-    ) {
-      return (
-        <Button
-          type="primary"
-          danger
-          icon={<CloseCircleOutlined />}
-          onClick={handleDisableVoting}
-        >
-          Tắt bình chọn
-        </Button>
-      );
     } else {
+      // Nếu không có bình chọn đang diễn ra, chỉ hiển thị nút bật bình chọn
       return (
         <Button
           type="primary"
@@ -760,76 +766,44 @@ function Votes({ showId }) {
     return voteCount > 0 && voteCount === maxVotes;
   };
 
+  // Đảm bảo khi component unmount, dọn dẹp tất cả các tài nguyên
+  useEffect(() => {
+    return () => {
+      // Đóng kết nối SignalR khi component unmount
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
+      try {
+        SignalRService.stopVoteConnection();
+      } catch (error) {
+        console.error("Error stopping SignalR connection:", error);
+      }
+    };
+  }, []);
+
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-semibold">Quản lý bình chọn</h2>
-        <Space>
-          {renderVotingControls()}
-          <Button
-            type="text"
-            icon={viewMode === "cards" ? <EyeOutlined /> : <FireOutlined />}
-            onClick={toggleViewMode}
-          >
-            {viewMode === "cards" ? "Hiển thị bảng" : "Hiển thị danh sách"}
-          </Button>
-        </Space>
+        <Space>{renderVotingControls()}</Space>
       </div>
 
-      {viewMode === "table" ? (
-        <Table
-          columns={columns}
-          dataSource={votes}
-          rowKey="registrationId"
-          loading={loading}
-          pagination={{
-            showSizeChanger: true,
-            pageSizeOptions: ["10", "20", "50", "100"],
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} trong ${total}`,
-            defaultPageSize: 10,
-            size: "small",
-            itemRender: (page, type, originalElement) => {
-              if (type === "prev") {
-                return (
-                  <Button type="text" size="small">
-                    {"<"}
-                  </Button>
-                );
-              }
-              if (type === "next") {
-                return (
-                  <Button type="text" size="small">
-                    {">"}
-                  </Button>
-                );
-              }
-              return originalElement;
-            },
-          }}
-        />
-      ) : (
-        <div className="mb-4">
-          <FlipMove
-            duration={500}
-            easing="ease-out"
-            enterAnimation="fade"
-            leaveAnimation="fade"
-            typeName={null}
-          >
-            {sortedVotes.map((item) => (
-              <VoteItem
-                key={item.registrationId}
-                item={item}
-                previousVotes={previousVotes}
-                onDetails={showDetailDrawer}
-                highlighted={item.registrationId === lastUpdatedId}
-                isTopVote={isTopVote(item.voteCount)}
-              />
-            ))}
-          </FlipMove>
+      <div className="mb-4">
+        <div className="space-y-2">
+          {sortedVotes.map((item) => (
+            <VoteItem
+              key={item.registrationId}
+              item={item}
+              previousVotes={previousVotes}
+              onDetails={showDetailDrawer}
+              highlighted={item.registrationId === lastUpdatedId}
+              isTopVote={isTopVote(item.voteCount)}
+            />
+          ))}
         </div>
-      )}
+      </div>
 
       {/* Detail Drawer */}
       <Drawer
