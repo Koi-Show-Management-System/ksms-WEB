@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Table,
   Tag,
@@ -6,12 +6,13 @@ import {
   Modal,
   Form,
   Space,
-  DatePicker,
   notification,
   Drawer,
   Descriptions,
   Tabs,
   Card,
+  InputNumber,
+  Image,
 } from "antd";
 import {
   EyeOutlined,
@@ -25,8 +26,33 @@ import {
 } from "@ant-design/icons";
 import useVote from "../../../../hooks/useVote";
 import moment from "moment";
+import { Loading } from "../../../../components";
+import CountUp from "react-countup";
+import SignalRService from "../../../../config/signalRService";
 
 const { TabPane } = Tabs;
+
+// Hình ảnh mặc định khi không có ảnh
+const PLACEHOLDER_IMAGE = "https://via.placeholder.com/150?text=No+Image";
+
+// Component hiển thị số phiếu với animation
+const AnimatedVoteCount = ({ value, previousValue }) => {
+  // Nếu không có giá trị trước đó, hoặc giá trị không thay đổi, hiển thị bình thường
+  if (previousValue === undefined || previousValue === value) {
+    return <span>{value}</span>;
+  }
+
+  // Nếu có thay đổi, hiển thị animation
+  return (
+    <CountUp
+      start={previousValue}
+      end={value}
+      duration={1}
+      separator=","
+      className={value > previousValue ? "text-green-600" : "text-red-600"}
+    />
+  );
+};
 
 // Countdown component for time remaining
 const CountdownTimer = ({ endTime, onTimerEnd }) => {
@@ -77,7 +103,6 @@ const CountdownTimer = ({ endTime, onTimerEnd }) => {
     <div className="flex items-center gap-1">
       <ClockCircleOutlined className="mr-1" />
       <span className="font-medium">
-        {timeRemaining.days > 0 && `${timeRemaining.days} ngày `}
         {String(timeRemaining.hours).padStart(2, "0")}:
         {String(timeRemaining.minutes).padStart(2, "0")}:
         {String(timeRemaining.seconds).padStart(2, "0")}
@@ -90,10 +115,13 @@ function Votes({ showId }) {
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [currentRecord, setCurrentRecord] = useState(null);
   const [enableModal, setEnableModal] = useState(false);
-  const [endTime, setEndTime] = useState(null);
   const [votingActive, setVotingActive] = useState(false);
   const [votingEndTime, setVotingEndTime] = useState(null);
   const [votingExpired, setVotingExpired] = useState(false);
+  const [customMinutes, setCustomMinutes] = useState(5);
+  const [previousVotes, setPreviousVotes] = useState({});
+  const unsubscribeRef = useRef(null);
+
   const {
     votes,
     loading,
@@ -101,6 +129,113 @@ function Votes({ showId }) {
     UpdateEnableVoting,
     UpdateDisableVoting,
   } = useVote();
+
+  // Thiết lập kết nối SignalR
+  useEffect(() => {
+    const setupSignalR = async () => {
+      if (votingActive && showId) {
+        try {
+          // Kết nối với vote hub
+          await SignalRService.startVoteConnection();
+
+          // Đăng ký nhận cập nhật phiếu bầu
+          const unsubscribe = SignalRService.subscribeToVoteUpdates((data) => {
+            // Cập nhật UI khi có phiếu bầu mới
+            if (data && data.registrationId && data.voteCount) {
+              updateVoteCount(data.registrationId, data.voteCount);
+            }
+          });
+
+          // Lưu hàm unsubscribe để dọn dẹp sau này
+          unsubscribeRef.current = unsubscribe;
+        } catch (error) {
+          console.error("Failed to connect to SignalR:", error);
+        }
+      }
+    };
+
+    setupSignalR();
+
+    // Dọn dẹp khi component unmount hoặc trạng thái thay đổi
+    return () => {
+      if (unsubscribeRef.current) {
+        unsubscribeRef.current();
+        unsubscribeRef.current = null;
+      }
+
+      // Ngắt kết nối nếu không còn active
+      if (!votingActive) {
+        SignalRService.stopVoteConnection();
+      }
+    };
+  }, [showId, votingActive]);
+
+  // Hàm cập nhật số phiếu khi nhận được thông báo từ SignalR
+  const updateVoteCount = (registrationId, newVoteCount) => {
+    // Tạo bản sao của mảng votes
+    const updatedVotes = [...votes];
+    const voteIndex = updatedVotes.findIndex(
+      (vote) => vote.registrationId === registrationId
+    );
+
+    if (voteIndex !== -1) {
+      // Lưu giá trị cũ để animation
+      const oldVoteCount = updatedVotes[voteIndex].voteCount;
+
+      // Cập nhật dữ liệu cục bộ
+      setPreviousVotes((prev) => ({
+        ...prev,
+        [registrationId]: oldVoteCount,
+      }));
+
+      // Cập nhật số phiếu mới
+      updatedVotes[voteIndex] = {
+        ...updatedVotes[voteIndex],
+        voteCount: newVoteCount,
+      };
+
+      // Hiển thị thông báo
+      notification.info({
+        message: "Có bình chọn mới",
+        description: `${updatedVotes[voteIndex].koiName || updatedVotes[voteIndex].registrationNumber} vừa nhận được một phiếu bầu mới!`,
+        placement: "bottomRight",
+        duration: 3,
+      });
+    }
+  };
+
+  // Lưu giá trị phiếu bầu trước đó để so sánh
+  useEffect(() => {
+    if (votes && votes.length > 0) {
+      const voteCounts = {};
+      votes.forEach((vote) => {
+        voteCounts[vote.registrationId] = vote.voteCount;
+      });
+
+      setPreviousVotes((prevState) => {
+        // Lần đầu tiên không có dữ liệu cũ
+        if (Object.keys(prevState).length === 0) {
+          return voteCounts;
+        }
+        // Sau 2 giây, cập nhật dữ liệu cũ
+        setTimeout(() => {
+          setPreviousVotes(voteCounts);
+        }, 2000);
+        return prevState;
+      });
+    }
+  }, [votes]);
+
+  // Thiết lập polling để cập nhật số phiếu tự động (backup khi SignalR không hoạt động)
+  useEffect(() => {
+    if (showId && votingActive) {
+      const interval = setInterval(() => {
+        fetchVotes(showId);
+      }, 30000); // Cập nhật mỗi 30 giây
+
+      return () => clearInterval(interval);
+    }
+  }, [showId, votingActive, fetchVotes]);
 
   useEffect(() => {
     if (showId) {
@@ -122,12 +257,15 @@ function Votes({ showId }) {
         const now = new Date();
         const end = new Date(votingEndTime);
         if (now >= end) {
-          setVotingActive(false);
-          setVotingExpired(true);
+          // Khi hết thời gian, gọi hàm handleVotingTimeout để tắt bình chọn
+          // Hàm này sẽ gọi API updateDisableVote trên server để tắt bình chọn
+          handleVotingTimeout();
         }
       };
 
+      // Kiểm tra ngay lập tức một lần
       checkTime();
+      // Thiết lập interval để kiểm tra mỗi giây
       const interval = setInterval(checkTime, 1000);
 
       return () => clearInterval(interval);
@@ -144,17 +282,20 @@ function Votes({ showId }) {
   };
 
   const handleEnableVoting = async () => {
-    if (!endTime) {
+    if (customMinutes <= 0) {
       notification.error({
         message: "Lỗi",
-        description: "Vui lòng chọn thời gian kết thúc",
+        description: "Vui lòng nhập số phút hợp lệ",
         placement: "topRight",
       });
       return;
     }
 
     try {
-      await UpdateEnableVoting(showId, endTime.toISOString());
+      // Tính thời gian kết thúc dựa trên số phút
+      const finalEndTime = moment().add(customMinutes, "minutes");
+
+      await UpdateEnableVoting(showId, finalEndTime.toISOString());
       notification.success({
         message: "Thành công",
         description: "Bật bình chọn thành công",
@@ -162,7 +303,15 @@ function Votes({ showId }) {
       });
       setEnableModal(false);
       setVotingActive(true);
-      setVotingEndTime(endTime);
+      setVotingEndTime(finalEndTime);
+
+      // Khi bật bình chọn, kết nối SignalR
+      try {
+        await SignalRService.startVoteConnection();
+      } catch (error) {
+        console.error("Failed to connect to SignalR on vote enable:", error);
+      }
+
       fetchVotes(showId);
     } catch (error) {
       notification.error({
@@ -184,6 +333,10 @@ function Votes({ showId }) {
       setVotingActive(false);
       setVotingEndTime(null);
       setVotingExpired(false);
+
+      // Đóng kết nối SignalR khi tắt bình chọn
+      SignalRService.stopVoteConnection();
+
       fetchVotes(showId);
     } catch (error) {
       notification.error({
@@ -191,6 +344,37 @@ function Votes({ showId }) {
         description: "Lỗi khi tắt bình chọn",
         placement: "topRight",
       });
+    }
+  };
+
+  // Xử lý khi hết thời gian bình chọn
+  const handleVotingTimeout = async () => {
+    if (votingActive) {
+      try {
+        // Gọi API tắt bình chọn thông qua useVote
+        // API này sẽ gửi request đến server để tắt bình chọn
+        await UpdateDisableVoting(showId);
+
+        notification.success({
+          message: "Thành công",
+          description: "Đã tự động tắt bình chọn do hết thời gian",
+          placement: "topRight",
+        });
+
+        // Cập nhật trạng thái UI để hiển thị đã tắt bình chọn
+        setVotingActive(false);
+        setVotingEndTime(null);
+        setVotingExpired(true);
+
+        // Tải lại dữ liệu bình chọn mới từ server
+        fetchVotes(showId);
+      } catch (error) {
+        notification.error({
+          message: "Lỗi",
+          description: "Lỗi khi tự động tắt bình chọn",
+          placement: "topRight",
+        });
+      }
     }
   };
 
@@ -202,20 +386,38 @@ function Votes({ showId }) {
     },
     {
       title: "Hình ảnh",
-      dataIndex: "koiMedia",
-      render: (media) => {
-        const image = media?.find((m) => m.mediaType === "Image");
-        return image ? (
-          <img
-            src={image.mediaUrl}
-            alt="Entry"
-            width="70"
-            height="50"
-            className="rounded-md object-cover"
-          />
-        ) : (
-          <div className="w-[50px] h-[50px] bg-gray-200 flex items-center justify-center">
-            N/A
+      key: "image",
+      render: (_, record) => {
+        const imageMedia =
+          record.koiMedia && record.koiMedia.length > 0
+            ? record.koiMedia.find((media) => media.mediaType === "Image")
+            : null;
+
+        const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
+
+        return (
+          <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
+            <Image
+              src={imageUrl}
+              alt="Hình cá"
+              width={80}
+              height={50}
+              className="object-cover"
+              preview={{
+                src: imageMedia?.mediaUrl,
+                mask: (
+                  <div className="text-xs">
+                    <EyeOutlined />
+                  </div>
+                ),
+              }}
+              placeholder={
+                <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                  <Loading />
+                </div>
+              }
+              fallback={PLACEHOLDER_IMAGE}
+            />
           </div>
         );
       },
@@ -234,6 +436,12 @@ function Votes({ showId }) {
       dataIndex: "voteCount",
       width: 120,
       sorter: (a, b) => a.voteCount - b.voteCount,
+      render: (voteCount, record) => (
+        <AnimatedVoteCount
+          value={voteCount}
+          previousValue={previousVotes[record.registrationId]}
+        />
+      ),
     },
     {
       title: "Chủ sở hữu",
@@ -270,10 +478,7 @@ function Votes({ showId }) {
             <div className="flex flex-col">
               <CountdownTimer
                 endTime={votingEndTime}
-                onTimerEnd={() => {
-                  setVotingActive(false);
-                  setVotingExpired(true);
-                }}
+                onTimerEnd={handleVotingTimeout}
               />
             </div>
           )}
@@ -318,6 +523,30 @@ function Votes({ showId }) {
         dataSource={votes}
         rowKey="registrationId"
         loading={loading}
+        pagination={{
+          showSizeChanger: true,
+          pageSizeOptions: ["10", "20", "50", "100"],
+          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
+          defaultPageSize: 10,
+          size: "small",
+          itemRender: (page, type, originalElement) => {
+            if (type === "prev") {
+              return (
+                <Button type="text" size="small">
+                  {"<"}
+                </Button>
+              );
+            }
+            if (type === "next") {
+              return (
+                <Button type="text" size="small">
+                  {">"}
+                </Button>
+              );
+            }
+            return originalElement;
+          },
+        }}
       />
 
       {/* Detail Drawer */}
@@ -489,33 +718,13 @@ function Votes({ showId }) {
         cancelText="Hủy"
       >
         <Form layout="vertical">
-          <Form.Item
-            label="Thời gian kết thúc bình chọn"
-            required
-            rules={[
-              { required: true, message: "Vui lòng chọn thời gian kết thúc" },
-            ]}
-          >
-            <DatePicker
-              showTime
-              onChange={setEndTime}
-              className="w-full"
-              placeholder="Chọn thời gian kết thúc"
-              disabledDate={(current) =>
-                current && current < moment().startOf("day")
-              }
-              disabledTime={(current) => ({
-                disabledHours: () => {
-                  if (current && current.isSame(moment(), "day")) {
-                    const hours = [];
-                    for (let i = 0; i < moment().hour(); i++) {
-                      hours.push(i);
-                    }
-                    return hours;
-                  }
-                  return [];
-                },
-              })}
+          <Form.Item label="Số phút bình chọn">
+            <InputNumber
+              min={1}
+              value={customMinutes}
+              onChange={setCustomMinutes}
+              style={{ width: "100%" }}
+              placeholder="Nhập số phút bình chọn"
             />
           </Form.Item>
         </Form>

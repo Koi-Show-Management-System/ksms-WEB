@@ -3,6 +3,7 @@ import { Table, Tag, Select, Row, Col, Spin, Empty, Image, Card } from "antd";
 import useCategory from "../../../hooks/useCategory";
 import useRound from "../../../hooks/useRound";
 import useRegistrationRound from "../../../hooks/useRegistrationRound";
+import { Loading } from "../../../components";
 
 const { Option } = Select;
 
@@ -172,7 +173,7 @@ function CompetitionRound({ showId }) {
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Spin size="small" />
+                    <Loading />
                   </div>
                 }
                 fallback={PLACEHOLDER_IMAGE}
@@ -313,7 +314,7 @@ function CompetitionRound({ showId }) {
               }
               loading={roundLoading}
               notFoundContent={
-                roundLoading ? <Spin size="small" /> : "Không có vòng"
+                roundLoading ? <Loading/> : "Không có vòng"
               }
             >
               {round?.map((item) => (

@@ -20,6 +20,7 @@ import {
 import { EyeOutlined, TrophyOutlined } from "@ant-design/icons";
 import useCategory from "../../../../hooks/useCategory";
 import useRoundResult from "../../../../hooks/useRoundResult";
+import { Loading } from "../../../../components";
 
 function RoundResult({ showId }) {
   const { categories, fetchCategories } = useCategory();
@@ -376,7 +377,7 @@ function RoundResult({ showId }) {
                                       alignItems: "center",
                                     }}
                                   >
-                                    <Spin />
+                                    <Loading/>
                                   </div>
                                 }
                                 preview={{

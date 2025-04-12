@@ -7,7 +7,6 @@ import {
   Input,
   Select,
   Space,
-  Spin,
   message,
   Tag,
   InputNumber,
@@ -21,6 +20,7 @@ import timezone from "dayjs/plugin/timezone";
 import useVariety from "../../../../hooks/useVariety";
 import useAccountTeam from "../../../../hooks/useAccountTeam";
 import useCriteria from "../../../../hooks/useCriteria";
+import { Loading } from "../../../../components";
 
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -702,7 +702,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         Chọn giống cá Koi
                       </label>
                       {isLoading ? (
-                        <Spin size="small" />
+                        <Loading/>
                       ) : (
                         <Select
                           mode="multiple"

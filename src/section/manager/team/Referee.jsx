@@ -13,6 +13,7 @@ import {
 import { EditOutlined, PlusOutlined } from "@ant-design/icons";
 import useAccountTeam from "../../../hooks/useAccountTeam";
 import { updateStatus } from "../../../api/accountManage";
+import { Loading } from "../../../components";
 
 function Referee({ accounts = [], isLoading, role }) {
   const { updateStatusAccount, fetchAccountTeam, updateAccountTeam } =
@@ -239,7 +240,7 @@ function Referee({ accounts = [], isLoading, role }) {
     <div>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <Spin size="large" />
+          <Loading />
         </div>
       ) : (
         <Table

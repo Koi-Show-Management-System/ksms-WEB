@@ -217,7 +217,7 @@ function CompetitionRound({ showId }) {
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Spin size="small" />
+                    <Loading />
                   </div>
                 }
                 fallback={PLACEHOLDER_IMAGE}

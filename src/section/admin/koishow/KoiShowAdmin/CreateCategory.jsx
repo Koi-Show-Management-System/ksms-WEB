@@ -30,6 +30,7 @@ import useCategory from "../../../../hooks/useCategory";
 import useVariety from "../../../../hooks/useVariety";
 import useAccountTeam from "../../../../hooks/useAccountTeam";
 import useCriteria from "../../../../hooks/useCriteria";
+import { Loading } from "../../../../components";
 
 const { Option } = Select;
 const { Panel } = Collapse;
@@ -814,7 +815,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 Chọn giống cá Koi
               </label>
               {isLoadingVariety ? (
-                <Spin size="small" />
+                <Loading />
               ) : (
                 <Select
                   mode="multiple"

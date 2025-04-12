@@ -2,6 +2,7 @@ import { Typography, Select, Spin, Empty } from "antd";
 import React, { useState, useEffect } from "react";
 import Overview from "../Overview";
 import useDashBoard from "../../../../hooks/useDashBoard";
+import { Loading } from "../../../../components";
 
 const { Option } = Select;
 const { Text } = Typography;
@@ -19,7 +20,7 @@ function OverviewView() {
     return (
       <div className="p-8 bg-gray-50 min-h-screen">
         <div className="flex justify-center items-center h-96">
-          <Spin size="large" />
+          <Loading />
         </div>
       </div>
     );

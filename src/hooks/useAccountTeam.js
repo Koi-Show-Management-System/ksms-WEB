@@ -104,25 +104,31 @@ const useAccountTeam = create((set, get) => ({
 
   createAccount: async (accountData) => {
     set({ isLoading: true, error: null });
-  
+
     try {
       // Tạo FormData object thay vì JSON
       const formData = new FormData();
-      
+
       // Thêm các trường vào FormData với đúng tên trường
-      formData.append('Email', accountData.email);
-      formData.append('HashedPassword', accountData.hashedPassword || accountData.password);
-      formData.append('FullName', accountData.fullName || accountData.name);
-      formData.append('Username', accountData.userName || accountData.email.split("@")[0]);
-      formData.append('Phone', accountData.phone);
-      formData.append('Role', accountData.role);
-      
+      formData.append("Email", accountData.email);
+      formData.append(
+        "HashedPassword",
+        accountData.hashedPassword || accountData.password
+      );
+      formData.append("FullName", accountData.fullName || accountData.name);
+      formData.append(
+        "Username",
+        accountData.userName || accountData.email.split("@")[0]
+      );
+      formData.append("Phone", accountData.phone);
+      formData.append("Role", accountData.role);
+
       // Nếu có AvatarUrl, thêm vào (có thể để trống)
-      formData.append('AvatarUrl', '');
-  
+      formData.append("AvatarUrl", "");
+
       // Gọi API với FormData thay vì JSON
       const res = await createAccount(formData);
-  
+
       if (res && res.status === 201) {
         console.log("Account created successfully:", res.data);
         await get().fetchAccountTeam(get().currentPage, get().pageSize);

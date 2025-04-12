@@ -1,16 +1,34 @@
 import * as signalR from "@microsoft/signalr";
 import { notification } from "antd";
 import Cookies from "js-cookie";
+
 class SignalRService {
   constructor() {
+    // Kết nối cho notification
     this.connection = new signalR.HubConnectionBuilder()
-      .withUrl("http://localhost:5250/notificationHub", {
+      .withUrl("https://api.ksms.news/notificationHub", {
         accessTokenFactory: () => {
           return Cookies.get("__token") || "";
         },
       })
       .withAutomaticReconnect()
       .build();
+
+    // Kết nối cho vote hub - không cần token
+    this.voteConnection = new signalR.HubConnectionBuilder()
+      .withUrl("https://api.ksms.news/voteHub")
+      .withAutomaticReconnect()
+      .build();
+
+    // Đăng ký callback cho vote updates
+    this.voteCallbacks = [];
+
+    // Khi nhận được cập nhật số phiếu
+    this.voteConnection.on("ReceiveVoteUpdate", (data) => {
+      console.log("Received vote update:", data);
+      // Gọi tất cả các callback đã đăng ký
+      this.voteCallbacks.forEach((callback) => callback(data));
+    });
 
     // Thêm log cho các sự kiện kết nối
     this.connection.onreconnecting((error) => {
@@ -70,9 +88,44 @@ class SignalRService {
     }
   }
 
+  async startVoteConnection() {
+    try {
+      if (this.voteConnection.state === "Disconnected") {
+        console.log("Starting Vote SignalR connection...");
+        await this.voteConnection.start();
+        console.log("Vote SignalR Connected successfully");
+      }
+      return Promise.resolve();
+    } catch (err) {
+      console.error("Vote SignalR Connection Error:", err);
+      return Promise.reject(err);
+    }
+  }
+
+  // Đăng ký callback để nhận cập nhật số phiếu
+  subscribeToVoteUpdates(callback) {
+    this.voteCallbacks.push(callback);
+    // Trả về hàm để hủy đăng ký
+    return () => {
+      this.voteCallbacks = this.voteCallbacks.filter((cb) => cb !== callback);
+    };
+  }
+
+  // Hủy kết nối vote hub
+  async stopVoteConnection() {
+    if (this.voteConnection.state !== "Disconnected") {
+      await this.voteConnection.stop();
+      console.log("Vote SignalR connection stopped");
+    }
+  }
+
   // Thêm phương thức để kiểm tra trạng thái kết nối
   getConnectionState() {
     return this.connection.state;
+  }
+
+  getVoteConnectionState() {
+    return this.voteConnection.state;
   }
 }
 

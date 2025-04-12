@@ -17,6 +17,7 @@ import ScanQrWrapper from "./ScanQrWrapper";
 import LiveStream from "./LiveStream";
 import RoundResult from "../../admin/koishow/KoiShowAdmin/RoundResult";
 import CheckOutKoi from "./CheckOutKoi";
+import Votes from "../../admin/koishow/KoiShowAdmin/Votes";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -66,8 +67,13 @@ function KoiShowDetail() {
         children: <RoundResult showId={id} />,
       },
       {
+        key: "votes",
+        label: "Bình chọn",
+        children: <Votes showId={id} />,
+      },
+      {
         key: "checkOutKoi",
-        label: "Check out cá",
+        label: "Check out",
         children: <CheckOutKoi showId={id} />,
       },
       {
@@ -77,7 +83,7 @@ function KoiShowDetail() {
       },
       {
         key: "liveStream",
-        label: "Live stream",
+        label: "LiveStream",
         children: <LiveStream showId={id} />,
       },
     ];

@@ -460,7 +460,7 @@ function Ticket({ showId, statusShow }) {
       >
         {isLoadingDetails ? (
           <div className="flex justify-center my-8">
-            <Spin />
+            <Loading />
           </div>
         ) : (
           <div>

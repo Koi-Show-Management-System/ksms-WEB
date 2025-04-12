@@ -48,6 +48,7 @@ import { getEvaluationColumns } from "./EvaluationColumns";
 import { getFinalColumns } from "./FinalColumns";
 import useRoundResult from "../../../../hooks/useRoundResult";
 import NextRound from "./NextRound";
+import { Loading } from "../../../../components";
 
 const { Option } = Select;
 const { TabPane } = Tabs;
@@ -698,7 +699,7 @@ function CompetitionRound({ showId }) {
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Spin size="small" />
+                    <Loading />
                   </div>
                 }
                 fallback={PLACEHOLDER_IMAGE}
@@ -1350,9 +1351,7 @@ function CompetitionRound({ showId }) {
                 className="w-full"
                 placeholder={roundLoading ? "Đang tải..." : "Chọn vòng "}
                 loading={roundLoading}
-                notFoundContent={
-                  roundLoading ? <Spin size="small" /> : "Không có vòng "
-                }
+                notFoundContent={roundLoading ? <Loading /> : "Không có vòng "}
               >
                 {round?.map((item) => (
                   <Option

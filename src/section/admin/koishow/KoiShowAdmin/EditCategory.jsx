@@ -34,6 +34,7 @@ import useVariety from "../../../../hooks/useVariety";
 import useCategory from "../../../../hooks/useCategory";
 import useAccountTeam from "../../../../hooks/useAccountTeam";
 import useCriteria from "../../../../hooks/useCriteria";
+import { Loading } from "../../../../components";
 
 const { Option } = Select;
 const { TextArea } = Input;
@@ -554,7 +555,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     >
       {isLoading || isLoadingVariety ? (
         <div className="flex justify-center items-center h-64">
-          <Spin size="large" />
+          <Loading />
         </div>
       ) : (
         <Form form={form} layout="vertical">

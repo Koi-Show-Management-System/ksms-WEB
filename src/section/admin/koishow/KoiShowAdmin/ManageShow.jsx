@@ -3,11 +3,14 @@ import { Button, Tabs } from "antd";
 import Manager from "./Manager";
 import Staff from "./Staff";
 import { PlusOutlined } from "@ant-design/icons";
+import useAuth from "../../../../hooks/useAuth";
 
 function ManageShow({ showId }) {
   const [activeTab, setActiveTab] = useState("manager");
   const managerRef = useRef(null);
   const staffRef = useRef(null);
+  const { checkRole } = useAuth();
+  const isManager = checkRole("manager");
 
   // Load initial data when component mounts
   useEffect(() => {
@@ -70,34 +73,57 @@ function ManageShow({ showId }) {
     }
   };
 
-  const items = [
-    {
-      key: "manager",
-      label: <span className="text-lg">Quản lý</span>,
-      children: (
-        <div>
-          <Manager ref={managerRef} showId={showId} hideAddButton={true} />
-        </div>
-      ),
-    },
-    {
-      key: "staff",
-      label: <span className="text-lg">Nhân viên</span>,
-      children: (
-        <div>
-          <Staff ref={staffRef} showId={showId} hideAddButton={true} />
-        </div>
-      ),
-    },
-  ];
+  // Chuẩn bị các tab dựa trên vai trò
+  let tabItems = [];
+
+  // Nếu là Manager, chỉ hiển thị tab Staff (Nhân viên)
+  if (isManager) {
+    tabItems = [
+      {
+        key: "staff",
+        label: <span className="text-lg">Nhân viên</span>,
+        children: (
+          <div>
+            <Staff ref={staffRef} showId={showId} hideAddButton={true} />
+          </div>
+        ),
+      },
+    ];
+    // Đảm bảo tab mặc định là "staff" nếu người dùng là Manager
+    if (activeTab === "manager") {
+      setActiveTab("staff");
+    }
+  } else {
+    // Nếu không phải Manager (là Admin), hiển thị cả 2 tab
+    tabItems = [
+      {
+        key: "manager",
+        label: <span className="text-lg">Quản lý</span>,
+        children: (
+          <div>
+            <Manager ref={managerRef} showId={showId} hideAddButton={true} />
+          </div>
+        ),
+      },
+      {
+        key: "staff",
+        label: <span className="text-lg">Nhân viên</span>,
+        children: (
+          <div>
+            <Staff ref={staffRef} showId={showId} hideAddButton={true} />
+          </div>
+        ),
+      },
+    ];
+  }
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <Tabs
-        defaultActiveKey="manager"
+        defaultActiveKey={isManager ? "staff" : "manager"}
         activeKey={activeTab}
         onChange={handleTabChange}
-        items={items}
+        items={tabItems}
         tabBarExtraContent={{
           right: (
             <Button

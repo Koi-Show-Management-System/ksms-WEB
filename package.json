@@ -32,6 +32,7 @@
     "moment-timezone": "^0.5.47",
     "qs": "^6.14.0",
     "react": "^18.3.1",
+    "react-countup": "^6.5.3",
     "react-dom": "^18.3.1",
     "react-helmet": "^6.1.0",
     "react-helmet-async": "^2.0.5",
