@@ -12,7 +12,6 @@ import {
   Typography,
   Select,
   Alert,
-  Spin,
   Row,
   Col,
   ConfigProvider,
@@ -31,6 +30,7 @@ import {
 import useRegistration from "../../../../hooks/useRegistration";
 import useCategory from "../../../../hooks/useCategory";
 import RoundSelector from "./RoundSelector";
+import { Loading } from "../../../../components";
 
 // Placeholder image for missing images
 const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
@@ -461,11 +461,15 @@ function Registration({ showId, statusShow }) {
               className="object-cover"
               preview={{
                 src: imageMedia?.mediaUrl,
-                mask: <div className="text-xs"><EyeOutlined /></div>,
+                mask: (
+                  <div className="text-xs">
+                    <EyeOutlined />
+                  </div>
+                ),
               }}
               placeholder={
                 <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                  <Spin size="small" />
+                  <Loading />
                 </div>
               }
               fallback={PLACEHOLDER_IMAGE}
@@ -859,7 +863,7 @@ function Registration({ showId, statusShow }) {
                                       alignItems: "center",
                                     }}
                                   >
-                                    <Spin />
+                                    <Loading />
                                   </div>
                                 }
                                 preview={{

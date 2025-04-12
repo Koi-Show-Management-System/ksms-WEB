@@ -1,10 +1,13 @@
 import axiosClient from "../config/axiosClient";
 
-const getRegistration = (page, size, showIds, categoryIds, statuses) => {
-  // Log để debug
-  console.log("Input params:", { page, size, showIds, categoryIds, statuses });
-
-  // Truyền tham số theo đúng cách mà Swagger đang sử dụng
+const getRegistration = (
+  page,
+  size,
+  showIds,
+  categoryIds,
+  statuses,
+  registrationNumber
+) => {
   const params = {
     page,
     size,
@@ -13,7 +16,7 @@ const getRegistration = (page, size, showIds, categoryIds, statuses) => {
   // Thêm ShowIds nếu có
   if (showIds) {
     if (Array.isArray(showIds)) {
-      params.ShowIds = showIds[0]; // Chỉ lấy phần tử đầu tiên của mảng
+      params.ShowIds = showIds[0];
     } else {
       params.ShowIds = showIds;
     }
@@ -22,16 +25,19 @@ const getRegistration = (page, size, showIds, categoryIds, statuses) => {
   // Thêm CategoryIds nếu có
   if (categoryIds) {
     if (Array.isArray(categoryIds)) {
-      params.CategoryIds = categoryIds[0]; // Chỉ lấy phần tử đầu tiên của mảng
+      params.CategoryIds = categoryIds[0];
     } else {
       params.CategoryIds = categoryIds;
     }
   }
 
-  // Thêm Statuses nếu có
   if (statuses && statuses.length > 0) {
-    // Sử dụng phương thức join để chuyển mảng thành chuỗi các giá trị cách nhau bởi dấu phẩy
     params.Status = statuses.join(",");
+  }
+
+  // Thêm registrationNumber nếu có
+  if (registrationNumber) {
+    params.RegistrationNumber = registrationNumber;
   }
 
   console.log("Request params:", params);
@@ -65,4 +71,31 @@ const patchRound = (roundId, registrationIds) => {
   });
 };
 
-export { getRegistration, updateStatusRegistration, patchRound };
+const CheckOutKoi = (registrationId, imgCheckOut, notes) => {
+  const data = {};
+
+  if (imgCheckOut) {
+    data.imgCheckOut = imgCheckOut;
+  }
+
+  if (notes) {
+    data.notes = notes;
+  }
+
+  return axiosClient.post(
+    `/registration/check-out-koi/${registrationId}`,
+    data
+  );
+};
+
+const getRegistrationByNumber = (registrationNumber) => {
+  return axiosClient.get(`/registration/by-number/${registrationNumber}`);
+};
+
+export {
+  getRegistration,
+  updateStatusRegistration,
+  patchRound,
+  CheckOutKoi,
+  getRegistrationByNumber,
+};

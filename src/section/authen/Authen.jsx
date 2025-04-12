@@ -75,7 +75,14 @@ function Authen() {
       Cookies.set("__role", role, { expires: expiresIn, secure: true });
       Cookies.set("__id", id, { expires: expiresIn, secure: true });
 
-      useAuth.getState().login();
+      // Gọi phương thức login và kiểm tra kết quả
+      const loginSuccess = useAuth.getState().login();
+
+      // Nếu login thất bại (vai trò Member), dừng xử lý tại đây
+      if (!loginSuccess) {
+        setIsLoggingIn(false);
+        return;
+      }
 
       notification.success({
         message: "Đăng nhập thành công",

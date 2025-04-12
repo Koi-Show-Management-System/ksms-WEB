@@ -16,6 +16,7 @@ import Ticket from "../../admin/koishow/KoiShowAdmin/Ticket";
 import ScanQrWrapper from "./ScanQrWrapper";
 import LiveStream from "./LiveStream";
 import RoundResult from "../../admin/koishow/KoiShowAdmin/RoundResult";
+import CheckOutKoi from "./CheckOutKoi";
 
 function KoiShowDetail() {
   const { id } = useParams();
@@ -45,33 +46,38 @@ function KoiShowDetail() {
         children: <Ticket showId={id} />,
       },
       {
+        key: "tank",
+        label: "Quản Lý bể",
+        children: <Tank showId={id} />,
+      },
+      {
         key: "scanQr",
         label: "Quét mã",
         children: <ScanQrWrapper />,
       },
       {
         key: "competitionRound",
-        label: "Vòng Thi",
+        label: "Vòng thi",
         children: <CompetitionRound showId={id} />,
       },
       {
         key: "roundResult",
-        label: "Kết Quả Cuối Cùng",
+        label: "Kết quả cuối cùng",
         children: <RoundResult showId={id} />,
       },
       {
-        key: "tank",
-        label: "Quản Lý Bể",
-        children: <Tank showId={id} />,
+        key: "checkOutKoi",
+        label: "Check out cá",
+        children: <CheckOutKoi showId={id} />,
       },
       {
         key: "rules",
-        label: "Quy Tắc",
+        label: "Quy tắc",
         children: <Rules showId={id} showRule={showRule} />,
       },
       {
         key: "liveStream",
-        label: "Live Stream",
+        label: "Live stream",
         children: <LiveStream showId={id} />,
       },
     ];

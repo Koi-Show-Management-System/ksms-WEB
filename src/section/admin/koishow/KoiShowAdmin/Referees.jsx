@@ -129,7 +129,6 @@ function Referees({ showId }) {
           pageSize: pageSize,
           total: totalItems,
           showSizeChanger: true,
-          showQuickJumper: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
         }}
         onChange={handleTableChange}

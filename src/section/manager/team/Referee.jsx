@@ -249,7 +249,6 @@ function Referee({ accounts = [], isLoading, role }) {
             total: refereeData.length,
             pageSize: 10,
             showSizeChanger: true,
-            showQuickJumper: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
           }}
         />

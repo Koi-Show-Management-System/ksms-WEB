@@ -52,7 +52,6 @@ function MyShow() {
 
   if (isLoading) return <Loading />;
   if (error) {
-    message.error("Lỗi tải dữ liệu!");
     return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
   }
 

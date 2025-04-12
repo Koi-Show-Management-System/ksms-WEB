@@ -1,6 +1,7 @@
 import Cookies from "js-cookie";
 import { create } from "zustand";
 import { getInfoUser } from "../api/authenApi";
+import { notification } from "antd";
 
 const useAuth = create((set) => ({
   infoUser: {},
@@ -25,7 +26,27 @@ const useAuth = create((set) => ({
 
   isAuthenticated: !!Cookies.get("__token"),
   login: () => {
+    const role = Cookies.get("__role");
+    if (role?.toLowerCase() === "member") {
+      // Nếu vai trò là Member, hiển thị thông báo và đăng xuất
+      notification.error({
+        message: "Không có quyền truy cập",
+        description: "Bạn không có quyền đăng nhập vào hệ thống quản trị.",
+        placement: "topRight",
+        duration: 5,
+      });
+
+      // Đăng xuất
+      Cookies.remove("__token");
+      Cookies.remove("__role");
+      Cookies.remove("__id");
+      sessionStorage.removeItem("keys");
+      set({ isAuthenticated: false });
+      return false;
+    }
+
     set({ isAuthenticated: true });
+    return true;
   },
   logout: () => {
     Cookies.remove("__token");

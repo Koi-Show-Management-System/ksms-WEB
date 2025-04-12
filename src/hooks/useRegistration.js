@@ -4,6 +4,7 @@ import {
   getRegistration,
   updateStatusRegistration,
   patchRound,
+  CheckOutKoi,
 } from "../api/registrationApi";
 
 const useRegistration = create((set, get) => ({
@@ -22,16 +23,18 @@ const useRegistration = create((set, get) => ({
     size = 10,
     showIds,
     categoryIds,
-    statuses
+    statuses,
+    registrationNumber
   ) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
-    console.log("Request params:", {
+    console.log("Calling API with params:", {
       page,
       size,
       showIds,
       categoryIds,
       statuses,
+      registrationNumber,
     });
 
     try {
@@ -40,7 +43,8 @@ const useRegistration = create((set, get) => ({
         size,
         showIds,
         categoryIds,
-        statuses
+        statuses,
+        registrationNumber
       );
 
       if (res && res.status === 200) {
@@ -58,6 +62,7 @@ const useRegistration = create((set, get) => ({
           res.data.data.items &&
           Array.isArray(res.data.data.items)
         ) {
+          console.log("Data format: res.data.data.items");
           registration = res.data.data.items;
           total = res.data.data.total || registration.length;
           totalPages = res.data.data.totalPages || 1;
@@ -66,15 +71,20 @@ const useRegistration = create((set, get) => ({
           res.data.items &&
           Array.isArray(res.data.items)
         ) {
+          console.log("Data format: res.data.items");
           registration = res.data.items;
           total = res.data.total || registration.length;
           totalPages = res.data.totalPages || 1;
         } else if (res.data && Array.isArray(res.data)) {
+          console.log("Data format: res.data (array)");
           registration = res.data;
           total = registration.length;
         } else {
           console.error("No data array found in API response:", res.data);
         }
+
+        console.log("Processed registration data:", registration);
+        console.log("Total items:", total);
 
         set({
           registration: registration,
@@ -82,13 +92,21 @@ const useRegistration = create((set, get) => ({
           totalPages: totalPages,
           isLoading: false,
         });
+
+        return {
+          registration,
+          totalItems: total,
+          totalPages,
+        };
       } else {
         console.error("API Error:", res);
         set({ error: res, isLoading: false });
+        return { registration: [], totalItems: 0, totalPages: 0 };
       }
     } catch (error) {
       console.error("API Error:", error);
       set({ error: error, isLoading: false });
+      return { registration: [], totalItems: 0, totalPages: 0 };
     }
   },
 
@@ -235,6 +253,34 @@ const useRegistration = create((set, get) => ({
   // Thêm hàm để bỏ chọn tất cả
   clearSelectedRegistrations: () => {
     set({ selectedRegistrations: [] });
+  },
+
+  checkOutKoi: async (registrationId, imgCheckOut, notes) => {
+    try {
+      const response = await CheckOutKoi(registrationId, imgCheckOut, notes);
+      if (response && response.status === 200) {
+        notification.success({
+          message: "Thành công",
+          description: response.data?.message || "Đã xuất cá ra khỏi khu vực",
+        });
+        return true;
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description:
+            response?.data?.message || "Không thể xuất cá ra khỏi khu vực",
+        });
+        return false;
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi",
+        description:
+          error?.response?.data?.Error || "Không thể xuất cá ra khỏi khu vực",
+      });
+      console.error("Error checking out koi:", error);
+      return false;
+    }
   },
 }));
 

@@ -10,7 +10,7 @@ const useVariety = create((set, get) => ({
   isLoading: false,
   error: null,
   totalPages: 1,
-  fetchVariety: async (page = 1, size = 10) => {
+  fetchVariety: async (page = 1, size = 1000) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
     try {

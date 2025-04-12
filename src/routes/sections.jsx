@@ -1,5 +1,5 @@
 import { Outlet, useRoutes, Navigate } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { Suspense, lazy, useEffect } from "react";
 import { Error404, Loading } from "../components";
 import Authentication from "../pages/AdminPage/Authentication";
 import AdminDashboard from "../layout/admin";
@@ -8,6 +8,7 @@ import RefereeDashboard from "../layout/referee";
 import Cookies from "js-cookie";
 import StaffDashboard from "../layout/staff";
 import Livestream from "../section/staff/koishow/LiveStream";
+import { notification } from "antd";
 
 export const KoiShowPage = lazy(() => import("../pages/AdminPage/KoiShowPage"));
 export const KoiShowDetail = lazy(
@@ -46,6 +47,24 @@ export const KoiShowDetailStaffPage = lazy(
 export const NewStaffPage = lazy(() => import("../pages/StaffPage/NewPage"));
 
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
+  useEffect(() => {
+    // Nếu vai trò là Member, hiển thị thông báo
+    if (userRole?.toLowerCase() === "member") {
+      notification.error({
+        message: "Không có quyền truy cập",
+        description: "Bạn không có quyền đăng nhập vào hệ thống quản trị.",
+        placement: "topRight",
+        duration: 5,
+      });
+
+      // Đăng xuất
+      Cookies.remove("__token");
+      Cookies.remove("__role");
+      Cookies.remove("__id");
+      sessionStorage.removeItem("keys");
+    }
+  }, [userRole]);
+
   if (userRole?.toLowerCase() !== allowedRole?.toLowerCase()) {
     return <Navigate to="/" replace />;
   }

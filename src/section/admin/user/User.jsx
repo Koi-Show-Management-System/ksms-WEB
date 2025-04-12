@@ -46,7 +46,7 @@ const User = () => {
         key: account.id,
         fullName: account.fullName,
         email: account.email,
-        phone: account.phone || "0384499305",
+        phone: account.phone || "N/A",
         status: account.status || "active",
         role: account.role,
       }));
@@ -212,22 +212,18 @@ const User = () => {
     {
       title: "Họ và Tên",
       dataIndex: "fullName",
-      width: "15%",
     },
     {
       title: "Email",
       dataIndex: "email",
-      width: "25%",
     },
     {
       title: "Số điện thoại",
       dataIndex: "phone",
-      width: "20%",
     },
     {
       title: "Trạng thái",
       dataIndex: "status",
-      width: "15%",
       render: (status, record) => {
         const options = [
           {
@@ -260,19 +256,19 @@ const User = () => {
       dataIndex: "role",
       render: (role) => (role === "Member" ? "Thành viên" : role),
     },
-    {
-      title: "Hành động",
-      key: "action",
-      render: (_, record) => (
-        <Space size="middle">
-          <Button
-            type="text"
-            icon={<EditOutlined />}
-            onClick={() => handleEdit(record)}
-          />
-        </Space>
-      ),
-    },
+    // {
+    //   title: "Hành động",
+    //   key: "action",
+    //   render: (_, record) => (
+    //     <Space size="middle">
+    //       <Button
+    //         type="text"
+    //         icon={<EditOutlined />}
+    //         onClick={() => handleEdit(record)}
+    //       />
+    //     </Space>
+    //   ),
+    // },
   ];
 
   return (
@@ -286,7 +282,6 @@ const User = () => {
           pageSize: pageSize,
           total: totalItems,
           showSizeChanger: true,
-          showQuickJumper: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
           pageSizeOptions: ["5", "10", "20", "50"],
         }}
