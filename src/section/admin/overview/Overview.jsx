@@ -1,10 +1,11 @@
-import React, { useState } from "react";
-import { Card, Row, Col, Select } from "antd";
+import React from "react";
+import { Card, Row, Col } from "antd";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
+  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   PieChart,
@@ -21,121 +22,126 @@ import {
   DollarOutlined,
 } from "@ant-design/icons";
 
-const { Option } = Select;
+// Hàm định dạng số tiền
+const formatCurrency = (value) => {
+  if (value === 0) return "0 đ";
+  if (!value) return "0 đ";
 
-const Overview = () => {
-  const [selectedShow, setSelectedShow] = useState("all");
+  return new Intl.NumberFormat("vi-VN", {
+    style: "currency",
+    currency: "VND",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+};
 
-  const showData = {
-    "Triển lãm Koi lớn": {
-      competitions: 2,
-      users: 8,
-      koiFish: 35,
-      revenue: 4000000,
-      refund: 500000,
-      profit: 3500000,
-    },
-    "Triển lãm Koi cao cấp": {
-      competitions: 1,
-      users: 10,
-      koiFish: 40,
-      revenue: 5000000,
-      refund: 300000,
-      profit: 4700000,
-    },
-    "Tìm kiếm Koi hiếm": {
-      competitions: 2,
-      users: 7,
-      koiFish: 30,
-      revenue: 4500000,
-      refund: 400000,
-      profit: 4100000,
-    },
-    "Lễ hội Koi mùa xuân": {
-      competitions: 1,
-      users: 5,
-      koiFish: 25,
-      revenue: 3000000,
-      refund: 200000,
-      profit: 2800000,
-    },
-    "Triển lãm Koi thiên đường": {
-      competitions: 2,
-      users: 8,
-      koiFish: 36,
-      revenue: 3500000,
-      refund: 250000,
-      profit: 3250000,
-    },
-    "Giải Koi nhiệt đới": {
-      competitions: 2,
-      users: 5,
-      koiFish: 25,
-      revenue: 2000000,
-      refund: 150000,
-      profit: 1850000,
-    },
-  };
+// Bảng màu hiện đại nhưng đơn giản
+const COLORS = [
+  "#1890ff", // Xanh dương
+  "#52c41a", // Xanh lá
+  "#fa8c16", // Cam
+  "#f5222d", // Đỏ
+  "#722ed1", // Tím
+  "#13c2c2", // Ngọc lam
+  "#faad14", // Vàng
+  "#eb2f96", // Hồng
+  "#bfbfbf", // Xám
+];
 
-  const revenueData = Object.entries(showData).map(([name, data]) => ({
-    name,
-    revenue: data.revenue,
-    refund: data.refund,
-    profit: data.profit,
+const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
+  // Lọc ra top 5 triển lãm có lợi nhuận cao nhất
+  const topKoiShows = [...dashboardData.koiShowRevenues]
+    .sort((a, b) => b.netProfit - a.netProfit)
+    .slice(0, 5);
+
+  // Dữ liệu doanh thu cho biểu đồ cột - đơn giản hóa
+  const revenueData = topKoiShows.map((show) => ({
+    name:
+      show.koiShowName.length > 15
+        ? show.koiShowName.substring(0, 12) + "..."
+        : show.koiShowName,
+    revenue:
+      show.registrationRevenue + show.ticketRevenue + show.sponsorRevenue,
+    refund: show.registrationRefundAmount + show.ticketRefundAmount,
+    profit: show.netProfit,
+    fullName: show.koiShowName,
   }));
 
-  const profitDistributionData = Object.entries(showData).map(
-    ([name, data]) => ({
-      name,
-      value: data.profit,
-    })
-  );
+  // Dữ liệu phân phối lợi nhuận cho biểu đồ tròn
+  const profitDistributionData = [...dashboardData.profitDistribution]
+    .sort((a, b) => b.percentage - a.percentage)
+    .slice(0, 5) // Chỉ lấy top 5 phần trăm cao nhất
+    .map((item) => ({
+      name: item.koiShowName,
+      value: dashboardData.netProfit * (item.percentage / 100),
+      percentage: item.percentage,
+    }));
 
-  const filteredProfitData =
-    selectedShow === "all"
-      ? profitDistributionData
-      : [
-          {
-            name: selectedShow,
-            value: showData[selectedShow].profit,
-          },
-        ];
+  // Thêm mục "Khác" nếu còn lại
+  if (dashboardData.profitDistribution.length > 5) {
+    const otherPercentage = dashboardData.profitDistribution
+      .sort((a, b) => b.percentage - a.percentage)
+      .slice(5)
+      .reduce((sum, item) => sum + item.percentage, 0);
 
+    if (otherPercentage > 0) {
+      profitDistributionData.push({
+        name: "Khác",
+        value: dashboardData.netProfit * (otherPercentage / 100),
+        percentage: Number(otherPercentage.toFixed(2)),
+      });
+    }
+  }
+
+  // Lấy số liệu thống kê theo triển lãm đã chọn
   function getTotalValue(key) {
     if (selectedShow === "all") {
-      return Object.values(showData).reduce((sum, data) => sum + data[key], 0);
+      return dashboardData[key];
     }
-    return showData[selectedShow][key];
+
+    const selectedShowData = dashboardData.koiShowRevenues.find(
+      (show) => show.koiShowName === selectedShow
+    );
+
+    if (!selectedShowData) return 0;
+
+    switch (key) {
+      case "totalKoiShows":
+        return 1;
+      case "totalUsers":
+      case "totalKoi":
+        return "-";
+      case "totalRevenue":
+        return (
+          selectedShowData.registrationRevenue +
+          selectedShowData.ticketRevenue +
+          selectedShowData.sponsorRevenue
+        );
+      case "totalRefund":
+        return (
+          selectedShowData.registrationRefundAmount +
+          selectedShowData.ticketRefundAmount
+        );
+      case "netProfit":
+        return selectedShowData.netProfit;
+      default:
+        return 0;
+    }
   }
 
-  function getTotalProfit() {
-    return Object.values(showData).reduce((sum, data) => sum + data.profit, 0);
-  }
-
-  const COLORS = [
-    "#0088FE",
-    "#00C49F",
-    "#FFBB28",
-    "#FF8042",
-    "#A28BEA",
-    "#FF6699",
-  ];
-
-  const StatCard = ({ title, value, icon, color }) => (
-    <Card className="hover:shadow-xl transition-shadow duration-300">
+  // Component Card thống kê đơn giản
+  const StatCard = ({ title, value, icon, color, isCurrency = false }) => (
+    <Card bodyStyle={{ padding: "16px" }}>
       <div className="flex items-center justify-between">
         <div>
-          <p className="text-gray-600 mb-1 text-sm">{title}</p>
-          <p className="text-2xl font-bold" style={{ color: color }}>
-            {value}
+          <p className="text-gray-500 mb-1 text-sm">{title}</p>
+          <p className="text-2xl font-semibold" style={{ color }}>
+            {isCurrency ? formatCurrency(value) : value}
           </p>
         </div>
         <div
           className="p-3 rounded-full"
-          style={{
-            backgroundColor: `${color}15`,
-            color: color,
-          }}
+          style={{ backgroundColor: `${color}15`, color }}
         >
           {icon}
         </div>
@@ -143,129 +149,212 @@ const Overview = () => {
     </Card>
   );
 
+  // Dữ liệu cho biểu đồ được chọn
   const filteredRevenueData =
     selectedShow === "all"
       ? revenueData
-      : [revenueData.find((item) => item.name === selectedShow)];
+      : dashboardData.koiShowRevenues
+          .filter((show) => show.koiShowName === selectedShow)
+          .map((show) => ({
+            name: show.koiShowName,
+            revenue:
+              show.registrationRevenue +
+              show.ticketRevenue +
+              show.sponsorRevenue,
+            refund: show.registrationRefundAmount + show.ticketRefundAmount,
+            profit: show.netProfit,
+            fullName: show.koiShowName,
+          }));
+
+  // Tooltip tùy chỉnh cho biểu đồ
+  const CustomTooltip = ({ active, payload, label }) => {
+    if (active && payload && payload.length) {
+      return (
+        <div className="bg-white p-3 border border-gray-100 shadow-md rounded-md">
+          <p className="font-semibold">
+            {payload[0]?.payload?.fullName || label}
+          </p>
+          {payload.map((entry, index) => (
+            <div key={index} className="flex items-center mt-1">
+              <span style={{ color: entry.color }}>●</span>
+              <span className="ml-2">{entry.name}: </span>
+              <span className="ml-1 font-medium">
+                {formatCurrency(entry.value)}
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+    return null;
+  };
 
   return (
     <div>
-      <div className="mb-6">
-        <Select
-          style={{ width: 300 }}
-          placeholder="Chọn một triển lãm"
-          onChange={(value) => setSelectedShow(value)}
-          defaultValue="all"
-        >
-          <Option value="all">Tất cả các triển lãm</Option>
-          {Object.keys(showData).map((show) => (
-            <Option key={show} value={show}>
-              {show}
-            </Option>
-          ))}
-        </Select>
-      </div>
-
-      <Row gutter={[24, 24]} className="mb-6">
-        <Col xs={24} sm={12} lg={8}>
-          <StatCard
-            title="Số lượng cuộc thi"
-            value={getTotalValue("competitions")}
-            icon={<TrophyOutlined style={{ fontSize: "24px" }} />}
-            color="#1890ff"
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <StatCard
-            title="Tổng số người dùng"
-            value={getTotalValue("users")}
-            icon={<UserOutlined style={{ fontSize: "24px" }} />}
-            color="#52c41a"
-          />
-        </Col>
-        <Col xs={24} sm={12} lg={8}>
-          <StatCard
-            title="Tổng số Koi"
-            value={getTotalValue("koiFish")}
-            icon={<GoldOutlined style={{ fontSize: "24px" }} />}
-            color="#722ed1"
-          />
-        </Col>
-      </Row>
-
-      <Row gutter={[24, 24]} className="mb-6">
-        <Col xs={24} sm={12} lg={8}>
+      <Row gutter={[16, 16]} className="mb-5">
+        <Col xs={24} sm={8}>
           <StatCard
             title="Tổng doanh thu"
-            value={`${getTotalValue("revenue").toLocaleString()} đ`}
+            value={getTotalValue("totalRevenue")}
             icon={<DollarOutlined style={{ fontSize: "24px" }} />}
-            color="#13c2c2"
+            color="#1890ff"
+            isCurrency={true}
           />
         </Col>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={8}>
           <StatCard
             title="Hoàn trả"
-            value={`${getTotalValue("refund").toLocaleString()} đ`}
+            value={getTotalValue("totalRefund")}
             icon={<RollbackOutlined style={{ fontSize: "24px" }} />}
             color="#f5222d"
+            isCurrency={true}
           />
         </Col>
-        <Col xs={24} sm={12} lg={8}>
+        <Col xs={24} sm={8}>
           <StatCard
             title="Lợi nhuận ròng"
-            value={`${getTotalValue("profit").toLocaleString()} đ`}
+            value={getTotalValue("netProfit")}
             icon={<LineChartOutlined style={{ fontSize: "24px" }} />}
-            color="#faad14"
+            color="#52c41a"
+            isCurrency={true}
           />
         </Col>
       </Row>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="shadow-lg" styles={{ body: { padding: "20px" } }}>
-          <h3 className="text-lg font-semibold text-center mb-4">
-            Biểu đồ doanh thu
-          </h3>
-          <div style={{ height: "300px" }}>
+      <Row gutter={[16, 16]} className="mb-5">
+        <Col xs={24} sm={8}>
+          <StatCard
+            title="Số lượng triển lãm"
+            value={getTotalValue("totalKoiShows")}
+            icon={<TrophyOutlined style={{ fontSize: "24px" }} />}
+            color="#722ed1"
+            isCurrency={false}
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <StatCard
+            title="Tổng số người dùng"
+            value={getTotalValue("totalUsers")}
+            icon={<UserOutlined style={{ fontSize: "24px" }} />}
+            color="#fa8c16"
+            isCurrency={false}
+          />
+        </Col>
+        <Col xs={24} sm={8}>
+          <StatCard
+            title="Tổng số Koi"
+            value={getTotalValue("totalKoi")}
+            icon={<GoldOutlined style={{ fontSize: "24px" }} />}
+            color="#13c2c2"
+            isCurrency={false}
+          />
+        </Col>
+      </Row>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <Card
+          title={
+            <h3 className="text-lg font-semibold">
+              {selectedShow === "all"
+                ? "Top 5 triển lãm theo doanh thu"
+                : "Chi tiết doanh thu"}
+            </h3>
+          }
+        >
+          <div style={{ height: "400px" }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={filteredRevenueData}>
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Legend />
-                <Bar dataKey="revenue" fill="#0088FE" name="Doanh thu" />
-                <Bar dataKey="refund" fill="#FF8042" name="Hoàn trả" />
-                <Bar dataKey="profit" fill="#00C49F" name="Lợi nhuận" />
+              <BarChart
+                data={filteredRevenueData}
+                margin={{ top: 10, right: 10, left: 20, bottom: 50 }}
+                barSize={30}
+              >
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke="#f0f0f0"
+                />
+                <XAxis
+                  dataKey="name"
+                  angle={-45}
+                  textAnchor="end"
+                  height={60}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis tickFormatter={(value) => value.toLocaleString()} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend
+                  verticalAlign="bottom"
+                  height={50}
+                  wrapperStyle={{ paddingTop: 40, marginBottom: 1 }}
+                />
+                <Bar
+                  dataKey="revenue"
+                  name="Doanh thu"
+                  fill="#1890ff"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="refund"
+                  name="Hoàn trả"
+                  fill="#f5222d"
+                  radius={[4, 4, 0, 0]}
+                />
+                <Bar
+                  dataKey="profit"
+                  name="Lợi nhuận"
+                  fill="#52c41a"
+                  radius={[4, 4, 0, 0]}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
         </Card>
 
-        <Card className="shadow-lg" styles={{ body: { padding: "20px" } }}>
-          <h3 className="text-lg font-semibold text-center mb-4">
-            Phân phối lợi nhuận theo cuộc thi
-          </h3>
-          <div style={{ height: "300px" }}>
+        <Card
+          title={
+            <h3 className="text-lg font-semibold">
+              Phân phối lợi nhuận theo triển lãm
+            </h3>
+          }
+        >
+          <div style={{ height: "360px" }}>
             <ResponsiveContainer width="100%" height="100%">
               <PieChart>
                 <Pie
-                  data={filteredProfitData}
+                  data={profitDistributionData}
                   dataKey="value"
                   nameKey="name"
-                  outerRadius={100}
-                  fill="#8884d8"
-                  label={({ name, percent }) =>
-                    `(${(percent * 100).toFixed(1)}%)`
-                  }
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={120}
+                  innerRadius={60}
+                  paddingAngle={2}
+                  label={({ name, percentage }) => `${percentage.toFixed(1)}%`}
                 >
-                  {filteredProfitData.map((entry, index) => (
+                  {profitDistributionData.map((entry, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
                     />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip
+                  formatter={(value) => formatCurrency(value)}
+                  labelFormatter={(name) => `${name}`}
+                />
+                <Legend
+                  formatter={(value, entry, index) => (
+                    <span
+                      style={{
+                        color: COLORS[index % COLORS.length],
+                        fontSize: "14px",
+                      }}
+                    >
+                      {value} ({entry.payload.percentage.toFixed(1)}%)
+                    </span>
+                  )}
+                  wrapperStyle={{ paddingTop: 10, marginBottom: 1 }}
+                />
               </PieChart>
             </ResponsiveContainer>
           </div>
