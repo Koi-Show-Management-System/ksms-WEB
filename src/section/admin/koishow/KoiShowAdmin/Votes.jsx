@@ -131,63 +131,48 @@ function Votes({ showId }) {
     UpdateDisableVoting,
   } = useVote();
 
-  // Thiết lập kết nối SignalR
+  // Thiết lập kết nối SignalR khi component được mount
   useEffect(() => {
-    const setupSignalR = async () => {
-      if (votingActive && showId) {
-        try {
-          // Kết nối với vote hub
-          await SignalRService.startVoteConnection();
+    // Khởi động SignalR khi component được mount
+    SignalRService.startVoteConnection()
+      .then(() => {
+        setSignalRConnected(true);
+        console.log("SignalR Vote connected successfully");
 
-          // Kiểm tra trạng thái kết nối
-          const connectionState = SignalRService.getVoteConnectionState();
-          setSignalRConnected(connectionState === "Connected");
+        // Đăng ký callback nhận cập nhật phiếu bầu
+        const unsubscribe = SignalRService.subscribeToVoteUpdates((data) => {
+          if (data && data.registrationId && data.voteCount) {
+            updateVoteCount(data.registrationId, data.voteCount);
+          }
+        });
 
-          // Đăng ký nhận cập nhật phiếu bầu
-          const unsubscribe = SignalRService.subscribeToVoteUpdates((data) => {
-            // Cập nhật UI khi có phiếu bầu mới
-            if (data && data.registrationId && data.voteCount) {
-              updateVoteCount(data.registrationId, data.voteCount);
-            }
-          });
+        unsubscribeRef.current = unsubscribe;
+      })
+      .catch((err) => {
+        console.error("SignalR Vote connection error:", err);
+        setSignalRConnected(false);
+      });
 
-          // Lưu hàm unsubscribe để dọn dẹp sau này
-          unsubscribeRef.current = unsubscribe;
-        } catch (error) {
-          console.error("Failed to connect to SignalR:", error);
-          setSignalRConnected(false);
-        }
-      }
-    };
-
-    setupSignalR();
-
-    // Dọn dẹp khi component unmount hoặc trạng thái thay đổi
+    // Cleanup khi component unmount
     return () => {
       if (unsubscribeRef.current) {
         unsubscribeRef.current();
         unsubscribeRef.current = null;
       }
-
-      // Ngắt kết nối nếu không còn active
-      if (!votingActive) {
-        SignalRService.stopVoteConnection();
-        setSignalRConnected(false);
-      }
     };
-  }, [showId, votingActive]);
+  }, []);
 
   // Hàm cập nhật số phiếu khi nhận được thông báo từ SignalR
   const updateVoteCount = (registrationId, newVoteCount) => {
-    // Tạo bản sao của mảng votes
-    const updatedVotes = [...votes];
-    const voteIndex = updatedVotes.findIndex(
+    if (!votes || votes.length === 0) return;
+
+    const voteIndex = votes.findIndex(
       (vote) => vote.registrationId === registrationId
     );
 
     if (voteIndex !== -1) {
       // Lưu giá trị cũ để animation
-      const oldVoteCount = updatedVotes[voteIndex].voteCount;
+      const oldVoteCount = votes[voteIndex].voteCount;
 
       // Cập nhật dữ liệu cục bộ
       setPreviousVotes((prev) => ({
@@ -195,7 +180,8 @@ function Votes({ showId }) {
         [registrationId]: oldVoteCount,
       }));
 
-      // Cập nhật số phiếu mới
+      // Cập nhật dữ liệu trong danh sách votes
+      const updatedVotes = [...votes];
       updatedVotes[voteIndex] = {
         ...updatedVotes[voteIndex],
         voteCount: newVoteCount,
@@ -204,41 +190,18 @@ function Votes({ showId }) {
       // Hiển thị thông báo
       notification.info({
         message: "Có bình chọn mới",
-        description: `${updatedVotes[voteIndex].koiName || updatedVotes[voteIndex].registrationNumber} vừa nhận được một phiếu bầu mới!`,
+        description: `${votes[voteIndex].koiName || votes[voteIndex].registrationNumber} vừa nhận được một phiếu bầu mới!`,
         placement: "bottomRight",
         duration: 3,
       });
     }
   };
 
-  // Lưu giá trị phiếu bầu trước đó để so sánh
-  useEffect(() => {
-    if (votes && votes.length > 0) {
-      const voteCounts = {};
-      votes.forEach((vote) => {
-        voteCounts[vote.registrationId] = vote.voteCount;
-      });
-
-      setPreviousVotes((prevState) => {
-        // Lần đầu tiên không có dữ liệu cũ
-        if (Object.keys(prevState).length === 0) {
-          return voteCounts;
-        }
-        // Sau 2 giây, cập nhật dữ liệu cũ
-        setTimeout(() => {
-          setPreviousVotes(voteCounts);
-        }, 2000);
-        return prevState;
-      });
-    }
-  }, [votes]);
-
-  // Đảm bảo dữ liệu ban đầu được tải khi mở component
+  // Tải dữ liệu ban đầu và kiểm tra trạng thái bình chọn
   useEffect(() => {
     if (showId) {
       fetchVotes(showId).then((data) => {
-        // Assuming the API response includes voting status information
-        // If not, you'll need to modify your API to include this information
+        // Kiểm tra trạng thái bình chọn từ API response
         if (data && data.length > 0 && data[0].votingStatus) {
           setVotingActive(data[0].votingStatus.isActive || false);
           setVotingEndTime(data[0].votingStatus.endTime || null);
@@ -268,6 +231,28 @@ function Votes({ showId }) {
       return () => clearInterval(interval);
     }
   }, [votingActive, votingEndTime]);
+
+  // Lưu giá trị phiếu bầu trước đó để so sánh
+  useEffect(() => {
+    if (votes && votes.length > 0) {
+      const voteCounts = {};
+      votes.forEach((vote) => {
+        voteCounts[vote.registrationId] = vote.voteCount;
+      });
+
+      setPreviousVotes((prevState) => {
+        // Lần đầu tiên không có dữ liệu cũ
+        if (Object.keys(prevState).length === 0) {
+          return voteCounts;
+        }
+        // Sau 2 giây, cập nhật dữ liệu cũ
+        setTimeout(() => {
+          setPreviousVotes(voteCounts);
+        }, 2000);
+        return prevState;
+      });
+    }
+  }, [votes]);
 
   const showDetailDrawer = (record) => {
     setCurrentRecord(record);
@@ -465,15 +450,11 @@ function Votes({ showId }) {
 
   const renderConnectionStatus = () => {
     if (votingActive) {
-      return (
-        <div className="text-xs ml-2">
-          {signalRConnected ? (
-            <Tag color="green" className="ml-1">
-              Realtime
-            </Tag>
-          ) : null}
-        </div>
-      );
+      return signalRConnected ? (
+        <Tag color="green" className="ml-1">
+          Realtime
+        </Tag>
+      ) : null;
     }
     return null;
   };
