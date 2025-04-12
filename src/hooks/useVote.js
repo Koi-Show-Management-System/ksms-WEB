@@ -22,6 +22,23 @@ const useVote = create((set, get) => ({
     }
   },
 
+  updateLocalVoteCount: (registrationId, newVoteCount) => {
+    const currentVotes = [...get().votes];
+    const voteIndex = currentVotes.findIndex(
+      (vote) => vote.registrationId === registrationId
+    );
+
+    if (voteIndex !== -1) {
+      currentVotes[voteIndex] = {
+        ...currentVotes[voteIndex],
+        voteCount: newVoteCount,
+      };
+      set({ votes: currentVotes });
+      return true;
+    }
+    return false;
+  },
+
   UpdateEnableVoting: async (showId, enable) => {
     set({ loading: true, error: null });
     try {

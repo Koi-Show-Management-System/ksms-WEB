@@ -13,6 +13,8 @@ import {
   Card,
   InputNumber,
   Image,
+  List,
+  Avatar,
 } from "antd";
 import {
   EyeOutlined,
@@ -23,17 +25,109 @@ import {
   TrophyOutlined,
   UserOutlined,
   ClockCircleOutlined,
+  CrownOutlined,
+  FireOutlined,
+  RiseOutlined,
 } from "@ant-design/icons";
 import useVote from "../../../../hooks/useVote";
 import moment from "moment";
 import { Loading } from "../../../../components";
 import CountUp from "react-countup";
 import SignalRService from "../../../../config/signalRService";
+import FlipMove from "react-flip-move";
+import styled from "styled-components";
 
 const { TabPane } = Tabs;
 
 // Hình ảnh mặc định khi không có ảnh
 const PLACEHOLDER_IMAGE = "https://via.placeholder.com/150?text=No+Image";
+
+// Styled components
+const VoteListItem = styled.div`
+  padding: 16px;
+  background: ${(props) =>
+    props.isTopVote ? "linear-gradient(to right, #f6ffed, #white)" : "white"};
+  border-radius: 8px;
+  margin-bottom: 8px;
+  box-shadow: ${(props) =>
+    props.isTopVote
+      ? "0 4px 12px rgba(82, 196, 26, 0.15)"
+      : "0 2px 8px rgba(0, 0, 0, 0.05)"};
+  display: flex;
+  align-items: center;
+  transition: all 0.3s ease;
+  border-left: 4px solid ${(props) => (props.isTopVote ? "#52c41a" : "#f0f0f0")};
+
+  &:hover {
+    transform: translateY(-2px);
+    box-shadow: ${(props) =>
+      props.isTopVote
+        ? "0 6px 16px rgba(82, 196, 26, 0.2)"
+        : "0 4px 12px rgba(0, 0, 0, 0.1)"};
+  }
+
+  ${(props) =>
+    props.isTopVote &&
+    `
+    &::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(45deg, transparent 96%, #52c41a 97%, #52c41a 100%);
+      border-radius: 8px;
+      pointer-events: none;
+    }
+  `}
+`;
+
+const ImageWrapper = styled.div`
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  overflow: hidden;
+  flex-shrink: 0;
+  margin-right: 16px;
+  ${(props) =>
+    props.isTopVote &&
+    `
+    box-shadow: 0 0 0 2px #52c41a;
+  `}
+`;
+
+const InfoWrapper = styled.div`
+  flex: 1;
+`;
+
+const VoteCountWrapper = styled.div`
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  font-weight: bold;
+  font-size: 18px;
+  flex-shrink: 0;
+  color: ${(props) => (props.highlighted ? "#1890ff" : "#000")};
+`;
+
+const RankBadge = styled.div`
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  color: white;
+  background: ${(props) => {
+    if (props.rank === 1) return "linear-gradient(45deg, #FFD700, #FFA500)";
+    if (props.rank === 2) return "linear-gradient(45deg, #C0C0C0, #A9A9A9)";
+    if (props.rank === 3) return "linear-gradient(45deg, #CD7F32, #8B4513)";
+    return "#f0f0f0";
+  }};
+  margin-right: 8px;
+`;
 
 // Component hiển thị số phiếu với animation
 const AnimatedVoteCount = ({ value, previousValue }) => {
@@ -53,6 +147,116 @@ const AnimatedVoteCount = ({ value, previousValue }) => {
     />
   );
 };
+
+const TopVoteIcon = styled(TrophyOutlined)`
+  color: gold;
+  font-size: 16px;
+  margin-left: 8px;
+`;
+
+// Component hiển thị dòng trong danh sách bình chọn
+const VoteItem = React.forwardRef(
+  ({ item, previousVotes, onDetails, highlighted, isTopVote }, ref) => (
+    <div ref={ref} style={{ position: "relative" }}>
+      <VoteListItem isTopVote={isTopVote}>
+        <ImageWrapper isTopVote={isTopVote}>
+          {item.koiMedia && item.koiMedia.length > 0 ? (
+            <Image
+              src={
+                item.koiMedia.find((m) => m.mediaType === "Image")?.mediaUrl ||
+                PLACEHOLDER_IMAGE
+              }
+              alt={item.koiName || item.registrationNumber}
+              preview={false}
+              style={{ width: "100%", height: "100%", objectFit: "cover" }}
+            />
+          ) : (
+            <div
+              style={{
+                width: "100%",
+                height: "100%",
+                background: "#f5f5f5",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <PictureOutlined style={{ color: "#d9d9d9", fontSize: "24px" }} />
+            </div>
+          )}
+        </ImageWrapper>
+
+        <InfoWrapper>
+          <div
+            style={{
+              fontWeight: "bold",
+              marginBottom: "4px",
+              display: "flex",
+              alignItems: "center",
+            }}
+          >
+            {item.koiName || item.registrationNumber}
+            {isTopVote && <TopVoteIcon />}
+            {highlighted && (
+              <Tag color="orange" style={{ marginLeft: "8px" }}>
+                Mới cập nhật
+              </Tag>
+            )}
+          </div>
+          <div style={{ fontSize: "12px", color: "#666" }}>
+            {item.registrationNumber} - {item.koiVariety}, {item.size}cm
+          </div>
+          <div style={{ fontSize: "12px", color: "#666" }}>
+            Chủ sở hữu: {item.ownerName}
+          </div>
+        </InfoWrapper>
+
+        <VoteCountWrapper highlighted={highlighted}>
+          {highlighted ? (
+            <AnimatedVoteCount
+              value={item.voteCount}
+              previousValue={previousVotes[item.registrationId]}
+            />
+          ) : (
+            item.voteCount
+          )}
+          <FireOutlined
+            style={{
+              color: isTopVote ? "gold" : "#ff4d4f",
+              marginLeft: "4px",
+              fontSize: "16px",
+            }}
+          />
+        </VoteCountWrapper>
+
+        <Button
+          type="text"
+          icon={<EyeOutlined />}
+          onClick={() => onDetails(item)}
+          size="small"
+          style={{ marginLeft: "8px" }}
+        />
+      </VoteListItem>
+      {isTopVote && (
+        <div
+          style={{
+            position: "absolute",
+            top: -5,
+            right: 10,
+            background: "#52c41a",
+            color: "white",
+            padding: "2px 8px",
+            borderRadius: "12px",
+            fontSize: "12px",
+            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
+          }}
+        >
+          Dẫn đầu
+        </div>
+      )}
+    </div>
+  )
+);
 
 // Countdown component for time remaining
 const CountdownTimer = ({ endTime, onTimerEnd }) => {
@@ -122,6 +326,10 @@ function Votes({ showId }) {
   const [previousVotes, setPreviousVotes] = useState({});
   const unsubscribeRef = useRef(null);
   const [signalRConnected, setSignalRConnected] = useState(false);
+  const [sortedVotes, setSortedVotes] = useState([]);
+  const [lastUpdatedId, setLastUpdatedId] = useState(null);
+  const [viewMode, setViewMode] = useState("cards"); // 'cards' or 'table'
+  const [maxVotes, setMaxVotes] = useState(0);
 
   const {
     votes,
@@ -129,7 +337,16 @@ function Votes({ showId }) {
     fetchVotes,
     UpdateEnableVoting,
     UpdateDisableVoting,
+    updateLocalVoteCount,
   } = useVote();
+
+  // Sắp xếp phiếu bầu theo số phiếu
+  useEffect(() => {
+    if (votes && votes.length > 0) {
+      const sorted = [...votes].sort((a, b) => b.voteCount - a.voteCount);
+      setSortedVotes(sorted);
+    }
+  }, [votes]);
 
   // Thiết lập kết nối SignalR khi component được mount
   useEffect(() => {
@@ -164,15 +381,30 @@ function Votes({ showId }) {
 
   // Hàm cập nhật số phiếu khi nhận được thông báo từ SignalR
   const updateVoteCount = (registrationId, newVoteCount) => {
-    if (!votes || votes.length === 0) return;
+    console.log("Updating vote count in UI:", registrationId, newVoteCount);
+    if (!votes || votes.length === 0) {
+      console.log("No votes data available, fetching data...");
+      fetchVotes(showId);
+      return;
+    }
 
     const voteIndex = votes.findIndex(
       (vote) => vote.registrationId === registrationId
     );
+    console.log("Found vote at index:", voteIndex);
 
     if (voteIndex !== -1) {
       // Lưu giá trị cũ để animation
       const oldVoteCount = votes[voteIndex].voteCount;
+      console.log(
+        "Old vote count:",
+        oldVoteCount,
+        "New vote count:",
+        newVoteCount
+      );
+
+      // Đánh dấu ID vừa được cập nhật để hiệu ứng highlight
+      setLastUpdatedId(registrationId);
 
       // Cập nhật dữ liệu cục bộ
       setPreviousVotes((prev) => ({
@@ -180,12 +412,9 @@ function Votes({ showId }) {
         [registrationId]: oldVoteCount,
       }));
 
-      // Cập nhật dữ liệu trong danh sách votes
-      const updatedVotes = [...votes];
-      updatedVotes[voteIndex] = {
-        ...updatedVotes[voteIndex],
-        voteCount: newVoteCount,
-      };
+      // Cập nhật state của votes trong store
+      const updated = updateLocalVoteCount(registrationId, newVoteCount);
+      console.log("Local update successful:", updated);
 
       // Hiển thị thông báo
       notification.info({
@@ -194,6 +423,14 @@ function Votes({ showId }) {
         placement: "bottomRight",
         duration: 3,
       });
+
+      // Xóa highlight sau 5 giây
+      setTimeout(() => {
+        setLastUpdatedId(null);
+      }, 5000);
+    } else {
+      console.log("Vote not found in current data, fetching new data...");
+      fetchVotes(showId);
     }
   };
 
@@ -448,6 +685,11 @@ function Votes({ showId }) {
     },
   ];
 
+  // Chuyển đổi giữa chế độ hiển thị
+  const toggleViewMode = () => {
+    setViewMode(viewMode === "cards" ? "table" : "cards");
+  };
+
   const renderConnectionStatus = () => {
     if (votingActive) {
       return signalRConnected ? (
@@ -505,43 +747,89 @@ function Votes({ showId }) {
     }
   };
 
+  // Xác định số phiếu cao nhất
+  useEffect(() => {
+    if (sortedVotes && sortedVotes.length > 0) {
+      const highestVoteCount = sortedVotes[0].voteCount;
+      setMaxVotes(highestVoteCount);
+    }
+  }, [sortedVotes]);
+
+  // Kiểm tra có phải là phiếu bầu cao nhất
+  const isTopVote = (voteCount) => {
+    return voteCount > 0 && voteCount === maxVotes;
+  };
+
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <div className="flex justify-between mb-4">
         <h2 className="text-xl font-semibold">Quản lý bình chọn</h2>
-        <Space>{renderVotingControls()}</Space>
+        <Space>
+          {renderVotingControls()}
+          <Button
+            type="text"
+            icon={viewMode === "cards" ? <EyeOutlined /> : <FireOutlined />}
+            onClick={toggleViewMode}
+          >
+            {viewMode === "cards" ? "Hiển thị bảng" : "Hiển thị danh sách"}
+          </Button>
+        </Space>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={votes}
-        rowKey="registrationId"
-        loading={loading}
-        pagination={{
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50", "100"],
-          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
-          defaultPageSize: 10,
-          size: "small",
-          itemRender: (page, type, originalElement) => {
-            if (type === "prev") {
-              return (
-                <Button type="text" size="small">
-                  {"<"}
-                </Button>
-              );
-            }
-            if (type === "next") {
-              return (
-                <Button type="text" size="small">
-                  {">"}
-                </Button>
-              );
-            }
-            return originalElement;
-          },
-        }}
-      />
+      {viewMode === "table" ? (
+        <Table
+          columns={columns}
+          dataSource={votes}
+          rowKey="registrationId"
+          loading={loading}
+          pagination={{
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50", "100"],
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} trong ${total}`,
+            defaultPageSize: 10,
+            size: "small",
+            itemRender: (page, type, originalElement) => {
+              if (type === "prev") {
+                return (
+                  <Button type="text" size="small">
+                    {"<"}
+                  </Button>
+                );
+              }
+              if (type === "next") {
+                return (
+                  <Button type="text" size="small">
+                    {">"}
+                  </Button>
+                );
+              }
+              return originalElement;
+            },
+          }}
+        />
+      ) : (
+        <div className="mb-4">
+          <FlipMove
+            duration={500}
+            easing="ease-out"
+            enterAnimation="fade"
+            leaveAnimation="fade"
+            typeName={null}
+          >
+            {sortedVotes.map((item) => (
+              <VoteItem
+                key={item.registrationId}
+                item={item}
+                previousVotes={previousVotes}
+                onDetails={showDetailDrawer}
+                highlighted={item.registrationId === lastUpdatedId}
+                isTopVote={isTopVote(item.voteCount)}
+              />
+            ))}
+          </FlipMove>
+        </div>
+      )}
 
       {/* Detail Drawer */}
       <Drawer
