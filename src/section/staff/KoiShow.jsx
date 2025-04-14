@@ -10,13 +10,13 @@ import {
   DatePicker,
 } from "antd";
 import { EditOutlined } from "@ant-design/icons";
-import NoKoiShow from "../../../assets/NoKoiShow.png";
+import NoKoiShow from "../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
-import useKoiShow from "../../../hooks/useKoiShow";
-import { Loading } from "../../../components";
+import useKoiShow from "../../hooks/useKoiShow";
+import { Loading } from "../../components";
 import Cookies from "js-cookie";
-import useAuth from "../../../hooks/useAuth";
+import useAuth from "../../hooks/useAuth";
 
 function KoiShow() {
   const navigate = useNavigate();

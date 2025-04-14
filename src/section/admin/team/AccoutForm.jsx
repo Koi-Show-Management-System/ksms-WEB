@@ -40,6 +40,8 @@ function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }
     <Modal
       title={title}
       open={isVisible}
+      okText="Thêm"
+      cancelText="Đóng"
       onCancel={() => {
         form.resetFields();
         onCancel();

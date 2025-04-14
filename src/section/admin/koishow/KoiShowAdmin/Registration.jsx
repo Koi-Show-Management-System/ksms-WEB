@@ -17,6 +17,7 @@ import {
   ConfigProvider,
   Input,
   Empty,
+  Spin,
 } from "antd";
 import {
   ExclamationCircleOutlined,
@@ -871,7 +872,7 @@ function Registration({ showId, statusShow }) {
                                       alignItems: "center",
                                     }}
                                   >
-                                    <Loading />
+                                    <Spin size="small" />
                                   </div>
                                 }
                                 preview={{

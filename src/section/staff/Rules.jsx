@@ -8,7 +8,7 @@ import {
   Pagination,
   Select,
 } from "antd";
-import useShowRule from "../../../hooks/useShowRule";
+import useShowRule from "../../hooks/useShowRule";
 
 const { Title, Paragraph } = Typography;
 
@@ -142,7 +142,7 @@ const Rules = ({ showId, showRule = [] }) => {
                 { value: 50, label: "50" },
               ]}
               size="small"
-              dropdownMatchSelectWidth={false}
+              popupMatchSelectWidth={false}
               className="w-16"
             />
             <span className="ml-1 text-gray-600 text-sm">/ page</span>

@@ -293,6 +293,8 @@ const User = () => {
         title="Thông tin tài khoản"
         open={isModalVisible}
         onCancel={handleCancel}
+        okText="Thêm"
+        cancelText="Đóng"
         footer={
           isEditing
             ? [

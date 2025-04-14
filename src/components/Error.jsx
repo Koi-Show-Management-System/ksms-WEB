@@ -4,10 +4,10 @@ const Error = () => (
   <Result
     status="404"
     title="404"
-    subTitle="Sorry, the page you visited does not exist."
+    subTitle="Trang bạn đang tìm kiếm không tồn tại."
     extra={
       <Button type="primary" className="bg-[#1677ff]">
-        <Link to="/admin/dashboard">Back home</Link>
+        <Link to="/admin/dashboard">Trang chủ</Link>
       </Button>
     }
   />

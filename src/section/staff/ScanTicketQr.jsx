@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import QrScanner from "react-qr-scanner";
-import useTicketType from "../../../hooks/useTicketType";
+import useTicketType from "../../hooks/useTicketType";
 import {
   Card,
   Button,

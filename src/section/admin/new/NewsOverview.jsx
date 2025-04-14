@@ -79,7 +79,7 @@ const NewsOverview = () => {
   const [editorContent, setEditorContent] = useState("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
 
   // Sử dụng hook useBlog
   const {
@@ -385,18 +385,17 @@ const NewsOverview = () => {
 
           <Select
             placeholder="Lọc theo danh mục"
-            onChange={handleCategoryChange}
             value={selectedCategory}
-            style={{ width: 180 }}
+            onChange={handleCategoryChange}
             allowClear
-            options={[
-              { value: null, label: "Tất cả" },
-              ...blogCategory.map((cat) => ({
-                value: cat.id,
-                label: cat.name,
-              })),
-            ]}
-          />
+          >
+            <Select.Option value="">Tất cả danh mục</Select.Option>
+            {blogCategory.map((category) => (
+              <Select.Option key={category.id} value={category.id}>
+                {category.name}
+              </Select.Option>
+            ))}
+          </Select>
         </div>
 
         <Button

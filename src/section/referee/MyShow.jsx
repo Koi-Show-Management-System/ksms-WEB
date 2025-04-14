@@ -1,8 +1,8 @@
 import { Button, DatePicker, Input, Pagination } from "antd";
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import useKoiShow from "../../../hooks/useKoiShow";
-import { Loading } from "../../../components";
+import useKoiShow from "../../hooks/useKoiShow";
+import { Loading } from "../../components";
 
 function MyShow() {
   const [showDetails, setShowDetails] = React.useState(false);
@@ -98,7 +98,7 @@ function MyShow() {
             <div
               key={show.id}
               className="bg-white rounded-lg shadow-md overflow-hidden"
-              onClick={() => navigate(`/staff/koiShow/detail/${show.id}`)}
+              onClick={() => navigate(`/referee/koiShow/detail/${show.id}`)}
             >
               {/* Show Image */}
               <img
@@ -157,7 +157,7 @@ function MyShow() {
                     {(show.registrationFee || 0).toLocaleString()} VND
                   </p>
                 </div>
-                <Link to={`/staff/koiShow/detail/${show.id}`}>
+                <Link to={`/referee/koiShow/detail/${show.id}`}>
                   <Button className="mt-3 w-full bg-blue-500" type="primary">
                     Xem chi tiết
                   </Button>

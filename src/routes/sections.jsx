@@ -7,7 +7,6 @@ import ManagerDashboard from "../layout/manager";
 import RefereeDashboard from "../layout/referee";
 import Cookies from "js-cookie";
 import StaffDashboard from "../layout/staff";
-import Livestream from "../section/staff/koishow/LiveStream";
 import { notification } from "antd";
 
 export const KoiShowPage = lazy(() => import("../pages/AdminPage/KoiShowPage"));
@@ -46,7 +45,6 @@ export const KoiShowDetailStaffPage = lazy(
   () => import("../pages/StaffPage/KoiShowDetailPage")
 );
 
-export const NewStaffPage = lazy(() => import("../pages/StaffPage/NewPage"));
 
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
   useEffect(() => {
@@ -140,10 +138,8 @@ export const Router = () => {
       path: "/staff",
       children: [
         { element: <KoiShowStaffPage />, path: "showList" },
-        { element: <NewStaffPage />, path: "news" },
         { element: <KoiShowDetailStaffPage />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/staff/showList" replace />, index: true },
-        { element: <Livestream />, path: "koishow/:id/livestream" },
         { element: <Error404 />, path: "*" },
       ],
     },

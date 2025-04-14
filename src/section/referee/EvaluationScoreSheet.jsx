@@ -26,8 +26,8 @@ import {
   PercentageOutlined,
   EditOutlined,
 } from "@ant-design/icons";
-import useScore from "../../../hooks/useScore";
-import { createErrorType } from "../../../api/errorType";
+import useScore from "../../hooks/useScore";
+import { createErrorType } from "../../api/errorType";
 
 const { Title, Text } = Typography;
 const { Option } = Select;

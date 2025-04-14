@@ -264,6 +264,8 @@ function Staff({ accounts = [], isLoading, role }) {
         title="Thông tin tài khoản"
         open={isModalVisible}
         onCancel={handleCancel}
+        okText="Cập nhật"
+        cancelText="Đóng"
         footer={
           isEditing
             ? [

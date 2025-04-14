@@ -20,10 +20,10 @@ import {
   Collapse,
 } from "antd";
 import { EyeOutlined, ReloadOutlined, TrophyOutlined } from "@ant-design/icons";
-import useCategory from "../../../hooks/useCategory";
-import useRound from "../../../hooks/useRound";
-import useRegistrationRound from "../../../hooks/useRegistrationRound";
-import useScore from "../../../hooks/useScore";
+import useCategory from "../../hooks/useCategory";
+import useRound from "../../hooks/useRound";
+import useRegistrationRound from "../../hooks/useRegistrationRound";
+import useScore from "../../hooks/useScore";
 
 const { Option } = Select;
 

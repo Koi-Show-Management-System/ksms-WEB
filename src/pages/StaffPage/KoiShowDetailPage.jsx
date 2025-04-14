@@ -1,6 +1,6 @@
 import React from "react";
 import { Helmet } from "react-helmet-async";
-import KoiShowDetail from "../../section/staff/koishow/KoiShowDetail";
+import KoiShowDetail from "../../section/staff/KoiShowDetail";
 function KoiShowDetailPage() {
   return (
     <>

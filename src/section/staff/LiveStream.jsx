@@ -28,8 +28,8 @@ import {
   CallingState,
 } from "@stream-io/video-react-sdk";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
-import useLiveStream from "../../../hooks/useLiveStream";
-import { GetHostToken } from "../../../api/liveStreamApi";
+import useLiveStream from "../../hooks/useLiveStream";
+import { GetHostToken } from "../../api/liveStreamApi";
 import Cookies from "js-cookie";
 import {
   VideoCameraOutlined,
@@ -527,9 +527,14 @@ function LiveStream({ showId }) {
 
   return (
     <Card
-      title={<Title level={3}>Quản lý Livestream</Title>}
-      style={{ width: "100%" }}
-      bodyStyle={{ padding: "24px" }}
+      title={
+        <div className="flex items-center justify-between">
+          <Title level={4} style={{ margin: 0 }}>
+            Live Stream
+          </Title>
+        </div>
+      }
+      styles={{ body: { padding: "24px" } }}
     >
       {isLoading ? (
         <Flex justify="center" align="center" style={{ minHeight: "400px" }}>

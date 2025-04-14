@@ -131,7 +131,7 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
 
   // Component Card thống kê đơn giản
   const StatCard = ({ title, value, icon, color, isCurrency = false }) => (
-    <Card bodyStyle={{ padding: "16px" }}>
+    <Card styles={{ body: { padding: "16px" } }}>
       <div className="flex items-center justify-between">
         <div>
           <p className="text-gray-500 mb-1 text-sm">{title}</p>

@@ -164,8 +164,8 @@ const Criteria = () => {
         </div>
 
         <Modal
-          title={currentCriteria ? "Cập Nhật Tiêu Chí" : "Thêm Tiêu Chí"}
-          visible={isModalVisible}
+          title={currentCriteria ? "Chỉnh sửa tiêu chí" : "Thêm tiêu chí mới"}
+          open={isModalVisible}
           onCancel={handleCancel}
           footer={null}
         >

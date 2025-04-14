@@ -27,8 +27,8 @@ import {
   CameraOutlined,
   InfoCircleOutlined,
 } from "@ant-design/icons";
-import useRegistration from "../../../hooks/useRegistration";
-import { Loading } from "../../../components";
+import useRegistration from "../../hooks/useRegistration";
+import { Loading } from "../../components";
 
 const { Title, Text } = Typography;
 const { TextArea } = Input;
@@ -43,11 +43,13 @@ function CheckOutKoi() {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isCheckOutInfoModalVisible, setIsCheckOutInfoModalVisible] =
     useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const { fetchRegistration, checkOutKoi } = useRegistration();
 
   const handleSearch = async (values) => {
     try {
       setLoading(true);
+      setHasSearched(true);
       // Sử dụng hook fetchRegistration có sẵn để tìm kiếm cá theo Mã đặng ký
       const result = await fetchRegistration(
         1,
@@ -123,7 +125,7 @@ function CheckOutKoi() {
     setIsModalVisible(false);
   };
 
-  const handleImageUpload = async ({ fileList }) => {
+  const handleImageUpload = ({ fileList }) => {
     if (fileList.length === 0) {
       setUploadedImage(null);
       setImgCheckOut("");
@@ -133,54 +135,52 @@ function CheckOutKoi() {
     const file = fileList[0].originFileObj;
     if (!file) return;
 
-    try {
-      setLoading(true);
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("upload_preset", "ml_default");
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "ml_default");
 
-      const response = await fetch(
-        "https://api.cloudinary.com/v1_1/dphupjpqt/image/upload",
-        {
-          method: "POST",
-          body: formData,
+    setLoading(true);
+    fetch("https://api.cloudinary.com/v1_1/dphupjpqt/image/upload", {
+      method: "POST",
+      body: formData,
+    })
+      .then((response) => response.json())
+      .then((data) => {
+        if (!data.secure_url) {
+          throw new Error("Upload failed");
         }
-      );
 
-      const data = await response.json();
+        const imageInfo = {
+          uid: "-1",
+          name: file.name,
+          status: "done",
+          url: data.secure_url,
+        };
 
-      if (!response.ok) {
-        console.error("Cloudinary upload error:", data);
-        throw new Error(data.error.message || "Image upload failed");
-      }
+        setImgCheckOut(data.secure_url);
+        setUploadedImage(imageInfo);
 
-      setImgCheckOut(data.secure_url);
-      setUploadedImage({
-        uid: "-1",
-        name: file.name,
-        status: "done",
-        url: data.secure_url,
+        notification.success({
+          message: "Thành công",
+          description: "Ảnh đã được tải lên thành công!",
+        });
+      })
+      .catch((error) => {
+        console.error("Error uploading image:", error);
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể tải lên ảnh. Vui lòng thử lại.",
+        });
+        setUploadedImage(null);
+        setImgCheckOut("");
+      })
+      .finally(() => {
+        setLoading(false);
       });
-
-      notification.success({
-        message: "Thành công",
-        description: "Ảnh đã được tải lên thành công!",
-      });
-    } catch (error) {
-      console.error("Error uploading image:", error);
-      notification.error({
-        message: "Lỗi",
-        description: "Không thể tải lên ảnh. Vui lòng thử lại.",
-      });
-    } finally {
-      setLoading(false);
-    }
   };
 
   const handleCheckOut = async () => {
     try {
-      const values = await checkoutForm.validateFields();
-
       if (!koiData?.id) {
         notification.error({
           message: "Lỗi",
@@ -197,13 +197,32 @@ function CheckOutKoi() {
         return;
       }
 
+      const values = await checkoutForm.validateFields();
+
       setLoading(true);
       await checkOutKoi(koiData.id, imgCheckOut, values.notes);
+
       setIsModalVisible(false);
       setKoiData(null);
       form.resetFields();
+      checkoutForm.resetFields();
+      setUploadedImage(null);
+      setImgCheckOut("");
+
+      notification.success({
+        message: "Thành công",
+        description: "Check out cá thành công!",
+      });
     } catch (error) {
+      if (error.errorFields) {
+        // Form validation error
+        return;
+      }
       console.error("Error during check out:", error);
+      notification.error({
+        message: "Lỗi",
+        description: error.message || "Không thể check out. Vui lòng thử lại.",
+      });
     } finally {
       setLoading(false);
     }
@@ -420,7 +439,7 @@ function CheckOutKoi() {
         </div>
       )}
 
-      {!loading && !koiData && form.getFieldValue("registrationNumber") && (
+      {!loading && !koiData && hasSearched && (
         <Empty
           description="Không tìm thấy thông tin cá"
           style={{ margin: "40px 0" }}
@@ -506,6 +525,9 @@ function CheckOutKoi() {
                 Hình ảnh check out <span style={{ color: "#ff4d4f" }}>*</span>
               </span>
             }
+            required
+            validateStatus={imgCheckOut ? "success" : "error"}
+            help={!imgCheckOut && "Vui lòng tải lên hình ảnh check out"}
           >
             <Upload
               accept=".jpg,.jpeg,.png"
@@ -522,13 +544,6 @@ function CheckOutKoi() {
                 </div>
               )}
             </Upload>
-            {!uploadedImage && (
-              <div
-                style={{ color: "#ff4d4f", fontSize: "14px", marginTop: "5px" }}
-              >
-                Vui lòng tải lên hình ảnh
-              </div>
-            )}
           </Form.Item>
         </Form>
       </Modal>

@@ -27,8 +27,8 @@ import {
   ApartmentOutlined,
   FieldTimeOutlined,
 } from "@ant-design/icons";
-import useCategory from "../../../hooks/useCategory";
-import EditCategory from "../../../section/admin/koishow/KoiShowAdmin/EditCategory";
+import useCategory from "../../hooks/useCategory";
+import EditCategory from "../admin/koishow/KoiShowAdmin/EditCategory";
 
 const { Search } = Input;
 const { Option } = Select;
