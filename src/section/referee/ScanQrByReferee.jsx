@@ -370,7 +370,6 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
               onChange={handleCategoryChange}
               allowClear
               style={{ width: "100%" }}
-              className="border rounded-md p-1"
               loading={categoryLoading}
               placeholder="Chọn danh mục"
               size="large"
@@ -398,7 +397,6 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 onChange={handleRoundTypeChange}
                 allowClear
                 style={{ width: "100%" }}
-                className="border rounded-md p-1"
                 loading={roundLoading}
                 placeholder="Chọn vòng thi"
                 size="large"
@@ -426,7 +424,6 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 value={selectedSubRound}
                 onChange={handleSubRoundChange}
                 style={{ width: "100%" }}
-                className="border rounded-md p-1"
                 placeholder="Chọn vòng nhỏ"
                 size="large"
               >
