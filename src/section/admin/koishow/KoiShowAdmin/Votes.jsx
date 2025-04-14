@@ -35,6 +35,7 @@ import { Loading } from "../../../../components";
 import CountUp from "react-countup";
 import SignalRService from "../../../../config/signalRService";
 import styled from "styled-components";
+import FlipMove from "react-flip-move";
 
 const { TabPane } = Tabs;
 
@@ -333,6 +334,7 @@ function Votes({ showId }) {
   const [viewMode, setViewMode] = useState("cards"); // 'cards' or 'table'
   const [maxVotes, setMaxVotes] = useState(0);
   const isDisablingRef = useRef(false);
+  const [prevSortedOrder, setPrevSortedOrder] = useState([]);
 
   const {
     votes,
@@ -373,9 +375,13 @@ function Votes({ showId }) {
     }
   }, [votingActive, UpdateDisableVoting, showId, fetchVotes]);
 
-  // Sắp xếp phiếu bầu theo số phiếu
+  // Sắp xếp phiếu bầu theo số phiếu và lưu trữ thứ tự cũ để so sánh
   useEffect(() => {
     if (votes && votes.length > 0) {
+      // Lưu thứ tự cũ trước khi sắp xếp lại
+      setPrevSortedOrder(sortedVotes.map((vote) => vote.registrationId));
+
+      // Sắp xếp danh sách phiếu bầu theo số phiếu từ cao đến thấp
       const sorted = [...votes].sort((a, b) => b.voteCount - a.voteCount);
       setSortedVotes(sorted);
     }
@@ -412,7 +418,7 @@ function Votes({ showId }) {
     };
   }, []);
 
-  // Hàm cập nhật số phiếu khi nhận được thông báo từ SignalR
+  // Xử lý khi nhận được cập nhật phiếu bầu từ SignalR
   const updateVoteCount = (registrationId, newVoteCount) => {
     console.log("Updating vote count in UI:", registrationId, newVoteCount);
     if (!votes || votes.length === 0) {
@@ -444,6 +450,9 @@ function Votes({ showId }) {
         ...prev,
         [registrationId]: oldVoteCount,
       }));
+
+      // Lưu thứ tự cũ trước khi cập nhật
+      setPrevSortedOrder(sortedVotes.map((vote) => vote.registrationId));
 
       // Cập nhật state của votes trong store
       const updated = updateLocalVoteCount(registrationId, newVoteCount);
@@ -783,6 +792,16 @@ function Votes({ showId }) {
     };
   }, []);
 
+  // Cấu hình cho FlipMove
+  const flipMoveOptions = {
+    duration: 800,
+    easing: "cubic-bezier(0.25, 0.1, 0.25, 1.0)",
+    staggerDurationBy: 30,
+    staggerDelayBy: 10,
+    enterAnimation: "fade",
+    leaveAnimation: "fade",
+  };
+
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
       <div className="flex justify-between mb-4">
@@ -791,7 +810,7 @@ function Votes({ showId }) {
       </div>
 
       <div className="mb-4">
-        <div className="space-y-2">
+        <FlipMove {...flipMoveOptions}>
           {sortedVotes.map((item) => (
             <VoteItem
               key={item.registrationId}
@@ -802,7 +821,7 @@ function Votes({ showId }) {
               isTopVote={isTopVote(item.voteCount)}
             />
           ))}
-        </div>
+        </FlipMove>
       </div>
 
       {/* Detail Drawer */}
