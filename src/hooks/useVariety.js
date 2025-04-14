@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { getVarieties } from "../api/varietyApi";
+import { createVariety, getVarieties } from "../api/varietyApi";
 
 const useVariety = create((set, get) => ({
   variety: [],
@@ -56,6 +56,17 @@ const useVariety = create((set, get) => ({
       } else {
         console.error("API Error:", res);
         set({ error: res, isLoading: false });
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      set({ error: error, isLoading: false });
+    }
+  },
+  createVariety: async (variety) => {
+    try {
+      const res = await createVariety(variety);
+      if (res && res.status === 200) {
+        get().fetchVariety();
       }
     } catch (error) {
       console.error("API Error:", error);

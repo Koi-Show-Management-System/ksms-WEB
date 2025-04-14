@@ -806,6 +806,14 @@ function Registration({ showId, statusShow }) {
                           {currentKoi.registrationFee?.toLocaleString() || 0}{" "}
                           VND
                         </p>
+                        {currentKoi.createdAt && (
+                          <p>
+                            <strong>Ngày Tạo:</strong>{" "}
+                            {currentKoi.createdAt
+                              ? new Date(currentKoi.createdAt).toLocaleString()
+                              : "-"}
+                          </p>
+                        )}
                         <p>
                           <strong>Trạng Thái:</strong>{" "}
                           {renderStatus(currentKoi.status)}

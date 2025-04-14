@@ -26,9 +26,11 @@ export const OverviewAdmin = lazy(
   () => import("../pages/AdminPage/OverviewPage")
 );
 export const NewsPage = lazy(() => import("../pages/AdminPage/NewsPage"));
+export const NewsCategoryPage = lazy(() => import("../pages/AdminPage/NewsCategoryPage"));
 export const CriteriaPage = lazy(
   () => import("../pages/AdminPage/CriteriaPage")
 );
+export const VarietyPage = lazy(() => import("../pages/AdminPage/VarietyPage"));
 
 export const TeamManagerPage = lazy(
   () => import("../pages/ManagerPage/TeamPage")
@@ -96,8 +98,10 @@ export const Router = () => {
         { element: <CreateShow />, path: "create-Show" },
         { element: <UserPage />, path: "users" },
         { element: <TeamPage />, path: "teams" },
-        { element: <NewsPage />, path: "news" },
+        { element: <NewsPage />, path: "news/overview" },
+        { element: <NewsCategoryPage/>, path: "news/category" },
         { element: <CriteriaPage />, path: "criteria" },
+        { element: <VarietyPage />, path: "variety" },
         { element: <KoiShowDetail />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/admin/overview" replace />, index: true },
         { element: <Error404 />, path: "*" },

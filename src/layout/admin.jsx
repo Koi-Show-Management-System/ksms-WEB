@@ -7,6 +7,9 @@ import {
   BookOutlined,
   UserAddOutlined,
   ReadOutlined,
+  ContainerOutlined,
+  FolderOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import Cookies from "js-cookie";
 import PropTypes from "prop-types";
@@ -51,8 +54,36 @@ const AdminDashboard = React.memo(({ children }) => {
         null,
         "/admin/teams"
       ),
-      getItem("Tin Tức", "sub4", <ReadOutlined />, null, "/admin/news"),
+      getItem(
+        "Tin Tức",
+        "sub4",
+        <ReadOutlined />,
+        [
+          getItem(
+            "Tin tức tổng hợp",
+            "news_overview",
+            <FileTextOutlined />,
+            null,
+            "/admin/news/overview"
+          ),
+          getItem(
+            "Thông tin hạng mục",
+            "news_category",
+            <FileTextOutlined />,
+            null,
+            "/admin/news/category"
+          ),
+        ],
+        null
+      ),
       getItem("Tiêu chí", "sub5", <BookOutlined />, null, "/admin/criteria"),
+      getItem(
+        "Giống Koi",
+        "sub6",
+        <ContainerOutlined />,
+        null,
+        "/admin/variety"
+      ),
     ],
     []
   );

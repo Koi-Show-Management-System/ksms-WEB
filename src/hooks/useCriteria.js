@@ -22,7 +22,7 @@ const useCriteria = create((set, get) => ({
     set({ criteriaCompetitionRound: [], error: null });
   },
 
-  fetchCriteria: async (page = 1, size = 10) => {
+  fetchCriteria: async (page = 1, size = 1000) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
     try {

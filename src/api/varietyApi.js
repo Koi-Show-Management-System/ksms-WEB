@@ -8,4 +8,10 @@ const getVarieties = (page, size) => {
     },
   });
 };
-export { getVarieties };
+
+const createVariety = (variety) => {
+  return axiosClient.post("/variety/create", variety);
+};
+
+
+export { getVarieties, createVariety };

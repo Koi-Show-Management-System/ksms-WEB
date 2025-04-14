@@ -17,6 +17,7 @@ import {
   Divider,
   Upload,
   Modal,
+  Tooltip,
 } from "antd";
 import {
   SearchOutlined,
@@ -24,6 +25,7 @@ import {
   QrcodeOutlined,
   UploadOutlined,
   CameraOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import useRegistration from "../../../hooks/useRegistration";
 import { Loading } from "../../../components";
@@ -39,6 +41,8 @@ function CheckOutKoi() {
   const [uploadedImage, setUploadedImage] = useState(null);
   const [imgCheckOut, setImgCheckOut] = useState("");
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isCheckOutInfoModalVisible, setIsCheckOutInfoModalVisible] =
+    useState(false);
   const { fetchRegistration, checkOutKoi } = useRegistration();
 
   const handleSearch = async (values) => {
@@ -241,6 +245,16 @@ function CheckOutKoi() {
     return <Tag color={color}>{text}</Tag>;
   };
 
+  // Hàm mở modal thông tin check out
+  const showCheckOutInfoModal = () => {
+    setIsCheckOutInfoModalVisible(true);
+  };
+
+  // Hàm đóng modal thông tin check out
+  const handleCheckOutInfoCancel = () => {
+    setIsCheckOutInfoModalVisible(false);
+  };
+
   return (
     <Card
       title={
@@ -365,21 +379,42 @@ function CheckOutKoi() {
                 <Descriptions.Item label="Vị trí check-in">
                   {koiData.checkInLocation || "-"}
                 </Descriptions.Item>
+                {koiData.checkOutLog && (
+                  <Descriptions.Item label="Thời gian check-out">
+                    {koiData.checkOutLog.checkOutTime
+                      ? new Date(
+                          koiData.checkOutLog.checkOutTime
+                        ).toLocaleString()
+                      : "-"}
+                  </Descriptions.Item>
+                )}
               </Descriptions>
 
-              <Button
-                type="primary"
-                danger
-                icon={<ExportOutlined />}
-                onClick={showCheckoutModal}
-                disabled={
-                  loading || koiData.status?.toLowerCase() === "checkout"
-                }
-                size="large"
-                style={{ borderRadius: "6px" }}
-              >
-                Check out cá
-              </Button>
+              {!koiData.checkOutLog ? (
+                <Button
+                  type="primary"
+                  danger
+                  icon={<ExportOutlined />}
+                  onClick={showCheckoutModal}
+                  disabled={
+                    loading || koiData.status?.toLowerCase() === "checkout"
+                  }
+                  size="large"
+                  style={{ borderRadius: "6px" }}
+                >
+                  Check out cá
+                </Button>
+              ) : (
+                <Button
+                  type="primary"
+                  icon={<InfoCircleOutlined />}
+                  onClick={showCheckOutInfoModal}
+                  size="large"
+                  style={{ borderRadius: "6px" }}
+                >
+                  Xem thông tin check out
+                </Button>
+              )}
             </Col>
           </Row>
         </div>
@@ -391,6 +426,64 @@ function CheckOutKoi() {
           style={{ margin: "40px 0" }}
         />
       )}
+
+      {/* Modal thông tin check out */}
+      <Modal
+        title="Thông tin Check Out"
+        open={isCheckOutInfoModalVisible}
+        onCancel={handleCheckOutInfoCancel}
+        footer={[
+          <Button key="back" onClick={handleCheckOutInfoCancel}>
+            Đóng
+          </Button>,
+        ]}
+        width={700}
+      >
+        {koiData?.checkOutLog && (
+          <div>
+            <Row gutter={24}>
+              <Col span={12}>
+                <div style={{ textAlign: "center", marginBottom: 20 }}>
+                  <Image
+                    src={koiData.checkOutLog.imgCheckOut}
+                    alt="Hình ảnh check out"
+                    style={{ maxHeight: "300px", objectFit: "contain" }}
+                  />
+                </div>
+              </Col>
+              <Col span={12}>
+                <Descriptions
+                  bordered
+                  column={1}
+                  size="small"
+                  labelStyle={{ fontWeight: "bold" }}
+                >
+                  <Descriptions.Item label="Thời gian check out">
+                    {koiData.checkOutLog.checkOutTime
+                      ? new Date(
+                          koiData.checkOutLog.checkOutTime
+                        ).toLocaleString()
+                      : "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Người thực hiện">
+                    {koiData.checkOutLog.checkedOutByNavigation?.fullName ||
+                      "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Email">
+                    {koiData.checkOutLog.checkedOutByNavigation?.email || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số điện thoại">
+                    {koiData.checkOutLog.checkedOutByNavigation?.phone || "-"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Ghi chú">
+                    {koiData.checkOutLog.notes || "-"}
+                  </Descriptions.Item>
+                </Descriptions>
+              </Col>
+            </Row>
+          </div>
+        )}
+      </Modal>
 
       {/* Modal check out */}
       <Modal
