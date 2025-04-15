@@ -1,5 +1,6 @@
 import { Router } from "./routes/sections";
-import { HelmetProvider } from 'react-helmet-async';
+import { HelmetProvider } from "react-helmet-async";
+import DashboardLayout from "./layout/DashboardLayout";
 
 function App() {
   return (

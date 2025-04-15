@@ -347,9 +347,7 @@ function Staff({ accounts = [], isLoading, role }) {
                       borderRadius: "4px",
                     }}
                   />
-                ) : (
-                  <div>Không có hình đại diện</div>
-                )}
+                ) : null}
               </div>
             </div>
           </Form.Item>

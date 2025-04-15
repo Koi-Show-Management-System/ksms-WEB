@@ -161,7 +161,7 @@ function CreateShow() {
             </div>
           ),
           placement: "topRight",
-          duration: 15,
+          duration: 5,
         });
       }
     }
@@ -386,7 +386,24 @@ function CreateShow() {
     }
 
     if (currentStep === 3) {
-      // Kiểm tra quy tắc
+      // Lấy trạng thái từ formData (sẽ có trong StepThree component)
+      const { availableStatuses } = formData;
+
+      // Kiểm tra số lượng trạng thái
+      if (formData.createShowStatusRequests.length < 10) {
+        notification.error({
+          message: "Thiếu trạng thái",
+          description: "Cần có ít nhất 10 trạng thái cho chương trình",
+          placement: "topRight",
+          duration: 6,
+        });
+        hasError = true;
+      }
+
+      // Kiểm tra xem có trạng thái nào chưa được chọn không
+      const unselectedStatuses = availableStatuses?.filter(
+        (status) => !status.selected
+      );
       if (formData.createShowRuleRequests.length < 3) {
         notification.error({
           message: "Lỗi quy tắc",
@@ -396,31 +413,36 @@ function CreateShow() {
         });
         hasError = true;
       }
-
-      // Kiểm tra trạng thái
-      if (formData.createShowStatusRequests.length < 3) {
+      if (unselectedStatuses && unselectedStatuses.length > 0) {
         notification.error({
-          message: "Lỗi trạng thái",
-          description: "Cần có ít nhất 3 trạng thái cho chương trình",
+          message: "Thiếu trạng thái",
+          description: `Bạn cần chọn thêm ${unselectedStatuses.length} trạng thái nữa: ${unselectedStatuses
+            .map((s) => s.description)
+            .join(", ")}`,
           placement: "topRight",
-          duration: 6,
+          duration: 10,
         });
         hasError = true;
-      }
+      } else {
+        // Nếu đã chọn tất cả, kiểm tra xem có trạng thái nào thiếu thông tin không
+        const incompleteStatuses = availableStatuses?.filter(
+          (status) =>
+            status.selected &&
+            (!status.startDate ||
+              ((status.statusName === "RegistrationOpen" ||
+                status.statusName !== "Finished") &&
+                !status.endDate))
+        );
 
-      // Kiểm tra trạng thái không hợp lệ
-      const invalidStatuses = formData.createShowStatusRequests.filter(
-        (status) => !status.startDate || !status.endDate
-      );
-
-      if (invalidStatuses.length > 0) {
-        notification.error({
-          message: "Lỗi trạng thái",
-          description: `${invalidStatuses.length} trạng thái chưa có đầy đủ ngày bắt đầu và kết thúc`,
-          placement: "topRight",
-          duration: 6,
-        });
-        hasError = true;
+        if (incompleteStatuses && incompleteStatuses.length > 0) {
+          notification.error({
+            message: "Thiếu thông tin trạng thái",
+            description: `${incompleteStatuses.length} trạng thái đã chọn chưa có đầy đủ ngày bắt đầu và kết thúc`,
+            placement: "topRight",
+            duration: 6,
+          });
+          hasError = true;
+        }
       }
     }
 
@@ -585,12 +607,12 @@ function CreateShow() {
         <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
       </Modal>
       {/* Debug Panel */}
-      {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
+      <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
         <pre className="overflow-auto max-h-96">
           {JSON.stringify(formData, null, 2)}
         </pre>
-      </div> */}
+      </div>
     </div>
   );
 }

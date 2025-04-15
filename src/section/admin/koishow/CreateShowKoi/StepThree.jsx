@@ -57,8 +57,12 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       description: "Giai đoạn đăng ký.",
     },
     "Điểm Danh": {
-      key: "CheckIn",
-      description: "Giai đoạn check-in.",
+      key: "KoiCheckIn",
+      description: "Giai đoạn check-in cá koi.",
+    },
+    "Vé vào": {
+      key: "TicketCheckIn",
+      description: "Giai đoạn check-in vé.",
     },
     "Vòng Sơ Khảo": {
       key: "Preliminary",
@@ -98,7 +102,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       description,
       startDate: null,
       endDate: null,
-      selected: false, // Flag để theo dõi trạng thái có được chọn hay không
+      selected: false, // Đặt lại thành false để người dùng tự chọn
     }))
   );
 
@@ -132,9 +136,18 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
   // Cập nhật form data mỗi khi có thay đổi
   useEffect(() => {
-    // Chỉ gửi lên các trạng thái được chọn (có selected = true)
+    // Chỉ gửi lên các trạng thái được chọn (có selected = true) và có đầy đủ thông tin
     const selectedStatuses = availableStatuses
-      .filter((status) => status.selected && status.startDate)
+      .filter(
+        (status) =>
+          status.selected &&
+          status.startDate &&
+          // Nếu là RegistrationOpen hoặc các trạng thái khác (trừ Finished), cần cả startDate và endDate
+          (status.statusName === "RegistrationOpen" ||
+          status.statusName !== "Finished"
+            ? status.endDate
+            : true)
+      )
       .map((status) => ({
         statusName: status.statusName,
         description: status.description,
@@ -159,6 +172,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
     updateFormData({
       createShowRuleRequests: rules,
       createShowStatusRequests: selectedStatuses,
+      availableStatuses: availableStatuses, // Thêm truyền toàn bộ thông tin trạng thái
     });
 
     setFilteredRules(rules);
@@ -304,7 +318,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         // Ngày bắt đầu đăng ký phải trước ngày kết thúc đăng ký
         if (dateType === "startDate") {
           const checkInStatus = availableStatuses.find(
-            (s) => s.statusName === "CheckIn" && s.selected
+            (s) => s.statusName === "KoiCheckIn" && s.selected
           );
           if (
             checkInStatus?.startDate &&
@@ -314,7 +328,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
             return;
           }
         }
-      } else if (statusName === "CheckIn") {
+      } else if (statusName === "KoiCheckIn") {
         // Ngày điểm danh phải sau ngày kết thúc đăng ký
         const registrationStatus = availableStatuses.find(
           (s) => s.statusName === "RegistrationOpen" && s.selected
@@ -510,12 +524,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       </Title>
       <Divider />
 
-      {/* Hiển thị lỗi nếu chưa có ít nhất 3 trạng thái */}
-      {showErrors && availableStatuses.filter((s) => s.selected).length < 3 && (
-        <p className="text-red-500 text-sm font-medium mb-4">
-          Cần chọn ít nhất 3 trạng thái cho chương trình.
-        </p>
-      )}
+      {showErrors &&
+        availableStatuses.filter((status) => status.selected).length < 10 && (
+          <p className="text-red-500 text-xs mt-1">
+            Chú ý: Bạn cần chọn ít nhất 10 trạng thái để có thể hoàn thành quá
+            trình tạo chương trình.{" "}
+          </p>
+        )}
 
       {/* Bảng trạng thái */}
       <List

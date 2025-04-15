@@ -2,11 +2,8 @@ import { Outlet, useRoutes, Navigate } from "react-router-dom";
 import { Suspense, lazy, useEffect } from "react";
 import { Error404, Loading } from "../components";
 import Authentication from "../pages/AdminPage/Authentication";
-import AdminDashboard from "../layout/admin";
-import ManagerDashboard from "../layout/manager";
-import RefereeDashboard from "../layout/referee";
+import DashboardLayout from "../layout/DashboardLayout";
 import Cookies from "js-cookie";
-import StaffDashboard from "../layout/staff";
 import { notification } from "antd";
 
 export const KoiShowPage = lazy(() => import("../pages/AdminPage/KoiShowPage"));
@@ -25,7 +22,9 @@ export const OverviewAdmin = lazy(
   () => import("../pages/AdminPage/OverviewPage")
 );
 export const NewsPage = lazy(() => import("../pages/AdminPage/NewsPage"));
-export const NewsCategoryPage = lazy(() => import("../pages/AdminPage/NewsCategoryPage"));
+export const NewsCategoryPage = lazy(
+  () => import("../pages/AdminPage/NewsCategoryPage")
+);
 export const CriteriaPage = lazy(
   () => import("../pages/AdminPage/CriteriaPage")
 );
@@ -44,7 +43,6 @@ export const KoiShowStaffPage = lazy(
 export const KoiShowDetailStaffPage = lazy(
   () => import("../pages/StaffPage/KoiShowDetailPage")
 );
-
 
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
   useEffect(() => {
@@ -82,11 +80,11 @@ export const Router = () => {
     {
       element: (
         <ProtectedRoute allowedRole="Admin" userRole={userRole}>
-          <AdminDashboard>
+          <DashboardLayout>
             <Suspense fallback={<Loading />}>
               <Outlet />
             </Suspense>
-          </AdminDashboard>
+          </DashboardLayout>
         </ProtectedRoute>
       ),
       path: "/admin",
@@ -97,7 +95,7 @@ export const Router = () => {
         { element: <UserPage />, path: "users" },
         { element: <TeamPage />, path: "teams" },
         { element: <NewsPage />, path: "news/overview" },
-        { element: <NewsCategoryPage/>, path: "news/category" },
+        { element: <NewsCategoryPage />, path: "news/category" },
         { element: <CriteriaPage />, path: "criteria" },
         { element: <VarietyPage />, path: "variety" },
         { element: <KoiShowDetail />, path: "koiShow/detail/:id" },
@@ -108,11 +106,11 @@ export const Router = () => {
     {
       element: (
         <ProtectedRoute allowedRole="Manager" userRole={userRole}>
-          <ManagerDashboard>
+          <DashboardLayout>
             <Suspense fallback={<Loading />}>
               <Outlet />
             </Suspense>
-          </ManagerDashboard>
+          </DashboardLayout>
         </ProtectedRoute>
       ),
       path: "/manager",
@@ -128,17 +126,18 @@ export const Router = () => {
     {
       element: (
         <ProtectedRoute allowedRole="Staff" userRole={userRole}>
-          <StaffDashboard>
+          <DashboardLayout>
             <Suspense fallback={<Loading />}>
               <Outlet />
             </Suspense>
-          </StaffDashboard>
+          </DashboardLayout>
         </ProtectedRoute>
       ),
       path: "/staff",
       children: [
         { element: <KoiShowStaffPage />, path: "showList" },
         { element: <KoiShowDetailStaffPage />, path: "koiShow/detail/:id" },
+        { element: <NewManagerPage />, path: "news" },
         { element: <Navigate to="/staff/showList" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],
@@ -146,17 +145,18 @@ export const Router = () => {
     {
       element: (
         <ProtectedRoute allowedRole="Referee" userRole={userRole}>
-          <RefereeDashboard>
+          <DashboardLayout>
             <Suspense fallback={<Loading />}>
               <Outlet />
             </Suspense>
-          </RefereeDashboard>
+          </DashboardLayout>
         </ProtectedRoute>
       ),
       path: "/referee",
       children: [
         { element: <KoiShowStaffPage />, path: "showList" },
         { element: <KoiShowDetailReferee />, path: "koiShow/detail/:id" },
+        { element: <NewManagerPage />, path: "news" },
         { element: <Navigate to="/referee/showList" replace />, index: true },
         { element: <Error404 />, path: "*" },
       ],

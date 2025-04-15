@@ -245,7 +245,7 @@ function Manager({ accounts = [], isLoading, role }) {
     <div>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <Loading/>
+          <Loading />
         </div>
       ) : (
         <Table
@@ -346,9 +346,7 @@ function Manager({ accounts = [], isLoading, role }) {
                       borderRadius: "4px",
                     }}
                   />
-                ) : (
-                  <div>Không có hình đại diện</div>
-                )}
+                ) : null}
               </div>
             </div>
           </Form.Item>

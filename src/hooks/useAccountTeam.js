@@ -4,7 +4,9 @@ import {
   createAccount,
   updateAccount,
   updateStatus,
+  updateAccountPassword,
 } from "../api/accountManage";
+import { notification } from "antd";
 
 const useAccountTeam = create((set, get) => ({
   accountManage: {
@@ -29,7 +31,6 @@ const useAccountTeam = create((set, get) => ({
       const res = await accountTeam(page, size, role);
 
       if (res && res.status === 200) {
-
         let accounts = [];
         let total = 0;
         let totalPages = 1;
@@ -130,16 +131,46 @@ const useAccountTeam = create((set, get) => ({
 
       if (res && res.status === 201) {
         console.log("Account created successfully:", res.data);
+
+        notification.success({
+          message: "Thành công",
+          description: res?.data?.message || "Tạo tài khoản thành công!",
+          placement: "topRight",
+        });
+
         await get().fetchAccountTeam(get().currentPage, get().pageSize);
         return { success: true, data: res.data };
       } else {
         set({ error: "Failed to create account", isLoading: false });
-        return { success: false, error: "Failed to create account" };
+
+        notification.error({
+          message: "Lỗi",
+          description: res?.data?.error || "Không thể tạo tài khoản.",
+          placement: "topRight",
+        });
+
+        return {
+          success: false,
+          error: res?.data?.error || "Failed to create account",
+        };
       }
     } catch (err) {
       console.error("Error creating account:", err);
       set({ error: err.message || "An error occurred", isLoading: false });
-      return { success: false, error: err.message || "An error occurred" };
+
+      notification.error({
+        message: "Lỗi",
+        description:
+          err?.response?.data?.Error ||
+          err.message ||
+          "Đã xảy ra lỗi khi tạo tài khoản.",
+        placement: "topRight",
+      });
+
+      return {
+        success: false,
+        error: err?.response?.data?.Error || err.message || "An error occurred",
+      };
     } finally {
       set({ isLoading: false });
     }
@@ -152,15 +183,48 @@ const useAccountTeam = create((set, get) => ({
 
       if (res && res.status === 200) {
         console.log("Account status updated successfully:", res.data);
+
+        notification.success({
+          message: "Thành công",
+          description:
+            res?.data?.message ||
+            `Trạng thái tài khoản đã được cập nhật thành ${status}`,
+          placement: "topRight",
+        });
+
         await get().fetchAccountTeam(get().currentPage, get().pageSize);
         return { success: true, data: res.data };
       } else {
         set({ error: "Failed to update account status", isLoading: false });
-        return { success: false, error: "Failed to update account status" };
+
+        notification.error({
+          message: "Lỗi",
+          description:
+            res?.data?.error || "Không thể cập nhật trạng thái tài khoản.",
+          placement: "topRight",
+        });
+
+        return {
+          success: false,
+          error: res?.data?.error || "Failed to update account status",
+        };
       }
     } catch (err) {
       set({ error: err.message || "An error occurred", isLoading: false });
-      return { success: false, error: err.message || "An error occurred" };
+
+      notification.error({
+        message: "Lỗi",
+        description:
+          err?.response?.data?.Error ||
+          err.message ||
+          "Đã xảy ra lỗi khi cập nhật trạng thái tài khoản.",
+        placement: "topRight",
+      });
+
+      return {
+        success: false,
+        error: err?.response?.data?.Error || err.message || "An error occurred",
+      };
     } finally {
       set({ isLoading: false });
     }
@@ -169,19 +233,146 @@ const useAccountTeam = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
+      // Kiểm tra xem accountData có phải là FormData không
+      const isFormData = accountData instanceof FormData;
+
+      // Log để debug
+      console.log(
+        "updateAccountTeam - Loại dữ liệu:",
+        isFormData ? "FormData" : typeof accountData
+      );
+
+      if (isFormData) {
+        // Log nội dung FormData
+        console.log("FormData content:");
+        for (let pair of accountData.entries()) {
+          console.log(pair[0], pair[1]);
+        }
+      } else {
+        console.log("Dữ liệu gửi đi:", accountData);
+
+        // Nếu dữ liệu không phải FormData, chuyển đổi thành FormData
+        const formData = new FormData();
+        if (accountData.FullName)
+          formData.append("FullName", accountData.FullName);
+        if (accountData.Username)
+          formData.append("Username", accountData.Username);
+        if (accountData.Phone) formData.append("Phone", accountData.Phone);
+        if (accountData.AvatarUrl)
+          formData.append("AvatarUrl", accountData.AvatarUrl);
+
+        // Gán lại accountData để sử dụng FormData
+        accountData = formData;
+
+        console.log("Đã chuyển đổi sang FormData:");
+        for (let pair of accountData.entries()) {
+          console.log(pair[0], pair[1]);
+        }
+      }
+
+      console.log("Gửi request đến API với accountId:", accountId);
+
       const res = await updateAccount(accountId, accountData);
 
       if (res && res.status === 200) {
         console.log("Account updated successfully:", res.data);
+
+        notification.success({
+          message: "Thành công",
+          description: res?.data?.message,
+          placement: "topRight",
+        });
+
         await get().fetchAccountTeam(get().currentPage, get().pageSize);
-        return { success: true, data: res.data };
+        return { success: true, data: res.data, message: res?.data?.message };
       } else {
         set({ error: "Failed to update account", isLoading: false });
-        return { success: false, error: "Failed to update account" };
+
+        notification.error({
+          message: "Lỗi",
+          description: res?.data?.Error || "Không thể cập nhật tài khoản.",
+          placement: "topRight",
+        });
+
+        return {
+          success: false,
+          error: res?.data?.error || "Failed to update account",
+        };
       }
     } catch (err) {
+      console.error("Error updating account:", err);
+
+      notification.error({
+        message: "Lỗi",
+        description:
+          err?.response?.data?.Error ||
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "Đã xảy ra lỗi khi cập nhật tài khoản.",
+        placement: "topRight",
+      });
+
+      return {
+        success: false,
+        error:
+          err?.response?.data?.Error ||
+          err?.response?.data?.error ||
+          err?.response?.data?.message ||
+          err?.message ||
+          "An error occurred",
+      };
+    } finally {
+      set({ isLoading: false });
+    }
+  },
+  updateAccountPassword: async (data) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await updateAccountPassword(data);
+      if (res && res.status === 200) {
+        console.log("Account password updated successfully:", res.data);
+
+        notification.success({
+          message: "Thành công",
+          description:
+            res?.data?.message || "Mật khẩu đã được cập nhật thành công!",
+          placement: "topRight",
+        });
+
+        return { success: true, data: res.data };
+      } else {
+        set({ error: "Failed to update account password", isLoading: false });
+
+        notification.error({
+          message: "Lỗi",
+          description: res?.data?.error || "Không thể cập nhật mật khẩu.",
+          placement: "topRight",
+        });
+
+        return {
+          success: false,
+          error: res?.data?.error || "Failed to update account password",
+        };
+      }
+    } catch (err) {
+      console.error("Error updating password:", err);
       set({ error: err.message || "An error occurred", isLoading: false });
-      return { success: false, error: err.message || "An error occurred" };
+
+      notification.error({
+        message: "Lỗi",
+        description:
+          err?.response?.data?.Error ||
+          err.message ||
+          "Đã xảy ra lỗi khi cập nhật mật khẩu.",
+        placement: "topRight",
+      });
+
+      return {
+        success: false,
+        error: err?.response?.data?.Error || err.message || "An error occurred",
+      };
     } finally {
       set({ isLoading: false });
     }

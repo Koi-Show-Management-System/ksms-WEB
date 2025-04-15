@@ -1,59 +1,321 @@
-import React from "react";
-import { Input, Button, Card, Tag } from "antd";
-import { SearchOutlined, PlusOutlined } from "@ant-design/icons";
+import React, { useState, useEffect } from "react";
+import {
+  Input,
+  Button,
+  Card,
+  Tag,
+  Row,
+  Col,
+  Pagination,
+  Empty,
+  Spin,
+  Modal,
+  Typography,
+  Divider,
+  Image,
+  Avatar,
+  Space,
+  Select,
+  Tooltip,
+} from "antd";
+import {
+  SearchOutlined,
+  UserOutlined,
+  CalendarOutlined,
+  ClockCircleOutlined,
+  EyeOutlined,
+} from "@ant-design/icons";
+import { useNavigate } from "react-router-dom";
+import useBlog from "../../../hooks/useBlog";
+import { formatDate } from "../../../util/dateUtils";
+import "react-quill/dist/quill.snow.css";
+
+const { Title, Text, Paragraph } = Typography;
 
 const New = () => {
-  const newsItem = {
-    id: 1,
-    title: "Cuộc thi Cá Koi 2025 - Một sự kiện đáng mong chờ",
-    category: "Cuộc thi",
-    date: "Ngày 20 tháng 8, 2022",
-    image:
-      "https://static.wixstatic.com/media/0fa26a_f753a8e165714f6bb735e80883d0aad2~mv2.png/v1/fit/w_1000,h_1000,al_c,q_80/file.png",
-    tag: "koi",
+  const navigate = useNavigate();
+  const [searchText, setSearchText] = useState("");
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [viewingBlog, setViewingBlog] = useState(null);
+  const [selectedCategory, setSelectedCategory] = useState("");
+
+  // Sử dụng hook useBlog
+  const {
+    blogs,
+    totalBlogs,
+    currentPage,
+    pageSize,
+    isLoadingBlogs,
+    blogCategory,
+    getBlogs,
+    getBlogCategory,
+    getBlogDetail,
+    currentBlog,
+  } = useBlog();
+
+  useEffect(() => {
+    getBlogs(1, 10);
+    getBlogCategory();
+  }, []);
+
+  // Lọc blogs theo searchText và danh mục
+  const filteredBlogs = blogs.filter((blog) => {
+    const matchesSearch = blog.title
+      .toLowerCase()
+      .includes(searchText.toLowerCase());
+    const matchesCategory = selectedCategory
+      ? blog.blogCategory?.id === selectedCategory
+      : true;
+    return matchesSearch && matchesCategory;
+  });
+
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
+  };
+
+  const handleCategoryChange = (categoryId) => {
+    setSelectedCategory(categoryId);
+  };
+
+  const handlePageChange = (page, pageSize) => {
+    getBlogs(page, pageSize);
+  };
+
+  const showDetailModal = async (blog) => {
+    setViewingBlog(blog);
+    setIsDetailModalVisible(true);
+
+    // Tải chi tiết blog nếu cần
+    if (blog.id) {
+      const result = await getBlogDetail(blog.id);
+      if (result.success) {
+        setViewingBlog(result.data);
+      }
+    }
+  };
+
+  const handleDetailCancel = () => {
+    setIsDetailModalVisible(false);
+    setViewingBlog(null);
+  };
+
+  // Hàm hiển thị nội dung HTML trong card
+  const renderContentPreview = (content) => {
+    if (!content) return "";
+
+    // Chỉ hiển thị văn bản thuần túy, loại bỏ các thẻ HTML
+    const tempElement = document.createElement("div");
+    tempElement.innerHTML = content;
+    const text = tempElement.textContent || tempElement.innerText || "";
+
+    // Giới hạn đoạn text ở 100 ký tự
+    return text.length > 100 ? text.substring(0, 100) + "..." : text;
   };
 
   return (
-    <div>
-      <div className="flex gap-4 mb-8">
-        <Input
-          placeholder="Tìm kiếm..."
-          prefix={<SearchOutlined className="text-gray-400" />}
-          className="flex-1"
-          size="large"
-        />
-        <Button
-          type="primary"
-          size="large"
-          icon={<PlusOutlined />}
-          className="bg-blue-500 hover:bg-blue-600"
-        >
-          Tạo mới
-        </Button>
+    <div className="news-container">
+      {/* Header với tìm kiếm và các nút lọc */}
+      <div className="header-actions mb-6 flex flex-wrap justify-between gap-5">
+        <div className="search-and-filter flex flex-wrap items-center gap-3 flex-grow">
+          <Input
+            placeholder="Tìm kiếm tin tức..."
+            prefix={<SearchOutlined />}
+            onChange={handleSearch}
+            value={searchText}
+            style={{ width: 300 }}
+            allowClear
+          />
+
+          <Select
+            placeholder="Lọc theo danh mục"
+            value={selectedCategory}
+            onChange={handleCategoryChange}
+            allowClear
+          >
+            <Select.Option value="">Tất cả danh mục</Select.Option>
+            {blogCategory.map((category) => (
+              <Select.Option key={category.id} value={category.id}>
+                {category.name}
+              </Select.Option>
+            ))}
+          </Select>
+        </div>
       </div>
 
-      <Card
-        hoverable
-        className="max-w-sm"
-        cover={
-          <img
-            alt="Cuộc thi Cá Koi"
-            src={newsItem.image}
-            className="h-64 object-cover"
+      {/* Hiển thị tin tức dạng lưới */}
+      <Spin spinning={isLoadingBlogs} tip="Đang tải...">
+        {filteredBlogs.length > 0 ? (
+          <Row gutter={[24, 24]}>
+            {filteredBlogs.map((blog) => (
+              <Col xs={24} sm={12} md={8} lg={8} xl={8} key={blog.id}>
+                <Card
+                  hoverable
+                  className="news-card h-full"
+                  cover={
+                    <div
+                      className="news-card-image-container"
+                      style={{ height: 200, overflow: "hidden" }}
+                    >
+                      <img
+                        alt={blog.title}
+                        src={
+                          blog.imgUrl || "https://via.placeholder.com/400x250"
+                        }
+                        className="news-card-image w-full h-full object-cover"
+                      />
+                    </div>
+                  }
+                  onClick={() => showDetailModal(blog)}
+                  style={{
+                    maxWidth: "100%",
+                    display: "flex",
+                    flexDirection: "column",
+                    height: "100%",
+                  }}
+                >
+                  <div className="flex justify-between items-center">
+                    <Tag color="blue" className="mb-2">
+                      {blog.blogCategory?.name || "Không phân loại"}
+                    </Tag>
+
+                    <div className="news-card-actions flex justify-end">
+                      <Space>
+                        <Tooltip title="Xem chi tiết">
+                          <Button
+                            type="text"
+                            size="small"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              showDetailModal(blog);
+                            }}
+                          />
+                        </Tooltip>
+                      </Space>
+                    </div>
+                  </div>
+
+                  <Card.Meta
+                    title={
+                      <div
+                        className="text-lg break-words"
+                        style={{
+                          whiteSpace: "normal",
+                          lineHeight: "1.5",
+                          overflow: "visible",
+                        }}
+                      >
+                        {blog.title}
+                      </div>
+                    }
+                    description={
+                      <div
+                        className="text-base"
+                        style={{
+                          display: "-webkit-box",
+                          WebkitLineClamp: 3,
+                          WebkitBoxOrient: "vertical",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis",
+                        }}
+                      >
+                        {renderContentPreview(blog.content)}
+                      </div>
+                    }
+                    className="mb-3"
+                  />
+
+                  <div className="news-card-footer flex items-center justify-between mt-3 text-gray-500 text-sm">
+                    <div className="flex items-center">
+                      <Avatar
+                        size="small"
+                        icon={<UserOutlined />}
+                        className="mr-1"
+                      />
+                      <span>{blog.account?.fullName || "Quản trị viên"}</span>
+                    </div>
+                    <div className="flex items-center">
+                      <ClockCircleOutlined className="mr-1" />
+                      <span>
+                        {blog.createdAt ? formatDate(blog.createdAt) : ""}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Divider style={{ margin: "12px 0" }} />
+                </Card>
+              </Col>
+            ))}
+          </Row>
+        ) : (
+          <Empty description="Không có tin tức nào" />
+        )}
+      </Spin>
+
+      {/* Phân trang */}
+      {filteredBlogs.length > 0 && (
+        <div className="pagination-container mt-6 flex justify-end">
+          <Pagination
+            current={currentPage}
+            pageSize={pageSize}
+            total={totalBlogs}
+            onChange={handlePageChange}
+            showSizeChanger
+            showTotal={(total) => `${total} bài viết`}
           />
-        }
+        </div>
+      )}
+
+      {/* Modal xem chi tiết tin tức */}
+      <Modal
+        title={null}
+        open={isDetailModalVisible}
+        onCancel={handleDetailCancel}
+        width={900}
+        footer={[
+          <Button key="close" onClick={handleDetailCancel}>
+            Đóng
+          </Button>,
+        ]}
       >
-        <div className="flex items-center justify-between mb-2">
-          <Tag className="text-white bg-blue-500 border-0 rounded-full ">
-            {newsItem.category}
-          </Tag>
-          <span className="text-gray-500 text-sm">{newsItem.date}</span>
-        </div>
-        <h2 className="text-xl font-semibold mb-3">{newsItem.title}</h2>
-        <div className="bg-gray-100 border-0 rounded-full w-1/4 text-center p-2">
-          Chỉnh sửa
-        </div>
-      </Card>
+        {viewingBlog && (
+          <div className="blog-detail">
+            <Title level={3} className="mb-4">
+              {viewingBlog.title}
+            </Title>
+
+            <Space className="mb-4 text-gray-500">
+              <Tag color="blue">
+                {viewingBlog.blogCategory?.name || "Không phân loại"}
+              </Tag>
+              <span>
+                <UserOutlined className="mr-1" />
+                {viewingBlog.account?.fullName || "Quản trị viên"}
+              </span>
+              <span>
+                <CalendarOutlined className="mr-1" />
+                {viewingBlog.createdAt ? formatDate(viewingBlog.createdAt) : ""}
+              </span>
+            </Space>
+
+            {viewingBlog.imgUrl && (
+              <div className="mb-4">
+                <Image
+                  src={viewingBlog.imgUrl}
+                  alt={viewingBlog.title}
+                  style={{ maxWidth: "100%" }}
+                />
+              </div>
+            )}
+
+            <Divider />
+
+            <div
+              className="blog-content"
+              dangerouslySetInnerHTML={{ __html: viewingBlog.content }}
+            />
+          </div>
+        )}
+      </Modal>
     </div>
   );
 };
