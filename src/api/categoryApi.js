@@ -20,4 +20,18 @@ const updateCategory = (id, data) => {
   return axiosClient.put(`/competition-category/${id}`, data);
 };
 
-export { getCategory, getDetail, createCategory, updateCategory };
+const deleteCategory = (id) => {
+  return axiosClient.delete(`/competition-category/${id}`);
+};
+const cancelCategory = (id, reason) => {
+  return axiosClient.put(`/competition-category/${id}/cancel?reason=${reason}`);
+};
+
+export {
+  getCategory,
+  getDetail,
+  createCategory,
+  updateCategory,
+  deleteCategory,
+  cancelCategory,
+};

@@ -805,7 +805,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         </div>
       )}
 
-      <style jsx global>{`
+      <style jsx="true" global>{`
         .custom-steps .ant-steps-item-icon {
           background: #f0f7ff;
           border-color: #1890ff;

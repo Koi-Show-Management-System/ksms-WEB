@@ -150,7 +150,7 @@ const DashboardLayout = React.memo(({ children }) => {
             "/admin/news/overview"
           ),
           getItem(
-            "Thông tin hạng mục",
+            "Chuyên mục",
             "news_category",
             <FileTextOutlined />,
             null,

@@ -401,7 +401,7 @@ function ScanTicketQr() {
         </Card>
       )}
 
-      <style jsx global>{`
+      <style jsx="true" global>{`
         /* Tablet optimization styles */
         .tablet-scanner {
           width: 90% !important;

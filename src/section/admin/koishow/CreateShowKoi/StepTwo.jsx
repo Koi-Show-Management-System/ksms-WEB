@@ -702,7 +702,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                         Chọn giống cá Koi
                       </label>
                       {isLoading ? (
-                        <Loading/>
+                        <Loading />
                       ) : (
                         <Select
                           mode="multiple"
@@ -1736,7 +1736,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
         icon={<PlusOutlined />}
         className="mt-4"
       >
-        Thêm Hạng Mục
+        Thêm hạng mục
       </Button>
     </>
   );

@@ -1,6 +1,8 @@
 import { create } from "zustand";
 import {
+  cancelCategory,
   createCategory,
+  deleteCategory,
   getCategory,
   getDetail,
   updateCategory,
@@ -24,7 +26,6 @@ const useCategory = create((set, get) => ({
       const res = await getCategory(id, page, size);
 
       if (res && res.status === 200) {
-
         let categories = [];
         let total = 0;
         let totalPages = 1;
@@ -229,6 +230,54 @@ const useCategory = create((set, get) => ({
 
       set({ error, isLoading: false });
       return null;
+    }
+  },
+
+  deleteCategory: async (categoryId) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await deleteCategory(categoryId);
+      if (res?.data?.statusCode === 200) {
+        notification.success({
+          message: "Thành công",
+          description: "Danh mục đã được xóa thành công!",
+          placement: "topRight",
+        });
+      } else {
+        throw new Error(res?.data?.message || "Xóa không thành công");
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi xóa",
+        description: error?.response?.data?.Error,
+        placement: "topRight",
+      });
+      console.error("API Error when deleting category:", error);
+      set({ error: error, isLoading: false });
+    }
+  },
+  cancelCategory: async (categoryId, reason) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await cancelCategory(categoryId, reason);
+      if (res?.data?.statusCode === 200) {
+        notification.success({
+          message: "Thành công",
+          description: res?.data?.message,
+          placement: "topRight",
+        });
+      } else {
+        throw new Error(res?.data?.message || "Hủy không thành công");
+      }
+    } catch (error) {
+      notification.error({
+        message: "Lỗi hủy",
+        description: error?.response?.data?.Error,
+        placement: "topRight",
+      });
+      set({ error: error, isLoading: false });
     }
   },
 }));

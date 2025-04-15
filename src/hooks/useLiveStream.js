@@ -1,5 +1,9 @@
 import { create } from "zustand";
-import { CreateLiveStream, EndLiveStream } from "../api/liveStreamApi";
+import {
+  CreateLiveStream,
+  EndLiveStream,
+  StartLiveStream,
+} from "../api/liveStreamApi";
 import { message } from "antd";
 
 const useLiveStream = create((get, set) => ({
@@ -83,6 +87,27 @@ const useLiveStream = create((get, set) => ({
             "Lỗi không xác định")
       );
       return false;
+    }
+  },
+
+  startLiveStream: async (id) => {
+    try {
+      set({ loading: true, error: null });
+
+      const response = await StartLiveStream(id);
+      if (response?.data?.statusCode === 200) {
+        set({
+          liveStream: response.data.data,
+          loading: false,
+        });
+      }
+    } catch (error) {
+      console.error("Lỗi khi bắt đầu livestream:", error);
+
+      set({
+        error: error.message || "Có lỗi xảy ra khi bắt đầu livestream",
+        loading: false,
+      });
     }
   },
 }));

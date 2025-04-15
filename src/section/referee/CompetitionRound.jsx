@@ -24,6 +24,7 @@ import useCategory from "../../hooks/useCategory";
 import useRound from "../../hooks/useRound";
 import useRegistrationRound from "../../hooks/useRegistrationRound";
 import useScore from "../../hooks/useScore";
+import { Loading } from "../../components";
 
 const { Option } = Select;
 
@@ -217,7 +218,7 @@ function CompetitionRound({ showId }) {
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Loading />
+                    <Loading/>
                   </div>
                 }
                 fallback={PLACEHOLDER_IMAGE}

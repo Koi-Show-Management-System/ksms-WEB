@@ -155,7 +155,7 @@ function NewsCategory() {
           icon={<PlusOutlined />}
           onClick={() => showModal()}
         >
-          Thêm hạng mục
+          Thêm chuyên mục
         </Button>
       </div>
 

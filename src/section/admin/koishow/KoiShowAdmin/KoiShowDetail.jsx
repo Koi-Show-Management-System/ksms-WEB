@@ -40,6 +40,7 @@ import Registration from "./Registration";
 import Tank from "./Tank";
 import Ticket from "./Ticket";
 import RoundResult from "./RoundResult";
+import StatusManager from "./StatusManager";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -718,78 +719,11 @@ function KoiShowDetail() {
                   </div>
                   <div>
                     <div className="mb-4">
-                      <Card className="mb-4 mt-0 md:mt-3 shadow-sm">
-                        <h3 className="font-bold mb-3 text-base md:text-lg">
-                          Trạng thái triển lãm
-                        </h3>
-                        <Timeline
-                          items={koiShowDetail.data.showStatuses
-                            .slice() // Create a copy to avoid mutating the original array
-                            .sort((a, b) => {
-                              // Define the order of status display
-                              const statusOrder = {
-                                RegistrationOpen: 1,
-                                CheckIn: 2,
-                                Preliminary: 3,
-                                Evaluation: 4,
-                                Final: 5,
-                                Exhibition: 6,
-                                PublicResult: 7,
-                                Award: 8,
-                                Finished: 9,
-                              };
-                              return (
-                                statusOrder[a.statusName] -
-                                statusOrder[b.statusName]
-                              );
-                            })
-                            .map((status) => {
-                              const { color } = statusMapping[
-                                status.statusName
-                              ] || {
-                                color: "gray",
-                              };
-
-                              // Check if dates are the same
-                              const sameDate =
-                                dayjs(status.startDate).format("YYYY-MM-DD") ===
-                                dayjs(status.endDate).format("YYYY-MM-DD");
-
-                              return {
-                                key: status.id,
-                                color: color,
-                                children: (
-                                  <div
-                                    className={`text-${color}-500 font-medium`}
-                                  >
-                                    <div
-                                      className={`text-xs md:text-sm ${status.isActive ? "text-blue-700 font-bold" : "text-gray-400"} mb-1`}
-                                    >
-                                      {status.description}
-                                    </div>
-
-                                    {sameDate ? (
-                                      // If same date, show one date with start and end times
-                                      <div className="text-[10px] md:text-xs text-gray-500">
-                                        {formatDate(status.startDate)},{" "}
-                                        {formatTime(status.startDate)} -{" "}
-                                        {formatTime(status.endDate)}
-                                      </div>
-                                    ) : (
-                                      // If different dates, show full range
-                                      <div className="text-[10px] md:text-xs text-gray-500">
-                                        {formatDate(status.startDate)}{" "}
-                                        {formatTime(status.startDate)} -{" "}
-                                        {formatDate(status.endDate)}{" "}
-                                        {formatTime(status.endDate)}
-                                      </div>
-                                    )}
-                                  </div>
-                                ),
-                              };
-                            })}
-                        />
-                      </Card>
+                      <StatusManager
+                        showId={id}
+                        showStatuses={koiShowDetail.data.showStatuses}
+                        disabled={isEditDisabled}
+                      />
                     </div>
                   </div>
                 </div>

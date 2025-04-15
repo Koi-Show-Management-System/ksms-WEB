@@ -79,7 +79,7 @@ function ScanQrWrapper() {
         </div>
       </div>
 
-      <style jsx global>{`
+      <style jsx="true" global>{`
         /* Tablet-specific styles */
         .tablet-mode {
           max-width: 100%;
