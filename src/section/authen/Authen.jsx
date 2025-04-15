@@ -25,6 +25,7 @@ function Authen() {
     const token = Cookies.get("__token");
     const role = Cookies.get("__role");
 
+
     if (token && role) {
       // Nếu đã đăng nhập, chuyển hướng dựa vào role
       if (role === "Admin") {
@@ -74,7 +75,6 @@ function Authen() {
       Cookies.set("__token", token, { expires: expiresIn, secure: true });
       Cookies.set("__role", role, { expires: expiresIn, secure: true });
       Cookies.set("__id", id, { expires: expiresIn, secure: true });
-
       // Gọi phương thức login và kiểm tra kết quả
       const loginSuccess = useAuth.getState().login();
 

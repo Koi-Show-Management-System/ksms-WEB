@@ -15,6 +15,7 @@ import {
   Avatar,
   Select,
   Empty,
+  Input,
 } from "antd";
 import {
   StreamVideo,
@@ -30,6 +31,7 @@ import {
   CallingState,
 } from "@stream-io/video-react-sdk";
 import "@stream-io/video-react-sdk/dist/css/styles.css";
+import { StreamChat } from "stream-chat";
 import useLiveStream from "../../hooks/useLiveStream";
 import { GetHostToken, StartLiveStream } from "../../api/liveStreamApi";
 import Cookies from "js-cookie";
@@ -44,9 +46,243 @@ import {
   ClockCircleOutlined,
   InfoCircleOutlined,
   SyncOutlined,
+  CommentOutlined,
+  SendOutlined,
 } from "@ant-design/icons";
-
+import useAuth from "../../hooks/useAuth";
 const { Title, Text } = Typography;
+
+// Custom Chat UI Component
+const CustomChatUI = ({ channel, chatClient }) => {
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState("");
+  const messagesEndRef = React.useRef(null);
+  const userId = Cookies.get("__id");
+  // Sử dụng tên "Host" cho người phát sóng
+  const userName = "Host";
+
+  const { fetchUserInfo, infoUser } = useAuth();
+  useEffect(() => {
+    if (!channel) return;
+
+    // Lấy userId từ cookie và gọi fetchUserInfo với userId
+    const userId = Cookies.get("__id");
+    if (userId) {
+      fetchUserInfo(userId);
+      console.log("Đã gọi fetchUserInfo với userId:", userId);
+    }
+
+    // Load existing messages
+    const loadMessages = async () => {
+      try {
+        const response = await channel.query({ messages: { limit: 50 } });
+        if (response.messages) {
+          setMessages(response.messages);
+        }
+      } catch (error) {
+        console.error("Error loading messages:", error);
+      }
+    };
+
+    loadMessages();
+
+    // Listen for new messages
+    const handleNewMessage = (event) => {
+      console.log("Tin nhắn mới:", event.message);
+      console.log("Avatar trong tin nhắn:", event.message.user?.image);
+      setMessages((prevMessages) => [...prevMessages, event.message]);
+    };
+
+    channel.on("message.new", handleNewMessage);
+
+    // Cleanup
+    return () => {
+      channel.off("message.new", handleNewMessage);
+    };
+  }, [channel]);
+
+  // Thêm useEffect để log khi infoUser thay đổi
+  useEffect(() => {
+    console.log("infoUser hiện tại:", infoUser);
+  }, [infoUser]);
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
+    }
+  }, [messages]);
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !channel) return;
+
+    try {
+      await channel.sendMessage({
+        text: newMessage,
+      });
+      setNewMessage("");
+    } catch (error) {
+      console.error("Error sending message:", error);
+      message.error("Không thể gửi tin nhắn");
+    }
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter") {
+      sendMessage();
+    }
+  };
+
+  // Format timestamp
+  const formatTime = (timestamp) => {
+    const date = new Date(timestamp);
+    return date.toLocaleTimeString("vi-VN", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+      {/* Messages area */}
+      <div
+        style={{
+          flexGrow: 1,
+          overflowY: "auto",
+          padding: "16px",
+          backgroundColor: "#f9f9f9",
+        }}
+      >
+        {messages.length === 0 ? (
+          <div
+            style={{
+              textAlign: "center",
+              padding: "20px",
+              color: "#999",
+              marginTop: "30%",
+            }}
+          >
+            <CommentOutlined style={{ fontSize: "32px" }} />
+            <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
+          </div>
+        ) : (
+          messages.map((msg) => {
+            const isCurrentUser = msg.user?.id === userId;
+            return (
+              <div
+                key={msg.id}
+                style={{
+                  marginBottom: "16px",
+                  display: "flex",
+                  flexDirection: isCurrentUser ? "row-reverse" : "row",
+                  alignItems: "flex-end",
+                }}
+                className="message-item"
+              >
+                <Avatar
+                  src={
+                    msg.user?.image ||
+                    `https://getstream.io/random_svg/?name=${encodeURIComponent(msg.user?.name || "User")}`
+                  }
+                  style={{
+                    marginRight: isCurrentUser ? 0 : "12px",
+                    marginLeft: isCurrentUser ? "12px" : 0,
+                    flexShrink: 0,
+                  }}
+                  size={36}
+                />
+                <div style={{ maxWidth: "70%" }}>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      fontSize: "13px",
+                      marginBottom: "4px",
+                      color: "#555",
+                      textAlign: isCurrentUser ? "right" : "left",
+                      paddingLeft: isCurrentUser ? 0 : "8px",
+                      paddingRight: isCurrentUser ? "8px" : 0,
+                    }}
+                  >
+                    {isCurrentUser ? userName : msg.user?.name || "Người dùng"}
+                  </div>
+                  <div
+                    style={{
+                      display: "flex",
+                      flexDirection: "column",
+                      alignItems: isCurrentUser ? "flex-end" : "flex-start",
+                    }}
+                  >
+                    <div
+                      style={{
+                        backgroundColor: isCurrentUser ? "#1677ff" : "#f0f0f0",
+                        color: isCurrentUser ? "white" : "#333",
+                        borderRadius: isCurrentUser
+                          ? "18px 4px 18px 18px"
+                          : "4px 18px 18px 18px",
+                        padding: "10px 14px",
+                        display: "inline-block",
+                        maxWidth: "100%",
+                        minWidth: "40px",
+                        wordBreak: "normal",
+                        wordWrap: "break-word",
+                        whiteSpace: "pre-wrap",
+                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
+                        position: "relative",
+                      }}
+                    >
+                      {msg.text}
+                    </div>
+                    <div
+                      style={{
+                        fontSize: "11px",
+                        marginTop: "4px",
+                        color: "#999",
+                        paddingLeft: isCurrentUser ? 0 : "8px",
+                        paddingRight: isCurrentUser ? "8px" : 0,
+                        textAlign: isCurrentUser ? "right" : "left",
+                      }}
+                    >
+                      {formatTime(msg.created_at)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input area */}
+      <div
+        style={{
+          borderTop: "1px solid #e8e8e8",
+          padding: "12px 16px",
+          backgroundColor: "white",
+          boxShadow: "0 -1px 3px rgba(0,0,0,0.05)",
+        }}
+      >
+        <Input.Group compact style={{ display: "flex" }}>
+          <Input
+            style={{ flex: 1, borderRadius: "20px 0 0 20px" }}
+            placeholder="Nhập tin nhắn..."
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            onKeyDown={handleKeyDown}
+            size="large"
+          />
+          <Button
+            type="primary"
+            icon={<SendOutlined />}
+            onClick={sendMessage}
+            style={{ borderRadius: "0 20px 20px 0" }}
+            size="large"
+          />
+        </Input.Group>
+      </div>
+    </div>
+  );
+};
 
 function LiveStream({ showId }) {
   const koiShowId = showId;
@@ -55,6 +291,27 @@ function LiveStream({ showId }) {
   const [client, setClient] = useState(null);
   const [call, setCall] = useState(null);
   const [localLoading, setLocalLoading] = useState(false);
+
+  // Chat related states
+  const [chatClient, setChatClient] = useState(null);
+  const [channel, setChannel] = useState(null);
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatError, setChatError] = useState(null);
+
+  const { fetchUserInfo, infoUser } = useAuth();
+  useEffect(() => {
+    // Lấy userId từ cookie và gọi fetchUserInfo với userId
+    const userId = Cookies.get("__id");
+    if (userId) {
+      fetchUserInfo(userId);
+      console.log("Đã gọi fetchUserInfo với userId:", userId);
+    }
+  }, []);
+
+  // Thêm useEffect để log khi infoUser thay đổi
+  useEffect(() => {
+    console.log("infoUser hiện tại:", infoUser);
+  }, [infoUser]);
 
   const handleCreateLiveStream = async () => {
     if (!koiShowId) {
@@ -141,6 +398,12 @@ function LiveStream({ showId }) {
         // Sử dụng API key từ biến môi trường
         const apiKey = import.meta.env.VITE_GETSTREAM_API_KEY || "z87auffz2r8y";
 
+        // Log thông tin người dùng trước khi kết nối
+        console.log("Thông tin người dùng trước khi kết nối video:", {
+          infoUser,
+          avatar: infoUser?.data?.avatar,
+        });
+
         // Khởi tạo client
         const videoClient = new StreamVideoClient({
           apiKey,
@@ -167,6 +430,73 @@ function LiveStream({ showId }) {
 
         // Tham gia cuộc gọi và tạo nếu chưa tồn tại
         await livestreamCall.join({ create: true });
+
+        // Thiết lập chat
+        try {
+          console.log("Đang thiết lập chat cho livestream...");
+
+          // Sử dụng API key từ biến môi trường
+          const apiKey =
+            import.meta.env.VITE_GETSTREAM_API_KEY || "z87auffz2r8y";
+
+          // Tạo chat client
+          const newChatClient = StreamChat.getInstance(apiKey);
+
+          // Log thông tin người dùng trước khi kết nối chat
+          console.log("Thông tin người dùng trước khi kết nối chat:", {
+            infoUser,
+            avatar: infoUser?.data?.avatar,
+          });
+
+          // Kết nối user với chat client
+          await newChatClient.connectUser(
+            {
+              id: cleanUserId,
+              name: "Host",
+              image:
+                infoUser?.data?.avatar ||
+                `https://getstream.io/random_svg/?name=Host`,
+            },
+            streamToken // Sử dụng cùng token từ livestream
+          );
+
+          // Cập nhật thông tin người dùng để đảm bảo tên "Host" được lưu
+          try {
+            await newChatClient.upsertUser({
+              id: cleanUserId,
+              name: "Host",
+              role: "admin",
+              isHost: true,
+              image:
+                infoUser?.data?.avatar ||
+                `https://getstream.io/random_svg/?name=Host`,
+            });
+            console.log("Đã cập nhật thông tin người dùng với tên 'Host'");
+          } catch (updateError) {
+            console.error(
+              "Không thể cập nhật thông tin người dùng:",
+              updateError
+            );
+          }
+
+          // Tạo hoặc kết nối với channel
+          const channelId = `livestream-${callId}`;
+          const newChannel = newChatClient.channel("livestream", channelId, {
+            name: `Chat for livestream`,
+            members: [cleanUserId],
+            // Thêm metadata để đánh dấu user là host
+            hostUser: cleanUserId,
+          });
+
+          await newChannel.watch();
+
+          setChatClient(newChatClient);
+          setChannel(newChannel);
+          console.log("Đã thiết lập chat thành công");
+        } catch (chatError) {
+          console.error("Lỗi khi thiết lập chat:", chatError);
+          setChatError("Không thể thiết lập chat: " + chatError.message);
+        }
 
         // Kiểm tra camera và microphone
         console.log("Danh sách thiết bị:", livestreamCall.devices);
@@ -258,6 +588,19 @@ function LiveStream({ showId }) {
       }
       await call.leave();
 
+      // Đóng kết nối chat
+      if (chatClient) {
+        try {
+          console.log("Đang ngắt kết nối chat...");
+          await chatClient.disconnectUser();
+          console.log("Đã ngắt kết nối chat thành công");
+        } catch (chatError) {
+          console.error("Lỗi khi ngắt kết nối chat:", chatError);
+        }
+        setChatClient(null);
+        setChannel(null);
+      }
+
       // Lấy livestream ID từ state hoặc localStorage
       const livestreamId =
         liveStream?.id || localStorage.getItem("currentLivestreamId");
@@ -300,6 +643,8 @@ function LiveStream({ showId }) {
         }
         setClient(null);
         setCall(null);
+        setChatClient(null);
+        setChannel(null);
       }
     } finally {
       setLocalLoading(false);
@@ -1224,8 +1569,13 @@ function LiveStream({ showId }) {
           .disconnectUser()
           .catch((err) => console.error("Lỗi khi ngắt kết nối:", err));
       }
+      if (chatClient) {
+        chatClient
+          .disconnectUser()
+          .catch((err) => console.error("Lỗi khi ngắt kết nối chat:", err));
+      }
     };
-  }, [client]);
+  }, [client, chatClient]);
 
   const isLoading = loading || localLoading;
 
@@ -1244,7 +1594,7 @@ function LiveStream({ showId }) {
           <StreamCall call={call}>
             <Flex vertical gap="middle" style={{ height: "100%" }}>
               <Row gutter={[16, 16]}>
-                <Col span={24}>
+                <Col span={24} md={16}>
                   {/* Hiển thị video của chính người dùng */}
                   <Card
                     title="Camera của bạn"
@@ -1252,6 +1602,44 @@ function LiveStream({ showId }) {
                     style={{ height: "100%" }}
                   >
                     <UserVideoPreview />
+                  </Card>
+                </Col>
+
+                <Col span={24} md={8}>
+                  <Card
+                    title={
+                      <Flex justify="space-between" align="center">
+                        <Space>
+                          <CommentOutlined /> Chat Trực tiếp
+                        </Space>
+                      </Flex>
+                    }
+                    bodyStyle={{
+                      height: "300px",
+                      padding: 0,
+                      position: "relative",
+                    }}
+                    className="chat-card"
+                  >
+                    {channel && chatClient ? (
+                      <CustomChatUI channel={channel} chatClient={chatClient} />
+                    ) : chatError ? (
+                      <div style={{ padding: "16px", textAlign: "center" }}>
+                        <Text type="danger">{chatError}</Text>
+                        <div style={{ marginTop: "16px" }}>
+                          <Button
+                            type="primary"
+                            onClick={() => window.location.reload()}
+                          >
+                            Thử lại
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div style={{ padding: "16px", textAlign: "center" }}>
+                        <Spin tip="Đang kết nối đến chat..." />
+                      </div>
+                    )}
                   </Card>
                 </Col>
               </Row>
