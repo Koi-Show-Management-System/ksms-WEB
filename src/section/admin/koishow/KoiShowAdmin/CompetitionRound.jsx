@@ -107,8 +107,22 @@ function CompetitionRound({ showId }) {
     ) {
       return false;
     }
-    // Check if every registration has a tankName
-    return registrationRound.every((item) => Boolean(item.tankName));
+
+    // Log để kiểm tra trong quá trình debug
+    console.log(
+      "Kiểm tra gán bể:",
+      registrationRound.map((item) => ({
+        id: item.id,
+        hasTank: Boolean(item.tankName || item.tankId),
+        tankName: item.tankName,
+        tankId: item.tankId,
+      }))
+    );
+
+    // Kiểm tra mỗi đăng ký có tankName hoặc tankId
+    return registrationRound.every((item) =>
+      Boolean(item.tankName || item.tankId)
+    );
   }, [registrationRound, selectedSubRound]);
 
   // Update the logic to hide the button only when ALL items are published
@@ -246,9 +260,17 @@ function CompetitionRound({ showId }) {
 
       if (value) {
         fetchTanks(value, 1, 100, true);
+        // Log ra giá trị hasTank để kiểm tra
+        const selectedCategoryData = categories?.find((c) => c.id === value);
+        console.log(
+          "Category selected:",
+          value,
+          "hasTank:",
+          selectedCategoryData?.hasTank
+        );
       }
     },
-    [fetchTanks]
+    [fetchTanks, categories]
   );
 
   // Handle round type selection
@@ -518,7 +540,6 @@ function CompetitionRound({ showId }) {
   };
 
   // Cập nhật phần displayData để tính toán thứ hạng dựa trên điểm số
-
   const displayData = useMemo(() => {
     if (
       !registrationLoading &&
@@ -606,233 +627,30 @@ function CompetitionRound({ showId }) {
     selectedSubRound,
   ]);
 
-  // Update the getColumnsForRoundType function to use our new component
-  const getColumnsForRoundType = useMemo(() => {
-    // For Final Round
-    if (selectedRoundType === "Final") {
-      console.log(
-        "Using FINAL round columns with criteria:",
-        criteriaCompetitionRound
-      );
-      return getFinalColumns({
-        handleViewDetails: showCategoryDetail,
-        loadingImages,
-        allTanksAssigned,
-        isRoundPublished: isRoundScorePublished,
-        assigningTank,
-        competitionRoundTanks,
-        handleTankChange: handleTankAssignment,
-        criteria: criteriaCompetitionRound, // Pass criteria to Final round too
-      });
-    }
-    // For Evaluation Round (existing code)
-    else if (selectedRoundType === "Evaluation") {
-      return getEvaluationColumns({
-        handleViewDetails: showCategoryDetail,
-        loadingImages,
-        allTanksAssigned,
-        isRoundPublished: isRoundScorePublished,
-        assigningTank,
-        competitionRoundTanks,
-        handleTankChange: handleTankAssignment,
-        criteria: criteriaCompetitionRound, // Pass criteria from API
-      });
-    }
-    // Default columns for Preliminary Round (existing code)
-    const baseColumns = [
-      {
-        title: "Top",
-        dataIndex: ["rank"],
-        width: 40,
-        render: (rank) => (
-          <span style={{ color: "blue", fontWeight: "bold" }}>
-            {rank ? `#${rank}` : "_"}
-          </span>
-        ),
-        sorter: (a, b) => {
-          // Handle null/undefined values for sorting
-          const rankA = a.registration?.rank || Number.MAX_VALUE;
-          const rankB = b.registration?.rank || Number.MAX_VALUE;
-          return rankA - rankB;
-        },
-      },
-      {
-        title: "Mã Đăng Ký",
-        dataIndex: ["registration", "registrationNumber"],
-        render: (registrationNumber, record) => {
-          return registrationNumber || "—";
-        },
-        sorter: (a, b) => {
-          const regNumA = a.registration?.registrationNumber || "";
-          const regNumB = b.registration?.registrationNumber || "";
-          return regNumA.localeCompare(regNumB);
-        },
-        // defaultSortOrder: "ascend",
-      },
-      {
-        title: "Hình ảnh",
-        dataIndex: ["registration", "koiMedia"],
-        render: (koiMedia, record) => {
-          const id = record.key;
-          const imageMedia =
-            koiMedia && koiMedia.length > 0
-              ? koiMedia.find((media) => media.mediaType === "Image")
-              : null;
-
-          const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
-
-          return (
-            <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
-              <Image
-                src={imageUrl}
-                alt="Hình cá"
-                width={80}
-                height={50}
-                className="object-cover"
-                preview={{
-                  src: imageMedia?.mediaUrl,
-                  mask: (
-                    <div className="text-xs">
-                      <EyeOutlined />
-                    </div>
-                  ),
-                }}
-                placeholder={
-                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Loading />
-                  </div>
-                }
-                fallback={PLACEHOLDER_IMAGE}
-              />
-            </div>
-          );
-        },
-      },
-      {
-        title: "Kích thước",
-        dataIndex: ["registration", "koiSize"],
-        render: (size) => (size ? `${size} cm` : "—"),
-      },
-      {
-        title: "Giống",
-        dataIndex: ["registration", "koiProfile", "variety", "name"],
-        ellipsis: true,
-        render: (name) => name || "—",
-      },
-      {
-        title: "Kết quả",
-        dataIndex: "roundResults",
-        render: (results) => {
-          if (!results || results.length === 0)
-            return <Tag color="gray">Chưa có</Tag>;
-
-          // Get the status from the roundResult field
-          const status = results[0]?.status;
-
-          if (status === "Pass") {
-            return <Tag color="green">Đạt</Tag>;
-          } else if (status === "Fail") {
-            return <Tag color="red">Không đạt</Tag>;
-          } else {
-            return <Tag color="orange">{status || "Đang chờ"}</Tag>;
-          }
-        },
-      },
-      {
-        title: "Trạng thái",
-        dataIndex: "status",
-        render: (status) => {
-          let color = "blue";
-          let text = status;
-
-          switch (status) {
-            case "unpublic":
-              color = "gray";
-              text = "Chưa công khai";
-              break;
-            case "public":
-              color = "green";
-              text = "Đã công khai";
-              break;
-            case "pending":
-              color = "orange";
-              text = "Đang chờ";
-              break;
-            default:
-              text = status || "—";
-          }
-
-          return <Tag color={color}>{text}</Tag>;
-        },
-      },
-    ];
-
-    // Only add tank column if the selected category has tanks
+  // Kiểm tra xem hạng mục hiện tại có sử dụng bể không
+  const currentCategoryHasTank = useMemo(() => {
     const selectedCategoryData = categories?.find(
       (c) => c.id === selectedCategory
     );
-    if (selectedCategoryData?.hasTank) {
-      baseColumns.push({
-        title: "Bể",
-        dataIndex: "tankName",
-        width: 100,
-        render: (tankName, record) => {
-          // Nếu đã công khai vòng thi thì chỉ hiển thị tên bể, không cho chọn
-          if (record.status === "public") {
-            return (
-              <Typography.Text>{tankName || "Chưa gán bể"}</Typography.Text>
-            );
-          }
+    return selectedCategoryData?.hasTank || false;
+  }, [categories, selectedCategory]);
 
-          return (
-            <Select
-              value={tankName || undefined}
-              placeholder="Chọn bể"
-              onChange={(value) => handleTankAssignment(record.id, value)}
-              loading={assigningTank[record.id]}
-              disabled={assigningTank[record.id] || record.status === "public"}
-              showSearch
-              optionFilterProp="children"
-            >
-              {competitionRoundTanks?.map((tank) => (
-                <Option key={tank.id} value={tank.id}>
-                  {tank.name || `Bể ${tank.id}`}
-                </Option>
-              ))}
-            </Select>
-          );
-        },
-      });
-    }
-
-    // Add actions column
-    baseColumns.push({
-      title: "Hành động",
-      key: "actions",
-      render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          className="text-gray-500 hover:text-blue-500"
-          onClick={() => showCategoryDetail(record)}
-        />
-      ),
+  // Cập nhật hàm kiểm tra nếu có thể công khai vòng thi
+  const canPublishRound = useMemo(() => {
+    // Log để theo dõi giá trị trong quá trình debug
+    console.log("Check canPublishRound:", {
+      currentCategoryHasTank,
+      allTanksAssigned,
     });
 
-    return baseColumns;
-  }, [
-    selectedRoundType,
-    showCategoryDetail,
-    loadingImages,
-    allTanksAssigned,
-    isRoundScorePublished,
-    assigningTank,
-    competitionRoundTanks,
-    handleTankAssignment,
-    categories,
-    selectedCategory,
-    criteriaCompetitionRound,
-  ]);
+    // Nếu hạng mục không sử dụng bể, có thể công khai ngay
+    if (!currentCategoryHasTank) {
+      return true;
+    }
+
+    // Nếu hạng mục có sử dụng bể, phải kiểm tra tất cả cá đã được gán bể chưa
+    return allTanksAssigned;
+  }, [currentCategoryHasTank, allTanksAssigned]);
 
   // Handle publishing round - Make sure it doesn't trigger on render
   const handlePublishRound = useCallback(async () => {
@@ -840,6 +658,23 @@ function CompetitionRound({ showId }) {
       notification.warning({
         message: "Thông báo",
         description: "Vui lòng chọn vòng thi trước khi công khai",
+      });
+      return;
+    }
+
+    // Kiểm tra chi tiết và log
+    console.log("Kiểm tra công khai vòng thi:", {
+      currentCategoryHasTank,
+      allTanksAssigned,
+      canPublishRound,
+    });
+
+    // Kiểm tra điều kiện dựa vào trạng thái hạng mục có bể hay không
+    if (currentCategoryHasTank && !allTanksAssigned) {
+      notification.warning({
+        message: "Cần gán bể cho tất cả",
+        description:
+          "Vui lòng gán bể cho tất cả các cá trước khi công khai vòng thi.",
       });
       return;
     }
@@ -858,18 +693,9 @@ function CompetitionRound({ showId }) {
         if (isMounted.current) {
           fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
         }
-      } else {
-        notification.error({
-          message: "Lỗi",
-          description: `Không thể công khai vòng thi: ${result?.error?.message || "Lỗi không xác định"}`,
-        });
       }
     } catch (error) {
       console.error("[PublishRound] Error:", error);
-      notification.error({
-        message: "Lỗi",
-        description: `Không thể công khai vòng thi: ${error?.message || "Lỗi không xác định"}`,
-      });
     } finally {
       if (isMounted.current) {
         setIsPublishing(false);
@@ -877,6 +703,9 @@ function CompetitionRound({ showId }) {
     }
   }, [
     selectedSubRound,
+    currentCategoryHasTank,
+    allTanksAssigned,
+    canPublishRound,
     updatePublishRound,
     fetchRegistrationRound,
     currentPage,
@@ -896,8 +725,6 @@ function CompetitionRound({ showId }) {
     try {
       setIsPublishing(true);
       const result = await createRoundResultFinalize(selectedSubRound);
-
-      console.log("API Response:", result);
 
       // Xử lý trường hợp thành công
       if (
@@ -968,7 +795,6 @@ function CompetitionRound({ showId }) {
   // Stabilize the fetchTanks effect
   useEffect(() => {
     if (selectedCategory && isMounted.current) {
-      console.log("Fetching tanks for category:", selectedCategory);
       // Store the category in a ref to avoid refetching on unmount
       const currentCategory = selectedCategory;
       fetchTanks(currentCategory, 1, 100, true);
@@ -1246,6 +1072,237 @@ function CompetitionRound({ showId }) {
     );
   };
 
+  // Update the getColumnsForRoundType function to use our new component
+  const getColumnsForRoundType = useMemo(() => {
+    // For Final Round
+    if (selectedRoundType === "Final") {
+      console.log(
+        "Using FINAL round columns with criteria:",
+        criteriaCompetitionRound
+      );
+      return getFinalColumns({
+        handleViewDetails: showCategoryDetail,
+        loadingImages,
+        allTanksAssigned,
+        isRoundPublished: isRoundScorePublished,
+        assigningTank,
+        competitionRoundTanks,
+        handleTankChange: handleTankAssignment,
+        criteria: criteriaCompetitionRound, // Pass criteria to Final round too
+        hasTank: currentCategoryHasTank, // Thêm tham số hasTank
+      });
+    }
+    // For Evaluation Round (existing code)
+    else if (selectedRoundType === "Evaluation") {
+      return getEvaluationColumns({
+        handleViewDetails: showCategoryDetail,
+        loadingImages,
+        allTanksAssigned,
+        isRoundPublished: isRoundScorePublished,
+        assigningTank,
+        competitionRoundTanks,
+        handleTankChange: handleTankAssignment,
+        criteria: criteriaCompetitionRound, // Pass criteria from API
+        hasTank: currentCategoryHasTank, // Thêm tham số hasTank
+      });
+    }
+    // Default columns for Preliminary Round (existing code)
+    const baseColumns = [
+      {
+        title: "Top",
+        dataIndex: ["rank"],
+        width: 40,
+        render: (rank) => (
+          <span style={{ color: "blue", fontWeight: "bold" }}>
+            {rank ? `#${rank}` : "_"}
+          </span>
+        ),
+        sorter: (a, b) => {
+          // Handle null/undefined values for sorting
+          const rankA = a.registration?.rank || Number.MAX_VALUE;
+          const rankB = b.registration?.rank || Number.MAX_VALUE;
+          return rankA - rankB;
+        },
+      },
+      {
+        title: "Mã Đăng Ký",
+        dataIndex: ["registration", "registrationNumber"],
+        render: (registrationNumber, record) => {
+          return registrationNumber || "—";
+        },
+        sorter: (a, b) => {
+          const regNumA = a.registration?.registrationNumber || "";
+          const regNumB = b.registration?.registrationNumber || "";
+          return regNumA.localeCompare(regNumB);
+        },
+        // defaultSortOrder: "ascend",
+      },
+      {
+        title: "Hình ảnh",
+        dataIndex: ["registration", "koiMedia"],
+        render: (koiMedia, record) => {
+          const id = record.key;
+          const imageMedia =
+            koiMedia && koiMedia.length > 0
+              ? koiMedia.find((media) => media.mediaType === "Image")
+              : null;
+
+          const imageUrl = imageMedia?.mediaUrl || PLACEHOLDER_IMAGE;
+
+          return (
+            <div className="w-[70px] h-[50px] bg-gray-100 flex items-center justify-center rounded-md overflow-hidden">
+              <Image
+                src={imageUrl}
+                alt="Hình cá"
+                width={80}
+                height={50}
+                className="object-cover"
+                preview={{
+                  src: imageMedia?.mediaUrl,
+                  mask: (
+                    <div className="text-xs">
+                      <EyeOutlined />
+                    </div>
+                  ),
+                }}
+                placeholder={
+                  <div className="w-full h-full flex items-center justify-center bg-gray-200">
+                    <Loading />
+                  </div>
+                }
+                fallback={PLACEHOLDER_IMAGE}
+              />
+            </div>
+          );
+        },
+      },
+      {
+        title: "Kích thước",
+        dataIndex: ["registration", "koiSize"],
+        render: (size) => (size ? `${size} cm` : "—"),
+      },
+      {
+        title: "Giống",
+        dataIndex: ["registration", "koiProfile", "variety", "name"],
+        ellipsis: true,
+        render: (name) => name || "—",
+      },
+      {
+        title: "Kết quả",
+        dataIndex: "roundResults",
+        render: (results) => {
+          if (!results || results.length === 0)
+            return <Tag color="gray">Chưa có</Tag>;
+
+          // Get the status from the roundResult field
+          const status = results[0]?.status;
+
+          if (status === "Pass") {
+            return <Tag color="green">Đạt</Tag>;
+          } else if (status === "Fail") {
+            return <Tag color="red">Không đạt</Tag>;
+          } else {
+            return <Tag color="orange">{status || "Đang chờ"}</Tag>;
+          }
+        },
+      },
+      {
+        title: "Trạng thái",
+        dataIndex: "status",
+        render: (status) => {
+          let color = "blue";
+          let text = status;
+
+          switch (status) {
+            case "unpublic":
+              color = "gray";
+              text = "Chưa công khai";
+              break;
+            case "public":
+              color = "green";
+              text = "Đã công khai";
+              break;
+            case "pending":
+              color = "orange";
+              text = "Đang chờ";
+              break;
+            default:
+              text = status || "—";
+          }
+
+          return <Tag color={color}>{text}</Tag>;
+        },
+      },
+    ];
+
+    // Only add tank column if the selected category has tanks
+    const selectedCategoryData = categories?.find(
+      (c) => c.id === selectedCategory
+    );
+    if (selectedCategoryData?.hasTank) {
+      baseColumns.push({
+        title: "Bể",
+        dataIndex: "tankName",
+        width: 100,
+        render: (tankName, record) => {
+          // Nếu đã công khai vòng thi thì chỉ hiển thị tên bể, không cho chọn
+          if (record.status === "public") {
+            return (
+              <Typography.Text>{tankName || "Chưa gán bể"}</Typography.Text>
+            );
+          }
+
+          return (
+            <Select
+              value={tankName || undefined}
+              placeholder="Chọn bể"
+              onChange={(value) => handleTankAssignment(record.id, value)}
+              loading={assigningTank[record.id]}
+              disabled={assigningTank[record.id] || record.status === "public"}
+              showSearch
+              optionFilterProp="children"
+            >
+              {competitionRoundTanks?.map((tank) => (
+                <Option key={tank.id} value={tank.id}>
+                  {tank.name || `Bể ${tank.id}`}
+                </Option>
+              ))}
+            </Select>
+          );
+        },
+      });
+    }
+
+    // Add actions column
+    baseColumns.push({
+      title: "Hành động",
+      key: "actions",
+      render: (_, record) => (
+        <Button
+          type="text"
+          icon={<EyeOutlined />}
+          className="text-gray-500 hover:text-blue-500"
+          onClick={() => showCategoryDetail(record)}
+        />
+      ),
+    });
+
+    return baseColumns;
+  }, [
+    selectedRoundType,
+    showCategoryDetail,
+    loadingImages,
+    allTanksAssigned,
+    isRoundScorePublished,
+    assigningTank,
+    competitionRoundTanks,
+    handleTankAssignment,
+    categories,
+    selectedCategory,
+    criteriaCompetitionRound,
+    currentCategoryHasTank,
+  ]);
+
   // Thay đổi cách sử dụng getColumnsForRoundType
   // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
   const columns = getColumnsForRoundType;
@@ -1366,82 +1423,70 @@ function CompetitionRound({ showId }) {
           )}
 
           {/* Only render the button container if there's at least one button to show */}
-          {selectedSubRound &&
-            (!isRoundPublished() ||
-            (selectedRoundType &&
-              isRoundPublished() &&
-              (!allEntriesHaveScores ||
-                (allEntriesHaveScores && !areResultsPublished))) ? (
-              <div>
-                {!isRoundPublished() && (
-                  <>
-                    <Button
-                      type="primary"
-                      size="middle"
-                      className="w-full"
-                      onClick={() => {
-                        if (!allTanksAssigned) {
-                          notification.warning({
-                            message: "Cần gán bể cho tất cả",
-                            description:
-                              "Vui lòng gán bể cho tất cả các cá trước khi công khai vòng thi.",
-                          });
-                        } else {
-                          handlePublishRound();
-                        }
-                      }}
-                      loading={isPublishing}
-                      icon={<TrophyOutlined />}
-                      disabled={!allTanksAssigned}
-                    >
-                      Công khai vòng thi
-                    </Button>
-                  </>
+          {selectedSubRound && (
+            <div>
+              {/* Thêm nút Công khai vòng thi khi cần */}
+              {selectedSubRound && !isRoundPublished() && (
+                <Button
+                  type="primary"
+                  size="middle"
+                  className="w-full mt-2"
+                  onClick={handlePublishRound}
+                  loading={isPublishing}
+                  icon={<CheckCircleOutlined />}
+                  disabled={
+                    isPublishing ||
+                    (currentCategoryHasTank && !allTanksAssigned)
+                  }
+                >
+                  Công Khai Vòng Thi
+                  {currentCategoryHasTank &&
+                    !allTanksAssigned &&
+                    " (Cần gán bể)"}
+                </Button>
+              )}
+
+              {/* Show Create Final Score button when needed */}
+              {selectedRoundType &&
+                (selectedRoundType === "Evaluation" ||
+                  selectedRoundType === "Final") &&
+                isRoundPublished() &&
+                !allEntriesHaveScores && (
+                  <Button
+                    type="primary"
+                    size="middle"
+                    className="w-full mt-2"
+                    onClick={handleCreateFinalScore}
+                    loading={roundResultLoading}
+                    icon={<TrophyOutlined />}
+                  >
+                    Tạo Điểm Cuối Cùng
+                  </Button>
                 )}
 
-                {/* Show Create Final Score button when needed */}
-                {selectedRoundType &&
-                  (selectedRoundType === "Evaluation" ||
-                    selectedRoundType === "Final") &&
-                  isRoundPublished() &&
-                  !allEntriesHaveScores && (
-                    <Button
-                      type="primary"
-                      size="middle"
-                      className="w-full mt-2"
-                      onClick={handleCreateFinalScore}
-                      loading={roundResultLoading}
-                      icon={<TrophyOutlined />}
-                    >
-                      Tạo Điểm Cuối Cùng
-                    </Button>
-                  )}
+              {/* Button for publishing round results */}
+              {selectedRoundType &&
+                isRoundPublished() &&
+                allEntriesHaveScores &&
+                !areResultsPublished && (
+                  <Button
+                    type="primary"
+                    size="middle"
+                    className="w-full mt-2"
+                    onClick={handlePublishRoundResults}
+                    loading={isPublishingScores}
+                    icon={<CheckCircleOutlined />}
+                    disabled={isPublishingScores}
+                  >
+                    Công Khai Điểm
+                  </Button>
+                )}
+            </div>
+          )}
 
-                {/* New button for publishing round results - now checking fish moved status */}
-                {selectedRoundType &&
-                  isRoundPublished() &&
-                  allEntriesHaveScores &&
-                  !areResultsPublished && (
-                    <Button
-                      type="primary"
-                      size="middle"
-                      className="w-full mt-2"
-                      onClick={handlePublishRoundResults}
-                      loading={isPublishingScores}
-                      icon={<CheckCircleOutlined />}
-                      disabled={isPublishingScores}
-                    >
-                      Công Khai Điểm
-                    </Button>
-                  )}
-              </div>
-            ) : null)}
-
-          {/* Adjust NextRound component to take more space when buttons are hidden */}
-          {selectedSubRound && (
-            <div
-              className={`w-full ${!isRoundPublished() || (selectedRoundType && isRoundPublished() && !allEntriesHaveScores) ? "md:w-1/4" : "md:w-1/3"}`}
-            >
+          {/* Adjust NextRound component to show only after results are published */}
+          {selectedSubRound && areResultsPublished && !fishMoved && (
+            <div className="w-full md:w-1/3">
               <NextRound
                 registrationRound={registrationRound}
                 selectedSubRound={selectedSubRound}
@@ -1495,6 +1540,7 @@ function CompetitionRound({ showId }) {
           loading={registrationLoading}
           scroll={{ x: "max-content" }}
           size="small"
+          key={`table-${selectedCategory}-${selectedRoundType}`}
           locale={{
             emptyText: (
               <Empty

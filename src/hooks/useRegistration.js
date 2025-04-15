@@ -28,15 +28,6 @@ const useRegistration = create((set, get) => ({
   ) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
-    console.log("Calling API with params:", {
-      page,
-      size,
-      showIds,
-      categoryIds,
-      statuses,
-      registrationNumber,
-    });
-
     try {
       const res = await getRegistration(
         page,
@@ -48,10 +39,6 @@ const useRegistration = create((set, get) => ({
       );
 
       if (res && res.status === 200) {
-        console.log("Registration API Response:", res.data);
-        console.log("API URL:", res.config?.url);
-        console.log("API Params:", res.config?.params);
-
         let registration = [];
         let total = 0;
         let totalPages = 1;
@@ -62,7 +49,6 @@ const useRegistration = create((set, get) => ({
           res.data.data.items &&
           Array.isArray(res.data.data.items)
         ) {
-          console.log("Data format: res.data.data.items");
           registration = res.data.data.items;
           total = res.data.data.total || registration.length;
           totalPages = res.data.data.totalPages || 1;
@@ -71,20 +57,15 @@ const useRegistration = create((set, get) => ({
           res.data.items &&
           Array.isArray(res.data.items)
         ) {
-          console.log("Data format: res.data.items");
           registration = res.data.items;
           total = res.data.total || registration.length;
           totalPages = res.data.totalPages || 1;
         } else if (res.data && Array.isArray(res.data)) {
-          console.log("Data format: res.data (array)");
           registration = res.data;
           total = registration.length;
         } else {
           console.error("No data array found in API response:", res.data);
         }
-
-        console.log("Processed registration data:", registration);
-        console.log("Total items:", total);
 
         set({
           registration: registration,

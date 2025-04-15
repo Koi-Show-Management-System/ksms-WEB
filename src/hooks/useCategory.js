@@ -24,7 +24,6 @@ const useCategory = create((set, get) => ({
       const res = await getCategory(id, page, size);
 
       if (res && res.status === 200) {
-        // console.log("Category API Response:", res.data);
 
         let categories = [];
         let total = 0;

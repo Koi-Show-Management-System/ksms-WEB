@@ -41,7 +41,6 @@ function RoundResult({ showId }) {
     setSelectedCategory(value);
     if (value) {
       const response = await fetchGetRoundResult(value);
-      console.log("API response:", response);
 
       if (
         response &&
@@ -94,33 +93,27 @@ function RoundResult({ showId }) {
         );
         break;
       case "second":
-        color = "silver";
+        color = "cyan";
         displayName = "Giải nhì";
         icon = (
-          <TrophyOutlined style={{ color: "#C0C0C0", fontSize: "16px" }} />
+          <TrophyOutlined style={{ color: "#87CEEB", fontSize: "16px" }} />
         );
         break;
       case "third":
-        color = "bronze";
+        color = "orange";
         displayName = "Giải ba";
         icon = (
-          <TrophyOutlined style={{ color: "#CD7F32", fontSize: "16px" }} />
+          <TrophyOutlined style={{ color: "#DEB887", fontSize: "16px" }} />
         );
         break;
       case "honorable":
-        color = "purple";
-        displayName = "Giải danh dự";
+        color = "green";
+        displayName = "Giải Khuyến Khích";
         icon = (
-          <TrophyOutlined style={{ color: "#9370DB", fontSize: "16px" }} />
+          <TrophyOutlined style={{ color: "#52c41a", fontSize: "16px" }} />
         );
         break;
-      case "champion":
-        color = "volcano";
-        displayName = "Vô địch";
-        icon = (
-          <TrophyOutlined style={{ color: "#FF4500", fontSize: "16px" }} />
-        );
-        break;
+
       default:
         color = "default";
         displayName = awardName || awardType;
@@ -147,9 +140,9 @@ function RoundResult({ showId }) {
               rank === 1
                 ? "#FFD700"
                 : rank === 2
-                  ? "#C0C0C0"
+                  ? "#87CEEB"
                   : rank === 3
-                    ? "#CD7F32"
+                    ? "#DEB887"
                     : "#52c41a",
             fontWeight: "bold",
             fontSize: "14px",
@@ -377,7 +370,7 @@ function RoundResult({ showId }) {
                                       alignItems: "center",
                                     }}
                                   >
-                                    <Loading/>
+                                    <Loading />
                                   </div>
                                 }
                                 preview={{

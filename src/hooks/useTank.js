@@ -27,7 +27,6 @@ const useTank = create((set, get) => ({
       const res = await getTank(categoryId, page, size);
 
       if (res && res.status === 200) {
-        console.log("API Response:", res.data);
 
         let tanks = [];
         let total = 0;

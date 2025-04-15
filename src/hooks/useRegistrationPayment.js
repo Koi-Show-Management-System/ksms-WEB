@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getRegistrationPayment } from "../api/registrationPayment";
+import { notification } from "antd";
 
 const useRegistrationPayment = create((set) => ({
   // State
@@ -12,14 +13,30 @@ const useRegistrationPayment = create((set) => ({
     try {
       set({ loading: true, error: null });
       const response = await getRegistrationPayment(registrationId);
-      set({
-        registrationPayment: response.data,
-        loading: false,
-      });
-      return response.data;
+      if (response.status === 200) {
+        set({
+          registrationPayment: response.data,
+          loading: false,
+        });
+        notification.success({
+          message: "Thành công",
+          description:
+            response.data?.message || "Lấy dữ liệu đăng ký thành công",
+        });
+        return response.data;
+      } else {
+        throw new Error("Failed to fetch registration payment");
+      }
     } catch (error) {
+      notification.error({
+        message: "Lỗi khi lấy dữ liệu đăng ký",
+        description:
+          error?.response?.data?.Error ||
+          "Failed to fetch registration payment",
+      });
       set({
-        error: error.message || "Failed to fetch registration payment",
+        error:
+          error?.data?.message?.Error || "Failed to fetch registration payment",
         loading: false,
       });
       throw error;

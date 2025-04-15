@@ -24,7 +24,6 @@ const useShowRule = create((set, get) => ({
       const res = await getRule(showId, page, size);
 
       if (res && res.status === 200) {
-        console.log("API Response:", res.data);
 
         let rules = [];
         let total = 0;

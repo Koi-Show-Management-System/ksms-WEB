@@ -27,6 +27,7 @@ export const getFinalColumns = (props) => {
     competitionRoundTanks,
     handleTankChange,
     criteria = [],
+    hasTank = false,
   } = props;
 
   console.log("Received criteria in EvaluationColumns:", criteria);
@@ -48,7 +49,6 @@ export const getFinalColumns = (props) => {
         const rankB = b.registration?.rank || Number.MAX_VALUE;
         return rankA - rankB;
       },
-      defaultSortOrder: "ascend",
     },
     {
       title: "Mã Đăng Ký",
@@ -62,7 +62,6 @@ export const getFinalColumns = (props) => {
         const regNumB = b.registration?.registrationNumber || "";
         return regNumA.localeCompare(regNumB);
       },
-      defaultSortOrder: "ascend",
     },
     {
       title: "Hình ảnh",
@@ -177,7 +176,11 @@ export const getFinalColumns = (props) => {
         return <Tag color={color}>{text}</Tag>;
       },
     },
-    {
+  ];
+
+  // Chỉ thêm cột "Bể" khi hạng mục có sử dụng bể
+  if (hasTank) {
+    columns.push({
       title: "Bể",
       dataIndex: "tankName",
       key: "tankName",
@@ -220,7 +223,11 @@ export const getFinalColumns = (props) => {
               placeholder="Chọn bể"
               showSearch
               optionFilterProp="children"
-              status={!tankName && !isRoundPublished ? "error" : undefined}
+              status={
+                !(tankName || tankIdToUse) && !isRoundPublished
+                  ? "error"
+                  : undefined
+              }
             >
               {competitionRoundTanks?.map((tank) => (
                 <Option key={tank.id} value={tank.id}>
@@ -231,21 +238,22 @@ export const getFinalColumns = (props) => {
           </div>
         );
       },
-    },
-    {
-      title: "Hành động",
-      key: "action",
-      fixed: "right",
-      render: (_, record) => (
-        <Button
-          type="text"
-          icon={<EyeOutlined />}
-          className="text-gray-500 hover:text-blue-500"
-          onClick={() => handleViewDetails(record)}
-        />
-      ),
-    },
-  ];
+    });
+  }
+
+  columns.push({
+    title: "Hành động",
+    key: "action",
+    fixed: "right",
+    render: (_, record) => (
+      <Button
+        type="text"
+        icon={<EyeOutlined />}
+        className="text-gray-500 hover:text-blue-500"
+        onClick={() => handleViewDetails(record)}
+      />
+    ),
+  });
 
   return columns;
 };

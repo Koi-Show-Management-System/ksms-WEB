@@ -11,8 +11,13 @@ import {
   Modal,
   Form,
   Input as AntInput,
+  Space,
 } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  SearchOutlined,
+  CalendarOutlined,
+} from "@ant-design/icons";
 import NoKoiShow from "../../../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
@@ -53,7 +58,6 @@ function KoiShow() {
 
   useEffect(() => {
     if (koiShows && koiShows.length > 0) {
-      console.log("KoiShows data:", koiShows);
       const formattedData = koiShows.map((item) => ({
         key: item.id,
         id: item.id,
@@ -300,6 +304,7 @@ function KoiShow() {
           {text}
         </span>
       ),
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
     {
       title: "Ngày Bắt Đầu",
@@ -307,33 +312,27 @@ function KoiShow() {
       key: "startDate",
       sorter: (a, b) => new Date(a.startDate) - new Date(b.startDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
+      responsive: ["sm", "md", "lg", "xl"],
     },
-    // {
-    //   title: "Phí Đăng Kí",
-    //   dataIndex: "registrationFee",
-    //   key: "registrationFee",
-    //   sorter: (a, b) => a.registrationFee - b.registrationFee,
-    //   render: (fee) =>
-    //     fee
-    //       ? fee.toLocaleString("vi-VN", { style: "currency", currency: "VND" })
-    //       : "Miễn phí",
-    // },
     {
       title: "Số lượng tối thiểu",
       dataIndex: "minParticipants",
       key: "minParticipants",
       render: (value) => value || "0",
+      responsive: ["md", "lg", "xl"],
     },
     {
       title: "Số lượng tối đa",
       dataIndex: "maxParticipants",
       key: "maxParticipants",
       render: (value) => value || "0",
+      responsive: ["md", "lg", "xl"],
     },
     {
       title: "Địa Điểm",
       dataIndex: "location",
       key: "location",
+      responsive: ["lg", "xl"],
     },
     {
       title: "Trạng Thái",
@@ -346,7 +345,7 @@ function KoiShow() {
         return (
           <Select
             value={status}
-            style={{ width: 150 }}
+            style={{ width: "100%", minWidth: 120 }}
             onChange={(value) => handleStatusChange(value, record.id)}
             options={availableOptions.map((opt) => ({
               value: opt.value,
@@ -359,68 +358,78 @@ function KoiShow() {
           />
         );
       },
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
   ];
 
   return (
-    <div>
-      <div className="flex gap-4 mb-6">
-        <div className="flex-1">
-          <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>
-          <Input
-            placeholder="Tìm kiếm..."
-            className="max-w-md"
-            value={searchText}
-            onChange={(e) => setSearchText(e.target.value)}
-          />
-        </div>
-        <div>
-          <div className="mb-2 text-sm">Ngày:</div>
-          <div className="flex gap-2">
-            <DatePicker
-              placeholder="Chọn ngày"
-              className="w-96"
-              format="DD/MM/YYYY"
-              value={selectedDate}
-              onChange={(date) => setSelectedDate(date)}
+    <div className="">
+      <div className="mb-6 rounded-lg shadow-sm">
+        <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4">
+          <div className="flex-1">
+            <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>
+            <Input
+              placeholder="Tìm kiếm..."
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              prefix={<SearchOutlined className="text-gray-400" />}
+              className="w-full md:max-w-md"
             />
-            <Button
-              type="primary"
-              className="bg-blue-500"
-              onClick={handleSearch}
-            >
-              Tìm kiếm
-            </Button>
+          </div>
+          <div className="flex-1 md:flex-initial">
+            <div className="mb-2 text-sm">Ngày:</div>
+            <Space.Compact className="w-full">
+              <DatePicker
+                placeholder="Chọn ngày"
+                format="DD/MM/YYYY"
+                value={selectedDate}
+                onChange={(date) => setSelectedDate(date)}
+                className="w-full md:w-48"
+                suffixIcon={<CalendarOutlined />}
+              />
+              <Button
+                type="primary"
+                className="bg-blue-500"
+                onClick={handleSearch}
+              >
+                Tìm kiếm
+              </Button>
+            </Space.Compact>
           </div>
         </div>
       </div>
-      <Table
-        columns={columns}
-        dataSource={filteredData}
-        pagination={false}
-        className="bg-white rounded-lg shadow-sm"
-        locale={{
-          emptyText: (
-            <div className="flex flex-col items-center justify-center py-12">
-              <h3 className="text-xl font-bold">Không có triển lãm nào</h3>
-              <img
-                src={NoKoiShow}
-                alt="No shows"
-                className="w-64 h-64 object-contain"
-              />
-            </div>
-          ),
-        }}
-      />
 
-      <div className="flex justify-end items-center mt-4">
-        <span>{`1-${filteredData.length} của ${totalItems}`}</span>
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          pagination={false}
+          scroll={{ x: "max-content" }}
+          locale={{
+            emptyText: (
+              <div className="flex flex-col items-center justify-center py-12">
+                <h3 className="text-xl font-bold">Không có triển lãm nào</h3>
+                <img
+                  src={NoKoiShow}
+                  alt="No shows"
+                  className="w-32 h-32 md:w-64 md:h-64 object-contain"
+                />
+              </div>
+            ),
+          }}
+        />
+      </div>
+
+      <div className="flex flex-col md:flex-row  md:items-center gap-2 mt-4  p-3 rounded-lg justify-end">
+        <span className="text-sm text-gray-500">{`1-${filteredData.length} của ${totalItems}`}</span>
         <Pagination
           current={currentPage}
           total={totalItems}
           pageSize={pageSize}
           showSizeChanger
           onChange={handlePageChange}
+          size="small"
+          className="self-end md:self-auto"
         />
       </div>
 

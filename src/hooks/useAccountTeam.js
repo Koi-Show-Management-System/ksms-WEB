@@ -29,7 +29,6 @@ const useAccountTeam = create((set, get) => ({
       const res = await accountTeam(page, size, role);
 
       if (res && res.status === 200) {
-        console.log("API Response:", res.data);
 
         let accounts = [];
         let total = 0;

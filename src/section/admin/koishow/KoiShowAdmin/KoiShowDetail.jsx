@@ -446,7 +446,7 @@ function KoiShowDetail() {
     }
   };
   return (
-    <div className="max-w-8xl mx-auto p-3">
+    <div className="max-w-8xl mx-auto p-2 md:p-4">
       <Collapse
         defaultActiveKey={["info"]}
         ghost
@@ -455,7 +455,7 @@ function KoiShowDetail() {
             key: "info",
             label: (
               <div className="flex items-center justify-between w-full">
-                <h1 className="text-2xl font-semibold">
+                <h1 className="text-xl md:text-2xl font-semibold">
                   {koiShowDetail.data.name}
                 </h1>
                 {!isEditDisabled && (
@@ -470,57 +470,82 @@ function KoiShowDetail() {
             ),
             children: (
               <>
-                <p className="text-gray-600">
+                <p className="text-gray-600 text-sm md:text-base">
                   {koiShowDetail.data.description}
                 </p>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
-                  <div className="md:col-span-2">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 my-4">
+                  <div className="lg:col-span-2">
                     <div className="mb-4">
-                      <Image
-                        src={koiShowDetail.data.imgUrl || koiFishImage}
-                        alt="Cá Koi"
-                        className="w-[300px] h-[200px] object-cover rounded-lg mt-3"
-                      />
+                      <div className="flex justify-center md:justify-start mb-4">
+                        <Image
+                          src={koiShowDetail.data.imgUrl || koiFishImage}
+                          alt="Cá Koi"
+                          className="w-full max-w-[500px] md:max-w-[780px] h-[280px] md:h-[360px] object-cover rounded-lg shadow-md"
+                          preview={{
+                            mask: (
+                              <div className="flex items-center justify-center">
+                                <span className="font-medium text-base">
+                                  Xem lớn
+                                </span>
+                              </div>
+                            ),
+                          }}
+                        />
+                      </div>
 
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="mt-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="mt-2">
                           <Collapse
                             defaultActiveKey={["1"]}
                             items={[
                               {
                                 key: "1",
-                                label: "Lịch Trình Sự Kiện",
+                                label: (
+                                  <span className="font-medium">
+                                    Lịch Trình Sự Kiện
+                                  </span>
+                                ),
                                 children: (
-                                  <div className="space-y-2">
-                                    <div className="flex justify-between">
+                                  <div className="space-y-2 text-sm md:text-base">
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Bắt đầu:
+                                      </span>
                                       <span>
                                         {new Date(
                                           koiShowDetail.data.startDate
                                         ).toLocaleDateString("vi-VN")}{" "}
                                         {formatTime(
                                           koiShowDetail.data.startDate
-                                        )}{" "}
-                                        : Thời gian bắt đầu
+                                        )}
                                       </span>
                                     </div>
-                                    <div className="flex justify-between">
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Kết thúc:
+                                      </span>
                                       <span>
                                         {new Date(
                                           koiShowDetail.data.endDate
                                         ).toLocaleDateString("vi-VN")}{" "}
-                                        {formatTime(koiShowDetail.data.endDate)}{" "}
-                                        : Thời gian kết thúc
+                                        {formatTime(koiShowDetail.data.endDate)}
                                       </span>
                                     </div>
-                                    <div>
-                                      Tham gia:{" "}
-                                      {koiShowDetail.data.minParticipants} -{" "}
-                                      {koiShowDetail.data.maxParticipants} người
-                                    </div>
-                                    <div className="flex justify-between">
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Số người tham gia:
+                                      </span>
                                       <span>
-                                        Địa điểm: {koiShowDetail.data.location}
+                                        {koiShowDetail.data.minParticipants} -{" "}
+                                        {koiShowDetail.data.maxParticipants}{" "}
+                                        người
                                       </span>
+                                    </div>
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Địa điểm:
+                                      </span>
+                                      <span>{koiShowDetail.data.location}</span>
                                     </div>
                                   </div>
                                 ),
@@ -529,29 +554,45 @@ function KoiShowDetail() {
                           />
                         </div>
 
-                        <div className="mt-4">
+                        <div className="mt-2">
                           <Collapse
                             defaultActiveKey={["2"]}
                             items={[
                               {
                                 key: "2",
-                                label: "Vé",
+                                label: <span className="font-medium">Vé</span>,
                                 children: (
-                                  <div className="space-y-2">
-                                    {koiShowDetail.data.ticketTypes.map(
-                                      (ticket) => (
-                                        <div key={ticket.id}>
-                                          <div>
-                                            {ticket.name} -{" "}
-                                            {new Intl.NumberFormat("vi-VN", {
-                                              style: "currency",
-                                              currency: "VND",
-                                            }).format(ticket.price)}{" "}
-                                            || Số lượng :{" "}
-                                            {ticket.availableQuantity} vé
+                                  <div className="space-y-2 text-sm md:text-base">
+                                    {koiShowDetail.data.ticketTypes.length >
+                                    0 ? (
+                                      koiShowDetail.data.ticketTypes.map(
+                                        (ticket) => (
+                                          <div
+                                            key={ticket.id}
+                                            className="flex flex-col md:flex-row md:justify-between"
+                                          >
+                                            <span>{ticket.name}</span>
+                                            <div className="flex justify-between md:block">
+                                              <span className="text-blue-600">
+                                                {new Intl.NumberFormat(
+                                                  "vi-VN",
+                                                  {
+                                                    style: "currency",
+                                                    currency: "VND",
+                                                  }
+                                                ).format(ticket.price)}
+                                              </span>
+                                              <span className="ml-2 text-gray-500">
+                                                ({ticket.availableQuantity} vé)
+                                              </span>
+                                            </div>
                                           </div>
-                                        </div>
+                                        )
                                       )
+                                    ) : (
+                                      <div className="text-gray-500">
+                                        Chưa có thông tin vé
+                                      </div>
                                     )}
                                   </div>
                                 ),
@@ -574,25 +615,30 @@ function KoiShowDetail() {
                         </div>
                       </div>
 
-                      <div className="mt-4 grid grid-cols-2 gap-4">
-                        <div className="bg-black/[0.02] p-4 rounded-lg">
-                          <h3 className="font-bold mb-4 text-lg">Tài Trợ</h3>
-                          <div className="grid grid-cols-2 gap-4 relative">
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-black/[0.02] p-3 md:p-4 rounded-lg">
+                          <h3 className="font-bold mb-3 text-base md:text-lg">
+                            Tài Trợ
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3 md:gap-4 relative">
                             {displaySponsors.map((sponsor, index) => (
-                              <div key={sponsor.id} className="relative">
+                              <div
+                                key={sponsor.id}
+                                className="relative flex justify-center items-center"
+                              >
                                 <Image
                                   src={sponsor.logoUrl || sponsorLogo1}
                                   alt={`Tài Trợ ${index + 1}`}
                                   className="rounded-xl"
-                                  width={150}
-                                  height={150}
+                                  width={180}
+                                  height={180}
                                 />
                                 {index === 1 && extraCount > 0 && (
                                   <div
                                     onClick={() => setIsModalOpen(true)}
                                     className="absolute inset-0 bg-black bg-opacity-50 rounded-xl flex items-center justify-center cursor-pointer"
                                   >
-                                    <span className="text-white font-semibold">
+                                    <span className="text-white font-semibold text-base md:text-lg">
                                       +{extraCount}
                                     </span>
                                   </div>
@@ -606,29 +652,30 @@ function KoiShowDetail() {
                             open={isModalOpen}
                             onCancel={() => setIsModalOpen(false)}
                             footer={null}
+                            width={700}
                           >
-                            <div className="grid grid-cols-2 gap-4">
+                            <div className="grid grid-cols-2 gap-5">
                               {sponsors.map((sponsor) => (
                                 <Image
                                   key={sponsor.id}
                                   src={sponsor.logoUrl || sponsorLogo1}
                                   alt="Tài trợ"
                                   className="rounded-xl"
-                                  width={150}
-                                  height={150}
+                                  width={250}
+                                  height={250}
                                 />
                               ))}
                             </div>
                           </Modal>
                         </div>
 
-                        <div className="bg-black/[0.02] p-4 rounded-lg">
-                          <h3 className="font-bold mb-4 text-lg">
+                        <div className="bg-black/[0.02] p-3 md:p-4 rounded-lg">
+                          <h3 className="font-bold mb-3 text-base md:text-lg">
                             Tiêu Chí Đánh Giá{" "}
                           </h3>
-                          <div className="grid grid-cols-2 gap-8">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
                             {/* Cột 1: Chứa 5 phần tử đầu tiên */}
-                            <div className="space-y-3">
+                            <div className="space-y-2 md:space-y-3">
                               {koiShowDetail.data.criteria
                                 .slice(0, 5)
                                 .map((criteriaList, index) => (
@@ -636,10 +683,10 @@ function KoiShowDetail() {
                                     key={index}
                                     className="flex items-center"
                                   >
-                                    <div className="w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0">
+                                    <div className="w-6 h-6 md:w-7 md:h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 flex-shrink-0">
                                       {index + 1}
                                     </div>
-                                    <div className="text-sm">
+                                    <div className="text-xs md:text-sm">
                                       {criteriaList}
                                     </div>
                                   </div>
@@ -647,7 +694,7 @@ function KoiShowDetail() {
                             </div>
 
                             {/* Cột 2: Chứa các phần tử còn lại */}
-                            <div className="space-y-3">
+                            <div className="space-y-2 md:space-y-3">
                               {koiShowDetail.data.criteria
                                 .slice(5)
                                 .map((criteriaList, index) => (
@@ -655,10 +702,10 @@ function KoiShowDetail() {
                                     key={index + 5}
                                     className="flex items-center"
                                   >
-                                    <div className="w-7 h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0">
+                                    <div className="w-6 h-6 md:w-7 md:h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 flex-shrink-0">
                                       {index + 6}
                                     </div>
-                                    <div className="text-sm">
+                                    <div className="text-xs md:text-sm">
                                       {criteriaList}
                                     </div>
                                   </div>
@@ -671,7 +718,10 @@ function KoiShowDetail() {
                   </div>
                   <div>
                     <div className="mb-4">
-                      <Card className="mb-4 mt-3">
+                      <Card className="mb-4 mt-0 md:mt-3 shadow-sm">
+                        <h3 className="font-bold mb-3 text-base md:text-lg">
+                          Trạng thái triển lãm
+                        </h3>
                         <Timeline
                           items={koiShowDetail.data.showStatuses
                             .slice() // Create a copy to avoid mutating the original array
@@ -713,21 +763,21 @@ function KoiShowDetail() {
                                     className={`text-${color}-500 font-medium`}
                                   >
                                     <div
-                                      className={`text-sm ${status.isActive ? "text-blue-700 font-bold" : "text-gray-400"} mb-1`}
+                                      className={`text-xs md:text-sm ${status.isActive ? "text-blue-700 font-bold" : "text-gray-400"} mb-1`}
                                     >
                                       {status.description}
                                     </div>
 
                                     {sameDate ? (
                                       // If same date, show one date with start and end times
-                                      <div className="text-xs text-gray-500">
+                                      <div className="text-[10px] md:text-xs text-gray-500">
                                         {formatDate(status.startDate)},{" "}
                                         {formatTime(status.startDate)} -{" "}
                                         {formatTime(status.endDate)}
                                       </div>
                                     ) : (
                                       // If different dates, show full range
-                                      <div className="text-xs text-gray-500">
+                                      <div className="text-[10px] md:text-xs text-gray-500">
                                         {formatDate(status.startDate)}{" "}
                                         {formatTime(status.startDate)} -{" "}
                                         {formatDate(status.endDate)}{" "}
@@ -749,10 +799,14 @@ function KoiShowDetail() {
         ]}
       />
 
-      <div className="flex items-center justify-between mx-2">
-        <div className="flex-1">
-          <Tabs defaultActiveKey="category" items={items} />
-        </div>
+      <div className="mt-2 md:mt-4 p-2 md:p-4 ">
+        <Tabs
+          defaultActiveKey="category"
+          items={items}
+          size="small"
+          tabBarGutter={12}
+          className="koishow-tabs"
+        />
       </div>
 
       <Modal
@@ -781,7 +835,7 @@ function KoiShowDetail() {
         ]}
       >
         <Form form={form} layout="vertical">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <Form.Item name="name" label="Tên">
               <Input />
             </Form.Item>
@@ -854,11 +908,12 @@ function KoiShowDetail() {
           </Form.Item>
         </Form>
       </Modal>
+
       {/* Ticket Management Modal */}
       <Modal
         title={
-          <div className="flex items-center justify-between py-5">
-            <span className="text-xl font-semibold">Quản lý vé</span>
+          <div className="flex items-center justify-between py-4">
+            <span className="text-lg md:text-xl font-semibold">Quản lý vé</span>
             {!isEditDisabled && (
               <PlusOutlined
                 className="text-blue-500 text-xl cursor-pointer hover:text-blue-700"
@@ -879,17 +934,19 @@ function KoiShowDetail() {
           setShowTicketForm(false);
         }}
         footer={null}
-        width={800}
+        width="95%"
+        centered
+        className="ticket-modal"
       >
         {isEditDisabled && (
-          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-600 rounded-md">
+          <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 text-yellow-600 rounded-md text-sm">
             <p>Không thể chỉnh sửa vé khi triển lãm đã công bố</p>
           </div>
         )}
 
         {showTicketForm && !editingTicket && !isEditDisabled && (
-          <div className="mb-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <h3 className="text-lg font-medium mb-4 border-b pb-2">
+          <div className="mb-4 p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 border-b pb-2">
               Tạo vé mới
             </h3>
 
@@ -898,7 +955,7 @@ function KoiShowDetail() {
               layout="vertical"
               onFinish={handleTicketSubmit}
             >
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                 <Form.Item
                   name="name"
                   label="Tên vé"
@@ -948,19 +1005,21 @@ function KoiShowDetail() {
           </div>
         )}
 
-        <h3 className="text-lg font-medium mb-4">Danh sách vé</h3>
+        <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4">
+          Danh sách vé
+        </h3>
 
         {koiShowDetail.data.ticketTypes.length === 0 ? (
-          <div className="text-center py-8 text-gray-500 bg-gray-50 rounded-lg">
-            <div className="text-4xl mb-2">🎫</div>
+          <div className="text-center py-6 md:py-8 text-gray-500 bg-gray-50 rounded-lg">
+            <div className="text-3xl md:text-4xl mb-2">🎫</div>
             <p>Chưa có loại vé nào được tạo</p>
           </div>
         ) : (
-          <div className="overflow-auto max-h-[500px]">
+          <div className="overflow-y-auto max-h-[300px] md:max-h-[500px]">
             {koiShowDetail.data.ticketTypes.map((ticket) => (
               <div
                 key={ticket.id}
-                className="mb-3 p-4 rounded-lg border border-gray-200 hover:border-gray-300"
+                className="mb-3 p-3 md:p-4 rounded-lg border border-gray-200 hover:border-gray-300"
               >
                 {editingTicket?.id === ticket.id ? (
                   // Inline edit form
@@ -974,7 +1033,7 @@ function KoiShowDetail() {
                       availableQuantity: ticket.availableQuantity,
                     }}
                   >
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4">
                       <Form.Item
                         name="name"
                         label="Tên vé"
@@ -1028,15 +1087,17 @@ function KoiShowDetail() {
                   </Form>
                 ) : (
                   // Display ticket info
-                  <div className="flex justify-between items-center">
+                  <div className="flex flex-col md:flex-row md:justify-between md:items-center">
                     <div>
-                      <h4 className="font-medium text-lg">{ticket.name}</h4>
-                      <div className="text-gray-600 text-sm mt-1">
+                      <h4 className="font-medium text-base md:text-lg">
+                        {ticket.name}
+                      </h4>
+                      <div className="text-gray-600 text-xs md:text-sm mt-1">
                         Số lượng: {ticket.availableQuantity} vé
                       </div>
                     </div>
-                    <div>
-                      <div className="text-lg font-semibold text-blue-600">
+                    <div className="mt-2 md:mt-0">
+                      <div className="text-base md:text-lg font-semibold text-blue-600">
                         {new Intl.NumberFormat("vi-VN", {
                           style: "currency",
                           currency: "VND",

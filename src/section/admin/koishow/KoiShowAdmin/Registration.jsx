@@ -61,13 +61,9 @@ function Registration({ showId, statusShow }) {
   const [selectedRoundName, setSelectedRoundName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
-  // Các state khác giữ nguyên
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [currentKoi, setCurrentKoi] = useState(null);
   const [updatedStatus, setUpdatedStatus] = useState(null);
-  // Thêm state cho phân trang trong modal
-  const [assignModalPage, setAssignModalPage] = useState(1);
-  const [assignModalPageSize, setAssignModalPageSize] = useState(10);
   const [checkinRegistrations, setCheckinRegistrations] = useState([]);
   const { confirm } = Modal;
   const roundSelectorRef = useRef(null);
@@ -81,7 +77,12 @@ function Registration({ showId, statusShow }) {
     { value: "waittopaid", label: "Chờ thanh toán" },
   ];
 
-  // Cập nhật STATUS_CONFIG để chỉ bao gồm 4 trạng thái chính
+  // Thêm lại định nghĩa REFUND_TYPE_OPTIONS
+  const REFUND_TYPE_OPTIONS = [
+    { value: "NotQualified", label: "Không đủ điều kiện" },
+    { value: "ShowCancelled", label: "Show bị hủy" },
+  ];
+
   const STATUS_CONFIG = {
     pending: { color: "orange", label: "Đang chờ", order: 1 },
     confirmed: { color: "green", label: "Đã xác nhận", order: 2 },
@@ -94,7 +95,6 @@ function Registration({ showId, statusShow }) {
     waittopaid: { color: "gold", label: "Chờ thanh toán", order: 9 },
   };
 
-  // Add back the renderStatus function
   const renderStatus = (status) => {
     const statusKey = status?.toLowerCase() || "";
     const config = STATUS_CONFIG[statusKey] || {
@@ -110,35 +110,39 @@ function Registration({ showId, statusShow }) {
     );
   };
 
-  // Add these new state variables
   const [showAllMedia, setShowAllMedia] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [rejectionId, setRejectionId] = useState(null);
-
-  // Add new states
   const [isRefundModalVisible, setIsRefundModalVisible] = useState(false);
   const [refundType, setRefundType] = useState(null);
   const [selectedRegistrationId, setSelectedRegistrationId] = useState(null);
-
-  // Add refund type options
-  const REFUND_TYPE_OPTIONS = [
-    { value: "NotQualified", label: "Không đủ điều kiện" },
-    { value: "ShowCancelled", label: "Show bị hủy" },
-  ];
+  const [totalCheckinRegistrations, setTotalCheckinRegistrations] = useState(0);
+  const [isAllSelected, setIsAllSelected] = useState(false);
+  const [activeFilters, setActiveFilters] = useState([]);
 
   useEffect(() => {
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
   }, []);
 
+  useEffect(() => {
+    if (selectedStatus && selectedStatus.length > 0) {
+      const statusLabels = selectedStatus.map(
+        (status) => STATUS_CONFIG[status]?.label || status
+      );
+      setActiveFilters(statusLabels);
+    } else {
+      setActiveFilters([]);
+    }
+  }, [selectedStatus]);
+
   const handleCategoryChange = (value) => {
     setSelectedCategory(value);
-    // Reset selected status khi thay đổi category
     setSelectedStatus(null);
+    setActiveFilters([]);
 
-    // Fetch lại dữ liệu với category mới
     fetchRegistration(1, 10, showId, value ? [value] : undefined, null);
   };
 
@@ -148,54 +152,100 @@ function Registration({ showId, statusShow }) {
   };
 
   const showAssignModal = () => {
-    // Lọc các con cá đã check-in
-    const checkedInFish = registration.filter(
-      (reg) => reg.status?.toLowerCase() === "checkin"
-    );
-
-    if (checkedInFish.length === 0) {
+    if (!selectedCategory) {
       notification.warning({
-        message: "Không có đăng ký",
-        description: "Không có đăng ký nào đã check-in để gán vòng",
+        message: "Chưa chọn hạng mục",
+        description: "Vui lòng chọn hạng mục trước khi gán vòng",
         placement: "topRight",
       });
       return;
     }
 
-    setCheckinRegistrations(checkedInFish);
-    setAssignModalPage(1); // Reset về trang 1 khi mở modal
-    setIsAssignModalVisible(true);
-    clearSelectedRegistrations();
+    // Hiển thị loading trước khi lấy dữ liệu
+    notification.info({
+      message: "Đang lấy dữ liệu",
+      description: "Đang lấy tất cả đăng ký đã check-in, vui lòng đợi...",
+      placement: "topRight",
+      duration: 2,
+    });
+
+    // Gọi API để lấy tất cả đăng ký có trạng thái checkin trong hạng mục đã chọn
+    // Đặt pageSize rất lớn để lấy tất cả dữ liệu trong một trang
+    fetchRegistration(
+      1,
+      1000, // Số lượng lớn để lấy tất cả đăng ký
+      showId,
+      [selectedCategory],
+      ["checkin"] // Chỉ lấy các đăng ký đã check-in
+    ).then((response) => {
+      if (response && response.registration) {
+        const checkedInFish = response.registration.filter(
+          (reg) =>
+            reg.status?.toLowerCase() === "checkin" &&
+            reg.competitionCategory?.id === selectedCategory
+        );
+
+        if (checkedInFish.length === 0) {
+          notification.warning({
+            message: "Không có đăng ký",
+            description: "Không có đăng ký nào đã check-in để gán vòng",
+            placement: "topRight",
+          });
+          return;
+        }
+
+        setCheckinRegistrations(checkedInFish);
+        setTotalCheckinRegistrations(checkedInFish.length);
+        setIsAssignModalVisible(true);
+        clearSelectedRegistrations();
+
+        notification.success({
+          message: "Đã lấy dữ liệu",
+          description: `Đã tìm thấy ${checkedInFish.length} đăng ký đã check-in`,
+          placement: "topRight",
+        });
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể lấy dữ liệu đăng ký",
+          placement: "topRight",
+        });
+      }
+    });
   };
 
   const closeAssignModal = () => {
     setIsAssignModalVisible(false);
-    // Reset các lựa chọn khi đóng modal
     setSelectedRoundId(null);
     setSelectedRoundName("");
     clearSelectedRegistrations();
-    setAssignModalPage(1);
+    setIsAllSelected(false);
 
-    // Reset RoundSelector thông qua ref
     if (roundSelectorRef.current) {
       roundSelectorRef.current.reset();
     }
   };
 
   const handleTableChange = (pagination, filters, sorter) => {
-    // Get all selected statuses from filters (can be multiple now)
     const filteredStatuses = filters.status;
 
-    // Update selectedStatus state to handle multiple selections
     setSelectedStatus(filteredStatuses);
 
-    // Fetch data with filters
+    if (filteredStatuses && filteredStatuses.length > 0) {
+      const statusLabels = filteredStatuses.map(
+        (status) => STATUS_CONFIG[status]?.label || status
+      );
+      setActiveFilters(statusLabels);
+    } else {
+      setActiveFilters([]);
+    }
+
     fetchRegistration(
       pagination.current,
       pagination.pageSize,
       showId,
       selectedCategory ? [selectedCategory] : undefined,
-      filteredStatuses // Truyền trạng thái đã chọn để lọc từ API
+      filteredStatuses
     );
   };
 
@@ -203,7 +253,7 @@ function Registration({ showId, statusShow }) {
     if (!selectedRoundId) {
       notification.warning({
         message: "Chưa chọn vòng",
-        description: "Vui lòng chọn vòng trước khi gán bể",
+        description: "Vui lòng chọn vòng trước khi gán vòng",
         placement: "topRight",
       });
       return;
@@ -212,29 +262,53 @@ function Registration({ showId, statusShow }) {
     if (selectedRegistrations?.length === 0) {
       notification.warning({
         message: "Chưa chọn đăng ký",
-        description: "Vui lòng chọn ít nhất một đăng ký để gán bể",
+        description: "Vui lòng chọn ít nhất một đăng ký để gán vòng",
         placement: "topRight",
       });
       return;
     }
 
+    // Hiển thị xác nhận khác nhau tùy theo số lượng đăng ký được chọn
+    const isLargeNumber = selectedRegistrations.length > 20;
+    const confirmTitle = isLargeNumber
+      ? "Xác nhận gán vòng cho số lượng lớn"
+      : "Xác nhận gán vòng";
+
+    const confirmContent = (
+      <div>
+        <p>
+          Bạn có chắc chắn muốn gán{" "}
+          <strong>{selectedRegistrations.length}</strong> đăng ký vào vòng:
+        </p>
+        <p>
+          <strong>{selectedRoundName}</strong>?
+        </p>
+        {isLargeNumber && (
+          <Alert
+            type="warning"
+            showIcon
+            message="Lưu ý: Thao tác này có thể mất một chút thời gian để hoàn thành"
+            style={{ marginTop: 16 }}
+          />
+        )}
+      </div>
+    );
+
     confirm({
-      title: "Xác nhận gán vòng",
-      content: (
-        <div>
-          <p>
-            Bạn có chắc chắn muốn gán {selectedRegistrations.length} đăng ký vào
-            vòng:
-          </p>
-          <p>
-            <strong>{selectedRoundName}</strong>?
-          </p>
-        </div>
-      ),
+      title: confirmTitle,
+      content: confirmContent,
       icon: <ExclamationCircleOutlined />,
       okText: "Đồng ý",
       cancelText: "Hủy",
       onOk: async () => {
+        // Hiển thị loading khi bắt đầu gán
+        notification.info({
+          message: "Đang xử lý",
+          description: `Đang gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}...`,
+          placement: "topRight",
+          duration: 3,
+        });
+
         const result = await assignToRound(
           selectedRoundId,
           selectedRegistrations
@@ -242,7 +316,7 @@ function Registration({ showId, statusShow }) {
 
         if (result.success) {
           closeAssignModal();
-          // Tải lại dữ liệu trang hiện tại với các bộ lọc hiện tại
+          // Tải lại dữ liệu sau khi gán thành công
           fetchRegistration(
             currentPage,
             pageSize,
@@ -250,6 +324,13 @@ function Registration({ showId, statusShow }) {
             selectedCategory ? [selectedCategory] : undefined,
             selectedStatus
           );
+
+          // Hiển thị thông báo thành công
+          notification.success({
+            message: "Gán vòng thành công",
+            description: `Đã gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}`,
+            placement: "topRight",
+          });
         }
       },
     });
@@ -259,6 +340,7 @@ function Registration({ showId, statusShow }) {
     selectedRowKeys: selectedRegistrations,
     onChange: (selectedRowKeys) => {
       setSelectedRegistrations(selectedRowKeys);
+      setIsAllSelected(selectedRowKeys.length === checkinRegistrations.length);
     },
     getCheckboxProps: (record) => ({
       disabled:
@@ -269,7 +351,6 @@ function Registration({ showId, statusShow }) {
     }),
   };
 
-  // Hàm lấy URL hình ảnh đầu tiên từ koiMedia
   const getFirstImageUrl = (record) => {
     if (
       record.koiMedia &&
@@ -283,25 +364,25 @@ function Registration({ showId, statusShow }) {
     }
     return null;
   };
+
   const getFilteredData = () => {
-    // Chỉnh sửa phần này để hiển thị dữ liệu khi chưa chọn category
     if (!registration || registration.length === 0) return [];
 
-    // Nếu không có category được chọn, hiển thị tất cả dữ liệu
     if (!selectedCategory) {
       return registration;
     }
 
-    // Lọc theo category nếu đã chọn
     return registration.filter((item) => {
       return item.competitionCategory?.id === selectedCategory;
     });
   };
+
   const handleViewDetails = (record) => {
     setCurrentKoi(record);
     setUpdatedStatus(null);
     setIsModalVisible(true);
   };
+
   const handleCancel = () => {
     setIsModalVisible(false);
     setUpdatedStatus(null);
@@ -310,7 +391,6 @@ function Registration({ showId, statusShow }) {
 
   const showConfirmModal = (id, status) => {
     if (status === "rejected") {
-      // Show rejection reason modal instead
       setRejectionId(id);
       setRejectionReason("");
       setIsRejectModalVisible(true);
@@ -338,7 +418,6 @@ function Registration({ showId, statusShow }) {
     try {
       const result = await updateStatus(id, status, reason);
       if (result.success) {
-        // Only update the UI state, notifications are handled in the hook
         if (currentKoi) {
           setCurrentKoi({
             ...currentKoi,
@@ -348,7 +427,6 @@ function Registration({ showId, statusShow }) {
           setUpdatedStatus(status);
         }
 
-        // Tải lại dữ liệu trang hiện tại sau khi cập nhật thành công
         fetchRegistration(
           currentPage,
           pageSize,
@@ -357,7 +435,6 @@ function Registration({ showId, statusShow }) {
           selectedStatus
         );
 
-        // Close the modal after successful update
         setIsModalVisible(false);
       }
     } catch (error) {
@@ -379,7 +456,6 @@ function Registration({ showId, statusShow }) {
     setIsRejectModalVisible(false);
   };
 
-  // Add refund handler
   const handleRefund = async () => {
     if (!refundType) {
       notification.warning({
@@ -400,7 +476,6 @@ function Registration({ showId, statusShow }) {
       if (result.success) {
         setIsRefundModalVisible(false);
         setRefundType(null);
-        // Tải lại dữ liệu trang hiện tại
         fetchRegistration(
           currentPage,
           pageSize,
@@ -414,19 +489,60 @@ function Registration({ showId, statusShow }) {
     }
   };
 
-  // Thêm hàm xử lý khi thay đổi trang trong modal gán vòng
-  const handleAssignModalTableChange = (pagination) => {
-    setAssignModalPage(pagination.current);
-    setAssignModalPageSize(pagination.pageSize);
-  };
-
-  // Thêm hàm chọn tất cả cá trong modal
   const handleSelectAllInModal = () => {
-    const allIds = checkinRegistrations.map((item) => item.id);
-    setSelectedRegistrations(allIds);
+    if (isAllSelected) {
+      clearSelectedRegistrations();
+      setIsAllSelected(false);
+      notification.info({
+        message: "Đã bỏ chọn tất cả",
+        description: "Bạn có thể chọn lại các đăng ký cần gán vòng",
+        placement: "topRight",
+      });
+    } else {
+      if (checkinRegistrations.length > 100) {
+        // Hiển thị xác nhận nếu số lượng lớn
+        confirm({
+          title: "Chọn số lượng lớn",
+          content: `Bạn đang chọn ${checkinRegistrations.length} đăng ký. Thao tác này có thể mất một chút thời gian. Bạn có muốn tiếp tục?`,
+          okText: "Tiếp tục",
+          cancelText: "Hủy",
+          onOk: () => {
+            const allIds = checkinRegistrations.map((item) => item.id);
+            setSelectedRegistrations(allIds);
+            setIsAllSelected(true);
+            notification.success({
+              message: "Đã chọn tất cả",
+              description: `Đã chọn tất cả ${allIds.length} đăng ký để gán vòng`,
+              placement: "topRight",
+            });
+          },
+        });
+      } else {
+        // Nếu số lượng nhỏ, chọn ngay
+        const allIds = checkinRegistrations.map((item) => item.id);
+        setSelectedRegistrations(allIds);
+        setIsAllSelected(true);
+        notification.success({
+          message: "Đã chọn tất cả",
+          description: `Đã chọn tất cả ${allIds.length} đăng ký để gán vòng`,
+          placement: "topRight",
+        });
+      }
+    }
   };
 
-  // Lấy dữ liệu đã lọc
+  const clearAllFilters = () => {
+    setSelectedStatus(null);
+    setActiveFilters([]);
+    fetchRegistration(
+      1,
+      pageSize,
+      showId,
+      selectedCategory ? [selectedCategory] : undefined,
+      null
+    );
+  };
+
   const filteredData = getFilteredData();
   const columns = [
     {
@@ -495,9 +611,17 @@ function Registration({ showId, statusShow }) {
       key: "category",
       render: (category) => category?.name || "N/A",
     },
-
     {
-      title: "Trạng thái",
+      title: () => (
+        <span>
+          Trạng thái
+          {activeFilters.length > 0 && (
+            <Tag color="blue" style={{ marginLeft: 8 }}>
+              {activeFilters.length}
+            </Tag>
+          )}
+        </span>
+      ),
       dataIndex: "status",
       key: "status",
       render: renderStatus,
@@ -505,11 +629,9 @@ function Registration({ showId, statusShow }) {
         text: config.label,
         value: key,
       })),
-      onFilter: (value, record) => {
-        return record.status?.toLowerCase() === value;
-      },
       filterMode: "menu",
       filterMultiple: true,
+      filteredValue: selectedStatus || null,
       filterSearch: false,
       filterDropdownProps: {
         locale: {
@@ -544,13 +666,11 @@ function Registration({ showId, statusShow }) {
       }}
     >
       <Card className="rounded-lg shadow-md">
-        {/* Header section */}
         <Flex justify="space-between" align="center" className="mb-6">
           {/* <Typography.Title level={4} style={{ margin: 0 }}>
             Quản lý đăng ký
           </Typography.Title> */}
         </Flex>
-        {/* Thêm bộ lọc category và status */}
         <Flex justify="space-between" align="center" className="mb-4">
           <Select
             style={{ width: "25%" }}
@@ -578,6 +698,30 @@ function Registration({ showId, statusShow }) {
             </Button>
           )}
         </Flex>
+
+        {activeFilters.length > 0 && (
+          <Alert
+            type="info"
+            showIcon
+            message={
+              <Space>
+                <Typography.Text strong>
+                  Đang lọc theo trạng thái:
+                </Typography.Text>
+                {activeFilters.map((filter) => (
+                  <Tag color="blue" key={filter} style={{ marginRight: 8 }}>
+                    {filter}
+                  </Tag>
+                ))}
+                <Button type="link" size="small" onClick={clearAllFilters}>
+                  Xóa bộ lọc
+                </Button>
+              </Space>
+            }
+            style={{ marginBottom: 16 }}
+          />
+        )}
+
         <Table
           columns={columns}
           dataSource={filteredData}
@@ -610,11 +754,13 @@ function Registration({ showId, statusShow }) {
             ),
           }}
         />
-        {/* Modal gán bể */}
         <Modal
           title={
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-              <span>Gán cá tham gia vào vòng</span>
+              <span>
+                Gán cá tham gia vào vòng - Tất cả {checkinRegistrations.length}{" "}
+                đăng ký đã check-in
+              </span>
             </div>
           }
           open={isAssignModalVisible}
@@ -630,7 +776,7 @@ function Registration({ showId, statusShow }) {
               onClick={handleassignToRound}
               disabled={selectedRegistrations?.length === 0 || !selectedRoundId}
             >
-              Gán vòng
+              Gán {selectedRegistrations?.length} đăng ký vào vòng
             </Button>,
           ]}
           width={1000}
@@ -656,6 +802,14 @@ function Registration({ showId, statusShow }) {
               />
             </div>
           </div>
+
+          <Alert
+            type="info"
+            showIcon
+            message="Tất cả đăng ký đã check-in của hạng mục này đang được hiển thị"
+            description="Bạn có thể chọn và gán vòng cho tất cả đăng ký cùng một lúc"
+            style={{ marginBottom: "16px" }}
+          />
 
           {selectedRoundId && (
             <>
@@ -684,11 +838,11 @@ function Registration({ showId, statusShow }) {
                   </div>
 
                   <Button
-                    type="primary"
+                    type={isAllSelected ? "default" : "primary"}
                     onClick={handleSelectAllInModal}
                     disabled={checkinRegistrations.length === 0}
                   >
-                    Chọn tất cả
+                    {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
                   </Button>
                 </div>
 
@@ -699,8 +853,14 @@ function Registration({ showId, statusShow }) {
                     message={
                       <span>
                         Đã chọn <strong>{selectedRegistrations.length}</strong>{" "}
-                        đăng ký để gán vào vòng{" "}
-                        <strong>{selectedRoundName}</strong>
+                        / <strong>{checkinRegistrations.length}</strong> đăng ký
+                        để gán vào vòng <strong>{selectedRoundName}</strong>
+                        {selectedRegistrations.length ===
+                          checkinRegistrations.length && (
+                          <Tag color="green" style={{ marginLeft: 8 }}>
+                            Đã chọn tất cả
+                          </Tag>
+                        )}
                       </span>
                     }
                     style={{ marginBottom: "16px" }}
@@ -712,19 +872,11 @@ function Registration({ showId, statusShow }) {
                   columns={columns.filter((col) => col.key !== "actions")}
                   dataSource={checkinRegistrations}
                   loading={isLoading}
-                  pagination={{
-                    current: assignModalPage,
-                    pageSize: assignModalPageSize,
-                    total: checkinRegistrations.length,
-                    showTotal: (total, range) =>
-                      `${range[0]}-${range[1]} trong ${total}`,
-                    showSizeChanger: true,
-                    pageSizeOptions: ["10", "20", "50"],
-                  }}
-                  onChange={handleAssignModalTableChange}
+                  pagination={false}
                   rowKey="id"
                   size="small"
                   bordered={false}
+                  scroll={{ y: 400 }}
                 />
               </div>
             </>
@@ -748,7 +900,7 @@ function Registration({ showId, statusShow }) {
                     onClick={() => {
                       setSelectedRegistrationId(currentKoi.id);
                       setIsRefundModalVisible(true);
-                      setIsModalVisible(false); // Đóng modal chi tiết
+                      setIsModalVisible(false);
                     }}
                   >
                     Đã Hoàn Tiền
@@ -761,7 +913,6 @@ function Registration({ showId, statusShow }) {
           {currentKoi && (
             <div className="p-4">
               <Row gutter={[16, 16]}>
-                {/* Thông tin đăng ký */}
                 <Col span={24}>
                   <Card
                     title="Thông Tin Đăng Ký"
@@ -831,7 +982,6 @@ function Registration({ showId, statusShow }) {
                   </Card>
                 </Col>
 
-                {/* Koi Media */}
                 {currentKoi.koiMedia && currentKoi.koiMedia.length > 0 && (
                   <Col span={24}>
                     <Card
@@ -840,7 +990,6 @@ function Registration({ showId, statusShow }) {
                       className="w-full"
                     >
                       <Row gutter={[16, 16]}>
-                        {/* Luôn hiển thị "Hình Ảnh:" bên trái và "Video:" bên phải */}
                         <Col span={12}>
                           <div>
                             <p>
@@ -976,7 +1125,6 @@ function Registration({ showId, statusShow }) {
                 )}
               </Row>
 
-              {/* Nút Approve/Reject */}
               {currentKoi.status === "pending" && (
                 <div className="mt-4 text-center space-x-3">
                   <Button
@@ -1010,7 +1158,6 @@ function Registration({ showId, statusShow }) {
             </div>
           )}
         </Modal>
-        {/* Add a new modal to display all media */}
         <Modal
           title="Tất cả hình ảnh và video"
           open={mediaModalVisible}
@@ -1018,7 +1165,6 @@ function Registration({ showId, statusShow }) {
           footer={null}
           width={900}
         >
-          {/* Hiển thị tất cả hình ảnh trước */}
           {currentKoi?.koiMedia?.filter((media) => media.mediaType === "Image")
             .length > 0 && (
             <>
@@ -1044,7 +1190,6 @@ function Registration({ showId, statusShow }) {
             </>
           )}
 
-          {/* Sau đó hiển thị tất cả video */}
           {currentKoi?.koiMedia?.filter((media) => media.mediaType === "Video")
             .length > 0 && (
             <>
@@ -1071,7 +1216,6 @@ function Registration({ showId, statusShow }) {
             </>
           )}
         </Modal>
-        {/* Add the rejection reason modal */}
         <Modal
           title="Từ Chối Đăng Ký"
           open={isRejectModalVisible}
@@ -1094,7 +1238,6 @@ function Registration({ showId, statusShow }) {
             />
           </div>
         </Modal>
-        {/* Add Refund Modal */}
         <Modal
           title="Hoàn Tiền Đăng Ký"
           open={isRefundModalVisible}

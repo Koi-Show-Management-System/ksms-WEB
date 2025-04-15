@@ -29,7 +29,6 @@ const useCriteria = create((set, get) => ({
       const res = await getCriterias(page, size);
 
       if (res && res.status === 200) {
-        console.log("API Responseee:", res.data);
 
         let criteria = [];
         let total = 0;
@@ -128,7 +127,6 @@ const useCriteria = create((set, get) => ({
         roundId
       );
 
-      console.log("Full API Response:", res);
 
       if (res?.status === 200) {
         // Handle different response formats

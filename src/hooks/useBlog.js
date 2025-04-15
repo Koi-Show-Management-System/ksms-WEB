@@ -31,7 +31,6 @@ const useBlog = create((set, get) => ({
       if (response.status === 200) {
         const blogData = response.data.data || [];
         set({ blogCategory: blogData });
-        console.log("Blog categories loaded:", blogData);
       }
     } catch (error) {
       console.log("Error loading blog categories:", error);

@@ -48,24 +48,24 @@ const VoteListItem = styled.div.attrs((props) => ({
 }))`
   padding: 16px;
   background: ${(props) =>
-    props.$isTopVote ? "linear-gradient(to right, #f6ffed, #white)" : "white"};
+    props.$isTopVote ? "linear-gradient(to right, #FFFBEB, #white)" : "white"};
   border-radius: 8px;
   margin-bottom: 8px;
   box-shadow: ${(props) =>
     props.$isTopVote
-      ? "0 4px 12px rgba(82, 196, 26, 0.15)"
+      ? "0 4px 12px rgba(255, 215, 0, 0.15)"
       : "0 2px 8px rgba(0, 0, 0, 0.05)"};
   display: flex;
   align-items: center;
   transition: all 0.3s ease;
   border-left: 4px solid
-    ${(props) => (props.$isTopVote ? "#52c41a" : "#f0f0f0")};
+    ${(props) => (props.$isTopVote ? "#FFD700" : "#f0f0f0")};
 
   &:hover {
     transform: translateY(-2px);
     box-shadow: ${(props) =>
       props.$isTopVote
-        ? "0 6px 16px rgba(82, 196, 26, 0.2)"
+        ? "0 6px 16px rgba(255, 215, 0, 0.2)"
         : "0 4px 12px rgba(0, 0, 0, 0.1)"};
   }
 
@@ -79,7 +79,7 @@ const VoteListItem = styled.div.attrs((props) => ({
       left: 0;
       right: 0;
       bottom: 0;
-      background: linear-gradient(45deg, transparent 96%, #52c41a 97%, #52c41a 100%);
+      background: linear-gradient(45deg, transparent 96%, #FFD700 97%, #FFD700 100%);
       border-radius: 8px;
       pointer-events: none;
     }
@@ -96,7 +96,7 @@ const ImageWrapper = styled.div`
   ${(props) =>
     props.$isTopVote &&
     `
-    box-shadow: 0 0 0 2px #52c41a;
+    box-shadow: 0 0 0 2px #FFD700;
   `}
 `;
 
@@ -240,23 +240,6 @@ const VoteItem = React.forwardRef(
           style={{ marginLeft: "8px" }}
         />
       </VoteListItem>
-      {isTopVote && (
-        <div
-          style={{
-            position: "absolute",
-            top: -5,
-            right: 10,
-            background: "#52c41a",
-            color: "white",
-            padding: "2px 8px",
-            borderRadius: "12px",
-            fontSize: "12px",
-            boxShadow: "0 2px 6px rgba(0, 0, 0, 0.15)",
-          }}
-        >
-          Dẫn đầu
-        </div>
-      )}
     </div>
   )
 );
@@ -735,7 +718,7 @@ function Votes({ showId }) {
     if (votingActive) {
       return (
         <div className="flex items-center">
-          <Tag color="green" className="mr-2">
+          <Tag color="gold" className="mr-2">
             Bình chọn đang diễn ra
           </Tag>
           {votingEndTime && (
@@ -770,7 +753,7 @@ function Votes({ showId }) {
     }
   }, [sortedVotes]);
 
-  // Kiểm tra có phải là phiếu bầu cao nhất
+  // Kiểm tra có phải là phiếu bầu cao nhất - đồng hạng cho tất cả
   const isTopVote = (voteCount) => {
     return voteCount > 0 && voteCount === maxVotes;
   };

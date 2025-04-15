@@ -18,7 +18,6 @@ const useRound = create((set, get) => ({
       const res = await getRound(competitionCategoryId, roundType, page, size);
 
       if (res && res.status === 200) {
-        console.log("API Response:", res.data);
 
         let round = [];
         let total = 0;
@@ -100,7 +99,6 @@ const useRound = create((set, get) => ({
       set({ isLoading: true, error: null });
 
       const res = await getNextRound(roundId);
-      console.log("API Response (Next Round):", res);
       if (res?.status === 200) {
         set({ nextRound: res.data, isLoading: false });
       } else {

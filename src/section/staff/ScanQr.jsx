@@ -20,6 +20,7 @@ import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
+  ScanOutlined,
 } from "@ant-design/icons";
 
 const { Title, Text } = Typography;
@@ -30,6 +31,22 @@ function ScanQr() {
   const [isCheckingIn, setIsCheckingIn] = useState(false);
   const [isRejecting, setIsRejecting] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
+  const [isTablet, setIsTablet] = useState(false);
+
+  // Detect tablet size
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsTablet(window.innerWidth >= 768 && window.innerWidth <= 1024);
+    };
+
+    checkScreenSize();
+    window.addEventListener("resize", checkScreenSize);
+
+    return () => {
+      window.removeEventListener("resize", checkScreenSize);
+    };
+  }, []);
+
   const {
     registrationPayment,
     loading,
@@ -113,19 +130,42 @@ function ScanQr() {
   };
 
   return (
-    <div className=" max-w-6xl mx-auto">
+    <div className="max-w-6xl mx-auto">
       {!showScanner && !qrResult && (
         <div className="flex justify-center mb-6">
-          <Button type="primary" onClick={() => setShowScanner(true)}>
+          <Button
+            type="primary"
+            onClick={() => setShowScanner(true)}
+            size={isTablet ? "large" : "middle"}
+            icon={<ScanOutlined />}
+            className="tablet-scan-button"
+            style={{
+              height: isTablet ? "56px" : "40px",
+              fontSize: isTablet ? "16px" : "14px",
+              padding: isTablet ? "0 32px" : "0 20px",
+            }}
+          >
             Bắt đầu quét QR
           </Button>
         </div>
       )}
 
       {showScanner && scannerEnabled && (
-        <div className="mb-6 shadow-md" style={{ borderRadius: "12px" }}>
+        <div
+          className={`mb-6 shadow-md ${isTablet ? "tablet-scanner" : ""}`}
+          style={{
+            borderRadius: "12px",
+            maxWidth: isTablet ? "600px" : "400px",
+            margin: "0 auto",
+          }}
+        >
           <div className="scanner-container flex flex-col items-center">
-            <div className="border-3 p-2 rounded-lg mb-4">
+            <div
+              className="qr-scanner-wrapper border-3 p-2 rounded-lg mb-4"
+              style={{
+                width: "100%",
+              }}
+            >
               <QrScanner
                 delay={300}
                 onError={handleError}
@@ -136,13 +176,21 @@ function ScanQr() {
                 style={{}}
               />
             </div>
-            <Text className="text-center text-gray-600 italic mb-2">
+            <Text
+              className="text-center text-gray-600 italic mb-2"
+              style={{ fontSize: isTablet ? "16px" : "14px" }}
+            >
               Hướng camera vào mã QR để quét
             </Text>
             <Button
               onClick={() => setShowScanner(false)}
               className="mb-4"
               danger
+              size={isTablet ? "large" : "middle"}
+              style={{
+                height: isTablet ? "48px" : "32px",
+                minWidth: isTablet ? "120px" : "80px",
+              }}
             >
               Hủy quét
             </Button>
@@ -166,7 +214,14 @@ function ScanQr() {
           className="mb-6"
           showIcon
           action={
-            <Button type="primary" size="middle" onClick={handleReset}>
+            <Button
+              type="primary"
+              size={isTablet ? "large" : "middle"}
+              onClick={handleReset}
+              style={{
+                height: isTablet ? "48px" : "32px",
+              }}
+            >
               Quét lại
             </Button>
           }
@@ -175,9 +230,13 @@ function ScanQr() {
 
       {registrationPayment && registrationPayment.data && (
         <Card
-          className="shadow-lg"
+          className={`shadow-lg ${isTablet ? "tablet-card" : ""}`}
           variant="borderless"
-          style={{ borderRadius: "12px" }}
+          style={{
+            borderRadius: "12px",
+            maxWidth: isTablet ? "900px" : "100%",
+            margin: "0 auto",
+          }}
         >
           <Title level={4} className="mb-6 pb-2 border-b border-gray-200">
             <span className="">Thông tin đăng ký</span>
@@ -379,7 +438,7 @@ function ScanQr() {
           <div className="flex justify-center gap-6 mt-8">
             <Button
               type="primary"
-              size="large"
+              size={isTablet ? "large" : "middle"}
               icon={<CheckCircleOutlined />}
               onClick={handleCheckIn}
               loading={isCheckingIn}
@@ -391,10 +450,11 @@ function ScanQr() {
                 backgroundColor: "#52c41a",
                 color: "white",
                 borderColor: "#52c41a",
-                height: "52px",
-                padding: "0 24px",
+                height: isTablet ? "60px" : "52px",
+                padding: isTablet ? "0 30px" : "0 24px",
                 borderRadius: "8px",
                 fontWeight: "bold",
+                fontSize: isTablet ? "16px" : "14px",
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
               }}
             >
@@ -402,7 +462,7 @@ function ScanQr() {
             </Button>
             <Button
               danger
-              size="large"
+              size={isTablet ? "large" : "middle"}
               icon={<CloseCircleOutlined />}
               onClick={handleReject}
               loading={isRejecting}
@@ -411,23 +471,25 @@ function ScanQr() {
                 registrationPayment.data.registration.status === "rejected"
               }
               style={{
-                height: "52px",
-                padding: "0 24px",
+                height: isTablet ? "60px" : "52px",
+                padding: isTablet ? "0 30px" : "0 24px",
                 borderRadius: "8px",
                 fontWeight: "bold",
+                fontSize: isTablet ? "16px" : "14px",
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
               }}
             >
               {isRejecting ? "Đang xử lý..." : "Từ chối"}
             </Button>
             <Button
-              size="large"
+              size={isTablet ? "large" : "middle"}
               icon={<ReloadOutlined />}
               onClick={handleReset}
               style={{
-                height: "52px",
-                padding: "0 24px",
+                height: isTablet ? "60px" : "52px",
+                padding: isTablet ? "0 30px" : "0 24px",
                 borderRadius: "8px",
+                fontSize: isTablet ? "16px" : "14px",
                 boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
               }}
             >
@@ -436,6 +498,45 @@ function ScanQr() {
           </div>
         </Card>
       )}
+
+      <style jsx global>{`
+        /* Tablet optimization styles */
+        .tablet-scanner {
+          width: 90% !important;
+          max-width: 600px !important;
+          margin: 0 auto;
+        }
+
+        .tablet-scanner .qr-scanner-wrapper {
+          border: 2px solid rgba(0, 0, 0, 0.1);
+          border-radius: 16px;
+          overflow: hidden;
+        }
+
+        .tablet-scan-button {
+          border-radius: 8px;
+        }
+
+        .tablet-card {
+          padding: 24px;
+        }
+
+        .tablet-card .ant-card-body {
+          padding: 24px;
+        }
+
+        /* Larger touch targets for tablet */
+        @media (min-width: 768px) and (max-width: 1024px) {
+          .react-qr-scanner video {
+            width: 100% !important;
+            height: auto !important;
+          }
+
+          button {
+            min-height: 44px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

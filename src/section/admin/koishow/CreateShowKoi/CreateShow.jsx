@@ -483,7 +483,6 @@ function CreateShow() {
     try {
       console.log("Calling fetchCreateKoi API...");
       const response = await fetchCreateKoi(formData);
-      console.log("API Response:", response);
 
       if (response?.statusCode === 201) {
         console.log("Success! Status code 201 received");

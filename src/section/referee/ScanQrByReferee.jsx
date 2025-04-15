@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { Select, Row, Col, QRCode, Statistic, Card as AntCard } from "antd";
-import useCategory from "../../hooks/useCategory";
-import useRound from "../../hooks/useRound";
-import useRegistrationRound from "../../hooks/useRegistrationRound";
-import useScore from "../../hooks/useScore";
-import useCriteria from "../../hooks/useCriteria";
-import QrScanner from "react-qr-scanner";
 import {
+  Select,
+  Row,
+  Col,
+  QRCode,
+  Statistic,
+  Card as AntCard,
   Button,
   Typography,
   Spin,
@@ -14,18 +13,32 @@ import {
   Tag,
   Space,
   notification,
+  Steps,
+  Divider,
+  Image,
+  Progress,
 } from "antd";
+import useCategory from "../../hooks/useCategory";
+import useRound from "../../hooks/useRound";
+import useRegistrationRound from "../../hooks/useRegistrationRound";
+import useScore from "../../hooks/useScore";
+import useCriteria from "../../hooks/useCriteria";
+import QrScanner from "react-qr-scanner";
 import {
   CheckCircleOutlined,
   CloseCircleOutlined,
   ReloadOutlined,
   PercentageOutlined,
   QrcodeOutlined,
+  TrophyOutlined,
+  AimOutlined,
 } from "@ant-design/icons";
 import EvaluationScoreSheet from "./EvaluationScoreSheet";
+import { Loading } from "../../components";
 
 const { Option } = Select;
-const { Title, Text } = Typography;
+const { Title, Text, Paragraph } = Typography;
+const { Step } = Steps;
 
 function ScanQrByReferee({ showId, refereeAccountId }) {
   const [categoryId, setCategoryId] = useState(null);
@@ -39,6 +52,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   const [postSubmitLoading, setPostSubmitLoading] = useState(false);
   const [scanError, setScanError] = useState(null);
   const [showDetailScoring, setShowDetailScoring] = useState(false);
+  const [currentStep, setCurrentStep] = useState(0);
 
   const {
     criteriaCompetitionRound,
@@ -88,6 +102,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
       setSelectedRoundType(null);
       setSubRounds([]);
       setSelectedSubRound(null);
+      setCurrentStep(0);
     }
   }, [categoryId, fetchRoundByReferee]);
 
@@ -95,6 +110,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     if (categoryId && selectedRoundType) {
       fetchRound(categoryId, selectedRoundType);
       setSelectedSubRound(null);
+      setCurrentStep(selectedRoundType ? 1 : 0);
     }
   }, [categoryId, selectedRoundType, fetchRound]);
 
@@ -122,11 +138,16 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         roundId: selectedSubRound,
       });
       fetchCriteriaCompetitionRound(categoryId, selectedSubRound);
+      setCurrentStep(selectedSubRound ? 2 : 1);
     } else if (
       selectedRoundType !== "Evaluation" &&
       selectedRoundType !== "Final"
     ) {
       resetCriteriaCompetitionRound();
+    }
+
+    if (selectedSubRound) {
+      setCurrentStep(2);
     }
   }, [
     categoryId,
@@ -152,6 +173,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         );
         if (result.success) {
           console.log("Scan successful:", result.data);
+          setCurrentStep(3);
         } else {
           let errorMessage = "Không thể quét mã QR này. Vui lòng thử lại.";
 
@@ -202,6 +224,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setShowScanner(true);
     resetRefereeRoundData();
     setScanError(null);
+    setCurrentStep(2);
   };
 
   const handleCategoryChange = (value) => {
@@ -215,6 +238,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setShowScanner(false);
     setScanError(null);
     setShowDetailScoring(false);
+    setCurrentStep(0);
   };
 
   const handleRoundTypeChange = (value) => {
@@ -227,6 +251,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setShowScanner(false);
     setScanError(null);
     setShowDetailScoring(false);
+    setCurrentStep(1);
   };
 
   const handleSubRoundChange = (value) => {
@@ -237,6 +262,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setShowScanner(false);
     setScanError(null);
     setShowDetailScoring(false);
+    setCurrentStep(2);
   };
 
   const handleScore = async (isPass) => {
@@ -284,6 +310,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
           setScannerEnabled(true);
           setShowScanner(true);
           setPostSubmitLoading(false);
+          setCurrentStep(2);
         }, 2000);
       }
 
@@ -305,16 +332,17 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
       setScannerEnabled(true);
       setShowScanner(true);
       setPostSubmitLoading(false);
+      setCurrentStep(2);
     }, 2000);
   };
 
   const CriteriaDisplay = () => {
     return (
-      <div className="mb-6 mt-4">
-        <Title level={5} className="mb-3">
+      <div className="my-6">
+        <Title level={5} className="mb-3 text-center font-semibold">
           Tiêu chí đánh giá
         </Title>
-        <Row gutter={[16, 8]}>
+        <Row gutter={[16, 16]}>
           {criteriaCompetitionRound.map((criteriaItem, index) => {
             const id =
               criteriaItem.id ||
@@ -332,10 +360,19 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
             return (
               <Col xs={24} sm={12} md={8} key={id}>
-                <AntCard size="small" className="h-full">
-                  <div className="flex items-center justify-between">
-                    <Typography.Text strong>{name}</Typography.Text>
-                    <Tag color="blue">{(weight * 100).toFixed(0)}%</Tag>
+                <AntCard
+                  size="small"
+                  className="h-full shadow-sm hover:shadow-md transition-shadow duration-300"
+                  bordered={false}
+                >
+                  <div className="flex items-center justify-between mb-2">
+                    <Typography.Text strong style={{ fontSize: "15px" }}>
+                      {name}
+                    </Typography.Text>
+                    <Tag color="blue" className="font-medium">
+                      <PercentageOutlined className="mr-1" />
+                      {(weight * 100).toFixed(0)}%
+                    </Tag>
                   </div>
                   {description && (
                     <Typography.Text
@@ -355,51 +392,68 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
-      <Row gutter={16}>
-        <Col xs={24} sm={8}>
-          <div className="mb-4">
-            <span className="block text-lg font-medium mb-2 flex items-center">
-              <QrcodeOutlined
-                style={{ marginRight: "8px", color: "#1890ff" }}
-              />
-              Hạng Mục:
-            </span>
-            <Select
-              value={categoryId}
-              onChange={handleCategoryChange}
-              allowClear
-              style={{ width: "100%" }}
-              loading={categoryLoading}
-              placeholder="Chọn danh mục"
-              size="large"
-            >
-              {categories?.map((category) => (
-                <Option key={category.id} value={category.id}>
-                  {category.name}
-                </Option>
-              ))}
-            </Select>
-          </div>
-        </Col>
+    <div className="bg-white space-y-6">
+      <Title level={3} className="text-center mb-6 text-blue-700">
+        <TrophyOutlined className="mr-2" />
+        Hệ thống chấm điểm giám khảo
+      </Title>
 
-        {categoryId && (
+      <Steps
+        current={currentStep}
+        className="mb-8 custom-steps"
+        labelPlacement="vertical"
+        responsive
+        size="small"
+      >
+        <Step title="Hạng mục" icon={<AimOutlined />} />
+        <Step title="Vòng thi" icon={<TrophyOutlined />} />
+        <Step title="Quét QR" icon={<QrcodeOutlined />} />
+        <Step title="Chấm điểm" icon={<PercentageOutlined />} />
+      </Steps>
+
+      <AntCard className="shadow-sm mb-6">
+        <Row gutter={[16, 16]} className="mb-2">
           <Col xs={24} sm={8}>
-            <div className="mb-4">
-              <span className="block text-lg font-medium mb-2 flex items-center">
-                <ReloadOutlined
-                  style={{ marginRight: "8px", color: "#1890ff" }}
-                />
-                Loại Vòng
-              </span>
+            <div>
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Hạng Mục:
+              </Text>
+              <Select
+                value={categoryId}
+                onChange={handleCategoryChange}
+                allowClear
+                style={{ width: "100%" }}
+                className="rounded-md"
+                loading={categoryLoading}
+                placeholder="Chọn danh mục"
+                size="large"
+                suffixIcon={<AimOutlined />}
+              >
+                {categories?.map((category) => (
+                  <Option key={category.id} value={category.id}>
+                    {category.name}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+          </Col>
+
+          <Col xs={24} sm={8}>
+            <div>
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Loại Vòng:
+              </Text>
               <Select
                 value={selectedRoundType}
                 onChange={handleRoundTypeChange}
                 allowClear
                 style={{ width: "100%" }}
+                className="rounded-md"
                 loading={roundLoading}
                 placeholder="Chọn vòng thi"
                 size="large"
+                disabled={!categoryId}
+                suffixIcon={<TrophyOutlined />}
               >
                 {refereeRoundTypes?.map((roundType) => (
                   <Option key={roundType} value={roundType}>
@@ -409,23 +463,21 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
               </Select>
             </div>
           </Col>
-        )}
 
-        {selectedRoundType && (
           <Col xs={24} sm={8}>
-            <div className="mb-4">
-              <span className="block text-lg font-medium mb-2 flex items-center">
-                <PercentageOutlined
-                  style={{ marginRight: "8px", color: "#1890ff" }}
-                />
+            <div>
+              <Text strong className="block text-base mb-2 text-gray-700">
                 Vòng:
-              </span>
+              </Text>
               <Select
                 value={selectedSubRound}
                 onChange={handleSubRoundChange}
                 style={{ width: "100%" }}
+                className="rounded-md"
                 placeholder="Chọn vòng nhỏ"
                 size="large"
+                disabled={!selectedRoundType}
+                suffixIcon={<TrophyOutlined />}
               >
                 {subRounds.map((subRound) => (
                   <Option key={subRound.id} value={subRound.id}>
@@ -435,54 +487,81 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
               </Select>
             </div>
           </Col>
-        )}
-      </Row>
+        </Row>
+      </AntCard>
 
       {selectedSubRound && (
-        <div className="mt-8">
-          <div className="text-center mb-6">
-            <Title level={4} className="mb-2">
-              Quét QR để chấm điểm
-            </Title>
-            <Tag color="blue" style={{ padding: "3px 8px" }}>
-              {roundTypeLabels[selectedRoundType] || selectedRoundType} -{" "}
-              {subRounds.find((r) => r.id === selectedSubRound)?.name ||
-                "Vòng thi"}
-            </Tag>
-          </div>
+        <div className="mt-5">
+          {(selectedRoundType === "Evaluation" ||
+            selectedRoundType === "Final") &&
+            criteriaCompetitionRound &&
+            criteriaCompetitionRound.length > 0 &&
+            !showDetailScoring &&
+            !qrResult && (
+              <div
+                className="mb-8 shadow-sm p-5"
+                title={
+                  <div className="flex items-center">
+                    <PercentageOutlined className="mr-2" />
+                    Tiêu chí đánh giá
+                  </div>
+                }
+              >
+                {criteriaLoading ? (
+                  <div className="py-6 text-center">
+                    <Spin tip="Đang tải tiêu chí..." />
+                  </div>
+                ) : (
+                  <CriteriaDisplay />
+                )}
+              </div>
+            )}
 
           {!showScanner && !qrResult && !scanError && (
-            <div className="flex justify-center mb-6">
-              <Button
-                type="primary"
-                onClick={() => setShowScanner(true)}
-                style={{
-                  height: "40px",
-                  padding: "0 24px",
-                  fontSize: "16px",
-                  borderRadius: "4px",
-                }}
-              >
-                Bắt đầu quét QR
-              </Button>
+            <div className="flex flex-col items-center mb-5">
+              <div className="w-full md:w-3/4 lg:w-1/2 text-center p-3  ">
+                <QrcodeOutlined
+                  style={{
+                    fontSize: "48px",
+                    color: "#3366ff",
+                    marginBottom: "16px",
+                  }}
+                />
+                <Title level={4} className="mb-4 font-semibold text-blue-800">
+                  Quét QR để chấm điểm
+                </Title>
+                <Paragraph className="text-gray-500 mb-6">
+                  Hướng camera vào mã QR của cá Koi để bắt đầu chấm điểm
+                </Paragraph>
+                <Button
+                  type="primary"
+                  size="large"
+                  icon={<QrcodeOutlined />}
+                  onClick={() => setShowScanner(true)}
+                  className="px-8 h-12 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                >
+                  Bắt đầu quét QR
+                </Button>
+              </div>
             </div>
           )}
 
           {scanError && (
-            <div className="mb-6">
+            <div className="mb-8">
               <Alert
                 message="Lỗi quét mã QR"
-                description="Không thể quét mã QR. Vui lòng thử lại."
+                description={scanError}
                 type="error"
                 showIcon
-                className="mb-4"
-                style={{ maxWidth: "500px", margin: "0 auto" }}
+                className="mb-4 shadow-sm"
               />
-              <div className="text-center">
+              <div className="flex justify-center">
                 <Button
                   type="primary"
                   icon={<ReloadOutlined />}
                   onClick={handleReset}
+                  size="large"
+                  className="px-6 h-10 rounded-lg shadow-sm"
                 >
                   Quét lại
                 </Button>
@@ -491,44 +570,59 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
           )}
 
           {showScanner && scannerEnabled && (
-            <div className="mb-6 shadow-md" style={{ borderRadius: "12px" }}>
-              <div className="scanner-container flex flex-col items-center">
-                <div className="border-3 p-2 rounded-lg mb-4">
-                  <QrScanner
-                    delay={300}
-                    onError={handleError}
-                    onScan={handleScan}
-                    constraints={{
-                      video: { facingMode: "environment" },
-                    }}
-                    style={{ width: "100%", height: "100%" }}
-                  />
+            <div className="mb-8">
+              <div className=" ">
+                <div className="flex flex-col items-center p-4">
+                  <div className="w-full max-w-md rounded-lg mb-4 overflow-hidden">
+                    <QrScanner
+                      delay={300}
+                      onError={handleError}
+                      onScan={handleScan}
+                      constraints={{
+                        video: { facingMode: "environment" },
+                      }}
+                      style={{ width: "150%", height: "300px" }}
+                    />
+                  </div>
+                  <Text className="text-center text-gray-600 italic mb-4">
+                    <AimOutlined className="mr-2" />
+                    Hướng camera vào mã QR để quét
+                  </Text>
+                  <Space>
+                    <Button
+                      onClick={() => setShowScanner(false)}
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      size="large"
+                      className="px-6 rounded-lg"
+                    >
+                      Hủy quét
+                    </Button>
+                  </Space>
                 </div>
-                <Text className="text-center text-gray-600 italic mb-2">
-                  Hướng camera vào mã QR để quét
-                </Text>
-                <Button
-                  onClick={() => setShowScanner(false)}
-                  className="mb-4"
-                  danger
-                >
-                  Hủy quét
-                </Button>
+              </div>
+            </div>
+          )}
+
+          {registrationLoading && (
+            <div className="flex justify-center my-8">
+              <div className="text-center">
+                <Loading tip="Đang tải thông tin..." />
               </div>
             </div>
           )}
 
           {refereeRoundData && !showDetailScoring && (
             <AntCard
-              className="shadow-lg"
+              className="shadow-sm mx-auto"
               variant="borderless"
-              style={{ borderRadius: "12px" }}
+              style={{ borderRadius: "12px", maxWidth: "700px" }}
             >
-              <Title level={4} className="mb-6 pb-2 border-b border-gray-200">
-                <span>Thông tin cá</span>
+              <Title level={5} className="mb-3 pb-5 border-b border-gray-200">
+                Thông tin cá
               </Title>
-              <div className="mb-3">
-                <Text strong className="text-lg block mb-2">
+              <div className="mb-2">
+                <Text strong>
                   Mã:{" "}
                   <span className="text-blue-600">
                     {refereeRoundData.registration?.registrationNumber || "-"}
@@ -538,31 +632,29 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
               {refereeRoundData.registration?.koiMedia &&
                 refereeRoundData.registration.koiMedia.length > 0 && (
-                  <div className="mb-6">
-                    <div className="mb-4">
-                      {refereeRoundData.registration.koiMedia
-                        .filter((media) => media.mediaType === "Image")
-                        .slice(0, 1)
-                        .map((media, index) => (
-                          <div key={index} className="relative w-full">
-                            <img
-                              src={media.mediaUrl}
-                              alt="Hình ảnh cá"
-                              className="w-full max-h-[280px] object-cover rounded-lg shadow-md"
-                            />
-                          </div>
-                        ))}
-                    </div>
+                  <div className="mb-4">
+                    {refereeRoundData.registration.koiMedia
+                      .filter((media) => media.mediaType === "Image")
+                      .slice(0, 1)
+                      .map((media, index) => (
+                        <div key={index} className="relative w-full">
+                          <img
+                            src={media.mediaUrl}
+                            alt="Hình ảnh cá"
+                            className="w-full h-[220px] object-cover rounded-md"
+                          />
+                        </div>
+                      ))}
                   </div>
                 )}
 
               {refereeRoundData.registration && (
                 <div>
-                  <AntCard className="bg-gray-50 border-0 mb-6">
-                    <div className="grid grid-cols-2 gap-4">
+                  <div className="bg-gray-50 p-3 rounded-md mb-4">
+                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
                       <div>
                         <Text type="secondary">Giống:</Text>
-                        <div className="font-semibold">
+                        <div className="font-medium">
                           {refereeRoundData.registration.koiProfile?.variety
                             ?.name || "N/A"}
                         </div>
@@ -570,7 +662,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
                       <div>
                         <Text type="secondary">Kích thước:</Text>
-                        <div className="font-semibold">
+                        <div className="font-medium">
                           {refereeRoundData.registration.koiSize
                             ? `${refereeRoundData.registration.koiSize} cm`
                             : "N/A"}
@@ -579,7 +671,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
                       <div>
                         <Text type="secondary">Giới tính:</Text>
-                        <div className="font-semibold">
+                        <div className="font-medium">
                           {refereeRoundData.registration?.koiProfile?.gender ||
                             "Không có"}
                         </div>
@@ -587,29 +679,26 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
                       <div>
                         <Text type="secondary">Người đăng ký:</Text>
-                        <div className="font-semibold">
+                        <div className="font-medium">
                           {refereeRoundData.registration?.registerName || "N/A"}
                         </div>
                       </div>
                     </div>
-                  </AntCard>
+                  </div>
 
-                  <div className="flex justify-center gap-6 mt-8">
+                  <div className="mt-5">
                     {postSubmitLoading ? (
-                      <div className="w-full text-center py-4">
-                        <Spin
-                          tip="Đang lưu kết quả chấm điểm..."
-                          size="large"
-                        />
-                        <div className="mt-3 text-blue-500 font-medium">
+                      <div className="w-full text-center py-3">
+                        <Spin tip="Đang lưu kết quả chấm điểm..." />
+                        <div className="mt-2 text-blue-500 font-medium">
                           Đã chấm điểm thành công!
                         </div>
                       </div>
                     ) : selectedRoundType === "Preliminary" ? (
-                      <>
+                      <div className="flex justify-center gap-4">
                         <Button
                           type="primary"
-                          size="large"
+                          size="middle"
                           icon={<CheckCircleOutlined />}
                           onClick={() => handleScore(true)}
                           loading={isScoring}
@@ -617,46 +706,39 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                             backgroundColor: "#52c41a",
                             color: "white",
                             borderColor: "#52c41a",
-                            height: "52px",
-                            padding: "0 24px",
                             borderRadius: "8px",
                             fontWeight: "bold",
-                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                           }}
                         >
                           Đạt
                         </Button>
                         <Button
                           danger
-                          size="large"
+                          size="middle"
                           icon={<CloseCircleOutlined />}
                           onClick={() => handleScore(false)}
                           loading={isScoring}
                           style={{
-                            height: "52px",
-                            padding: "0 24px",
                             borderRadius: "8px",
                             fontWeight: "bold",
-                            boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                           }}
                         >
                           Không Đạt
                         </Button>
-                      </>
+                      </div>
                     ) : (
                       <Button
                         type="primary"
-                        size="large"
+                        block
                         icon={<PercentageOutlined />}
                         onClick={() => handleScore(true)}
                         loading={isScoring}
                         style={{
-                          height: "52px",
-                          width: "100%",
-                          padding: "0 24px",
                           borderRadius: "8px",
                           fontWeight: "bold",
-                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
+                          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
                         }}
                       >
                         Chấm điểm chi tiết
@@ -665,15 +747,13 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                   </div>
 
                   {!postSubmitLoading && (
-                    <div className="text-center mt-4">
+                    <div className="text-center mt-3">
                       <Button
                         icon={<ReloadOutlined />}
                         onClick={handleReset}
+                        size="small"
                         style={{
-                          height: "40px",
-                          padding: "0 24px",
                           borderRadius: "8px",
-                          boxShadow: "0 4px 6px rgba(0, 0, 0, 0.1)",
                         }}
                       >
                         Quét lại
@@ -688,36 +768,20 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
       )}
 
       {showDetailScoring && refereeRoundData && (
-        <div className="mt-8 max-w-6xl mx-auto">
+        <div className="mt-8">
           {postSubmitLoading ? (
             <div className="text-center py-8">
-              <Spin tip="Đang lưu kết quả chấm điểm..." size="large" />
-              <div className="mt-3 text-blue-500 font-medium">
-                Đã chấm điểm thành công!
-              </div>
+              <AntCard className="shadow-md p-8 rounded-xl">
+                <Spin tip="Đang lưu kết quả chấm điểm..." size="large" />
+                <div className="mt-4 text-blue-500 font-medium">
+                  <CheckCircleOutlined className="mr-2" />
+                  Đã chấm điểm thành công!
+                </div>
+              </AntCard>
             </div>
           ) : (
             <>
-              <AntCard
-                className="shadow-md mb-6"
-                title={
-                  <Title level={4} className="mb-0">
-                    Chấm Điểm Chi Tiết
-                  </Title>
-                }
-              >
-                <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                  <div>
-                    <Text strong>Mã:</Text>{" "}
-                    {refereeRoundData.registration?.registrationNumber}
-                  </div>
-                  <div>
-                    <Text strong>Giống:</Text>{" "}
-                    {refereeRoundData.registration.koiProfile?.variety?.name ||
-                      "N/A"}
-                  </div>
-                </div>
-
+              <AntCard className="shadow-lg rounded-xl mb-4 border-0">
                 <EvaluationScoreSheet
                   criteriaList={criteriaCompetitionRound}
                   registrationId={qrResult}
@@ -725,16 +789,31 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                   refereeAccountId={refereeAccountId}
                   onScoreSubmitted={handleDetailScoreSubmitted}
                 />
-                <div className="mt-4 flex justify-center">
-                  <Button onClick={() => setShowDetailScoring(false)}>
-                    Quay lại
-                  </Button>
-                </div>
               </AntCard>
+              <div className="mt-4 flex justify-center">
+                <Button
+                  onClick={() => setShowDetailScoring(false)}
+                  size="large"
+                  className="px-6 rounded-lg"
+                  icon={<ReloadOutlined />}
+                >
+                  Quay lại
+                </Button>
+              </div>
             </>
           )}
         </div>
       )}
+
+      <style jsx global>{`
+        .custom-steps .ant-steps-item-icon {
+          background: #f0f7ff;
+          border-color: #1890ff;
+        }
+        .custom-steps .ant-steps-item-active .ant-steps-item-icon {
+          background: #1890ff;
+        }
+      `}</style>
     </div>
   );
 }

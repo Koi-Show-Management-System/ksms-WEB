@@ -17,7 +17,6 @@ const useVariety = create((set, get) => ({
       const res = await getVarieties(page, size);
 
       if (res && res.status === 200) {
-        console.log("API Response:", res.data);
 
         let varieties = [];
         let total = 0;

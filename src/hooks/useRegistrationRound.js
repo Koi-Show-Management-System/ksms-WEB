@@ -25,8 +25,6 @@ const useRegistrationRound = create((set, get) => ({
       const res = await getRegistrationRound(roundId, page, size);
 
       if (res && res.status === 200) {
-        console.log("API Responseee:", res.data);
-
         let registrationRound = [];
         let total = 0;
         let totalPages = 1;
@@ -140,6 +138,10 @@ const useRegistrationRound = create((set, get) => ({
       console.log("Update response:", res.data);
       if (res && res.status === 200) {
         set({ isLoading: false });
+        notification.success({
+          message: "Thành công",
+          description: res.data?.message || "Đã công khai vòng thi",
+        });
         return { success: true, data: res.data };
       } else {
         set({ error: res, isLoading: false });
@@ -147,6 +149,11 @@ const useRegistrationRound = create((set, get) => ({
       }
     } catch (error) {
       console.error("Update Publish Round Error:", error);
+      notification.error({
+        message: "Lỗi",
+        description:
+          error?.response?.data?.Error || "Không thể công khai vòng thi",
+      });
       set({ error: error, isLoading: false });
     }
   },
@@ -266,8 +273,6 @@ const useRegistrationRound = create((set, get) => ({
       const res = await getRegistrationRound(roundId, 1, 1000);
 
       if (res && (res.status === 200 || res.status === 201)) {
-        console.log("All fish data response:", res.data);
-
         let allRegistrations = [];
 
         // Xử lý các dạng response khác nhau

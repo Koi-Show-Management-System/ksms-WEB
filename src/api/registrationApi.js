@@ -40,8 +40,6 @@ const getRegistration = (
     params.RegistrationNumber = registrationNumber;
   }
 
-  console.log("Request params:", params);
-
   return axiosClient.get(
     "/registration/get-paging-registration-for-current-account",
     { params }

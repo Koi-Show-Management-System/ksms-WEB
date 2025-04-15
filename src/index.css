@@ -133,3 +133,96 @@
     outline-offset: 2px !important;
   }
 }
+
+/* Responsive styles for KoiShow tabs */
+.koishow-tabs .ant-tabs-nav .ant-tabs-tab {
+  padding: 8px 12px;
+  margin: 0 4px;
+  font-size: 14px;
+}
+
+@media (max-width: 768px) {
+  .koishow-tabs .ant-tabs-nav .ant-tabs-tab {
+    padding: 6px 8px;
+    margin: 0 2px;
+    font-size: 13px;
+  }
+
+  .koishow-tabs .ant-tabs-nav {
+    padding-bottom: 8px;
+  }
+
+  .koishow-tabs .ant-tabs-content-holder {
+    padding-top: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .koishow-tabs .ant-tabs-nav .ant-tabs-tab {
+    padding: 4px 6px;
+    font-size: 12px;
+  }
+
+  .koishow-tabs .ant-tabs-nav-list {
+    overflow-x: auto;
+    scrollbar-width: none; /* Firefox */
+  }
+
+  .koishow-tabs .ant-tabs-nav-list::-webkit-scrollbar {
+    display: none; /* Chrome, Safari, Edge */
+  }
+}
+
+/* Modal responsive styles */
+@media (max-width: 768px) {
+  .ticket-modal .ant-modal-content {
+    padding: 12px;
+  }
+
+  .ticket-modal .ant-modal-body {
+    padding: 12px 8px;
+  }
+
+  .ticket-modal .ant-modal-header {
+    padding: 12px 8px;
+  }
+}
+
+/* Custom styles for Image component in KoiShowDetail */
+@media (min-width: 768px) and (max-width: 1024px) {
+  .ant-image {
+    display: block;
+    text-align: center;
+  }
+
+  .ant-image-img {
+    max-width: 100% !important;
+    height: auto !important;
+    object-fit: contain;
+  }
+
+  .ant-modal {
+    width: 95% !important;
+    max-width: 700px;
+  }
+
+  .ant-modal .ant-modal-body {
+    padding: 16px;
+  }
+
+  .ant-modal .ant-modal-body .ant-image {
+    margin-bottom: 16px;
+  }
+}
+
+/* Tablet-specific image preview styles */
+@media (min-width: 768px) {
+  .ant-image-preview-img {
+    max-width: 90vw;
+    max-height: 80vh;
+  }
+
+  .ant-image-preview-operations {
+    background: rgba(0, 0, 0, 0.7);
+  }
+}
