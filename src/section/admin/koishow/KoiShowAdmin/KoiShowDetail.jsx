@@ -41,6 +41,7 @@ import Tank from "./Tank";
 import Ticket from "./Ticket";
 import RoundResult from "./RoundResult";
 import StatusManager from "./StatusManager";
+import Cookies from "js-cookie";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -51,6 +52,10 @@ function KoiShowDetail() {
   const { koiShowDetail, isLoading, fetchKoiShowDetail, updateKoiShow } =
     useKoiShow();
   const [form] = Form.useForm();
+
+  // Lấy role từ cookies
+  const userRole = Cookies.get("__role");
+  const isStaff = userRole === "Staff";
 
   const [showAll, setShowAll] = useState(false);
   const [showTicketForm, setShowTicketForm] = useState(false);
@@ -459,7 +464,7 @@ function KoiShowDetail() {
                 <h1 className="text-xl md:text-2xl font-semibold">
                   {koiShowDetail.data.name}
                 </h1>
-                {!isEditDisabled && (
+                {!isEditDisabled && !isStaff && (
                   <div
                     onClick={openEditModal}
                     className="text-blue-500 hover:text-blue-700 cursor-pointer"
@@ -477,11 +482,11 @@ function KoiShowDetail() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 my-4">
                   <div className="lg:col-span-2">
                     <div className="mb-4">
-                      <div className="flex justify-center md:justify-start mb-4">
+                      <div className="flex justify-center lg:justify-start mb-6">
                         <Image
                           src={koiShowDetail.data.imgUrl || koiFishImage}
                           alt="Cá Koi"
-                          className="w-full max-w-[500px] md:max-w-[780px] h-[280px] md:h-[360px] object-cover rounded-lg shadow-md"
+                          className="w-full h-[280px] sm:h-[320px] md:h-[380px] lg:h-[420px] xl:h-[480px] object-cover rounded-lg shadow-md"
                           preview={{
                             mask: (
                               <div className="flex items-center justify-center">
@@ -507,10 +512,10 @@ function KoiShowDetail() {
                                   </span>
                                 ),
                                 children: (
-                                  <div className="space-y-2 text-sm md:text-base">
+                                  <div className="space-y-2 text-sm md:text-sm">
                                     <div className="flex flex-col md:flex-row md:justify-between">
                                       <span className="font-medium">
-                                        Bắt đầu:
+                                        Thời gian bắt đầu:
                                       </span>
                                       <span>
                                         {new Date(
@@ -523,7 +528,7 @@ function KoiShowDetail() {
                                     </div>
                                     <div className="flex flex-col md:flex-row md:justify-between">
                                       <span className="font-medium">
-                                        Kết thúc:
+                                        Thời gian kết thúc:
                                       </span>
                                       <span>
                                         {new Date(
@@ -563,7 +568,7 @@ function KoiShowDetail() {
                                 key: "2",
                                 label: <span className="font-medium">Vé</span>,
                                 children: (
-                                  <div className="space-y-2 text-sm md:text-base">
+                                  <div className="space-y-2 text-sm md:text-sm">
                                     {koiShowDetail.data.ticketTypes.length >
                                     0 ? (
                                       koiShowDetail.data.ticketTypes.map(
@@ -597,7 +602,7 @@ function KoiShowDetail() {
                                     )}
                                   </div>
                                 ),
-                                extra: !isEditDisabled && (
+                                extra: !isEditDisabled && !isStaff && (
                                   <InfoCircleOutlined
                                     style={{
                                       fontSize: "16px",
@@ -722,7 +727,7 @@ function KoiShowDetail() {
                       <StatusManager
                         showId={id}
                         showStatuses={koiShowDetail.data.showStatuses}
-                        disabled={isEditDisabled}
+                        disabled={isStaff || isEditDisabled}
                       />
                     </div>
                   </div>
@@ -848,7 +853,7 @@ function KoiShowDetail() {
         title={
           <div className="flex items-center justify-between py-4">
             <span className="text-lg md:text-xl font-semibold">Quản lý vé</span>
-            {!isEditDisabled && (
+            {!isEditDisabled && !isStaff && (
               <PlusOutlined
                 className="text-blue-500 text-xl cursor-pointer hover:text-blue-700"
                 onClick={() => {
@@ -878,7 +883,7 @@ function KoiShowDetail() {
           </div>
         )}
 
-        {showTicketForm && !editingTicket && !isEditDisabled && (
+        {showTicketForm && !editingTicket && !isEditDisabled && !isStaff && (
           <div className="mb-4 p-3 md:p-4 bg-gray-50 rounded-lg border border-gray-200">
             <h3 className="text-base md:text-lg font-medium mb-3 md:mb-4 border-b pb-2">
               Tạo vé mới
@@ -1038,7 +1043,7 @@ function KoiShowDetail() {
                         }).format(ticket.price)}
                       </div>
                       <div className="flex justify-end mt-2 space-x-2">
-                        {!isEditDisabled && (
+                        {!isEditDisabled && !isStaff && (
                           <>
                             <EditOutlined
                               className="text-blue-500 cursor-pointer hover:text-blue-700 mr-3"

@@ -287,7 +287,7 @@ function RoundResult({ showId }) {
                           {currentKoi.registrationNumber}
                         </Typography.Paragraph>
                         <Typography.Paragraph>
-                          <strong>Tên người đăng ký:</strong>{" "}
+                          <strong>Chủ sở hữu:</strong>{" "}
                           {currentKoi.registerName}
                         </Typography.Paragraph>
                         <Typography.Paragraph>

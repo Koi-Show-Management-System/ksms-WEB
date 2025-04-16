@@ -20,6 +20,7 @@ import useKoiShow from "../../hooks/useKoiShow";
 import Rules from "../staff/Rules";
 import ScanQrByReferee from "./ScanQrByReferee";
 import Cookies from "js-cookie";
+import StatusManager from "../admin/koishow/KoiShowAdmin/StatusManager";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -117,33 +118,41 @@ function KoiShowDetail() {
                             key: "1",
                             label: "Lịch Trình Sự Kiện",
                             children: (
-                              <div className="space-y-2">
-                                <div className="flex justify-between">
+                              <div className="space-y-2 text-sm md:text-sm">
+                                <div className="flex flex-col md:flex-row md:justify-between">
+                                  <span className="font-medium">
+                                    Thời gian bắt đầu:
+                                  </span>
                                   <span>
                                     {new Date(
                                       koiShowDetail.data.startDate
                                     ).toLocaleDateString("vi-VN")}{" "}
-                                    {formatTime(koiShowDetail.data.startDate)} :
-                                    Thời gian bắt đầu
+                                    {formatTime(koiShowDetail.data.startDate)}
                                   </span>
                                 </div>
-                                <div className="flex justify-between">
+                                <div className="flex flex-col md:flex-row md:justify-between">
+                                  <span className="font-medium">
+                                    Thời gian kết thúc:
+                                  </span>
                                   <span>
                                     {new Date(
                                       koiShowDetail.data.endDate
                                     ).toLocaleDateString("vi-VN")}{" "}
-                                    {formatTime(koiShowDetail.data.endDate)} :
-                                    Thời gian kết thúc
+                                    {formatTime(koiShowDetail.data.endDate)}
                                   </span>
                                 </div>
-                                <div>
-                                  Tham gia: {koiShowDetail.data.minParticipants}{" "}
-                                  - {koiShowDetail.data.maxParticipants} người
-                                </div>
-                                <div className="flex justify-between">
+                                <div className="flex flex-col md:flex-row md:justify-between">
+                                  <span className="font-medium">
+                                    Số người tham gia:
+                                  </span>
                                   <span>
-                                    Địa điểm: {koiShowDetail.data.location}
+                                    {koiShowDetail.data.minParticipants} -{" "}
+                                    {koiShowDetail.data.maxParticipants} người
                                   </span>
+                                </div>
+                                <div className="flex flex-col md:flex-row md:justify-between">
+                                  <span className="font-medium">Địa điểm:</span>
+                                  <span>{koiShowDetail.data.location}</span>
                                 </div>
                               </div>
                             ),
@@ -160,21 +169,33 @@ function KoiShowDetail() {
                             key: "2",
                             label: "Vé",
                             children: (
-                              <div className="space-y-2">
-                                {koiShowDetail.data.ticketTypes.map(
-                                  (ticket) => (
-                                    <div key={ticket.id}>
-                                      <div>
-                                        {ticket.name} -{" "}
-                                        {new Intl.NumberFormat("vi-VN", {
-                                          style: "currency",
-                                          currency: "VND",
-                                        }).format(ticket.price)}{" "}
-                                        || Số lượng : {ticket.availableQuantity}{" "}
-                                        vé
+                              <div className="space-y-2 text-sm md:text-sm">
+                                {koiShowDetail.data.ticketTypes.length > 0 ? (
+                                  koiShowDetail.data.ticketTypes.map(
+                                    (ticket) => (
+                                      <div
+                                        key={ticket.id}
+                                        className="flex flex-col md:flex-row md:justify-between"
+                                      >
+                                        <span>{ticket.name}</span>
+                                        <div className="flex justify-between md:block">
+                                          <span className="text-blue-600">
+                                            {new Intl.NumberFormat("vi-VN", {
+                                              style: "currency",
+                                              currency: "VND",
+                                            }).format(ticket.price)}
+                                          </span>
+                                          <span className="ml-2 text-gray-500">
+                                            ({ticket.availableQuantity} vé)
+                                          </span>
+                                        </div>
                                       </div>
-                                    </div>
+                                    )
                                   )
+                                ) : (
+                                  <div className="text-gray-500">
+                                    Chưa có thông tin vé
+                                  </div>
                                 )}
                               </div>
                             ),
@@ -271,73 +292,11 @@ function KoiShowDetail() {
                   </div>
                 </div>
                 <div>
-                  <Card title="Trạng Thái" className="mb-4">
-                    <Timeline
-                      items={koiShowDetail.data.showStatuses
-                        .slice() // Create a copy to avoid mutating the original array
-                        .sort((a, b) => {
-                          // Define the order of status display
-                          const statusOrder = {
-                            RegistrationOpen: 1,
-                            CheckIn: 2,
-                            Preliminary: 3,
-                            Evaluation: 4,
-                            Final: 5,
-                            Exhibition: 6,
-                            PublicResult: 7,
-                            Award: 8,
-                            Finished: 9,
-                          };
-                          return (
-                            statusOrder[a.statusName] -
-                            statusOrder[b.statusName]
-                          );
-                        })
-                        .map((status) => {
-                          const { color } = statusMapping[
-                            status.statusName
-                          ] || {
-                            color: "gray",
-                          };
-
-                          // Check if dates are the same
-                          const sameDate =
-                            dayjs(status.startDate).format("YYYY-MM-DD") ===
-                            dayjs(status.endDate).format("YYYY-MM-DD");
-
-                          return {
-                            key: status.id,
-                            color: color,
-                            children: (
-                              <div className={`text-${color}-500 font-medium`}>
-                                <div
-                                  className={`text-sm ${status.isActive ? "text-blue-700 font-bold" : "text-gray-400"} mb-1`}
-                                >
-                                  {status.description}
-                                </div>
-
-                                {sameDate ? (
-                                  // If same date, show one date with start and end times
-                                  <div className="text-xs text-gray-500">
-                                    {formatDate(status.startDate)},{" "}
-                                    {formatTime(status.startDate)} -{" "}
-                                    {formatTime(status.endDate)}
-                                  </div>
-                                ) : (
-                                  // If different dates, show full range
-                                  <div className="text-xs text-gray-500">
-                                    {formatDate(status.startDate)}{" "}
-                                    {formatTime(status.startDate)} -{" "}
-                                    {formatDate(status.endDate)}{" "}
-                                    {formatTime(status.endDate)}
-                                  </div>
-                                )}
-                              </div>
-                            ),
-                          };
-                        })}
-                    />
-                  </Card>
+                  <StatusManager
+                    showId={id}
+                    showStatuses={koiShowDetail.data.showStatuses}
+                    disabled={true}
+                  />
                 </div>
               </div>
             ),

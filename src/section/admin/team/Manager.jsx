@@ -10,6 +10,7 @@ import {
   notification,
   Upload,
   message,
+  Empty,
 } from "antd";
 import {
   EditOutlined,
@@ -256,6 +257,15 @@ function Manager({ accounts = [], isLoading, role }) {
             pageSize: 10,
             showSizeChanger: true,
             showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+          }}
+          locale={{
+            emptyText: (
+              <Empty
+                description="Không có dữ liệu"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "24px 0" }}
+              />
+            ),
           }}
         />
       )}

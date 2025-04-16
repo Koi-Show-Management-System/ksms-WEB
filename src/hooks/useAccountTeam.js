@@ -106,27 +106,42 @@ const useAccountTeam = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      // Tạo FormData object thay vì JSON
-      const formData = new FormData();
+      // Kiểm tra xem accountData đã là FormData chưa
+      const formData =
+        accountData instanceof FormData ? accountData : new FormData();
 
-      // Thêm các trường vào FormData với đúng tên trường
-      formData.append("Email", accountData.email);
-      formData.append(
-        "HashedPassword",
-        accountData.hashedPassword || accountData.password
-      );
-      formData.append("FullName", accountData.fullName || accountData.name);
-      formData.append(
-        "Username",
-        accountData.userName || accountData.email.split("@")[0]
-      );
-      formData.append("Phone", accountData.phone);
-      formData.append("Role", accountData.role);
+      // Nếu accountData không phải FormData, thì tạo mới
+      if (!(accountData instanceof FormData)) {
+        // Thêm các trường vào FormData với đúng tên trường
+        formData.append("Email", accountData.email);
+        formData.append(
+          "FullName",
+          accountData.fullName || accountData.name || ""
+        );
+        formData.append(
+          "Username",
+          accountData.userName ||
+            (accountData.email && accountData.email.split("@")[0]) ||
+            ""
+        );
+        formData.append("Phone", accountData.phone || "");
+        formData.append("Role", accountData.role || "");
 
-      // Nếu có AvatarUrl, thêm vào (có thể để trống)
-      formData.append("AvatarUrl", "");
+        // Nếu có AvatarUrl, thêm vào (có thể để trống)
+        if (accountData.AvatarUrl) {
+          formData.append("AvatarUrl", accountData.AvatarUrl);
+        } else {
+          formData.append("AvatarUrl", "");
+        }
+      }
 
-      // Gọi API với FormData thay vì JSON
+      // Log dữ liệu gửi đi để debug
+      console.log("Dữ liệu gửi lên API (trong useAccountTeam):");
+      for (let pair of formData.entries()) {
+        console.log(pair[0], pair[1]);
+      }
+
+      // Gọi API với FormData
       const res = await createAccount(formData);
 
       if (res && res.status === 201) {

@@ -1591,7 +1591,7 @@ function CompetitionRound({ showId }) {
                     currentRegistration.registration?.id?.substring(0, 8) ||
                     "—"}
                 </Descriptions.Item>
-                <Descriptions.Item label="Tên Người Đăng Ký">
+                <Descriptions.Item label="Chủ sở hữu">
                   {currentRegistration.registration?.registerName || "—"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Tên Cá Koi">

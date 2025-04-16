@@ -1,38 +1,45 @@
-import { Button, Form, Input, Modal, Select, notification } from "antd";
-import React from "react";
+import { Button, Form, Input, Modal, Select, notification, Upload } from "antd";
+import React, { useState } from "react";
+import { PlusOutlined } from "@ant-design/icons";
 import useAccountTeam from "../../../hooks/useAccountTeam";
 
 function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }) {
   const [form] = Form.useForm();
   const { createAccount, isLoading, fetchAccountTeam } = useAccountTeam();
+  const [fileList, setFileList] = useState([]);
+  const [previewImage, setPreviewImage] = useState("");
 
   const handleSubmit = async (values) => {
-    const accountData = {
-      email: values.email,
-      password: values.password,
-      fullName: values.fullName,
-      userName: values.userName,
-      phone: values.phone,
-      role: values.role,
-    };
+    const formData = new FormData();
+    formData.append("Email", values.email);
+    formData.append("FullName", values.fullName);
+    formData.append("Username", values.userName);
+    formData.append("Phone", values.phone);
+    formData.append("Role", values.role);
 
-    const result = await createAccount(accountData);
-    fetchAccountTeam(1, 10, role);
+    if (fileList.length > 0 && fileList[0].originFileObj) {
+      formData.append("AvatarUrl", fileList[0].originFileObj);
+    }
 
-    if (result.success) {
-      notification.success({
-        message: "Thành công",
-        description: "Tài khoản được tạo thành công",
-        placement: "topRight",
-      });
-      form.resetFields();
-      onCancel();
+    console.log("🔥 Dữ liệu gửi lên:");
+    for (let pair of formData.entries()) {
+      console.log(pair[0], pair[1]);
+    }
+
+    await createAccount(formData);
+    fetchAccountTeam(1, 10);
+    form.resetFields();
+    setFileList([]);
+    setPreviewImage("");
+    onCancel();
+  };
+
+  const handleUploadChange = ({ fileList }) => {
+    setFileList(fileList);
+    if (fileList.length > 0) {
+      setPreviewImage(URL.createObjectURL(fileList[0].originFileObj));
     } else {
-      notification.error({
-        message: "Lỗi",
-        description: result.error || "Không thể tạo tài khoản",
-        placement: "topRight",
-      });
+      setPreviewImage("");
     }
   };
 
@@ -44,6 +51,8 @@ function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }
       cancelText="Đóng"
       onCancel={() => {
         form.resetFields();
+        setFileList([]);
+        setPreviewImage("");
         onCancel();
       }}
       onOk={() => form.submit()}
@@ -83,14 +92,6 @@ function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }
         </Form.Item>
 
         <Form.Item
-          label="Mật khẩu"
-          name="password"
-          rules={[{ required: true, message: "Vui lòng nhập mật khẩu!" }]}
-        >
-          <Input.Password />
-        </Form.Item>
-
-        <Form.Item
           label="Số điện thoại"
           name="phone"
           rules={[{ required: true, message: "Vui lòng nhập số điện thoại!" }]}
@@ -104,10 +105,40 @@ function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }
           rules={[{ required: true, message: "Vui lòng chọn vai trò!" }]}
         >
           <Select placeholder="Chọn vai trò">
-            <Select.Option value="Manager">Manager</Select.Option>
-            <Select.Option value="Staff">Staff</Select.Option>
-            <Select.Option value="Referee">Referee</Select.Option>
+            <Select.Option value="Manager">Quản lý </Select.Option>
+            <Select.Option value="Staff">Nhân viên</Select.Option>
+            <Select.Option value="Referee">Trọng tài</Select.Option>
           </Select>
+        </Form.Item>
+
+        <Form.Item label="Ảnh đại diện">
+          <div className="flex items-center">
+            <div>
+              <Upload
+                listType="picture-card"
+                fileList={fileList}
+                beforeUpload={() => false}
+                onChange={handleUploadChange}
+              >
+                {fileList.length > 0 ? null : <PlusOutlined />}
+              </Upload>
+            </div>
+
+            <div>
+              {previewImage ? (
+                <img
+                  src={previewImage}
+                  alt="avatar"
+                  style={{
+                    width: "100px",
+                    height: "100px",
+                    objectFit: "cover",
+                    borderRadius: "4px",
+                  }}
+                />
+              ) : null}
+            </div>
+          </div>
         </Form.Item>
       </Form>
     </Modal>

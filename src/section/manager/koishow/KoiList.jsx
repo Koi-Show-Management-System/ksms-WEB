@@ -195,7 +195,7 @@ function KoiList({ showId }) {
       render: (_, __, index) => index + 1 + (currentPage - 1) * pageSize,
     },
     {
-      title: "Tên người đăng ký",
+      title: "Chủ sở hữu",
       dataIndex: "registerName",
       key: "registerName",
     },
@@ -381,7 +381,7 @@ function KoiList({ showId }) {
                   <Row gutter={[16, 16]}>
                     <Col span={12}>
                       <p>
-                        <strong>Tên Người Đăng Ký:</strong>{" "}
+                        <strong>Chủ sở hữu:</strong>{" "}
                         {currentKoi.registerName}
                       </p>
                       <p>
