@@ -85,7 +85,7 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
     TicketCheckIn: {
       label: "Vé vào",
       description: "Giai đoạn check-in vé",
-      color: "cyan",
+      color: "red",
     },
     Preliminary: {
       label: "Vòng Sơ Khảo",
@@ -112,7 +112,7 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
       description: "Công bố kết quả",
       color: "yellow",
     },
-    Award: { label: "Trao giải", description: "Lễ trao giải", color: "yellow" },
+    Award: { label: "Trao giải", description: "Lễ trao giải", color: "black" },
     Finished: {
       label: "Kết thúc sự kiện",
       description: "Kết thúc sự kiện",
@@ -127,7 +127,7 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
 
   // Hàm format date
   const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
-  const formatTime = (date) => dayjs(date).format("HH:mm");
+  const formatTime = (date) => dayjs(date).format("hh:mm A");
 
   // Khởi tạo trạng thái từ dữ liệu triển lãm
   useEffect(() => {

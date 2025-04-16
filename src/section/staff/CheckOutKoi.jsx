@@ -80,7 +80,7 @@ function CheckOutKoi() {
           notification.error({
             message: "Lỗi",
             description:
-              "Không tìm thấy thông tin cá với Mã đặng ký này trong kết quả",
+              "Không tìm thấy thông tin cá với Mã đăng ký này trong kết quả",
           });
           setKoiData(null);
         }
@@ -294,13 +294,13 @@ function CheckOutKoi() {
           <Col span={18}>
             <Form.Item
               name="registrationNumber"
-              label="Mã đặng ký"
+              label="Mã đăng ký"
               rules={[
                 { required: true, message: "Vui lòng nhập Mã đặng ký cá" },
               ]}
             >
               <Input
-                placeholder="Nhập Mã đặng ký cá (ví dụ: VKS25-MI001)"
+                placeholder="Nhập Mã đăng ký cá (ví dụ: VKS25-MI001)"
                 size="large"
                 prefix={<SearchOutlined />}
                 style={{ borderRadius: "6px" }}
@@ -372,7 +372,7 @@ function CheckOutKoi() {
                 style={{ marginBottom: 20 }}
                 labelStyle={{ fontWeight: "bold", width: "150px" }}
               >
-                <Descriptions.Item label="Mã đặng ký">
+                <Descriptions.Item label="Mã đăng ký">
                   {koiData.registrationNumber}
                 </Descriptions.Item>
                 <Descriptions.Item label="Giống">

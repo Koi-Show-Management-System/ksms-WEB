@@ -891,7 +891,8 @@ function Registration({ showId, statusShow }) {
               <Button key="cancel" onClick={handleCancel}>
                 Đóng
               </Button>
-              {statusShow === "cancelled" &&
+              {(statusShow === "cancelled" ||
+                currentKoi?.status === "rejected") &&
                 currentKoi?.status !== "Refunded" && (
                   <Button
                     key="refund"
@@ -922,8 +923,7 @@ function Registration({ showId, statusShow }) {
                     <Row gutter={[16, 16]}>
                       <Col span={12}>
                         <p>
-                          <strong>Chủ sở hữu:</strong>{" "}
-                          {currentKoi.registerName}
+                          <strong>Chủ sở hữu:</strong> {currentKoi.registerName}
                         </p>
                         <p>
                           <strong>Tên Cá Koi:</strong>{" "}

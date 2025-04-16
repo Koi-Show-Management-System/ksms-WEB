@@ -581,7 +581,7 @@ function Category({ showId }) {
                               header={
                                 <div className="flex justify-between items-center">
                                   <span>
-                                    Vòng Nhỏ {round.roundOrder} -{" "}
+                                    Vòng {round.roundOrder} -{" "}
                                     {group.translatedType}
                                   </span>
                                 </div>

@@ -48,241 +48,11 @@ import {
   SyncOutlined,
   CommentOutlined,
   SendOutlined,
+  TeamOutlined,
 } from "@ant-design/icons";
 import useAuth from "../../hooks/useAuth";
+import ChatComponent from "../../components/ChatComponent";
 const { Title, Text } = Typography;
-
-// Custom Chat UI Component
-const CustomChatUI = ({ channel, chatClient }) => {
-  const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
-  const messagesEndRef = React.useRef(null);
-  const userId = Cookies.get("__id");
-  // Sử dụng tên "Host" cho người phát sóng
-  const userName = "Host";
-
-  const { fetchUserInfo, infoUser } = useAuth();
-  useEffect(() => {
-    if (!channel) return;
-
-    // Lấy userId từ cookie và gọi fetchUserInfo với userId
-    const userId = Cookies.get("__id");
-    if (userId) {
-      fetchUserInfo(userId);
-      console.log("Đã gọi fetchUserInfo với userId:", userId);
-    }
-
-    // Load existing messages
-    const loadMessages = async () => {
-      try {
-        const response = await channel.query({ messages: { limit: 50 } });
-        if (response.messages) {
-          setMessages(response.messages);
-        }
-      } catch (error) {
-        console.error("Error loading messages:", error);
-      }
-    };
-
-    loadMessages();
-
-    // Listen for new messages
-    const handleNewMessage = (event) => {
-      console.log("Tin nhắn mới:", event.message);
-      console.log("Avatar trong tin nhắn:", event.message.user?.image);
-      setMessages((prevMessages) => [...prevMessages, event.message]);
-    };
-
-    channel.on("message.new", handleNewMessage);
-
-    // Cleanup
-    return () => {
-      channel.off("message.new", handleNewMessage);
-    };
-  }, [channel]);
-
-  // Thêm useEffect để log khi infoUser thay đổi
-  useEffect(() => {
-    console.log("infoUser hiện tại:", infoUser);
-  }, [infoUser]);
-
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
-  const sendMessage = async () => {
-    if (!newMessage.trim() || !channel) return;
-
-    try {
-      await channel.sendMessage({
-        text: newMessage,
-      });
-      setNewMessage("");
-    } catch (error) {
-      console.error("Error sending message:", error);
-      message.error("Không thể gửi tin nhắn");
-    }
-  };
-
-  const handleKeyDown = (e) => {
-    if (e.key === "Enter") {
-      sendMessage();
-    }
-  };
-
-  // Format timestamp
-  const formatTime = (timestamp) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString("vi-VN", {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
-  return (
-    <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-      {/* Messages area */}
-      <div
-        style={{
-          flexGrow: 1,
-          overflowY: "auto",
-          padding: "16px",
-          backgroundColor: "#f9f9f9",
-        }}
-      >
-        {messages.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "20px",
-              color: "#999",
-              marginTop: "30%",
-            }}
-          >
-            <CommentOutlined style={{ fontSize: "32px" }} />
-            <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
-          </div>
-        ) : (
-          messages.map((msg) => {
-            const isCurrentUser = msg.user?.id === userId;
-            return (
-              <div
-                key={msg.id}
-                style={{
-                  marginBottom: "16px",
-                  display: "flex",
-                  flexDirection: isCurrentUser ? "row-reverse" : "row",
-                  alignItems: "flex-end",
-                }}
-                className="message-item"
-              >
-                <Avatar
-                  src={
-                    msg.user?.image ||
-                    `https://getstream.io/random_svg/?name=${encodeURIComponent(msg.user?.name || "User")}`
-                  }
-                  style={{
-                    marginRight: isCurrentUser ? 0 : "12px",
-                    marginLeft: isCurrentUser ? "12px" : 0,
-                    flexShrink: 0,
-                  }}
-                  size={36}
-                />
-                <div style={{ maxWidth: "70%" }}>
-                  <div
-                    style={{
-                      fontWeight: "bold",
-                      fontSize: "13px",
-                      marginBottom: "4px",
-                      color: "#555",
-                      textAlign: isCurrentUser ? "right" : "left",
-                      paddingLeft: isCurrentUser ? 0 : "8px",
-                      paddingRight: isCurrentUser ? "8px" : 0,
-                    }}
-                  >
-                    {isCurrentUser ? userName : msg.user?.name || "Người dùng"}
-                  </div>
-                  <div
-                    style={{
-                      display: "flex",
-                      flexDirection: "column",
-                      alignItems: isCurrentUser ? "flex-end" : "flex-start",
-                    }}
-                  >
-                    <div
-                      style={{
-                        backgroundColor: isCurrentUser ? "#1677ff" : "#f0f0f0",
-                        color: isCurrentUser ? "white" : "#333",
-                        borderRadius: isCurrentUser
-                          ? "18px 4px 18px 18px"
-                          : "4px 18px 18px 18px",
-                        padding: "10px 14px",
-                        display: "inline-block",
-                        maxWidth: "100%",
-                        minWidth: "40px",
-                        wordBreak: "normal",
-                        wordWrap: "break-word",
-                        whiteSpace: "pre-wrap",
-                        boxShadow: "0 1px 2px rgba(0,0,0,0.1)",
-                        position: "relative",
-                      }}
-                    >
-                      {msg.text}
-                    </div>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        marginTop: "4px",
-                        color: "#999",
-                        paddingLeft: isCurrentUser ? 0 : "8px",
-                        paddingRight: isCurrentUser ? "8px" : 0,
-                        textAlign: isCurrentUser ? "right" : "left",
-                      }}
-                    >
-                      {formatTime(msg.created_at)}
-                    </div>
-                  </div>
-                </div>
-              </div>
-            );
-          })
-        )}
-        <div ref={messagesEndRef} />
-      </div>
-
-      {/* Input area */}
-      <div
-        style={{
-          borderTop: "1px solid #e8e8e8",
-          padding: "12px 16px",
-          backgroundColor: "white",
-          boxShadow: "0 -1px 3px rgba(0,0,0,0.05)",
-        }}
-      >
-        <Input.Group compact style={{ display: "flex" }}>
-          <Input
-            style={{ flex: 1, borderRadius: "20px 0 0 20px" }}
-            placeholder="Nhập tin nhắn..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyDown={handleKeyDown}
-            size="large"
-          />
-          <Button
-            type="primary"
-            icon={<SendOutlined />}
-            onClick={sendMessage}
-            style={{ borderRadius: "0 20px 20px 0" }}
-            size="large"
-          />
-        </Input.Group>
-      </div>
-    </div>
-  );
-};
 
 function LiveStream({ showId }) {
   const koiShowId = showId;
@@ -655,53 +425,96 @@ function LiveStream({ showId }) {
   const UserVideoPreview = () => {
     const { useLocalParticipant } = useCallStateHooks();
     const localParticipant = useLocalParticipant();
+    const { useCameraState, useMicrophoneState, useIsCallLive } =
+      useCallStateHooks();
+
+    const { camera, isEnabled: isCamEnabled } = useCameraState();
+    const { microphone, isEnabled: isMicEnabled } = useMicrophoneState();
+    const isLive = useIsCallLive();
 
     if (!localParticipant) {
       return (
         <Flex
           align="center"
           justify="center"
-          style={{
-            width: "100%",
-            height: "300px",
-            background: "#f0f2f5",
-            borderRadius: "8px",
-          }}
+          className="w-full h-full bg-gray-100 rounded-xl"
         >
           <Space direction="vertical" align="center">
-            <Avatar size={64} icon={<UserOutlined />} />
+            <Avatar size={80} icon={<UserOutlined />} />
             <Text>Không tìm thấy camera hoặc người dùng cục bộ</Text>
           </Space>
         </Flex>
       );
     }
 
+    const handleCameraToggle = async () => {
+      try {
+        await camera.toggle();
+      } catch (cameraError) {
+        console.error("Lỗi khi bật/tắt camera:", cameraError);
+        message.error(`Lỗi camera: ${cameraError.message}`);
+      }
+    };
+
+    const handleMicToggle = async () => {
+      try {
+        await microphone.toggle();
+      } catch (micError) {
+        console.error("Lỗi khi bật/tắt microphone:", micError);
+        message.error(`Lỗi microphone: ${micError.message}`);
+      }
+    };
+
     return (
-      <div
-        style={{
-          width: "100%",
-          height: "300px",
-          position: "relative",
-          borderRadius: "12px",
-          overflow: "hidden",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
-        }}
-      >
+      <div className="w-full h-full relative rounded-none overflow-hidden bg-black">
         <ParticipantView participant={localParticipant} />
-        <div
-          style={{
-            position: "absolute",
-            top: "10px",
-            left: "10px",
-            padding: "4px 8px",
-            background: "rgba(0,0,0,0.6)",
-            borderRadius: "4px",
-          }}
-        >
-          <Text style={{ color: "white", fontSize: "12px" }}>
-            <UserOutlined /> Bạn (Host)
+
+        <div className="absolute top-4 left-4 py-1.5 px-3 bg-black/60 rounded-full backdrop-blur-sm shadow-lg">
+          <Text className="text-white text-sm font-medium">
+            <UserOutlined className="mr-1.5" /> Bạn (Host)
           </Text>
         </div>
+
+        {/* Thanh điều khiển ở góc dưới phải */}
+        {/* <div className="absolute bottom-4 right-4 flex gap-2.5 p-2 bg-black/50 rounded-full backdrop-blur-md shadow-lg">
+          <Button
+            type={isCamEnabled ? "primary" : "default"}
+            shape="circle"
+            icon={
+              <VideoCameraOutlined
+                className={isCamEnabled ? "text-white" : "text-red-500"}
+              />
+            }
+            onClick={handleCameraToggle}
+            className={`${
+              isCamEnabled
+                ? "bg-blue-500 border-blue-500"
+                : "bg-red-50 border-red-500"
+            } shadow-md`}
+          />
+
+          <Button
+            type={isMicEnabled ? "primary" : "default"}
+            shape="circle"
+            icon={
+              <AudioOutlined
+                className={isMicEnabled ? "text-white" : "text-red-500"}
+              />
+            }
+            onClick={handleMicToggle}
+            className={`${
+              isMicEnabled
+                ? "bg-blue-500 border-blue-500"
+                : "bg-red-50 border-red-500"
+            } shadow-md`}
+          />
+
+          {isLive ? (
+            <Tag color="red" className="m-0 rounded-full py-0 px-2">
+              LIVE
+            </Tag>
+          ) : null}
+        </div> */}
       </div>
     );
   };
@@ -876,116 +689,6 @@ function LiveStream({ showId }) {
     console.log("Camera có bật không:", isCamEnabled);
     console.log("Micro có bật không:", isMicEnabled);
 
-    const handleCameraToggle = async () => {
-      try {
-        await camera.toggle();
-        console.log("Đã nhấn nút bật/tắt camera:", !isCamEnabled);
-      } catch (cameraError) {
-        console.error("Lỗi khi bật/tắt camera:", cameraError);
-
-        if (cameraError.name === "NotReadableError") {
-          message.error(
-            "Không thể truy cập camera! Camera có thể đang được sử dụng bởi ứng dụng khác."
-          );
-        } else if (cameraError.name === "NotAllowedError") {
-          message.error("Trình duyệt chưa được cấp quyền truy cập camera!");
-        } else {
-          message.error(`Lỗi camera: ${cameraError.message}`);
-        }
-      }
-    };
-
-    // Xử lý thay đổi camera
-    const handleCameraChange = async (deviceId) => {
-      try {
-        setSelectedCamera(deviceId);
-        if (camera && deviceId) {
-          // Nếu là camera giả định, không cần thay đổi thiết bị
-          if (deviceId === "current") {
-            message.info("Đang sử dụng camera hiện tại");
-            setCameraDropdownOpen(false);
-            return;
-          }
-
-          console.log("Đang chuyển sang camera:", deviceId);
-          console.log("Trạng thái camera hiện tại:", camera.state);
-          console.log(
-            "Các phương thức có sẵn:",
-            Object.getOwnPropertyNames(Object.getPrototypeOf(camera))
-          );
-
-          // Thử các phương thức khác nhau của GetStream Camera API
-          try {
-            // Phương pháp 1: Tắt camera hiện tại trước
-            if (camera.state.status === "enabled") {
-              await camera.disable();
-              await new Promise((resolve) => setTimeout(resolve, 300)); // Đợi một chút
-            }
-
-            // Phương pháp 2: Kích hoạt camera với deviceId cụ thể
-            await camera.enable(deviceId);
-
-            // Ghi log thiết bị đã chọn
-            console.log(
-              "Camera hiện tại sau khi thay đổi:",
-              camera.selectedDevice
-            );
-
-            // Lưu camera ưa thích
-            localStorage.setItem("preferredCameraId", deviceId);
-
-            message.success("Đã chuyển sang camera mới");
-          } catch (innerError) {
-            console.error("Lỗi khi thử phương pháp chính:", innerError);
-
-            // Phương pháp dự phòng: Thử sử dụng navigator.mediaDevices trực tiếp
-            try {
-              console.log("Thử phương pháp dự phòng...");
-
-              // Tắt camera hiện tại
-              await camera.disable();
-
-              // Tạo stream mới với deviceId cụ thể
-              const newStream = await navigator.mediaDevices.getUserMedia({
-                video: { deviceId: { exact: deviceId } },
-              });
-
-              // Thay thế stream hiện tại của call
-              if (
-                call.video &&
-                typeof call.video.replaceTracks === "function"
-              ) {
-                await call.video.replaceTracks(newStream.getVideoTracks()[0]);
-                message.success("Đã thay đổi camera (phương pháp dự phòng)");
-              } else {
-                // Nếu không có replaceTracks, thử lại từ đầu
-                await camera.enable();
-                message.info(
-                  "Đã bật lại camera, nhưng không thể chuyển đổi thiết bị"
-                );
-              }
-            } catch (fallbackError) {
-              console.error("Lỗi khi thử phương pháp dự phòng:", fallbackError);
-
-              // Đảm bảo camera được bật lại nếu có lỗi
-              if (camera.state.status !== "enabled") {
-                await camera.enable();
-              }
-
-              throw new Error(
-                "Không thể thay đổi camera. Vui lòng tải lại trang và thử lại."
-              );
-            }
-          }
-
-          setCameraDropdownOpen(false);
-        }
-      } catch (err) {
-        console.error("Lỗi khi chuyển camera:", err);
-        message.error(`Không thể chuyển camera: ${err.message}`);
-      }
-    };
-
     // Lấy livestreamId từ localStorage để sử dụng khi gọi API phát sóng
     const livestreamId = localStorage.getItem("currentLivestreamId");
 
@@ -1081,482 +784,325 @@ function LiveStream({ showId }) {
     };
 
     return (
-      <div
-        style={{
-          padding: "16px",
-          backgroundColor: "#f9f9f9",
-          borderRadius: "8px",
-          boxShadow: "0 2px 8px rgba(0,0,0,0.05)",
-        }}
-      >
-        <Row gutter={16} align="middle">
-          <Col span={8}>
-            <Flex align="center" gap="small">
-              <ClockCircleOutlined />
-              <Text strong>{formatDuration(duration)}</Text>
+      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-auto min-w-[300px] max-w-[600px] py-3 px-5 bg-black/80 rounded-xl backdrop-blur-md shadow-lg z-40">
+        {/* Thông tin thời gian và người xem */}
+        <div className="flex justify-between items-center">
+          <div className="flex items-center space-x-3">
+            {/* Đồng hồ thời gian */}
+            <div className="bg-white/10 py-1 px-2.5 rounded-full flex items-center gap-1.5">
+              <ClockCircleOutlined className="text-white" />
+              <Text strong className="text-white m-0">
+                {formatDuration(duration)}
+              </Text>
+            </div>
 
-              {isLive && (
-                <Tag color="red" style={{ marginLeft: "8px" }}>
-                  LIVE
-                </Tag>
-              )}
-            </Flex>
-          </Col>
+            {/* Tag LIVE */}
+            {isLive && (
+              <Tag color="red" className="m-0 rounded-full py-0 px-2">
+                LIVE
+              </Tag>
+            )}
 
-          <Col span={8}>
-            <Flex justify="center" gap="middle">
-              <Button
-                type={isCamEnabled ? "default" : "primary"}
-                shape="circle"
-                icon={<VideoCameraOutlined />}
-                onClick={handleCameraToggle}
-                size="large"
-                danger={!isCamEnabled}
-              />
+            {/* Số người xem */}
+            <div className="bg-white/10 py-1 px-2.5 rounded-full flex items-center gap-1.5">
+              <UserOutlined className="text-white" />
+              <Text strong className="text-white m-0">
+                {Math.max(0, participantCount - 1)} người xem
+              </Text>
+            </div>
+          </div>
 
-              <Button
-                type={isMicEnabled ? "default" : "primary"}
-                shape="circle"
-                icon={<AudioOutlined />}
-                onClick={() => {
-                  microphone.toggle();
-                  console.log("Đã nhấn nút bật/tắt micro:", !isMicEnabled);
-                }}
-                size="large"
-                danger={!isMicEnabled}
-              />
-
-              {/* Thêm nút chọn camera */}
-              <div style={{ position: "relative" }}>
-                <Button
-                  type="default"
-                  shape="circle"
-                  icon={<SettingOutlined />}
-                  onClick={() => setCameraDropdownOpen(!cameraDropdownOpen)}
-                  size="large"
+          {/* Các nút điều khiển */}
+          <div className="flex items-center gap-2">
+            {/* Nút camera */}
+            <Button
+              type="text"
+              shape="circle"
+              icon={
+                <VideoCameraOutlined
+                  className={isCamEnabled ? "text-white" : "text-red-500"}
                 />
+              }
+              onClick={() => camera.toggle()}
+              className="hover:bg-white/10"
+            />
 
-                {/* Dropdown cho danh sách camera */}
-                {cameraDropdownOpen && (
-                  <div
-                    style={{
-                      position: "absolute",
-                      top: "100%",
-                      left: "50%",
-                      transform: "translateX(-50%)",
-                      marginTop: "8px",
-                      background: "white",
-                      border: "none",
-                      borderRadius: "12px",
-                      padding: "12px",
-                      zIndex: 1000,
-                      boxShadow:
-                        "0 6px 16px rgba(0,0,0,0.12), 0 3px 6px rgba(0,0,0,0.08)",
-                      width: "280px",
-                    }}
-                  >
-                    <div
-                      style={{
-                        marginBottom: "12px",
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        paddingBottom: "8px",
-                        borderBottom: "1px solid #f0f0f0",
-                      }}
+            {/* Nút mic */}
+            <Button
+              type="text"
+              shape="circle"
+              icon={
+                <AudioOutlined
+                  className={isMicEnabled ? "text-white" : "text-red-500"}
+                />
+              }
+              onClick={() => microphone.toggle()}
+              className="hover:bg-white/10"
+            />
+
+            {/* Nút cài đặt */}
+            <Button
+              type="text"
+              shape="circle"
+              icon={<SettingOutlined className="text-white" />}
+              onClick={() => setCameraDropdownOpen(!cameraDropdownOpen)}
+              className="border-0 hover:bg-white/10"
+            />
+
+            {/* Nút phát sóng */}
+            {!isLive && (
+              <Button
+                type="primary"
+                icon={<PlayCircleOutlined />}
+                onClick={handleLiveToggle}
+                className="py-0 px-4 h-8 bg-red-500 hover:bg-red-600 border-0 shadow-md ml-2"
+              >
+                Phát sóng
+              </Button>
+            )}
+          </div>
+        </div>
+
+        {/* Dropdown chọn camera */}
+        {cameraDropdownOpen && (
+          <div className="absolute bottom-full right-0 mb-2 bg-white border-none rounded-xl p-3 z-50 shadow-lg w-[280px]">
+            <div className="mb-3 flex justify-between items-center pb-2 border-b border-gray-100">
+              <Text strong className="text-sm">
+                <VideoCameraOutlined className="mr-1.5 text-blue-500" />
+                Chọn Camera
+              </Text>
+              <Button
+                type="text"
+                size="small"
+                shape="circle"
+                icon={<CloseCircleOutlined />}
+                onClick={() => setCameraDropdownOpen(false)}
+              />
+            </div>
+
+            {loadingCameras ? (
+              <Flex justify="center" className="py-5">
+                <Spin size="small" />
+              </Flex>
+            ) : cameras.length > 0 ? (
+              <Space direction="vertical" className="w-full">
+                {cameras.map((device) => (
+                  <div key={device.deviceId} className="mb-2">
+                    <Button
+                      type={
+                        selectedCamera === device.deviceId ? "primary" : "text"
+                      }
+                      onClick={() => handleLiveToggle()}
+                      className={`text-left w-full h-auto py-2.5 px-3 rounded-lg flex items-center overflow-hidden transition-all ${
+                        selectedCamera === device.deviceId
+                          ? "border-none bg-blue-500"
+                          : "border border-gray-100 bg-white"
+                      }`}
                     >
-                      <Text strong style={{ fontSize: "14px" }}>
-                        <VideoCameraOutlined
-                          style={{ marginRight: "6px", color: "#1890ff" }}
-                        />
-                        Chọn Camera
-                      </Text>
-                      <Button
-                        type="text"
-                        size="small"
-                        shape="circle"
-                        icon={<CloseCircleOutlined />}
-                        onClick={() => setCameraDropdownOpen(false)}
-                      />
-                    </div>
-
-                    {loadingCameras ? (
-                      <Flex justify="center" style={{ padding: "20px" }}>
-                        <Spin size="small" />
-                      </Flex>
-                    ) : cameras.length > 0 ? (
-                      <Space direction="vertical" style={{ width: "100%" }}>
-                        {cameras.map((device) => (
-                          <div
-                            key={device.deviceId}
-                            style={{ marginBottom: "8px" }}
-                          >
-                            <Button
-                              type={
-                                selectedCamera === device.deviceId
-                                  ? "primary"
-                                  : "text"
-                              }
-                              onClick={() =>
-                                handleCameraChange(device.deviceId)
-                              }
-                              style={{
-                                textAlign: "left",
-                                width: "100%",
-                                height: "auto",
-                                padding: "10px 12px",
-                                borderRadius: "8px",
-                                display: "flex",
-                                alignItems: "center",
-                                overflow: "hidden",
-                                transition: "all 0.3s",
-                                border:
-                                  selectedCamera === device.deviceId
-                                    ? "none"
-                                    : "1px solid #f0f0f0",
-                                background:
-                                  selectedCamera === device.deviceId
-                                    ? "#1890ff"
-                                    : "white",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                  width: "100%",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    marginRight: "12px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    width: "32px",
-                                    height: "32px",
-                                    borderRadius: "50%",
-                                    background:
-                                      selectedCamera === device.deviceId
-                                        ? "rgba(255,255,255,0.2)"
-                                        : "#f5f5f5",
-                                  }}
-                                >
-                                  <VideoCameraOutlined
-                                    style={{
-                                      fontSize: "16px",
-                                      color:
-                                        selectedCamera === device.deviceId
-                                          ? "white"
-                                          : "#1890ff",
-                                    }}
-                                  />
-                                </div>
-                                <div style={{ overflow: "hidden", flex: 1 }}>
-                                  <div
-                                    style={{
-                                      fontWeight: "500",
-                                      whiteSpace: "nowrap",
-                                      overflow: "hidden",
-                                      textOverflow: "ellipsis",
-                                      color:
-                                        selectedCamera === device.deviceId
-                                          ? "white"
-                                          : "rgba(0,0,0,0.85)",
-                                    }}
-                                  >
-                                    {device.label ||
-                                      `Camera ${device.deviceId.substring(0, 8)}...`}
-                                  </div>
-                                  {selectedCamera === device.deviceId && (
-                                    <Text
-                                      style={{
-                                        fontSize: "12px",
-                                        color: "rgba(255,255,255,0.85)",
-                                      }}
-                                    >
-                                      Đang sử dụng
-                                    </Text>
-                                  )}
-                                </div>
-                                {selectedCamera === device.deviceId && (
-                                  <div
-                                    style={{
-                                      marginLeft: "auto",
-                                      fontSize: "16px",
-                                      color: "white",
-                                    }}
-                                  >
-                                    ✓
-                                  </div>
-                                )}
-                              </div>
-                            </Button>
-
-                            {/* Thêm nút chuyển đổi triệt để nếu không phải camera đang được chọn */}
-                            {selectedCamera !== device.deviceId && (
-                              <Button
-                                type="link"
-                                size="small"
-                                onClick={() => {
-                                  message.info(
-                                    "Đang thử chuyển camera. Vui lòng đợi..."
-                                  );
-                                  handleCameraChange(device.deviceId);
-                                }}
-                                icon={<SyncOutlined />}
-                                style={{
-                                  marginLeft: "44px",
-                                  fontSize: "12px",
-                                  padding: "0 0 4px 0",
-                                }}
-                              >
-                                Chuyển camera
-                              </Button>
-                            )}
-                          </div>
-                        ))}
-                      </Space>
-                    ) : (
-                      <div>
-                        {call.camera.state.status === "enabled" ? (
-                          // Nếu camera đang hoạt động nhưng không tìm thấy trong danh sách
-                          <Space direction="vertical" style={{ width: "100%" }}>
-                            <Button
-                              type="primary"
-                              onClick={() => handleCameraChange("current")}
-                              style={{
-                                textAlign: "left",
-                                width: "100%",
-                                padding: "10px 12px",
-                                borderRadius: "8px",
-                                marginBottom: "10px",
-                                height: "auto",
-                              }}
-                            >
-                              <div
-                                style={{
-                                  display: "flex",
-                                  alignItems: "center",
-                                }}
-                              >
-                                <div
-                                  style={{
-                                    marginRight: "12px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    width: "32px",
-                                    height: "32px",
-                                    borderRadius: "50%",
-                                    background: "rgba(255,255,255,0.2)",
-                                  }}
-                                >
-                                  <VideoCameraOutlined
-                                    style={{ fontSize: "16px", color: "white" }}
-                                  />
-                                </div>
-                                <div>
-                                  <div style={{ fontWeight: "500" }}>
-                                    Camera đang sử dụng
-                                  </div>
-                                  <div
-                                    style={{
-                                      fontSize: "12px",
-                                      color: "rgba(255,255,255,0.85)",
-                                    }}
-                                  >
-                                    Đang hoạt động
-                                  </div>
-                                </div>
-                              </div>
-                            </Button>
-                            <div
-                              style={{
-                                padding: "12px",
-                                background: "#f9f9f9",
-                                borderRadius: "8px",
-                                border: "1px solid #f0f0f0",
-                              }}
-                            >
-                              <Text
-                                type="secondary"
-                                style={{ fontSize: "13px" }}
-                              >
-                                <InfoCircleOutlined
-                                  style={{ marginRight: "6px" }}
-                                />
-                                Camera đang hoạt động nhưng không thể liệt kê
-                                chi tiết
-                              </Text>
-                            </div>
-                          </Space>
-                        ) : (
-                          // Nếu không có camera nào
-                          <Empty
-                            description={
-                              <Space direction="vertical" align="center">
-                                <Text>Không tìm thấy camera</Text>
-                                <Text
-                                  type="secondary"
-                                  style={{ fontSize: "12px" }}
-                                >
-                                  Vui lòng kết nối thiết bị và làm mới
-                                </Text>
-                              </Space>
-                            }
-                            image={Empty.PRESENTED_IMAGE_SIMPLE}
-                            style={{ margin: "20px 0", padding: "10px" }}
+                      <div className="flex items-center w-full">
+                        <div
+                          className={`mr-3 flex items-center justify-center w-8 h-8 rounded-full ${
+                            selectedCamera === device.deviceId
+                              ? "bg-white/20"
+                              : "bg-gray-100"
+                          }`}
+                        >
+                          <VideoCameraOutlined
+                            className={`text-base ${
+                              selectedCamera === device.deviceId
+                                ? "text-white"
+                                : "text-blue-500"
+                            }`}
                           />
+                        </div>
+                        <div className="overflow-hidden flex-1">
+                          <div
+                            className={`font-medium whitespace-nowrap overflow-hidden text-ellipsis ${
+                              selectedCamera === device.deviceId
+                                ? "text-white"
+                                : "text-gray-900"
+                            }`}
+                          >
+                            {device.label ||
+                              `Camera ${device.deviceId.substring(0, 8)}...`}
+                          </div>
+                          {selectedCamera === device.deviceId && (
+                            <Text className="text-xs text-white/85">
+                              Đang sử dụng
+                            </Text>
+                          )}
+                        </div>
+                        {selectedCamera === device.deviceId && (
+                          <div className="ml-auto text-base text-white">✓</div>
                         )}
                       </div>
-                    )}
+                    </Button>
 
-                    <div
-                      style={{
-                        marginTop: "12px",
-                        paddingTop: "12px",
-                        borderTop: "1px solid #f0f0f0",
-                        display: "flex",
-                        justifyContent: "center",
-                      }}
-                    >
+                    {/* Thêm nút chuyển đổi triệt để nếu không phải camera đang được chọn */}
+                    {selectedCamera !== device.deviceId && (
                       <Button
-                        type="default"
-                        size="middle"
+                        type="link"
+                        size="small"
                         onClick={() => {
-                          // Làm mới thủ công
-                          setCameraDropdownOpen(false);
-                          setLoadingCameras(true);
-
-                          // Hiển thị thông báo loading
-                          message.loading(
-                            "Đang làm mới danh sách camera...",
-                            1.5
+                          message.info(
+                            "Đang thử chuyển camera. Vui lòng đợi..."
                           );
-
-                          // Kiểm tra quyền truy cập media
-                          navigator.mediaDevices
-                            .getUserMedia({ video: true })
-                            .then((stream) => {
-                              // Dừng stream sau khi đã xác nhận quyền truy cập
-                              stream
-                                .getTracks()
-                                .forEach((track) => track.stop());
-
-                              // Sau khi có quyền, lấy danh sách thiết bị
-                              return navigator.mediaDevices.enumerateDevices();
-                            })
-                            .then((devices) => {
-                              const videoCameras = devices.filter(
-                                (device) => device.kind === "videoinput"
-                              );
-
-                              if (videoCameras.length > 0) {
-                                // Chuyển đổi định dạng
-                                const formattedCameras = videoCameras.map(
-                                  (device) => ({
-                                    deviceId: device.deviceId,
-                                    label:
-                                      device.label ||
-                                      `Camera ${device.deviceId.substring(0, 8)}...`,
-                                    kind: "videoinput",
-                                  })
-                                );
-
-                                setCameras(formattedCameras);
-                                message.success(
-                                  `Đã tìm thấy ${formattedCameras.length} camera`
-                                );
-
-                                // Mở lại dropdown sau khi cập nhật
-                                setTimeout(() => {
-                                  setCameraDropdownOpen(true);
-                                  setLoadingCameras(false);
-                                }, 300);
-                              } else {
-                                message.info("Không tìm thấy camera nào");
-                                setLoadingCameras(false);
-
-                                // Nếu camera đang hoạt động, thêm camera giả định
-                                if (call.camera.state.status === "enabled") {
-                                  setCameras([
-                                    {
-                                      deviceId: "current",
-                                      label: "Camera đang sử dụng",
-                                      kind: "videoinput",
-                                    },
-                                  ]);
-                                  setSelectedCamera("current");
-
-                                  // Mở lại dropdown sau khi cập nhật
-                                  setTimeout(() => {
-                                    setCameraDropdownOpen(true);
-                                  }, 300);
-                                }
-                              }
-                            })
-                            .catch((err) => {
-                              console.error("Lỗi khi làm mới camera:", err);
-                              message.error(
-                                "Không thể làm mới danh sách camera: " +
-                                  err.message
-                              );
-                              setLoadingCameras(false);
-
-                              // Nếu camera đang hoạt động, thêm camera giả định
-                              if (call.camera.state.status === "enabled") {
-                                setCameras([
-                                  {
-                                    deviceId: "current",
-                                    label: "Camera đang sử dụng",
-                                    kind: "videoinput",
-                                  },
-                                ]);
-                                setSelectedCamera("current");
-                              }
-                            });
+                          handleLiveToggle();
                         }}
                         icon={<SyncOutlined />}
-                        style={{
-                          borderRadius: "6px",
-                          boxShadow: "none",
-                          border: "1px solid #d9d9d9",
-                          padding: "0 16px",
-                        }}
+                        className="ml-11 text-xs py-0 pb-1"
                       >
-                        Làm mới danh sách
+                        Chuyển camera
                       </Button>
-                    </div>
+                    )}
                   </div>
+                ))}
+              </Space>
+            ) : (
+              <div>
+                {call.camera.state.status === "enabled" ? (
+                  // Nếu camera đang hoạt động nhưng không tìm thấy trong danh sách
+                  <Space direction="vertical" className="w-full">
+                    <Button
+                      type="primary"
+                      onClick={() => handleLiveToggle()}
+                      className="text-left w-full py-2.5 px-3 rounded-lg mb-2.5 h-auto"
+                    >
+                      <div className="flex items-center">
+                        <div className="mr-3 flex items-center justify-center w-8 h-8 rounded-full bg-white/20">
+                          <VideoCameraOutlined className="text-base text-white" />
+                        </div>
+                        <div>
+                          <div className="font-medium">Camera đang sử dụng</div>
+                          <div className="text-xs text-white/85">
+                            Đang hoạt động
+                          </div>
+                        </div>
+                      </div>
+                    </Button>
+                    <div className="p-3 bg-gray-50 rounded-lg border border-gray-100">
+                      <Text type="secondary" className="text-sm">
+                        <InfoCircleOutlined className="mr-1.5" />
+                        Camera đang hoạt động nhưng không thể liệt kê chi tiết
+                      </Text>
+                    </div>
+                  </Space>
+                ) : (
+                  // Nếu không có camera nào
+                  <Empty
+                    description={
+                      <Space direction="vertical" align="center">
+                        <Text>Không tìm thấy camera</Text>
+                        <Text type="secondary" className="text-xs">
+                          Vui lòng kết nối thiết bị và làm mới
+                        </Text>
+                      </Space>
+                    }
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    className="my-5 py-2.5"
+                  />
                 )}
               </div>
+            )}
 
-              {/* Chỉ hiển thị nút Phát sóng khi chưa phát */}
-              {!isLive && (
-                <Button
-                  type="default"
-                  shape="round"
-                  icon={<PlayCircleOutlined />}
-                  onClick={handleLiveToggle}
-                  size="large"
-                >
-                  Phát sóng
-                </Button>
-              )}
-            </Flex>
-          </Col>
+            <div className="mt-3 pt-3 border-t border-gray-100 flex justify-center">
+              <Button
+                type="default"
+                size="middle"
+                onClick={() => {
+                  // Giữ nguyên nội dung hàm
+                  // Làm mới thủ công
+                  setCameraDropdownOpen(false);
+                  setLoadingCameras(true);
 
-          <Col span={8}>
-            <Flex justify="end" align="middle" gap="small">
-              <UserOutlined />
-              <Text>{Math.max(0, participantCount - 1)} người xem</Text>
-              <Tag color={callingState === "joined" ? "green" : "orange"}>
-                {callingState === "joined" ? "Đã kết nối" : callingState}
-              </Tag>
-            </Flex>
-          </Col>
-        </Row>
+                  // Hiển thị thông báo loading
+                  message.loading("Đang làm mới danh sách camera...", 1.5);
+
+                  // Kiểm tra quyền truy cập media
+                  navigator.mediaDevices
+                    .getUserMedia({ video: true })
+                    .then((stream) => {
+                      // Dừng stream sau khi đã xác nhận quyền truy cập
+                      stream.getTracks().forEach((track) => track.stop());
+
+                      // Sau khi có quyền, lấy danh sách thiết bị
+                      return navigator.mediaDevices.enumerateDevices();
+                    })
+                    .then((devices) => {
+                      const videoCameras = devices.filter(
+                        (device) => device.kind === "videoinput"
+                      );
+
+                      if (videoCameras.length > 0) {
+                        // Chuyển đổi định dạng
+                        const formattedCameras = videoCameras.map((device) => ({
+                          deviceId: device.deviceId,
+                          label:
+                            device.label ||
+                            `Camera ${device.deviceId.substring(0, 8)}...`,
+                          kind: "videoinput",
+                        }));
+
+                        setCameras(formattedCameras);
+                        message.success(
+                          `Đã tìm thấy ${formattedCameras.length} camera`
+                        );
+
+                        // Mở lại dropdown sau khi cập nhật
+                        setTimeout(() => {
+                          setCameraDropdownOpen(true);
+                          setLoadingCameras(false);
+                        }, 300);
+                      } else {
+                        message.info("Không tìm thấy camera nào");
+                        setLoadingCameras(false);
+
+                        // Nếu camera đang hoạt động, thêm camera giả định
+                        if (call.camera.state.status === "enabled") {
+                          setCameras([
+                            {
+                              deviceId: "current",
+                              label: "Camera đang sử dụng",
+                              kind: "videoinput",
+                            },
+                          ]);
+                          setSelectedCamera("current");
+
+                          // Mở lại dropdown sau khi cập nhật
+                          setTimeout(() => {
+                            setCameraDropdownOpen(true);
+                          }, 300);
+                        }
+                      }
+                    })
+                    .catch((err) => {
+                      console.error("Lỗi khi làm mới camera:", err);
+                      message.error(
+                        "Không thể làm mới danh sách camera: " + err.message
+                      );
+                      setLoadingCameras(false);
+
+                      // Nếu camera đang hoạt động, thêm camera giả định
+                      if (call.camera.state.status === "enabled") {
+                        setCameras([
+                          {
+                            deviceId: "current",
+                            label: "Camera đang sử dụng",
+                            kind: "videoinput",
+                          },
+                        ]);
+                        setSelectedCamera("current");
+                      }
+                    });
+                }}
+                icon={<SyncOutlined />}
+                className="rounded-md shadow-none border border-gray-300 py-0 px-4"
+              >
+                Làm mới danh sách
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -1582,51 +1128,93 @@ function LiveStream({ showId }) {
   return (
     <Card
       title={<Title level={3}>Quản lý Livestream</Title>}
-      style={{ width: "100%" }}
-      bodyStyle={{ padding: "24px" }}
+      className="w-full rounded-2xl shadow-lg overflow-hidden livestream-card border-0 pb-15"
     >
       {isLoading ? (
-        <Flex justify="center" align="center" style={{ minHeight: "400px" }}>
+        <Flex justify="center" align="center" className="min-h-[400px]">
           <Spin size="large" tip="Đang xử lý..." />
         </Flex>
       ) : call && client ? (
         <StreamVideo client={client}>
-          <StreamCall call={call}>
-            <Flex vertical gap="middle" style={{ height: "100%" }}>
-              <Row gutter={[16, 16]}>
-                <Col span={24} md={16}>
+          <StreamCall
+            call={call}
+            callControlsProps={{ hideDefaultCallControls: true }}
+            layout={LivestreamLayout}
+            layoutProps={{
+              params: {
+                showParticipantControls: false,
+                showControls: false,
+              },
+            }}
+          >
+            <Flex vertical gap="24px" className="h-full">
+              <Row gutter={[16, 16]} className="h-[500px] flex items-stretch">
+                <Col span={24} md={14} className="flex">
                   {/* Hiển thị video của chính người dùng */}
                   <Card
-                    title="Camera của bạn"
+                    title={
+                      <Space>
+                        <VideoCameraOutlined className="text-blue-500" />
+                        <span>Camera của bạn</span>
+                      </Space>
+                    }
                     bordered={false}
-                    style={{ height: "100%" }}
+                    className="w-full h-full shadow-md rounded-xl overflow-hidden bg-gray-900 camera-card"
+                    bodyStyle={{
+                      height: "calc(100% - 57px)",
+                      padding: "0",
+                      position: "relative",
+                    }}
+                    headStyle={{
+                      borderBottom: "1px solid rgba(255,255,255,0.1)",
+                      backgroundColor: "rgba(0,0,0,0.3)",
+                      color: "white",
+                    }}
+                    extra={
+                      <Space>
+                        <Button
+                          type="primary"
+                          danger
+                          icon={<CloseCircleOutlined />}
+                          onClick={handleEndLiveStream}
+                          size="middle"
+                          className="shadow-md"
+                        >
+                          Kết thúc Livestream
+                        </Button>
+                      </Space>
+                    }
                   >
                     <UserVideoPreview />
                   </Card>
                 </Col>
 
-                <Col span={24} md={8}>
+                <Col span={24} md={10} className="flex">
                   <Card
                     title={
-                      <Flex justify="space-between" align="center">
-                        <Space>
-                          <CommentOutlined /> Chat Trực tiếp
-                        </Space>
-                      </Flex>
+                      <Space>
+                        <CommentOutlined className="text-blue-500" />
+                        <span>Chat Trực tiếp</span>
+                      </Space>
                     }
+                    bordered={false}
+                    className="w-full h-full shadow-md rounded-xl overflow-hidden bg-white chat-card"
                     bodyStyle={{
-                      height: "300px",
+                      height: "calc(100% - 57px)",
                       padding: 0,
                       position: "relative",
                     }}
-                    className="chat-card"
+                    headStyle={{ borderBottom: "1px solid #f0f0f0" }}
                   >
                     {channel && chatClient ? (
-                      <CustomChatUI channel={channel} chatClient={chatClient} />
+                      <ChatComponent
+                        channel={channel}
+                        chatClient={chatClient}
+                      />
                     ) : chatError ? (
-                      <div style={{ padding: "16px", textAlign: "center" }}>
+                      <div className="p-4 text-center">
                         <Text type="danger">{chatError}</Text>
-                        <div style={{ marginTop: "16px" }}>
+                        <div className="mt-4">
                           <Button
                             type="primary"
                             onClick={() => window.location.reload()}
@@ -1636,7 +1224,7 @@ function LiveStream({ showId }) {
                         </div>
                       </div>
                     ) : (
-                      <div style={{ padding: "16px", textAlign: "center" }}>
+                      <div className="p-4 text-center">
                         <Spin tip="Đang kết nối đến chat..." />
                       </div>
                     )}
@@ -1644,101 +1232,61 @@ function LiveStream({ showId }) {
                 </Col>
               </Row>
 
-              <Divider />
-
+              {/* Thanh điều khiển đơn giản */}
               <LiveStreamControls call={call} />
 
-              <Divider />
-
-              <Row gutter={16}>
-                <Col span={24} md={16}>
-                  <Card title="Cài đặt thiết bị" bordered={false}>
-                    <DeviceSettings />
-                  </Card>
-                </Col>
-
-                <Col span={24} md={8}>
-                  <Flex vertical gap="middle" style={{ height: "100%" }}>
-                    <Button
-                      danger
-                      type="primary"
-                      icon={<CloseCircleOutlined />}
-                      onClick={handleEndLiveStream}
-                      size="large"
-                      block
-                      style={{ height: "50px" }}
-                    >
-                      Kết thúc Livestream
-                    </Button>
-
-                    <Text type="secondary" style={{ textAlign: "center" }}>
-                      Kết thúc phiên livestream sẽ ngắt kết nối tất cả người xem
-                    </Text>
-                  </Flex>
-                </Col>
-              </Row>
+              {/* Thêm khoảng trống ở cuối */}
+              <div className="h-5"></div>
             </Flex>
           </StreamCall>
         </StreamVideo>
       ) : (
-        <Flex
-          vertical
-          gap="middle"
-          align="center"
-          justify="center"
-          style={{
-            minHeight: "400px",
-            padding: "40px",
-            backgroundColor: "#f7f9fc",
-            borderRadius: "8px",
-          }}
-        >
-          <VideoCameraOutlined style={{ fontSize: "48px", color: "#1890ff" }} />
-          <Title level={3}>Bắt đầu livestream cho buổi triển lãm Koi</Title>
-          <Text
-            style={{
-              maxWidth: "600px",
-              textAlign: "center",
-              marginBottom: "20px",
-            }}
-          >
+        <Flex vertical align="center" className="min-h-[400px] p-8 bg-gray-50">
+          <div className="text-5xl text-blue-500 mb-4">
+            <VideoCameraOutlined />
+          </div>
+
+          <Title level={2} className="text-center mb-4">
+            Bắt đầu livestream cho buổi triển lãm Koi
+          </Title>
+
+          <Text className="text-center max-w-[700px] mb-8 text-base">
             Tạo một buổi livestream để chia sẻ sự kiện với mọi người. Bạn có thể
             bật/tắt camera và micro, cũng như kết thúc buổi phát sóng bất cứ lúc
             nào.
           </Text>
 
           <Card
-            style={{ width: "100%", maxWidth: "600px", marginBottom: "20px" }}
+            className="w-full max-w-[700px] rounded-xl border border-gray-200 mb-8"
+            bodyStyle={{ padding: "24px" }}
           >
-            <Space direction="vertical" style={{ width: "100%" }}>
-              <Text strong>Sử dụng máy ghi hình ngoài:</Text>
-              <Text>
-                Kết nối máy ghi hình vào máy tính qua cổng USB hoặc HDMI (cần có
-                bộ chuyển đổi). Sau khi tạo livestream, bạn có thể chọn giữa
-                camera máy tính và máy ghi hình ngoài.
-              </Text>
-              <Divider dashed style={{ margin: "10px 0" }} />
-              <Text type="secondary" style={{ fontSize: "12px" }}>
-                Lưu ý: Nếu bạn kết nối máy ghi hình sau khi đã bắt đầu
-                livestream, hãy tải lại trang để hệ thống nhận diện thiết bị
-                mới.
-              </Text>
-            </Space>
-          </Card>
+            <Title level={5} className="mb-4">
+              Sử dụng máy ghi hình ngoài:
+            </Title>
 
-          {error && (
-            <Text type="danger" style={{ marginBottom: "20px" }}>
-              {error}
+            <Text className="block mb-2">
+              Kết nối máy ghi hình vào máy tính qua cổng USB hoặc HDMI (cần có
+              bộ chuyển đổi).
             </Text>
-          )}
+
+            <Text className="block mb-4">
+              Sau khi tạo livestream, bạn có thể chọn giữa camera máy tính và
+              máy ghi hình ngoài.
+            </Text>
+
+            <Text type="secondary" className="block text-sm italic">
+              Lưu ý: Nếu bạn kết nối máy ghi hình sau khi đã bắt đầu livestream,
+              hãy tải lại trang để hệ thống nhận diện thiết bị mới.
+            </Text>
+          </Card>
 
           <Button
             type="primary"
-            size="large"
+            shape="round"
             icon={<PlayCircleOutlined />}
             onClick={handleCreateLiveStream}
-            loading={isLoading}
-            style={{ height: "50px", minWidth: "200px" }}
+            size="large"
+            className="shadow-md px-6 h-12 text-base"
           >
             Tạo Livestream mới
           </Button>
