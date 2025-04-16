@@ -49,10 +49,18 @@ const updateAccount = (id, accountData) => {
 };
 
 const updateStatus = (accountId, status) => {
+  // Nếu trạng thái là 'blocked', thêm tham số forceLogout=true
+  const params = {
+    status: status,
+  };
+
+  // Nếu trạng thái là 'blocked', thêm tham số buộc đăng xuất
+  if (status === "blocked") {
+    params.forceLogout = true;
+  }
+
   return axiosClient.patch(`/account/${accountId}`, null, {
-    params: {
-      status: status,
-    },
+    params: params,
   });
 };
 const updateAccountPassword = (data) => {

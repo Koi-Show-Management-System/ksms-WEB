@@ -1,6 +1,7 @@
 import * as signalR from "@microsoft/signalr";
 import { notification } from "antd";
 import Cookies from "js-cookie";
+import useAuth from "../hooks/useAuth";
 
 class SignalRService {
   constructor() {
@@ -76,6 +77,31 @@ class SignalRService {
       } catch (error) {
         console.error("Error displaying notification:", error);
       }
+    });
+
+    // Lắng nghe sự kiện ForceLogout từ server
+    this.connection.on("ForceLogout", (data) => {
+      console.log("Force logout received:", data);
+
+      if (!data) return;
+
+      // Hiển thị thông báo với lý do được cung cấp từ server
+      notification.error({
+        message: "Tài khoản không khả dụng",
+        description:
+          data.reason ||
+          "Tài khoản của bạn không còn khả dụng. Bạn sẽ bị đăng xuất.",
+        placement: "topRight",
+        duration: 3,
+      });
+
+      // Đăng xuất sau 3 giây
+      setTimeout(() => {
+        const logout = useAuth.getState().logout;
+        logout();
+        // Chuyển về trang đăng nhập
+        window.location.href = "/";
+      }, 3000);
     });
   }
 

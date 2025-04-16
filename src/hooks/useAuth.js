@@ -10,6 +10,28 @@ const useAuth = create((set) => ({
       const res = await getInfoUser(id);
       if (res && res.status === 200) {
         set({ infoUser: res?.data || {} });
+
+        // Kiểm tra xem tài khoản có bị block không
+        if (res?.data?.data?.status === "blocked") {
+          // Hiển thị thông báo
+          notification.error({
+            message: "Tài khoản đã bị khóa",
+            description:
+              "Tài khoản của bạn đã bị khóa bởi quản trị viên. Bạn sẽ bị đăng xuất.",
+            placement: "topRight",
+            duration: 3,
+          });
+
+          // Đăng xuất sau 3 giây
+          setTimeout(() => {
+            set({ isAuthenticated: false });
+            Cookies.remove("__token");
+            Cookies.remove("__role");
+            Cookies.remove("__id");
+            sessionStorage.removeItem("keys");
+            window.location.href = "/";
+          }, 3000);
+        }
       }
     } catch (err) {
       console.error("Error fetching userInfo", err);
@@ -21,6 +43,15 @@ const useAuth = create((set) => ({
         Cookies.remove("__id");
         sessionStorage.removeItem("keys");
       }
+    }
+  },
+
+  // Hàm kiểm tra trạng thái tài khoản định kỳ
+  checkAccountStatus: () => {
+    const id = Cookies.get("__id");
+    if (id) {
+      // Gọi fetchUserInfo để kiểm tra trạng thái tài khoản
+      useAuth.getState().fetchUserInfo(id);
     }
   },
 

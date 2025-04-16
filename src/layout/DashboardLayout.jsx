@@ -64,7 +64,7 @@ const getItem = (label, key, icon, children, path) => {
 const DashboardLayout = React.memo(({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-  const { infoUser, fetchUserInfo, logout } = useAuth();
+  const { infoUser, fetchUserInfo, logout, checkAccountStatus } = useAuth();
   const { updateAccountPassword, updateAccountTeam } = useAccountTeam();
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
   const [isPasswordModalVisible, setIsPasswordModalVisible] = useState(false);
@@ -97,26 +97,41 @@ const DashboardLayout = React.memo(({ children }) => {
     };
   }, []);
 
-  // Thiết lập SignalR cho staff
+  // Thiết lập kiểm tra trạng thái tài khoản định kỳ
   useEffect(() => {
-    if (userRole === "staff") {
-      SignalRService.start()
-        .then(() => {
-          // Kết nối SignalR thành công
-          setTimeout(() => {
-            // Kiểm tra trạng thái kết nối sau 2 giây
-          }, 2000);
-        })
-        .catch((err) => {
-          // Lỗi kết nối SignalR
-        });
+    // Kiểm tra trạng thái tài khoản ngay khi component được mount
+    checkAccountStatus();
 
-      // Cleanup khi component unmount
-      return () => {
-        // Ngắt kết nối SignalR
-      };
-    }
-  }, [userRole]);
+    // Thiết lập interval để kiểm tra định kỳ (2 phút một lần)
+    const statusCheckInterval = setInterval(
+      () => {
+        checkAccountStatus();
+      },
+      2 * 60 * 1000
+    ); // 2 phút
+
+    // Xóa interval khi component unmount
+    return () => {
+      clearInterval(statusCheckInterval);
+    };
+  }, [checkAccountStatus]);
+
+  // Thiết lập SignalR cho tất cả vai trò
+  useEffect(() => {
+    // Bắt đầu kết nối với SignalR khi component được mount
+    SignalRService.start()
+      .then(() => {
+        console.log("SignalR kết nối thành công");
+      })
+      .catch((err) => {
+        console.error("Lỗi kết nối SignalR:", err);
+      });
+
+    // Cleanup khi component unmount
+    return () => {
+      // Ngắt kết nối có thể được thực hiện trong tương lai nếu cần
+    };
+  }, []);
 
   // Menu items cho Admin
   const adminItems = useMemo(
