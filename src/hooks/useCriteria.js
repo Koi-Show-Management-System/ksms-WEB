@@ -118,9 +118,7 @@ const useCriteria = create((set, get) => ({
 
     try {
       set({ isLoading: true, error: null });
-      console.log(
-        `Fetching criteria for category ${competitionCategoryId} and round ${roundId}`
-      );
+ 
 
       const res = await getCriteriaCompetitionRound(
         competitionCategoryId,
@@ -140,7 +138,6 @@ const useCriteria = create((set, get) => ({
           console.warn("Unexpected criteria response format:", res.data);
         }
 
-        console.log("Processed criteria data:", criteriaData);
         set({ criteriaCompetitionRound: criteriaData, isLoading: false });
         return criteriaData;
       } else {

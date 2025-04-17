@@ -108,17 +108,6 @@ function CompetitionRound({ showId }) {
       return false;
     }
 
-    // Log để kiểm tra trong quá trình debug
-    console.log(
-      "Kiểm tra gán bể:",
-      registrationRound.map((item) => ({
-        id: item.id,
-        hasTank: Boolean(item.tankName || item.tankId),
-        tankName: item.tankName,
-        tankId: item.tankId,
-      }))
-    );
-
     // Kiểm tra mỗi đăng ký có tankName hoặc tankId
     return registrationRound.every((item) =>
       Boolean(item.tankName || item.tankId)
@@ -262,12 +251,6 @@ function CompetitionRound({ showId }) {
         fetchTanks(value, 1, 100, true);
         // Log ra giá trị hasTank để kiểm tra
         const selectedCategoryData = categories?.find((c) => c.id === value);
-        console.log(
-          "Category selected:",
-          value,
-          "hasTank:",
-          selectedCategoryData?.hasTank
-        );
       }
     },
     [fetchTanks, categories]
@@ -301,13 +284,19 @@ function CompetitionRound({ showId }) {
 
       // Only update state if the value has actually changed
       if (value !== selectedSubRound) {
+        // Reset fishMoved state when changing rounds
+        setFishMoved(false);
+
         // First set the selected sub round
         setSelectedSubRound(value);
 
         // Only fetch if we have a valid value
         if (value && typeof value === "string" && value !== "undefined") {
-          // Use a local variable to track if we should update
-          let shouldUpdateState = true;
+          // Tìm vòng đã chọn trong danh sách round hiện có
+          const selectedRound =
+            round && Array.isArray(round)
+              ? round.find((r) => r.id === value)
+              : null;
 
           // Wrap in try/catch to prevent any unhandled rejection errors
           try {
@@ -318,11 +307,7 @@ function CompetitionRound({ showId }) {
             fetchPromise
               .then((data) => {
                 // Only update state if component is still mounted and we should update
-                if (
-                  isMounted.current &&
-                  shouldUpdateState &&
-                  Array.isArray(data)
-                ) {
+                if (isMounted.current && Array.isArray(data)) {
                   const allScoresPublished = data.every(
                     (item) =>
                       item.roundResults &&
@@ -379,6 +364,7 @@ function CompetitionRound({ showId }) {
       selectedSubRound,
       areResultsPublished, // Include this in dependencies to properly compare current value
       isMounted,
+      round,
     ]
   );
 
@@ -388,38 +374,30 @@ function CompetitionRound({ showId }) {
   // Fix the problematic useEffect that was also updating areResultsPublished
   // Use a ref to track changes instead of depending on the state variable
   useEffect(() => {
-    // Create a cleanup function that runs when the component unmounts
-    const handleRegistrationDataChange = () => {
-      if (registrationRound && registrationRound.length > 0) {
-        // Only update if the data has actually changed
-        if (registrationRound !== previousRegistrationRoundRef.current) {
-          const allPublished = registrationRound.every(
-            (item) =>
-              item.roundResults &&
-              item.roundResults.length > 0 &&
-              item.roundResults[0]?.isPublic === true
-          );
+    // Skip if no data
+    if (!registrationRound || registrationRound.length === 0) return;
 
-          // Update the state using the functional form to avoid stale closures
-          setAreResultsPublished((prevState) => {
-            // Only update if the value has changed
-            if (allPublished !== prevState) {
-              return allPublished;
-            }
-            return prevState;
-          });
+    // Only update if the data has actually changed
+    if (registrationRound === previousRegistrationRoundRef.current) return;
 
-          // Update ref to prevent unnecessary updates
-          previousRegistrationRoundRef.current = registrationRound;
-        }
+    // Calculate whether all items are published
+    const allPublished = registrationRound.every(
+      (item) =>
+        item.roundResults &&
+        item.roundResults.length > 0 &&
+        item.roundResults[0]?.isPublic === true
+    );
+
+    // Update state ONLY if the value has changed
+    setAreResultsPublished((prevState) => {
+      if (allPublished !== prevState) {
+        return allPublished;
       }
-    };
+      return prevState;
+    });
 
-    // Call it once
-    handleRegistrationDataChange();
-
-    // Only run this effect when registrationRound changes
-    // This is safe because we're using refs and functional updates
+    // Update ref to prevent unnecessary updates
+    previousRegistrationRoundRef.current = registrationRound;
   }, [registrationRound]);
 
   // Update this when selectedRoundType changes to fetch criteria
@@ -637,12 +615,6 @@ function CompetitionRound({ showId }) {
 
   // Cập nhật hàm kiểm tra nếu có thể công khai vòng thi
   const canPublishRound = useMemo(() => {
-    // Log để theo dõi giá trị trong quá trình debug
-    console.log("Check canPublishRound:", {
-      currentCategoryHasTank,
-      allTanksAssigned,
-    });
-
     // Nếu hạng mục không sử dụng bể, có thể công khai ngay
     if (!currentCategoryHasTank) {
       return true;
@@ -1351,6 +1323,7 @@ function CompetitionRound({ showId }) {
   // Thêm state để theo dõi xem fish đã được chuyển sang vòng tiếp theo chưa
   const [fishMoved, setFishMoved] = useState(false);
   const [isNoNextRound, setIsNoNextRound] = useState(false);
+  const prevSelectedSubRoundRef = useRef(null); // Thêm ref để lưu giá trị trước đó
 
   // Xử lý khi NextRound cập nhật trạng thái chuyển cá
   const handleFishMoveStatus = useCallback((moved, noNextRound) => {
@@ -1410,14 +1383,28 @@ function CompetitionRound({ showId }) {
                 loading={roundLoading}
                 notFoundContent={roundLoading ? <Loading /> : "Không có vòng "}
               >
-                {round?.map((item) => (
-                  <Option
-                    key={item.id || item.roundId}
-                    value={item.id || item.roundId}
-                  >
-                    {item.name || item.roundName || `Vòng ${item.id}`}
-                  </Option>
-                ))}
+                {round
+                  ?.sort((a, b) => {
+                    // Sort by roundOrder if available
+                    if (
+                      a.roundOrder !== undefined &&
+                      b.roundOrder !== undefined
+                    ) {
+                      return a.roundOrder - b.roundOrder;
+                    }
+                    // Fall back to name sorting if no roundOrder
+                    return (a.name || a.roundName || "").localeCompare(
+                      b.name || b.roundName || ""
+                    );
+                  })
+                  ?.map((item) => (
+                    <Option
+                      key={item.id || item.roundId}
+                      value={item.id || item.roundId}
+                    >
+                      {item.name || item.roundName || `Vòng ${item.id}`}
+                    </Option>
+                  ))}
               </Select>
             </div>
           )}
@@ -1484,9 +1471,18 @@ function CompetitionRound({ showId }) {
             </div>
           )}
 
-          {/* Adjust NextRound component to show only after results are published */}
-          {selectedSubRound && areResultsPublished && !fishMoved && (
+          {/* Adjust NextRound component to show when round is published */}
+          {selectedSubRound && isRoundPublished() && !fishMoved && (
             <div className="w-full md:w-1/3">
+              {/* Thêm debug log ở đây */}
+              {(() => {
+                const currentRound = round?.find(
+                  (r) => r.id === selectedSubRound
+                );
+                // Thêm log chi tiết hơn, cả dữ liệu round
+
+                return null;
+              })()}
               <NextRound
                 registrationRound={registrationRound}
                 selectedSubRound={selectedSubRound}
@@ -1497,6 +1493,20 @@ function CompetitionRound({ showId }) {
                 currentPage={currentPage}
                 pageSize={pageSize}
                 onFishMoveStatusChange={handleFishMoveStatus}
+                roundStatus={(() => {
+                  // Chỉ lấy roundStatus khi có selectedSubRound cụ thể
+                  if (!selectedSubRound) {
+                    console.log("No selectedSubRound, not passing roundStatus");
+                    return null;
+                  }
+
+                  // Tìm trong danh sách round
+                  const currentRound = round?.find(
+                    (r) => r.id === selectedSubRound
+                  );
+
+                  return currentRound?.status || null;
+                })()}
               />
             </div>
           )}

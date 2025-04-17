@@ -331,11 +331,11 @@ function Category({ showId, statusShow }) {
                 <Descriptions.Item label="Số lượng tối thiểu ">
                   {selectedCategory.minEntries}
                 </Descriptions.Item>
-                <Descriptions.Item label="Trạng thái">
-                  {selectedCategory.status === "cancelled" && (
+                {selectedCategory.status === "cancelled" && (
+                  <Descriptions.Item label="Trạng thái">
                     <Tag color="red">Đã hủy</Tag>
-                  )}
-                </Descriptions.Item>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Bể trưng bày">
                   {selectedCategory.hasTank ? "Có" : "Không"}
                 </Descriptions.Item>

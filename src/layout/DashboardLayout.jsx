@@ -138,7 +138,7 @@ const DashboardLayout = React.memo(({ children }) => {
     () => [
       getItem("Tổng Quan", "1", <HomeOutlined />, null, "/admin/overview"),
       getItem(
-        "Danh Sách Triển Lãm",
+        "Triển Lãm Của Tôi",
         "2",
         <CalendarOutlined />,
         null,
@@ -190,7 +190,7 @@ const DashboardLayout = React.memo(({ children }) => {
   const managerItems = useMemo(
     () => [
       getItem(
-        "Danh Sách Triển Lãm",
+        "Triển Lãm Của Tôi",
         "1",
         <CalendarOutlined />,
         null,
@@ -212,7 +212,7 @@ const DashboardLayout = React.memo(({ children }) => {
   const staffItems = useMemo(
     () => [
       getItem(
-        "Danh Sách Triển Lãm",
+        "Triển Lãm Của Tôi",
         "1",
         <CalendarOutlined />,
         null,
@@ -227,7 +227,7 @@ const DashboardLayout = React.memo(({ children }) => {
   const refereeItems = useMemo(
     () => [
       getItem(
-        "Danh Sách Triển Lãm",
+        "Triển Lãm Của Tôi",
         "1",
         <CalendarOutlined />,
         null,
@@ -798,7 +798,7 @@ const DashboardLayout = React.memo(({ children }) => {
                   icon={!userInfo?.avatar && <UserOutlined />}
                 />
                 <h2 className="mt-3 text-xl font-bold">{userInfo?.fullName}</h2>
-                <Text type="secondary">{userRole}</Text>
+                <Text type="secondary">{userRole || "Khách"}</Text>
               </div>
 
               <Divider style={{ marginTop: 0 }} />

@@ -52,7 +52,7 @@ function KoiShowDetail() {
         label: (
           <span style={{ fontSize: isTablet ? "16px" : "14px" }}>Danh Mục</span>
         ),
-        children: <Category showId={id} />,
+        children: <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />,
       },
       {
         key: "registration",

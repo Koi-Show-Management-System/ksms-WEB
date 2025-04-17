@@ -392,9 +392,9 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   };
 
   return (
-    <div className="bg-white space-y-6">
+    <div className="bg-white space-y-6 ">
       <Title level={3} className="text-center mb-6 text-blue-700">
-        <TrophyOutlined className="mr-2" />
+        <TrophyOutlined className="mr-2 my-3" />
         Hệ thống chấm điểm giám khảo
       </Title>
 
@@ -479,11 +479,21 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 disabled={!selectedRoundType}
                 suffixIcon={<TrophyOutlined />}
               >
-                {subRounds.map((subRound) => (
-                  <Option key={subRound.id} value={subRound.id}>
-                    {subRound.name}
-                  </Option>
-                ))}
+                {subRounds
+                  .sort((a, b) => {
+                    if (
+                      a.roundOrder !== undefined &&
+                      b.roundOrder !== undefined
+                    ) {
+                      return a.roundOrder - b.roundOrder;
+                    }
+                    return (a.name || "").localeCompare(b.name || "");
+                  })
+                  .map((subRound) => (
+                    <Option key={subRound.id} value={subRound.id}>
+                      {subRound.name}
+                    </Option>
+                  ))}
               </Select>
             </div>
           </Col>

@@ -158,13 +158,26 @@ const useRegistration = create((set, get) => ({
     }
   },
 
-  assignToRound: async (roundId, registrationIds) => {
-    set({ assignLoading: true, error: null });
-
+  assignToRound: async (
+    targetRoundId,
+    registrationIds,
+    currentRoundId = null,
+    page = 1,
+    size = 10
+  ) => {
     try {
-      const response = await patchRound(roundId, registrationIds);
+      set({ assignLoading: true, error: null });
 
-      if (response && response.status === 200) {
+      // Sử dụng patchRound với currentRoundId, page và size
+      const response = await patchRound(
+        targetRoundId,
+        registrationIds,
+        currentRoundId,
+        page,
+        size
+      );
+
+      if (response && (response.status === 200 || response.status === 201)) {
         const { currentPage, pageSize, showIds } = get();
         await get().fetchRegistration(currentPage, pageSize, showIds);
         set({ assignLoading: false, selectedRegistrations: [] });
@@ -190,7 +203,7 @@ const useRegistration = create((set, get) => ({
         return { success: false, error: response };
       }
     } catch (error) {
-      console.error("Error assigning to tank:", error);
+      console.error("Error assigning to round:", error);
       set({ error, assignLoading: false });
 
       let errorMsg = "Không thể chuyển cá sang vòng tiếp theo";

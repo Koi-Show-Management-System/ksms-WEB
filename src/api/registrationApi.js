@@ -62,11 +62,22 @@ const updateStatusRegistration = (id, status, rejectedReason, refundType) => {
   return axiosClient.put(`/registration/${id}?${params}`);
 };
 
-const patchRound = (roundId, registrationIds) => {
-  return axiosClient.post("/registration-round/assign-to-tank", {
-    roundId: roundId,
-    registrationIds: registrationIds,
-  });
+const patchRound = (
+  roundId,
+  registrationIds,
+  currentRoundId = null,
+  page = 1,
+  size = 10
+) => {
+  return axiosClient.post(
+    `/registration-round/assign-to-tank?currentRoundId=${currentRoundId}`,
+    {
+      roundId: roundId,
+      registrationIds: registrationIds,
+      page: page,
+      size: size,
+    }
+  );
 };
 
 const CheckOutKoi = (registrationId, imgCheckOut, notes) => {

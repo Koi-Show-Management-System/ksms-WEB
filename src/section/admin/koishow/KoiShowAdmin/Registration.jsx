@@ -586,7 +586,7 @@ function Registration({ showId, statusShow }) {
               }}
               placeholder={
                 <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                  <Loading />
+                  <Spin size="small" />
                 </div>
               }
               fallback={PLACEHOLDER_IMAGE}

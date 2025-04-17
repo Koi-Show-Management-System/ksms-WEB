@@ -99,12 +99,14 @@ function CompetitionRound({ showId }) {
   // Process sub-rounds from the fetched data
   useEffect(() => {
     if (round && round.length > 0) {
-      // Extract unique sub-rounds from the response
-      const uniqueSubRounds = round.map((item) => ({
-        id: item.id,
-        name: item.name,
-        roundOrder: item.roundOrder,
-      }));
+      // Extract unique sub-rounds from the response and sort by roundOrder
+      const uniqueSubRounds = round
+        .map((item) => ({
+          id: item.id,
+          name: item.name,
+          roundOrder: item.roundOrder,
+        }))
+        .sort((a, b) => a.roundOrder - b.roundOrder);
       setSubRounds(uniqueSubRounds);
     } else {
       setSubRounds([]);
@@ -218,7 +220,7 @@ function CompetitionRound({ showId }) {
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Loading/>
+                    <Loading />
                   </div>
                 }
                 fallback={PLACEHOLDER_IMAGE}
@@ -239,18 +241,35 @@ function CompetitionRound({ showId }) {
         render: (name) => name || "—",
       },
       {
-        title: "Điểm",
+        title: selectedRoundType === "Preliminary" ? "Kết quả" : "Điểm",
         dataIndex: ["roundResults", "0", "totalScore"],
         key: "score",
-        render: (totalScore) => {
+        render: (totalScore, record) => {
           if (totalScore === undefined || totalScore === null) return "—";
+
+          // Hiển thị trạng thái (Pass/Fail) cho vòng Sơ Khảo
+          if (selectedRoundType === "Preliminary") {
+            const status = record.roundResults?.[0]?.status;
+            return (
+              <Tooltip title="Kết quả">
+                <Tag
+                  color={status === "Pass" ? "green" : "red"}
+                  style={{ fontSize: "14px", fontWeight: "bold" }}
+                >
+                  {status === "Pass" ? "Đạt" : "Không đạt"}
+                </Tag>
+              </Tooltip>
+            );
+          }
+
+          // Hiển thị điểm cho các vòng khác
           return (
             <Tooltip title="Điểm tổng">
               <Tag
                 color="blue"
                 style={{ fontSize: "14px", fontWeight: "bold" }}
               >
-                {totalScore.toFixed(2)}
+                {totalScore}
               </Tag>
             </Tooltip>
           );
@@ -276,7 +295,7 @@ function CompetitionRound({ showId }) {
     ];
 
     return baseColumns;
-  }, [categories]);
+  }, [categories, selectedRoundType]);
 
   const displayData = useMemo(() => {
     if (
@@ -378,6 +397,15 @@ function CompetitionRound({ showId }) {
           total: totalItems,
           showSizeChanger: true,
           showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+        }}
+        locale={{
+          emptyText: (
+            <Empty
+              description="Không có dữ liệu"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ margin: "24px 0" }}
+            />
+          ),
         }}
         onChange={handleTableChange}
         className="mt-4"

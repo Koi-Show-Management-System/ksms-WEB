@@ -27,6 +27,7 @@ import {
   TagOutlined,
   NumberOutlined,
   DollarOutlined,
+  EyeOutlined,
 } from "@ant-design/icons";
 import koiFishImage from "../../../../assets/koiFishImage.png";
 import sponsorLogo1 from "../../../../assets/sponsorLogo1.png";
@@ -495,7 +496,7 @@ function KoiShowDetail() {
                             mask: (
                               <div className="flex items-center justify-center">
                                 <span className="font-medium text-base">
-                                  Xem lớn
+                                  <EyeOutlined />
                                 </span>
                               </div>
                             ),

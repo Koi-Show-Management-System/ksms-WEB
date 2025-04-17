@@ -11,7 +11,6 @@ import {
 } from "antd";
 import dayjs from "dayjs";
 import sponsorLogo1 from "../../assets/sponsorLogo1.png";
-import Category from "./Category";
 import koiFishImage from "../../assets/koiFishImage.png";
 import CompetitionRound from "./CompetitionRound";
 import { useParams } from "react-router-dom";
@@ -21,6 +20,7 @@ import Rules from "../staff/Rules";
 import ScanQrByReferee from "./ScanQrByReferee";
 import Cookies from "js-cookie";
 import StatusManager from "../admin/koishow/KoiShowAdmin/StatusManager";
+import Category from "../staff/Category";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -65,7 +65,7 @@ function KoiShowDetail() {
     {
       key: "category",
       label: "Danh Mục",
-      children: <Category showId={id} />,
+      children: <Category showId={id}  />,
     },
     {
       key: "scanQrByReferee",

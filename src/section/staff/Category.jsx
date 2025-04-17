@@ -16,6 +16,7 @@ import {
   Card,
   Tabs,
   Collapse,
+  Popconfirm,
 } from "antd";
 import {
   EditOutlined,
@@ -26,30 +27,47 @@ import {
   TrophyOutlined,
   ApartmentOutlined,
   FieldTimeOutlined,
+  StopOutlined,
+  CloseCircleOutlined,
 } from "@ant-design/icons";
 import useCategory from "../../hooks/useCategory";
-import EditCategory from "../admin/koishow/KoiShowAdmin/EditCategory";
 
 const { Search } = Input;
 const { Option } = Select;
 const { TabPane } = Tabs;
+const { TextArea } = Input;
 
-function Category({ showId }) {
+function Category({ showId, statusShow }) {
   const [searchText, setSearchText] = useState("");
   const [filterVariety, setFilterVariety] = useState("");
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
-  const [form] = Form.useForm();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const isEditDisabled = statusShow === "published";
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [categoryToCancel, setCategoryToCancel] = useState(null);
+
+  const showEditModal = (categoryId) => {
+    setEditingCategoryId(categoryId);
+    setIsEditModalVisible(true);
+  };
 
   const closeEditModal = () => {
     setEditingCategoryId(null);
     setIsEditModalVisible(false);
   };
 
-  const { categories, isLoading, error, fetchCategories, getCategoryDetail } =
-    useCategory();
+  const {
+    categories,
+    isLoading,
+    error,
+    fetchCategories,
+    getCategoryDetail,
+    deleteCategory,
+    cancelCategory,
+  } = useCategory();
 
   useEffect(() => {
     fetchCategories(showId, 1, 10);
@@ -57,6 +75,11 @@ function Category({ showId }) {
 
   const handleSearch = (value) => {
     setSearchText(value.toLowerCase());
+  };
+
+  const handleCategoryCreated = () => {
+    // Refresh the categories list after a new category is created
+    fetchCategories(showId, 1, 10);
   };
 
   const showCategoryDetail = async (categoryId) => {
@@ -70,6 +93,36 @@ function Category({ showId }) {
       message.error("Failed to load category details");
       console.error("Error fetching category details:", error);
     }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    try {
+      await deleteCategory(categoryId);
+      fetchCategories(showId, 1, 10);
+    } catch (error) {
+      message.error("Không thể xóa hạng mục. Vui lòng thử lại sau.");
+    }
+  };
+
+  const handleCancelCategory = async (categoryId, reason) => {
+    if (!reason || reason.trim() === "") {
+      message.error("Vui lòng nhập lý do hủy hạng mục!");
+      return;
+    }
+
+    try {
+      await cancelCategory(categoryId, reason);
+      fetchCategories(showId, 1, 10);
+      setCancelReason("");
+      setCancelModalVisible(false);
+    } catch (error) {
+      message.error("Không thể hủy hạng mục. Vui lòng thử lại sau.");
+    }
+  };
+
+  const showCancelModal = (categoryId) => {
+    setCategoryToCancel(categoryId);
+    setCancelModalVisible(true);
   };
 
   // Filter the categories from the API
@@ -93,6 +146,16 @@ function Category({ showId }) {
       dataIndex: "name",
       key: "name",
       sorter: (a, b) => (a.name || "").localeCompare(b.name || ""),
+      render: (name, record) => (
+        <div>
+          <Typography.Text>{name}</Typography.Text>
+          {record.status === "cancelled" && (
+            <Tag color="red" className="ml-2">
+              Đã hủy
+            </Tag>
+          )}
+        </div>
+      ),
     },
     {
       title: "Kích Thước",
@@ -154,38 +217,6 @@ function Category({ showId }) {
       key: "maxEntries",
       sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
     },
-    // {
-    //   title: "Trạng Thái",
-    //   dataIndex: "status",
-    //   key: "status",
-    //   render: (status) => (
-    //     <Tag
-    //       color={
-    //         status === "pending"
-    //           ? "orange"
-    //           : status === "approved"
-    //             ? "green"
-    //             : status === "upcoming"
-    //               ? "blue"
-    //               : "default"
-    //       }
-    //     >
-    //       {status === "pending"
-    //         ? "Chờ duyệt"
-    //         : status === "approved"
-    //           ? "Đã duyệt"
-    //           : status === "upcoming"
-    //             ? "Sắp diễn ra"
-    //             : status}
-    //     </Tag>
-    //   ),
-    //   filters: [
-    //     { text: "Chờ duyệt", value: "pending" },
-    //     { text: "Đã duyệt", value: "approved" },
-    //     { text: "Sắp diễn ra", value: "upcoming" },
-    //   ],
-    //   onFilter: (value, record) => record.status === value,
-    // },
     {
       title: "Hành Động",
       key: "actions",
@@ -252,27 +283,11 @@ function Category({ showId }) {
                 <Descriptions.Item label="Số lượng tối thiểu ">
                   {selectedCategory.minEntries}
                 </Descriptions.Item>
-                {/* <Descriptions.Item label="Trạng thái">
-                  <Tag
-                    color={
-                      selectedCategory.status === "pending"
-                        ? "orange"
-                        : selectedCategory.status === "approved"
-                          ? "green"
-                          : selectedCategory.status === "upcoming"
-                            ? "blue"
-                            : "default"
-                    }
-                  >
-                    {selectedCategory.status === "pending"
-                      ? "Chờ duyệt"
-                      : selectedCategory.status === "approved"
-                        ? "Đã duyệt"
-                        : selectedCategory.status === "upcoming"
-                          ? "Sắp diễn ra"
-                          : selectedCategory.status}
-                  </Tag>
-                </Descriptions.Item> */}
+                {selectedCategory.status === "cancelled" && (
+                  <Descriptions.Item label="Trạng thái">
+                    <Tag color="red">Đã hủy</Tag>
+                  </Descriptions.Item>
+                )}
                 <Descriptions.Item label="Bể trưng bày">
                   {selectedCategory.hasTank ? "Có" : "Không"}
                 </Descriptions.Item>
@@ -332,9 +347,12 @@ function Category({ showId }) {
                         key={award.id}
                         header={
                           <div className="flex items-center">
-                            {awardTypeMap[award.awardType].icon}
+                            {awardTypeMap[award.awardType]?.icon || (
+                              <TrophyOutlined style={{ color: "#4A4A4A" }} />
+                            )}
                             <span className="ml-2 font-medium">
-                              {awardTypeMap[award.awardType].name}
+                              {awardTypeMap[award.awardType]?.name ||
+                                award.awardType}
                             </span>
                           </div>
                         }
@@ -608,6 +626,43 @@ function Category({ showId }) {
           </Tabs>
         )}
       </Drawer>
+      {isEditModalVisible && (
+        <EditCategory
+          categoryId={editingCategoryId}
+          onClose={closeEditModal}
+          showId={showId}
+          onCategoryUpdated={() => fetchCategories(showId, 1, 10)}
+        />
+      )}
+
+      {/* Modal Nhập lý do hủy */}
+      <Modal
+        title="Hủy hạng mục"
+        open={cancelModalVisible}
+        onOk={() => handleCancelCategory(categoryToCancel, cancelReason)}
+        onCancel={() => {
+          setCancelModalVisible(false);
+          setCancelReason("");
+        }}
+        okText="Xác nhận"
+        cancelText="Hủy bỏ"
+        okButtonProps={{ disabled: !cancelReason.trim() }}
+      >
+        <Form layout="vertical">
+          <Form.Item
+            label="Lý do hủy"
+            name="cancelReason"
+            rules={[{ required: true, message: "Vui lòng nhập lý do hủy!" }]}
+          >
+            <TextArea
+              rows={4}
+              value={cancelReason}
+              onChange={(e) => setCancelReason(e.target.value)}
+              placeholder="Nhập lý do hủy hạng mục..."
+            />
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }

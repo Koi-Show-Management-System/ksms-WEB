@@ -30,7 +30,6 @@ export const getEvaluationColumns = (props) => {
     hasTank = false,
   } = props;
 
-  console.log("Received criteria in EvaluationColumns:", criteria);
 
   // Keep using the existing columns structure, but don't add criteria columns
   const columns = [
