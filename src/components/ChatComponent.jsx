@@ -120,163 +120,77 @@ const ChatComponent = ({ channel, chatClient }) => {
   };
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        height: "100%",
-        background: "linear-gradient(to bottom, #f8f9fa, #e9ecef)",
-        borderRadius: "12px",
-        overflow: "hidden",
-      }}
-      className="chat-component"
-    >
+    <div className="flex flex-col h-full bg-gradient-to-b from-gray-50 to-gray-100 rounded-xl overflow-hidden relative">
       {/* Messages header */}
-      <div
-        style={{
-          padding: "12px 16px",
-          borderBottom: "1px solid #eaeaea",
-          background: "white",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          boxShadow: "0 1px 3px rgba(0,0,0,0.05)",
-        }}
-      >
-        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+      <div className="flex items-center justify-between px-4 py-3 bg-white border-b border-gray-200 shadow-sm h-14">
+        <div className="flex items-center gap-2">
           <Badge status="processing" color="#52c41a" />
           <Text strong>Chat trực tiếp</Text>
         </div>
         <Tooltip title="Chat với người xem">
-          <InfoCircleOutlined style={{ color: "#8c8c8c" }} />
+          <InfoCircleOutlined className="text-gray-500" />
         </Tooltip>
       </div>
 
       {/* Messages area */}
       <div
         ref={messagesContainerRef}
-        style={{
-          flexGrow: 1,
-          overflowY: "auto",
-          padding: "16px",
-          backgroundColor: "rgba(255,255,255,0.7)",
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M11 18c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm48 25c3.866 0 7-3.134 7-7s-3.134-7-7-7-7 3.134-7 7 3.134 7 7 7zm-43-7c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm63 31c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM34 90c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zm56-76c1.657 0 3-1.343 3-3s-1.343-3-3-3-3 1.343-3 3 1.343 3 3 3zM12 86c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm28-65c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm23-11c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-6 60c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm29 22c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zM32 63c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm57-13c2.76 0 5-2.24 5-5s-2.24-5-5-5-5 2.24-5 5 2.24 5 5 5zm-9-21c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM60 91c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM35 41c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2zM12 60c1.105 0 2-.895 2-2s-.895-2-2-2-2 .895-2 2 .895 2 2 2z' fill='%23dddddd' fill-opacity='0.2' fill-rule='evenodd'/%3E%3C/svg%3E\")",
-        }}
-        className="messages-container"
+        className="h-[280px] overflow-y-auto px-4 py-3 bg-white/70"
       >
         {messages.length === 0 ? (
-          <div
-            style={{
-              textAlign: "center",
-              padding: "20px",
-              color: "#999",
-              marginTop: "30%",
-            }}
-            className="empty-messages"
-          >
-            <CommentOutlined style={{ fontSize: "32px" }} />
+          <div className="flex flex-col items-center justify-center h-full text-gray-500">
+            <CommentOutlined className="text-3xl mb-2" />
             <p>Chưa có tin nhắn nào. Hãy bắt đầu cuộc trò chuyện!</p>
           </div>
         ) : (
-          <div className="messages-list">
+          <div className="space-y-4">
             {messages.map((msg, index) => {
               const isCurrentUser = msg.user?.id === userId;
               return (
                 <div
                   key={msg.id}
-                  style={{
-                    marginBottom: "16px",
-                    display: "flex",
-                    flexDirection: isCurrentUser ? "row-reverse" : "row",
-                    alignItems: "flex-end",
-                    opacity: 1,
-                    animation: "fadeInUp 0.3s ease-out",
-                    transform: "translateY(0)",
-                    transition: "all 0.3s ease-out",
-                  }}
-                  className={`message-item ${isCurrentUser ? "message-mine" : "message-other"}`}
+                  className={`flex ${isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end gap-2`}
                 >
                   <Avatar
                     src={
                       msg.user?.image ||
                       `https://getstream.io/random_svg/?name=${encodeURIComponent(msg.user?.name || "User")}`
                     }
-                    style={{
-                      marginRight: isCurrentUser ? 0 : "12px",
-                      marginLeft: isCurrentUser ? "12px" : 0,
-                      flexShrink: 0,
-                      border: isCurrentUser ? "2px solid #1677ff" : "none",
-                      boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
-                    }}
+                    className={`flex-shrink-0 ${isCurrentUser ? "ml-2" : "mr-2"} ${
+                      isCurrentUser ? "border-2 border-blue-500" : ""
+                    } shadow-md`}
                     size={40}
                     icon={<UserOutlined />}
                   />
-                  <div style={{ maxWidth: "70%" }}>
+                  <div className="max-w-[70%] space-y-1">
                     <div
-                      style={{
-                        fontWeight: "bold",
-                        fontSize: "13px",
-                        marginBottom: "4px",
-                        color: isCurrentUser ? "#1677ff" : "#555",
-                        textAlign: isCurrentUser ? "right" : "left",
-                        paddingLeft: isCurrentUser ? 0 : "8px",
-                        paddingRight: isCurrentUser ? "8px" : 0,
-                      }}
+                      className={`text-xs font-semibold ${
+                        isCurrentUser
+                          ? "text-blue-500 text-right"
+                          : "text-gray-700"
+                      }`}
                     >
                       {isCurrentUser
                         ? userName
                         : msg.user?.name || "Người dùng"}
                     </div>
-                    <div
-                      style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: isCurrentUser ? "flex-end" : "flex-start",
-                      }}
-                    >
+                    <div className="flex flex-col">
                       <div
-                        style={{
-                          backgroundColor: isCurrentUser
-                            ? "linear-gradient(135deg, #1677ff 0%, #0e5cda 100%)"
-                            : "linear-gradient(135deg, #ffffff 0%, #f5f5f5 100%)",
-                          color: isCurrentUser ? "white" : "#333",
-                          borderRadius: isCurrentUser
-                            ? "18px 4px 18px 18px"
-                            : "4px 18px 18px 18px",
-                          padding: "12px 16px",
-                          display: "inline-block",
-                          maxWidth: "100%",
-                          minWidth: "40px",
-                          wordBreak: "normal",
-                          wordWrap: "break-word",
-                          whiteSpace: "pre-wrap",
-                          boxShadow: isCurrentUser
-                            ? "0 2px 8px rgba(22, 119, 255, 0.3)"
-                            : "0 1px 4px rgba(0,0,0,0.05)",
-                          position: "relative",
-                          border: isCurrentUser
-                            ? "none"
-                            : "1px solid rgba(0,0,0,0.05)",
-                          background: isCurrentUser ? "#1677ff" : "#f0f0f0",
-                        }}
-                        className={`message-bubble ${isCurrentUser ? "mine" : "other"}`}
+                        className={`inline-block px-4 py-2 rounded-2xl ${
+                          isCurrentUser
+                            ? "bg-blue-500 text-white rounded-br-sm"
+                            : "bg-gray-100 text-gray-800 rounded-bl-sm"
+                        } shadow-sm`}
                       >
                         {msg.text}
                       </div>
-                      <div
-                        style={{
-                          fontSize: "11px",
-                          marginTop: "4px",
-                          color: "#999",
-                          paddingLeft: isCurrentUser ? 0 : "8px",
-                          paddingRight: isCurrentUser ? "8px" : 0,
-                          textAlign: isCurrentUser ? "right" : "left",
-                        }}
-                        className="message-time"
+                      <span
+                        className={`text-xs text-gray-500 mt-1 ${
+                          isCurrentUser ? "text-right" : "text-left"
+                        }`}
                       >
                         {formatTime(msg.created_at)}
-                      </div>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -288,125 +202,32 @@ const ChatComponent = ({ channel, chatClient }) => {
       </div>
 
       {/* Input area */}
-      <div
-        style={{
-          borderTop: "1px solid #e8e8e8",
-          padding: "12px 16px",
-          backgroundColor: "white",
-          boxShadow: "0 -1px 3px rgba(0,0,0,0.05)",
-        }}
-        className="chat-input-area"
-      >
-        <Input.Group compact style={{ display: "flex" }}>
-          <div style={{ display: "flex", width: "100%" }}>
+      <div className="px-4 py-3 bg-white border-t border-gray-200 shadow-sm">
+        <Input.Group compact className="flex">
+          <div className="flex w-full">
             <Input
+              className="flex-1 rounded-l-full border-gray-300 hover:border-blue-500 focus:border-blue-500 focus:shadow-none"
               style={{
-                flex: 1,
-                borderRadius: "30px 0 0 30px",
-                padding: "8px 16px",
-                boxShadow: "none",
-                borderColor: "#d9d9d9",
                 height: "46px",
+                paddingLeft: "1rem",
               }}
               placeholder="Nhập tin nhắn..."
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              prefix={
-                <SmileOutlined
-                  style={{ color: "#bfbfbf", marginRight: "6px" }}
-                />
-              }
-              className="chat-input"
+              prefix={<SmileOutlined className="text-gray-400 mr-2" />}
               disabled={sending}
             />
             <Button
               type="primary"
               icon={sending ? <Spin size="small" /> : <SendOutlined />}
               onClick={sendMessage}
-              style={{
-                borderRadius: "0 30px 30px 0",
-                height: "46px",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                width: "46px",
-              }}
+              className="rounded-r-full h-[46px] w-[46px] flex items-center justify-center"
               disabled={sending || !newMessage.trim()}
-              className="send-button"
             />
           </div>
         </Input.Group>
       </div>
-
-      {/* CSS cho các hiệu ứng */}
-      <style jsx="true">{`
-        .message-item {
-          transition: all 0.3s ease;
-        }
-
-        @keyframes fadeInUp {
-          from {
-            opacity: 0;
-            transform: translateY(20px);
-          }
-          to {
-            opacity: 1;
-            transform: translateY(0);
-          }
-        }
-
-        .message-bubble {
-          transition: all 0.2s ease;
-        }
-
-        .message-bubble:hover {
-          transform: scale(1.02);
-        }
-
-        .message-bubble.mine:hover {
-          box-shadow: 0 4px 12px rgba(22, 119, 255, 0.4);
-        }
-
-        .message-bubble.other:hover {
-          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-        }
-
-        .chat-input {
-          transition: all 0.3s ease;
-        }
-
-        .chat-input:focus {
-          box-shadow: 0 0 0 2px rgba(22, 119, 255, 0.2);
-          border-color: #1677ff;
-        }
-
-        .send-button {
-          transition: all 0.3s ease;
-        }
-
-        .send-button:hover:not(:disabled) {
-          transform: scale(1.05);
-        }
-
-        .messages-container::-webkit-scrollbar {
-          width: 6px;
-        }
-
-        .messages-container::-webkit-scrollbar-track {
-          background: rgba(0, 0, 0, 0.05);
-          border-radius: 10px;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb {
-          background: rgba(0, 0, 0, 0.2);
-          border-radius: 10px;
-        }
-
-        .messages-container::-webkit-scrollbar-thumb:hover {
-          background: rgba(0, 0, 0, 0.3);
-        }
-      `}</style>
     </div>
   );
 };

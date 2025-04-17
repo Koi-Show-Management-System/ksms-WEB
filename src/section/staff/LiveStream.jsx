@@ -1148,7 +1148,10 @@ function LiveStream({ showId }) {
             }}
           >
             <Flex vertical gap="24px" className="h-full">
-              <Row gutter={[16, 16]} className="h-[500px] flex items-stretch">
+              <Row
+                gutter={[16, 16]}
+                className="h-[calc(100vh-200px)] flex items-stretch"
+              >
                 <Col span={24} md={14} className="flex">
                   {/* Hiển thị video của chính người dùng */}
                   <Card
@@ -1164,6 +1167,7 @@ function LiveStream({ showId }) {
                       height: "calc(100% - 57px)",
                       padding: "0",
                       position: "relative",
+                      overflow: "hidden",
                     }}
                     headStyle={{
                       borderBottom: "1px solid rgba(255,255,255,0.1)",
@@ -1203,6 +1207,7 @@ function LiveStream({ showId }) {
                       height: "calc(100% - 57px)",
                       padding: 0,
                       position: "relative",
+                      overflow: "hidden",
                     }}
                     headStyle={{ borderBottom: "1px solid #f0f0f0" }}
                   >
