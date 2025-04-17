@@ -135,21 +135,11 @@ function Referee({ accounts = [], isLoading, role }) {
     const res = await updateAccountTeam(currentAccount.key, formData);
 
     if (res.success) {
-      notification.success({
-        message: "Thành công",
-        description: "Cập nhật tài khoản thành công!",
-        placement: "topRight",
-      });
-
       fetchAccountTeam(1, 10, role);
       setIsModalVisible(false);
       setIsEditing(false);
     } else {
-      notification.error({
-        message: "Lỗi",
-        description: res.error || "Không thể cập nhật tài khoản.",
-        placement: "topRight",
-      });
+      console.log("Lỗi account", res);
     }
   };
 

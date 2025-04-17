@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo } from "react";
 import { Collapse, Timeline, Card, Image, Tabs, Modal, message } from "antd";
 import dayjs from "dayjs";
+import { EyeOutlined } from "@ant-design/icons";
 import sponsorLogo1 from "../../assets/sponsorLogo1.png";
 import Category from "./Category";
 import koiFishImage from "../../assets/koiFishImage.png";
@@ -26,21 +27,6 @@ function KoiShowDetail() {
 
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
-
-  // Detect tablet size
-  useEffect(() => {
-    const checkScreenSize = () => {
-      setIsTablet(window.innerWidth >= 768 && window.innerWidth <= 1024);
-    };
-
-    checkScreenSize();
-    window.addEventListener("resize", checkScreenSize);
-
-    return () => {
-      window.removeEventListener("resize", checkScreenSize);
-    };
-  }, []);
 
   const items = useMemo(() => {
     if (!koiShowDetail?.data) return [];
@@ -49,97 +35,63 @@ function KoiShowDetail() {
     return [
       {
         key: "category",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>Danh Mục</span>
+        label: "Danh Mục",
+        children: (
+          <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />
         ),
-        children: <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />,
       },
       {
         key: "registration",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            Đơn Đăng Ký
-          </span>
-        ),
+        label: "Đơn Đăng Ký",
         children: <Registration showId={id} />,
       },
       {
         key: "ticket",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            Quản lý vé
-          </span>
-        ),
+        label: "Quản lý vé",
         children: <Ticket showId={id} />,
       },
       {
         key: "tank",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            Quản Lý bể
-          </span>
-        ),
+        label: "Quản Lý bể",
         children: <Tank showId={id} />,
       },
       {
         key: "scanQr",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>Quét mã</span>
-        ),
+        label: "Quét mã",
         children: <ScanQrWrapper />,
       },
       {
         key: "competitionRound",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>Vòng thi</span>
-        ),
+        label: "Vòng thi",
         children: <CompetitionRound showId={id} />,
       },
       {
         key: "roundResult",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            Kết quả cuối cùng
-          </span>
-        ),
+        label: "Kết quả cuối cùng",
         children: <RoundResult showId={id} />,
       },
       {
         key: "votes",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            Bình chọn
-          </span>
-        ),
+        label: "Bình chọn",
         children: <Votes showId={id} />,
       },
       {
         key: "checkOutKoi",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            Check out
-          </span>
-        ),
+        label: "Check out",
         children: <CheckOutKoi showId={id} />,
       },
       {
         key: "rules",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>Quy tắc</span>
-        ),
+        label: "Quy tắc",
         children: <Rules showId={id} showRule={showRule} />,
       },
       {
         key: "liveStream",
-        label: (
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
-            LiveStream
-          </span>
-        ),
+        label: "LiveStream",
         children: <LiveStream showId={id} />,
       },
     ];
-  }, [id, koiShowDetail?.data, isTablet]);
+  }, [id, koiShowDetail?.data]);
 
   useEffect(() => {
     fetchKoiShowDetail(id);
@@ -167,101 +119,15 @@ function KoiShowDetail() {
     Final: { label: "Vòng Chung Kết", color: "orange" },
     GrandChampion: { label: "Grand Champion", color: "yellow" },
     Completed: { label: "Hoàn Thành ", color: "gray" },
-    Exhibition: { lablel: "Triễn Lãm ", color: "teal" },
-    Finished: { lablel: "Kết Thúc", color: "brown" },
+    Exhibition: { label: "Triễn Lãm ", color: "teal" },
+    Finished: { label: "Kết Thúc", color: "brown" },
   };
 
   const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
   const formatTime = (date) => dayjs(date).format("hh:mm A");
 
-  const scheduleItems = [
-    {
-      key: "1",
-      label: (
-        <span
-          style={{ fontSize: isTablet ? "16px" : "14px", fontWeight: "bold" }}
-        >
-          Lịch Trình Sự Kiện
-        </span>
-      ),
-      children: (
-        <div className="space-y-2 text-sm md:text-sm">
-          <div className="flex flex-col md:flex-row md:justify-between">
-            <span className="font-medium">Thời gian bắt đầu:</span>
-            <span>
-              {new Date(koiShowDetail.data.startDate).toLocaleDateString(
-                "vi-VN"
-              )}{" "}
-              {formatTime(koiShowDetail.data.startDate)}
-            </span>
-          </div>
-          <div className="flex flex-col md:flex-row md:justify-between">
-            <span className="font-medium">Thời gian kết thúc:</span>
-            <span>
-              {new Date(koiShowDetail.data.endDate).toLocaleDateString("vi-VN")}{" "}
-              {formatTime(koiShowDetail.data.endDate)}
-            </span>
-          </div>
-          <div className="flex flex-col md:flex-row md:justify-between">
-            <span className="font-medium">Số người tham gia:</span>
-            <span>
-              {koiShowDetail.data.minParticipants} -{" "}
-              {koiShowDetail.data.maxParticipants} người
-            </span>
-          </div>
-          <div className="flex flex-col md:flex-row md:justify-between">
-            <span className="font-medium">Địa điểm:</span>
-            <span>{koiShowDetail.data.location}</span>
-          </div>
-        </div>
-      ),
-    },
-  ];
-
-  const ticketItems = [
-    {
-      key: "2",
-      label: (
-        <span
-          style={{ fontSize: isTablet ? "16px" : "14px", fontWeight: "bold" }}
-        >
-          Vé
-        </span>
-      ),
-      children: (
-        <div className="space-y-2 text-sm md:text-sm">
-          {koiShowDetail.data.ticketTypes.length > 0 ? (
-            koiShowDetail.data.ticketTypes.map((ticket) => (
-              <div
-                key={ticket.id}
-                className="flex flex-col md:flex-row md:justify-between"
-              >
-                <span>{ticket.name}</span>
-                <div className="flex justify-between md:block">
-                  <span className="text-blue-600">
-                    {new Intl.NumberFormat("vi-VN", {
-                      style: "currency",
-                      currency: "VND",
-                    }).format(ticket.price)}
-                  </span>
-                  <span className="ml-2 text-gray-500">
-                    ({ticket.availableQuantity} vé)
-                  </span>
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-gray-500">Chưa có thông tin vé</div>
-          )}
-        </div>
-      ),
-    },
-  ];
-
   return (
-    <div
-      className={`max-w-8xl mx-auto p-3 ${isTablet ? "tablet-container" : ""}`}
-    >
+    <div className="max-w-8xl mx-auto p-2 md:p-4">
       <Collapse
         defaultActiveKey={["info"]}
         ghost
@@ -270,182 +136,254 @@ function KoiShowDetail() {
             key: "info",
             label: (
               <div className="flex items-center justify-between w-full">
-                <h1
-                  className={`text-2xl font-semibold ${isTablet ? "tablet-heading" : ""}`}
-                >
+                <h1 className="text-xl md:text-2xl font-semibold">
                   {koiShowDetail.data.name}
                 </h1>
               </div>
             ),
             children: (
               <>
-                <p
-                  className="text-gray-600"
-                  style={{ fontSize: isTablet ? "16px" : "14px" }}
-                >
+                <p className="text-gray-600 text-sm md:text-base">
                   {koiShowDetail.data.description}
                 </p>
-
-                <div
-                  className={`grid ${isTablet ? "grid-cols-1" : "grid-cols-1 md:grid-cols-3"} gap-4 md:gap-8`}
-                >
-                  <div className={isTablet ? "col-span-1" : "md:col-span-2"}>
-                    <div className="flex justify-center mb-4">
-                      <Image
-                        src={koiShowDetail.data.imgUrl || koiFishImage}
-                        alt="Cá Koi"
-                        className={
-                          isTablet
-                            ? "w-full max-w-lg h-auto object-cover rounded-lg"
-                            : "w-[300px] h-[200px] object-cover rounded-lg"
-                        }
-                      />
-                    </div>
-
-                    <div
-                      className={`grid ${isTablet ? "grid-cols-1 gap-4" : "grid-cols-2 gap-4"}`}
-                    >
-                      <div className="mt-4">
-                        <Collapse
-                          defaultActiveKey={["1"]}
-                          items={scheduleItems}
-                          className={isTablet ? "tablet-collapse" : ""}
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 my-4">
+                  <div className="lg:col-span-2">
+                    <div className="mb-4">
+                      <div className="flex justify-center lg:justify-start mb-6">
+                        <Image
+                          src={koiShowDetail.data.imgUrl || koiFishImage}
+                          alt="Cá Koi"
+                          className="w-full h-[280px] sm:h-[320px] md:h-[380px] lg:h-[420px] xl:h-[480px] object-cover rounded-lg shadow-md"
+                          preview={{
+                            mask: (
+                              <div className="flex items-center justify-center">
+                                <span className="font-medium text-base">
+                                  <EyeOutlined />
+                                </span>
+                              </div>
+                            ),
+                          }}
                         />
                       </div>
 
-                      <div className="mt-4">
-                        <Collapse
-                          defaultActiveKey={["2"]}
-                          items={ticketItems}
-                          className={isTablet ? "tablet-collapse" : ""}
-                        />
-                      </div>
-                    </div>
-
-                    <div
-                      className={`mt-4 grid ${isTablet ? "grid-cols-1 gap-6" : "grid-cols-2 gap-4"}`}
-                    >
-                      <div className="bg-black/[0.02] p-4 rounded-lg">
-                        <h3
-                          className={`font-bold mb-4 ${isTablet ? "text-xl" : "text-lg"}`}
-                        >
-                          Tài Trợ
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4 relative">
-                          {displaySponsors.map((sponsor, index) => (
-                            <div key={sponsor.id} className="relative">
-                              <Image
-                                src={sponsor.logoUrl || sponsorLogo1}
-                                alt={`Tài Trợ ${index + 1}`}
-                                className="rounded-xl"
-                                width={isTablet ? 180 : 150}
-                                height={isTablet ? 180 : 150}
-                              />
-                              {index === 1 && extraCount > 0 && (
-                                <div
-                                  onClick={() => setIsModalOpen(true)}
-                                  className="absolute inset-0 bg-black bg-opacity-50 rounded-xl flex items-center justify-center cursor-pointer"
-                                >
-                                  <span
-                                    className="text-white font-semibold"
-                                    style={{
-                                      fontSize: isTablet ? "20px" : "16px",
-                                    }}
-                                  >
-                                    +{extraCount}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="mt-2">
+                          <Collapse
+                            defaultActiveKey={["1"]}
+                            items={[
+                              {
+                                key: "1",
+                                label: (
+                                  <span className="font-medium">
+                                    Lịch Trình Sự Kiện
                                   </span>
-                                </div>
-                              )}
-                            </div>
-                          ))}
+                                ),
+                                children: (
+                                  <div className="space-y-2 text-sm md:text-sm">
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Thời gian bắt đầu:
+                                      </span>
+                                      <span>
+                                        {new Date(
+                                          koiShowDetail.data.startDate
+                                        ).toLocaleDateString("vi-VN")}{" "}
+                                        {formatTime(
+                                          koiShowDetail.data.startDate
+                                        )}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Thời gian kết thúc:
+                                      </span>
+                                      <span>
+                                        {new Date(
+                                          koiShowDetail.data.endDate
+                                        ).toLocaleDateString("vi-VN")}{" "}
+                                        {formatTime(koiShowDetail.data.endDate)}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Số người tham gia:
+                                      </span>
+                                      <span>
+                                        {koiShowDetail.data.minParticipants} -{" "}
+                                        {koiShowDetail.data.maxParticipants}{" "}
+                                        người
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col md:flex-row md:justify-between">
+                                      <span className="font-medium">
+                                        Địa điểm:
+                                      </span>
+                                      <span>{koiShowDetail.data.location}</span>
+                                    </div>
+                                  </div>
+                                ),
+                              },
+                            ]}
+                          />
                         </div>
 
-                        <Modal
-                          title="Tất cả nhà tài trợ"
-                          open={isModalOpen}
-                          onCancel={() => setIsModalOpen(false)}
-                          footer={null}
-                          width={isTablet ? 600 : 520}
-                        >
-                          <div className="grid grid-cols-2 gap-4">
-                            {sponsors.map((sponsor) => (
-                              <Image
-                                key={sponsor.id}
-                                src={sponsor.logoUrl || sponsorLogo1}
-                                alt="Tài trợ"
-                                className="rounded-xl"
-                                width={isTablet ? 180 : 150}
-                                height={isTablet ? 180 : 150}
-                              />
-                            ))}
-                          </div>
-                        </Modal>
+                        <div className="mt-2">
+                          <Collapse
+                            defaultActiveKey={["2"]}
+                            items={[
+                              {
+                                key: "2",
+                                label: <span className="font-medium">Vé</span>,
+                                children: (
+                                  <div className="space-y-2 text-sm md:text-sm">
+                                    {koiShowDetail.data.ticketTypes.length >
+                                    0 ? (
+                                      koiShowDetail.data.ticketTypes.map(
+                                        (ticket) => (
+                                          <div
+                                            key={ticket.id}
+                                            className="flex flex-col md:flex-row md:justify-between"
+                                          >
+                                            <span>{ticket.name}</span>
+                                            <div className="flex justify-between md:block">
+                                              <span className="text-blue-600">
+                                                {new Intl.NumberFormat(
+                                                  "vi-VN",
+                                                  {
+                                                    style: "currency",
+                                                    currency: "VND",
+                                                  }
+                                                ).format(ticket.price)}
+                                              </span>
+                                              <span className="ml-2 text-gray-500">
+                                                ({ticket.availableQuantity} vé)
+                                              </span>
+                                            </div>
+                                          </div>
+                                        )
+                                      )
+                                    ) : (
+                                      <div className="text-gray-500">
+                                        Chưa có thông tin vé
+                                      </div>
+                                    )}
+                                  </div>
+                                ),
+                              },
+                            ]}
+                          />
+                        </div>
                       </div>
 
-                      <div className="bg-black/[0.02] p-4 rounded-lg">
-                        <h3
-                          className={`font-bold mb-4 ${isTablet ? "text-xl" : "text-lg"}`}
-                        >
-                          Tiêu Chí Đánh Giá{" "}
-                        </h3>
-                        <div className="grid grid-cols-2 gap-4 md:gap-8">
-                          {/* Cột 1: Chứa 5 phần tử đầu tiên */}
-                          <div className="space-y-3">
-                            {koiShowDetail.data.criteria
-                              .slice(0, 5)
-                              .map((criteriaList, index) => (
-                                <div key={index} className="flex items-center">
+                      <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-black/[0.02] p-3 md:p-4 rounded-lg">
+                          <h3 className="font-bold mb-3 text-base md:text-lg">
+                            Tài Trợ
+                          </h3>
+                          <div className="grid grid-cols-2 gap-3 md:gap-4 relative">
+                            {displaySponsors.map((sponsor, index) => (
+                              <div
+                                key={sponsor.id}
+                                className="relative flex justify-center items-center"
+                              >
+                                <Image
+                                  src={sponsor.logoUrl || sponsorLogo1}
+                                  alt={`Tài Trợ ${index + 1}`}
+                                  className="rounded-xl"
+                                  width={180}
+                                  height={180}
+                                />
+                                {index === 1 && extraCount > 0 && (
                                   <div
-                                    className={`${isTablet ? "w-8 h-8" : "w-7 h-7"} bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0`}
+                                    onClick={() => setIsModalOpen(true)}
+                                    className="absolute inset-0 bg-black bg-opacity-50 rounded-xl flex items-center justify-center cursor-pointer"
                                   >
-                                    {index + 1}
+                                    <span className="text-white font-semibold text-base md:text-lg">
+                                      +{extraCount}
+                                    </span>
                                   </div>
-                                  <div
-                                    className={
-                                      isTablet ? "text-base" : "text-sm"
-                                    }
-                                  >
-                                    {criteriaList}
-                                  </div>
-                                </div>
-                              ))}
+                                )}
+                              </div>
+                            ))}
                           </div>
 
-                          {/* Cột 2: Chứa các phần tử còn lại */}
-                          <div className="space-y-3">
-                            {koiShowDetail.data.criteria
-                              .slice(5)
-                              .map((criteriaList, index) => (
-                                <div
-                                  key={index + 5}
-                                  className="flex items-center"
-                                >
-                                  <div
-                                    className={`${isTablet ? "w-8 h-8" : "w-7 h-7"} bg-blue-500 text-white rounded-full flex items-center justify-center text-sm mr-2 flex-shrink-0`}
-                                  >
-                                    {index + 6}
-                                  </div>
-                                  <div
-                                    className={
-                                      isTablet ? "text-base" : "text-sm"
-                                    }
-                                  >
-                                    {criteriaList}
-                                  </div>
-                                </div>
+                          <Modal
+                            title="Tất cả nhà tài trợ"
+                            open={isModalOpen}
+                            onCancel={() => setIsModalOpen(false)}
+                            footer={null}
+                            width={700}
+                          >
+                            <div className="grid grid-cols-2 gap-5">
+                              {sponsors.map((sponsor) => (
+                                <Image
+                                  key={sponsor.id}
+                                  src={sponsor.logoUrl || sponsorLogo1}
+                                  alt="Tài trợ"
+                                  className="rounded-xl"
+                                  width={250}
+                                  height={250}
+                                />
                               ))}
+                            </div>
+                          </Modal>
+                        </div>
+
+                        <div className="bg-black/[0.02] p-3 md:p-4 rounded-lg">
+                          <h3 className="font-bold mb-3 text-base md:text-lg">
+                            Tiêu Chí Đánh Giá{" "}
+                          </h3>
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
+                            {/* Cột 1: Chứa 5 phần tử đầu tiên */}
+                            <div className="space-y-2 md:space-y-3">
+                              {koiShowDetail.data.criteria
+                                .slice(0, 5)
+                                .map((criteriaList, index) => (
+                                  <div
+                                    key={index}
+                                    className="flex items-center"
+                                  >
+                                    <div className="w-6 h-6 md:w-7 md:h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 flex-shrink-0">
+                                      {index + 1}
+                                    </div>
+                                    <div className="text-xs md:text-sm">
+                                      {criteriaList}
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
+
+                            {/* Cột 2: Chứa các phần tử còn lại */}
+                            <div className="space-y-2 md:space-y-3">
+                              {koiShowDetail.data.criteria
+                                .slice(5)
+                                .map((criteriaList, index) => (
+                                  <div
+                                    key={index + 5}
+                                    className="flex items-center"
+                                  >
+                                    <div className="w-6 h-6 md:w-7 md:h-7 bg-blue-500 text-white rounded-full flex items-center justify-center text-xs md:text-sm mr-2 flex-shrink-0">
+                                      {index + 6}
+                                    </div>
+                                    <div className="text-xs md:text-sm">
+                                      {criteriaList}
+                                    </div>
+                                  </div>
+                                ))}
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
                   </div>
-
-                  <div className={isTablet ? "mt-4" : ""}>
-                    <StatusManager
-                      showId={id}
-                      showStatuses={koiShowDetail.data.showStatuses}
-                      disabled={true}
-                    />
+                  <div>
+                    <div className="mb-4">
+                      <StatusManager
+                        showId={id}
+                        showStatuses={koiShowDetail.data.showStatuses}
+                        disabled={true}
+                      />
+                    </div>
                   </div>
                 </div>
               </>
@@ -454,98 +392,15 @@ function KoiShowDetail() {
         ]}
       />
 
-      <div className="flex items-center justify-between mx-2 mt-4">
-        <div className="flex-1">
-          <Tabs
-            defaultActiveKey="category"
-            items={items}
-            size={isTablet ? "large" : "middle"}
-            tabBarGutter={isTablet ? 24 : 16}
-            tabBarStyle={{
-              margin: isTablet ? "0 0 24px 0" : "0 0 16px 0",
-              padding: isTablet ? "0 8px" : "0",
-            }}
-            className={isTablet ? "tablet-tabs" : ""}
-          />
-        </div>
+      <div className="mt-2 md:mt-4 p-2 md:p-4">
+        <Tabs
+          defaultActiveKey="category"
+          items={items}
+          size="small"
+          tabBarGutter={12}
+          className="koishow-tabs"
+        />
       </div>
-
-      <style jsx="true" global>{`
-        .tablet-container {
-          padding: 16px;
-        }
-
-        .tablet-heading {
-          font-size: 28px;
-          margin-bottom: 16px;
-        }
-
-        .tablet-card .ant-card-head {
-          padding: 16px 24px;
-          min-height: 60px;
-        }
-
-        .tablet-card .ant-card-body {
-          padding: 20px 24px;
-        }
-
-        .tablet-collapse .ant-collapse-header {
-          padding: 16px 20px !important;
-        }
-
-        .tablet-collapse .ant-collapse-content-box {
-          padding: 16px 20px !important;
-        }
-
-        .tablet-tabs .ant-tabs-nav-list {
-          width: 100%;
-          overflow-x: auto;
-          white-space: nowrap;
-          padding-bottom: 6px;
-        }
-
-        .tablet-tabs .ant-tabs-tab {
-          padding: 12px 16px;
-          touch-action: manipulation;
-        }
-
-        .tablet-tabs .ant-tabs-ink-bar {
-          height: 3px;
-        }
-
-        /* Tablet sizes for touch interface */
-        @media (min-width: 768px) and (max-width: 1024px) {
-          .ant-collapse-header {
-            min-height: 50px;
-          }
-
-          .ant-btn {
-            min-height: 44px;
-          }
-
-          .ant-select-selector {
-            height: 44px !important;
-          }
-
-          .ant-input {
-            height: 44px;
-            font-size: 16px;
-          }
-
-          .ant-pagination-item {
-            min-width: 36px;
-            height: 36px;
-            line-height: 34px;
-          }
-
-          /* Avoid zoom on input fields */
-          input,
-          select,
-          textarea {
-            font-size: 16px !important;
-          }
-        }
-      `}</style>
     </div>
   );
 }

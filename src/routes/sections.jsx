@@ -116,7 +116,7 @@ export const Router = () => {
       path: "/manager",
       children: [
         { element: <KoiShowPage />, path: "showList" },
-        { element: <TeamManagerPage />, path: "teams" },
+        { element: <TeamPage />, path: "teams" },
         { element: <NewManagerPage />, path: "news" },
         { element: <KoiShowDetail />, path: "koiShow/detail/:id" },
         { element: <Navigate to="/manager/showList" replace />, index: true },
