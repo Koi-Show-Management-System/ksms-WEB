@@ -305,9 +305,6 @@ const useRegistrationRound = create((set, get) => ({
             item.roundResults[0]?.status === status
         );
 
-        console.log(
-          `Found ${filteredRegistrations.length} fish with status ${status}`
-        );
         set({ isLoading: false });
         return filteredRegistrations;
       } else {

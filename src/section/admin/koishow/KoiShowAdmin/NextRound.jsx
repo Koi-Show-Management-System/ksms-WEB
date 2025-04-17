@@ -101,20 +101,86 @@ function NextRound({
     );
   }, [registrationRound]);
 
+  // Thêm state để lưu trữ thời điểm cuối cùng fetch tất cả cá pass
+  const [lastFetchPassingFish, setLastFetchPassingFish] = useState(null);
+
+  // Cập nhật hàm để fetch tất cả cá pass và sử dụng biến tham chiếu để tránh fetch nhiều lần
+  const fetchAllPassingFishFromAllPages = useCallback(async () => {
+    if (!selectedSubRound) return;
+
+    try {
+      // Đánh dấu đang tải dữ liệu
+      setIsLoadingAllFish(true);
+
+      // Gọi API lấy tất cả cá pass từ tất cả các trang
+      const response = await fetchAllRegistrationRoundByStatus(
+        selectedSubRound,
+        "Pass"
+      );
+
+      let fishData = [];
+      if (response && Array.isArray(response)) {
+        fishData = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        fishData = response.data;
+      } else {
+        console.error(
+          "Invalid response format for all passing fish:",
+          response
+        );
+        // Fallback: Sử dụng danh sách cá pass từ trang hiện tại
+        fishData = passingFish;
+      }
+
+      setAllPassingFish(fishData);
+      setLastFetchPassingFish(Date.now());
+    } catch (error) {
+      console.error("Error fetching all passing fish:", error);
+      // Fallback: Sử dụng danh sách cá pass từ trang hiện tại
+      setAllPassingFish(passingFish);
+    } finally {
+      setIsLoadingAllFish(false);
+    }
+  }, [selectedSubRound, fetchAllRegistrationRoundByStatus, passingFish]);
+
+  // Cập nhật useEffect để gọi hàm fetch tất cả cá pass
+  useEffect(() => {
+    if (selectedSubRound) {
+      fetchAllPassingFishFromAllPages();
+    }
+  }, [
+    selectedSubRound,
+    currentPage,
+    pageSize,
+    fetchAllPassingFishFromAllPages,
+  ]);
+
+  // Thêm useEffect để tự động refresh dữ liệu mỗi khi passingFish thay đổi
+  useEffect(() => {
+    // Nếu dữ liệu vừa được tải trong vòng 2 giây, không cần tải lại
+    if (lastFetchPassingFish && Date.now() - lastFetchPassingFish < 2000) {
+      return;
+    }
+
+    if (selectedSubRound && passingFish.length > 0) {
+      // Dùng setTimeout để tránh quá nhiều request liên tiếp
+      const timerId = setTimeout(() => {
+        fetchAllPassingFishFromAllPages();
+      }, 100);
+
+      return () => clearTimeout(timerId);
+    }
+  }, [
+    selectedSubRound,
+    passingFish,
+    fetchAllPassingFishFromAllPages,
+    lastFetchPassingFish,
+  ]);
+
   // Kiểm tra xem tất cả cá trong vòng thi đã có kết quả chưa
   useEffect(() => {
     const checkAllFishHaveResults = async () => {
       if (!selectedSubRound) return;
-
-      // Lấy từ localStorage trước, nếu đã chuyển cá thì không cần kiểm tra nữa
-      const localStorageKey = `round_${selectedSubRound}_promoted`;
-      const wasPromoted = localStorage.getItem(localStorageKey) === "true";
-
-      if (wasPromoted) {
-        setFishAlreadyMoved(true);
-        setAllFishHaveResults(true);
-        return;
-      }
 
       try {
         setIsLoadingAllFish(true);
@@ -176,60 +242,12 @@ function NextRound({
     if (selectedSubRound) {
       checkAllFishHaveResults();
     }
-  }, [selectedSubRound, fetchAllRegistrationRound, registrationRound]);
-
-  // Thêm useEffect mới để kiểm tra localStorage khi component mount hoặc selectedSubRound thay đổi
-  useEffect(() => {
-    if (selectedSubRound) {
-      const localStorageKey = `round_${selectedSubRound}_promoted`;
-      const wasPromoted = localStorage.getItem(localStorageKey) === "true";
-
-      if (wasPromoted) {
-        setFishAlreadyMoved(true);
-        setProcessedRounds((prev) =>
-          prev.includes(selectedSubRound) ? prev : [...prev, selectedSubRound]
-        );
-      }
-    }
-  }, [selectedSubRound]);
-
-  // Thêm useEffect mới để lấy tất cả cá pass từ tất cả các trang
-  useEffect(() => {
-    const fetchAllPassingFish = async () => {
-      if (!selectedSubRound) return;
-
-      try {
-        setIsLoadingAllFish(true);
-        // Giả sử API này trả về tất cả cá pass từ tất cả các trang
-        const response = await fetchAllRegistrationRoundByStatus(
-          selectedSubRound,
-          "Pass"
-        );
-        if (response && Array.isArray(response)) {
-          setAllPassingFish(response);
-        } else if (response && response.data && Array.isArray(response.data)) {
-          setAllPassingFish(response.data);
-        } else {
-          console.error(
-            "Invalid response format for all passing fish:",
-            response
-          );
-          // Fallback: Sử dụng danh sách cá pass từ trang hiện tại
-          setAllPassingFish(passingFish);
-        }
-      } catch (error) {
-        console.error("Error fetching all passing fish:", error);
-        // Fallback: Sử dụng danh sách cá pass từ trang hiện tại
-        setAllPassingFish(passingFish);
-      } finally {
-        setIsLoadingAllFish(false);
-      }
-    };
-
-    if (selectedSubRound) {
-      fetchAllPassingFish();
-    }
-  }, [selectedSubRound, fetchAllRegistrationRoundByStatus]);
+  }, [
+    selectedSubRound,
+    fetchAllRegistrationRound,
+    registrationRound,
+    currentPage,
+  ]);
 
   // Thêm biến kiểm tra xem có cá nào có kết quả chưa
   const hasAnyResults = useMemo(() => {
@@ -321,12 +339,21 @@ function NextRound({
     roundStatus,
   ]);
 
-  // Cập nhật hàm checkTransferredFish để kiểm tra cả status của vòng
+  // Cập nhật hàm checkTransferredFish để không gây vòng lặp
   const checkTransferredFish = useCallback(async () => {
     if (!selectedSubRound) return;
 
+    // Lấy giá trị currentRoundStatus hiện tại bằng Promise để tránh dependency cycle
+    const roundStatusValue = await new Promise((resolve) => {
+      // Sử dụng functional update để lấy giá trị state hiện tại
+      setCurrentRoundStatus((current) => {
+        resolve(current);
+        return current;
+      });
+    });
+
     // Kiểm tra status trước - dùng biến cục bộ thay vì state để tránh dependency cycle
-    const roundIsCompleted = currentRoundStatus === "completed";
+    const roundIsCompleted = roundStatusValue === "completed";
 
     // Nếu đã kiểm tra thấy vòng có trạng thái completed, không cần kiểm tra nữa
     if (roundIsCompleted) {
@@ -396,15 +423,9 @@ function NextRound({
     } catch (error) {
       console.error("Error in checkTransferredFish:", error);
     }
-  }, [
-    selectedSubRound,
-    hasNextRoundId,
-    cachedNextRoundId,
-    fetchNextRound,
-    // Loại bỏ currentRoundStatus khỏi dependencies, sử dụng biến cục bộ roundIsCompleted thay thế
-  ]);
+  }, [selectedSubRound, hasNextRoundId, cachedNextRoundId, fetchNextRound]);
 
-  // Cập nhật hàm checkPromotionFromServer
+  // Cập nhật hàm checkPromotionFromServer để không sử dụng localStorage
   const checkPromotionFromServer = useCallback(async () => {
     if (!selectedSubRound) return;
 
@@ -430,20 +451,14 @@ function NextRound({
       // Ưu tiên kiểm tra từ vòng tiếp theo bằng cách gọi hàm mới
       await checkTransferredFish();
 
-      // Nếu không lấy được từ API, kiểm tra từ localStorage như giải pháp dự phòng
-      if (!fishAlreadyMoved) {
-        // Kiểm tra trạng thái từ localStorage
-        const localStorageKey = `round_${selectedSubRound}_promoted`;
-        const localStorageValue = localStorage.getItem(localStorageKey);
-
-        if (
-          localStorageValue === "true" &&
-          !processedRounds.includes(selectedSubRound)
-        ) {
-          setProcessedRounds((prev) => [...prev, selectedSubRound]);
-          setFishAlreadyMoved(true);
-        }
-      }
+      // Lấy giá trị hiện tại từ state thay vì sử dụng biến state trong dependency
+      const isFishMoved = await new Promise((resolve) => {
+        // Sử dụng functional update để lấy giá trị state hiện tại
+        setFishAlreadyMoved((current) => {
+          resolve(current);
+          return current;
+        });
+      });
     } catch (error) {
       console.error("Error checking promotion status:", error);
     }
@@ -452,13 +467,31 @@ function NextRound({
     processedRounds,
     checkTransferredFish,
     checkRoundStatus,
-    fishAlreadyMoved,
   ]);
 
-  // Gọi hàm kiểm tra từ server khi component mount hoặc thay đổi vòng
+  // Cập nhật useEffect để kiểm tra trạng thái vòng
   useEffect(() => {
     if (selectedSubRound) {
-      checkPromotionFromServer();
+      checkRoundStatus();
+    }
+  }, [selectedSubRound, checkRoundStatus]);
+
+  // Cập nhật useEffect để kiểm tra cá đã chuyển
+  useEffect(() => {
+    if (selectedSubRound && !currentRoundStatus) {
+      // Chỉ gọi khi chưa có currentRoundStatus
+      checkTransferredFish();
+    }
+  }, [selectedSubRound, checkTransferredFish, currentRoundStatus]);
+
+  // Cập nhật useEffect để kiểm tra từ server
+  useEffect(() => {
+    if (selectedSubRound) {
+      // Sử dụng setTimeout để tránh vòng lặp vô hạn
+      const timer = setTimeout(() => {
+        checkPromotionFromServer();
+      }, 100);
+      return () => clearTimeout(timer);
     }
   }, [selectedSubRound, checkPromotionFromServer]);
 
@@ -508,12 +541,21 @@ function NextRound({
     checkTransferredFish,
   ]);
 
-  // BƯỚC 1: Định nghĩa prefetchNextRound trước khi sử dụng
+  // Cập nhật prefetchNextRound
   const prefetchNextRound = useCallback(async () => {
     if (!selectedSubRound || isPrefetching) return;
 
+    // Thêm tham chiếu trạng thái để tránh race condition
+    const currentIsPrefetching = await new Promise((resolve) => {
+      setIsPrefetching((current) => {
+        resolve(current);
+        return true; // Luôn đặt thành true khi bắt đầu fetch
+      });
+    });
+
+    if (currentIsPrefetching) return;
+
     try {
-      setIsPrefetching(true);
       const result = await fetchNextRound(selectedSubRound);
       if (result?.data?.nextRoundId) {
         setCachedNextRoundId(result.data.nextRoundId);
@@ -524,18 +566,24 @@ function NextRound({
     } finally {
       setIsPrefetching(false);
     }
-  }, [selectedSubRound, isPrefetching, fetchNextRound]);
+  }, [selectedSubRound, fetchNextRound]); // Loại bỏ isPrefetching từ dependencies
 
-  // BƯỚC 2: Sau đó sử dụng trong useEffect
+  // Cập nhật useEffect cho prefetchNextRound
   useEffect(() => {
-    if (
+    const shouldPrefetch =
       selectedSubRound &&
       allPassingFish.length > 0 &&
       !cachedNextRoundId &&
       !isPrefetching &&
-      (!lastPrefetch || Date.now() - lastPrefetch > 60000)
-    ) {
-      prefetchNextRound();
+      (!lastPrefetch || Date.now() - lastPrefetch > 60000);
+
+    if (shouldPrefetch) {
+      // Sử dụng setTimeout để tránh lặp
+      const timer = setTimeout(() => {
+        prefetchNextRound();
+      }, 100);
+
+      return () => clearTimeout(timer);
     }
   }, [
     selectedSubRound,
@@ -546,7 +594,7 @@ function NextRound({
     prefetchNextRound,
   ]);
 
-  // Xác định trạng thái hiển thị nút
+  // Cập nhật shouldShowButton để sử dụng callback tốt hơn
   const shouldShowButton = useMemo(() => {
     if (selectedSubRound && roundStatus === "completed") {
       return false;
@@ -583,7 +631,7 @@ function NextRound({
     hasPassingRegistrations,
     isCurrentRoundProcessed,
     allFishHaveResults,
-    // Loại bỏ currentRoundStatus khỏi dependency list vì đã lấy giá trị trong closure
+    // currentRoundStatus đã được sử dụng trong closure
   ]);
 
   // Hàm xóa một vòng khỏi danh sách đã xử lý (để thử lại)
@@ -634,11 +682,16 @@ function NextRound({
       onFishMoveStatusChange &&
       typeof onFishMoveStatusChange === "function"
     ) {
-      onFishMoveStatusChange(fishAlreadyMoved, noNextRound);
+      // Sử dụng setTimeout để trì hoãn một chút, tránh việc kích hoạt quá nhiều lần
+      const timerId = setTimeout(() => {
+        onFishMoveStatusChange(fishAlreadyMoved, noNextRound);
+      }, 0);
+
+      return () => clearTimeout(timerId);
     }
   }, [fishAlreadyMoved, noNextRound, onFishMoveStatusChange]);
 
-  // Cập nhật hàm handleMoveToNextRound để thêm lại việc lưu vào localStorage
+  // Cập nhật hàm handleMoveToNextRound để không sử dụng localStorage
   const handleMoveToNextRound = async () => {
     if (isCurrentRoundMoved) return;
 
@@ -708,6 +761,10 @@ function NextRound({
 
         // Refresh dữ liệu để cập nhật UI
         fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+        // Tải lại tất cả dữ liệu sau khi chuyển cá thành công
+        setTimeout(() => {
+          fetchAllPassingFishFromAllPages();
+        }, 1000);
       }
     } catch (error) {
       console.error("Error moving fish to next round:", error);
@@ -744,7 +801,7 @@ function NextRound({
     buttonContent = (
       <Button
         onClick={handleMoveToNextRound}
-        loading={isMovingToNextRound}
+        loading={isMovingToNextRound || isLoadingAllFish}
         style={{
           backgroundColor: "#52c41a",
           color: "white",
@@ -752,7 +809,8 @@ function NextRound({
           width: "100%",
         }}
       >
-        Chuyển {allPassingFish.length} cá sang vòng tiếp theo
+        Chuyển {isLoadingAllFish ? "..." : allPassingFish.length} cá sang vòng
+        tiếp theo
       </Button>
     );
   }

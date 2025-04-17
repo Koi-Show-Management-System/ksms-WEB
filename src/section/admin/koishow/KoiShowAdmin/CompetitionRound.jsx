@@ -1048,10 +1048,6 @@ function CompetitionRound({ showId }) {
   const getColumnsForRoundType = useMemo(() => {
     // For Final Round
     if (selectedRoundType === "Final") {
-      console.log(
-        "Using FINAL round columns with criteria:",
-        criteriaCompetitionRound
-      );
       return getFinalColumns({
         handleViewDetails: showCategoryDetail,
         loadingImages,

@@ -161,7 +161,7 @@ const useRegistration = create((set, get) => ({
   assignToRound: async (
     targetRoundId,
     registrationIds,
-    currentRoundId = null,
+    currentRoundId = "",
     page = 1,
     size = 10
   ) => {

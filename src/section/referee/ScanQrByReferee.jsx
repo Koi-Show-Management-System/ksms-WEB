@@ -474,7 +474,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 onChange={handleSubRoundChange}
                 style={{ width: "100%" }}
                 className="rounded-md"
-                placeholder="Chọn vòng nhỏ"
+                placeholder="Chọn vòng"
                 size="large"
                 disabled={!selectedRoundType}
                 suffixIcon={<TrophyOutlined />}
