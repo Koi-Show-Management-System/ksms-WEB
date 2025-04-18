@@ -27,6 +27,7 @@ function Team() {
             accounts={accountManage.staff}
             isLoading={isLoading}
             role={activeRole}
+            userRole={userRole}
           />
         ),
       },
@@ -38,6 +39,7 @@ function Team() {
             accounts={accountManage.referees}
             isLoading={isLoading}
             role={activeRole}
+            userRole={userRole}
           />
         ),
       },

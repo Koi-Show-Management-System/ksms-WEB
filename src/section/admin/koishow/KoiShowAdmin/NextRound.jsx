@@ -68,6 +68,15 @@ function NextRound({
     roundStatus || null
   );
 
+  // Thêm state để kiểm soát quá trình tải dữ liệu ban đầu
+  const [initialStatusChecked, setInitialStatusChecked] = useState(false);
+
+  // Thêm ref để lưu trữ vòng hiện tại được kiểm tra
+  const checkedRoundRef = useRef(null);
+
+  // Lưu trữ trang đã kiểm tra để không reset khi phân trang
+  const checkedPageRef = useRef(null);
+
   const { assignToRound } = useRegistration();
   // Lấy cả nextRound state từ hook useRound
   const { fetchNextRound, nextRound, fetchRound } = useRound();
@@ -461,51 +470,84 @@ function NextRound({
       });
     } catch (error) {
       console.error("Error checking promotion status:", error);
+    } finally {
+      // Đánh dấu đã hoàn thành kiểm tra trạng thái ban đầu và cập nhật ref
+      setInitialStatusChecked(true);
+      checkedRoundRef.current = selectedSubRound;
+      checkedPageRef.current = currentPage;
     }
   }, [
     selectedSubRound,
     processedRounds,
     checkTransferredFish,
     checkRoundStatus,
+    currentRoundStatus,
+    currentPage,
   ]);
 
-  // Cập nhật useEffect để kiểm tra trạng thái vòng
+  // Cập nhật useEffect để kiểm tra trạng thái vòng - thêm currentPage vào dependencies
   useEffect(() => {
     if (selectedSubRound) {
+      // Chỉ reset trạng thái khi thay đổi vòng, không phải khi chỉ chuyển trang
+      if (checkedRoundRef.current !== selectedSubRound) {
+        setInitialStatusChecked(false);
+        checkedRoundRef.current = selectedSubRound;
+      }
+
+      // Luôn gọi checkRoundStatus khi selectedSubRound thay đổi hoặc currentPage thay đổi
       checkRoundStatus();
     }
-  }, [selectedSubRound, checkRoundStatus]);
+  }, [selectedSubRound, checkRoundStatus, currentPage]);
 
-  // Cập nhật useEffect để kiểm tra cá đã chuyển
+  // Cập nhật useEffect để kiểm tra cá đã chuyển - thêm currentPage vào dependencies
   useEffect(() => {
     if (selectedSubRound && !currentRoundStatus) {
       // Chỉ gọi khi chưa có currentRoundStatus
       checkTransferredFish();
     }
-  }, [selectedSubRound, checkTransferredFish, currentRoundStatus]);
+  }, [selectedSubRound, checkTransferredFish, currentRoundStatus, currentPage]);
 
-  // Cập nhật useEffect để kiểm tra từ server
+  // Cập nhật useEffect để kiểm tra từ server - thêm dependency currentPage
   useEffect(() => {
     if (selectedSubRound) {
+      // Kiểm tra xem chúng ta đã kiểm tra vòng này và trang này chưa
+      const sameRoundAndPage =
+        checkedRoundRef.current === selectedSubRound &&
+        checkedPageRef.current === currentPage;
+
+      // Nếu đã kiểm tra rồi và đã hoàn thành, không cần chạy lại
+      if (sameRoundAndPage && initialStatusChecked) {
+        return;
+      }
+
       // Sử dụng setTimeout để tránh vòng lặp vô hạn
       const timer = setTimeout(() => {
         checkPromotionFromServer();
       }, 100);
       return () => clearTimeout(timer);
     }
-  }, [selectedSubRound, checkPromotionFromServer]);
+  }, [
+    selectedSubRound,
+    checkPromotionFromServer,
+    currentPage,
+    initialStatusChecked,
+  ]);
 
   // Kiểm tra và cập nhật dữ liệu khi đổi vòng
   useEffect(() => {
     if (selectedSubRound) {
-      // Reset các state
-      setProcessingError(null);
-      setCachedNextRoundId(null);
-      setLastPrefetch(null);
-      setAllPassingFish([]);
-      setAllFishHaveResults(false);
+      // Chỉ reset các state khi thay đổi vòng, không phải chỉ chuyển trang
+      if (checkedRoundRef.current !== selectedSubRound) {
+        setProcessingError(null);
+        setCachedNextRoundId(null);
+        setLastPrefetch(null);
+        setAllPassingFish([]);
+        setAllFishHaveResults(false);
+        setInitialStatusChecked(false);
+        checkedRoundRef.current = selectedSubRound;
+      }
 
-      // Refresh data when round selection changes
+      // Luôn refresh dữ liệu khi đổi vòng hoặc đổi trang
       fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
     }
   }, [selectedSubRound, fetchRegistrationRound, currentPage, pageSize]);
@@ -539,6 +581,7 @@ function NextRound({
     nextRound, // Phụ thuộc vào nextRound thay vì hasNextRoundId
     cachedNextRoundId,
     checkTransferredFish,
+    currentPage, // Thêm currentPage vào dependencies
   ]);
 
   // Cập nhật prefetchNextRound
@@ -596,6 +639,11 @@ function NextRound({
 
   // Cập nhật shouldShowButton để sử dụng callback tốt hơn
   const shouldShowButton = useMemo(() => {
+    // Đảm bảo trạng thái ban đầu đã được kiểm tra xong
+    if (!initialStatusChecked) {
+      return false;
+    }
+
     if (selectedSubRound && roundStatus === "completed") {
       return false;
     }
@@ -626,12 +674,13 @@ function NextRound({
 
     return true;
   }, [
+    initialStatusChecked,
     roundStatus,
     selectedSubRound,
     hasPassingRegistrations,
     isCurrentRoundProcessed,
     allFishHaveResults,
-    // currentRoundStatus đã được sử dụng trong closure
+    currentRoundStatus,
   ]);
 
   // Hàm xóa một vòng khỏi danh sách đã xử lý (để thử lại)
@@ -777,44 +826,6 @@ function NextRound({
     }
   };
 
-  // Quyết định nội dung hiển thị dựa trên trạng thái
-  let buttonContent;
-
-  if (fishAlreadyMoved || isCurrentRoundMoved) {
-    buttonContent = null;
-  } else if (noNextRound) {
-    buttonContent = (
-      <Button
-        type="default"
-        disabled={true}
-        style={{
-          backgroundColor: "#d9d9d9",
-          color: "white",
-          borderColor: "#d9d9d9",
-          width: "100%",
-        }}
-      >
-        Không có vòng tiếp theo
-      </Button>
-    );
-  } else {
-    buttonContent = (
-      <Button
-        onClick={handleMoveToNextRound}
-        loading={isMovingToNextRound || isLoadingAllFish}
-        style={{
-          backgroundColor: "#52c41a",
-          color: "white",
-          borderColor: "#52c41a",
-          width: "100%",
-        }}
-      >
-        Chuyển {isLoadingAllFish ? "..." : allPassingFish.length} cá sang vòng
-        tiếp theo
-      </Button>
-    );
-  }
-
   // Thêm useEffect để cập nhật currentRoundStatus khi prop roundStatus thay đổi
   useEffect(() => {
     if (roundStatus) {
@@ -832,6 +843,46 @@ function NextRound({
       }
     }
   }, [roundStatus, selectedSubRound]);
+
+  // Quyết định nội dung hiển thị dựa trên trạng thái
+  let buttonContent = null;
+
+  if (initialStatusChecked) {
+    if (fishAlreadyMoved || isCurrentRoundMoved) {
+      buttonContent = null;
+    } else if (noNextRound) {
+      buttonContent = (
+        <Button
+          type="default"
+          disabled={true}
+          style={{
+            backgroundColor: "#d9d9d9",
+            color: "white",
+            borderColor: "#d9d9d9",
+            width: "100%",
+          }}
+        >
+          Không có vòng tiếp theo
+        </Button>
+      );
+    } else if (shouldShowButton) {
+      buttonContent = (
+        <Button
+          onClick={handleMoveToNextRound}
+          loading={isMovingToNextRound || isLoadingAllFish}
+          style={{
+            backgroundColor: "#52c41a",
+            color: "white",
+            borderColor: "#52c41a",
+            width: "100%",
+          }}
+        >
+          Chuyển {isLoadingAllFish ? "..." : allPassingFish.length} cá sang vòng
+          tiếp theo
+        </Button>
+      );
+    }
+  }
 
   return buttonContent;
 }

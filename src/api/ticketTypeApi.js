@@ -1,9 +1,10 @@
 import axiosClient from "../config/axiosClient";
 
-const getTicketTypes = (showId, page, size) => {
+const getTicketTypes = (showId, status, page, size) => {
   return axiosClient.get(`/ticket-order/get-paging-orders`, {
     params: {
       koiShowId: showId,
+      orderStatus: status,
       page: page,
       size: size,
     },

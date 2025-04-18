@@ -33,6 +33,7 @@ const { Option } = Select;
 function Ticket({ showId, statusShow }) {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [orderStatus, setOrderStatus] = useState("all");
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedOrderId, setSelectedOrderId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
@@ -52,9 +53,14 @@ function Ticket({ showId, statusShow }) {
 
   useEffect(() => {
     if (showId) {
-      fetchTicketOrders(showId, currentPage, pageSize);
+      fetchTicketOrders(
+        showId,
+        currentPage,
+        pageSize,
+        orderStatus !== "all" ? orderStatus : null
+      );
     }
-  }, [showId, currentPage, pageSize, fetchTicketOrders]);
+  }, [showId, currentPage, pageSize, orderStatus, fetchTicketOrders]);
 
   useEffect(() => {
     // Check localStorage for refunded orders when displaying order details
@@ -89,7 +95,12 @@ function Ticket({ showId, statusShow }) {
     // Assuming you'll add this functionality to your useTicketType hook
     const result = await updateTicketOrderStatus(orderId, newStatus);
     if (result?.success) {
-      fetchTicketOrders(showId, currentPage, pageSize);
+      fetchTicketOrders(
+        showId,
+        currentPage,
+        pageSize,
+        orderStatus !== "all" ? orderStatus : null
+      );
     }
   };
 
@@ -101,6 +112,12 @@ function Ticket({ showId, statusShow }) {
         break;
       case "pending":
         statusTag = <Tag color="warning">Chờ thanh toán</Tag>;
+        break;
+      case "cancelled":
+        statusTag = <Tag color="error">Đã hủy</Tag>;
+        break;
+      case "expired":
+        statusTag = <Tag color="default">Đã hết hạn</Tag>;
         break;
       default:
         statusTag = <Tag>{status}</Tag>;
@@ -163,12 +180,7 @@ function Ticket({ showId, statusShow }) {
   const filteredOrders = Array.isArray(items)
     ? items
         .filter((order) => {
-          // Không lọc ra những đơn hàng đã hoàn tiền nữa
-
-          // Chỉ hiển thị đơn hàng đã thanh toán
-          if (order.status !== "paid") {
-            return false;
-          }
+          // Không lọc theo trạng thái thanh toán vì đã được lọc qua API với tham số orderStatus
 
           const matchesSearch =
             order.fullName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -188,9 +200,14 @@ function Ticket({ showId, statusShow }) {
   // Update pagination handling
   useEffect(() => {
     if (showId) {
-      fetchTicketOrders(showId, currentPage, pageSize);
+      fetchTicketOrders(
+        showId,
+        currentPage,
+        pageSize,
+        orderStatus !== "all" ? orderStatus : null
+      );
     }
-  }, [showId, currentPage, pageSize, fetchTicketOrders]);
+  }, [showId, currentPage, pageSize, orderStatus, fetchTicketOrders]);
 
   // Update total count reference
   const totalItems = ticketOrders?.data?.data?.total || 0;
@@ -340,7 +357,12 @@ function Ticket({ showId, statusShow }) {
       fetchTicketOrderDetails(orderId);
 
       // Also refresh the main list
-      fetchTicketOrders(showId, currentPage, pageSize);
+      fetchTicketOrders(
+        showId,
+        currentPage,
+        pageSize,
+        orderStatus !== "all" ? orderStatus : null
+      );
     } else {
       notification.error({
         message: "Hoàn tiền thất bại",
@@ -384,6 +406,22 @@ function Ticket({ showId, statusShow }) {
           value={searchTerm}
           style={{ width: 300 }}
         />
+
+        <Select
+          value={orderStatus}
+          onChange={(value) => {
+            setOrderStatus(value);
+            setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi bộ lọc
+          }}
+          style={{ width: 180 }}
+          placeholder="Trạng thái đơn hàng"
+        >
+          <Option value="all">Tất cả trạng thái</Option>
+          <Option value="pending">Chờ thanh toán</Option>
+          <Option value="paid">Đã thanh toán</Option>
+          <Option value="cancelled">Đã hủy</Option>
+          <Option value="expired">Đã hết hạn</Option>
+        </Select>
       </div>
 
       <Table

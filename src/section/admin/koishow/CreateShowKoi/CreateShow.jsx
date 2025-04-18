@@ -514,12 +514,10 @@ function CreateShow() {
         }, 2000);
       } else {
         console.error("API returned unexpected status:", response?.statusCode);
-        message.error("Có lỗi xảy ra khi tạo chương trình");
       }
     } catch (error) {
       console.error("Error submitting form:", error);
       console.error("Error details:", error.response?.data || error.message);
-      message.error("Có lỗi xảy ra khi tạo chương trình");
     }
   };
 
@@ -607,12 +605,12 @@ function CreateShow() {
         <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
       </Modal>
       {/* Debug Panel */}
-      {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
+      <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
         <pre className="overflow-auto max-h-96">
           {JSON.stringify(formData, null, 2)}
         </pre>
-      </div> */}
+      </div>
     </div>
   );
 }

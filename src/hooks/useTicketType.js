@@ -21,10 +21,10 @@ const useTicketType = create((set, get) => ({
   orderDetails: [],
   isLoadingDetails: false,
 
-  fetchTicketTypes: async (showId, page, pageSize) => {
+  fetchTicketTypes: async (showId, page, pageSize, status = null) => {
     set({ isLoading: true, error: null });
     try {
-      const response = await getTicketTypes(showId, page, pageSize);
+      const response = await getTicketTypes(showId, status, page, pageSize);
       if (response?.data?.statusCode === 200) {
         set({
           ticketTypes: response,

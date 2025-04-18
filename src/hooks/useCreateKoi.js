@@ -26,20 +26,6 @@ const useCreateKoi = create((set) => ({
         });
 
         return res.data; // Trả về res.data thay vì res
-      } else {
-        set({
-          error: res?.data?.message || "Không thể tạo Koi Show.",
-          isLoading: false,
-        });
-
-        notification.error({
-          message: "Lỗi",
-          description:
-            res?.data?.message || "Không thể tạo Koi Show. Vui lòng thử lại.",
-          placement: "topRight",
-        });
-
-        return res.data;
       }
     } catch (err) {
       console.error("Error fetching createKoi:", err);
@@ -47,7 +33,7 @@ const useCreateKoi = create((set) => ({
 
       notification.error({
         message: "Lỗi hệ thống",
-        description: `Có lỗi xảy ra: ${err.message}`,
+        description: err?.response?.data?.Error,
         placement: "topRight",
       });
 

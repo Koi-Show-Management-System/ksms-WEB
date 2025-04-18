@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Input,
   DatePicker,
@@ -22,7 +22,6 @@ import { Cloudinary } from "@cloudinary/url-gen";
 import useAccountTeam from "../../../../hooks/useAccountTeam";
 
 const { Option } = Select;
-const { Panel } = Collapse;
 
 const cloudinary = new Cloudinary({
   cloud: {
@@ -51,12 +50,17 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     maxParticipants: "",
   });
 
+  // Effect xử lý initialData thay đổi
   useEffect(() => {
-    if (JSON.stringify(data) !== JSON.stringify(initialData)) {
+    // Sử dụng biến tạm để theo dõi nếu đã thực hiện update
+    const needsUpdate = JSON.stringify(initialData) !== JSON.stringify(data);
+
+    if (needsUpdate) {
+      // Cập nhật data một lần duy nhất
       setData(initialData);
 
       // Cập nhật lỗi khi dữ liệu thay đổi
-      const newParticipantErrors = { ...participantErrors };
+      const newParticipantErrors = {};
 
       if (initialData.minParticipants && initialData.maxParticipants) {
         const min = Number(initialData.minParticipants);
@@ -73,18 +77,35 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
       setParticipantErrors(newParticipantErrors);
     }
-  }, [initialData]);
+  }, [initialData]); // Chỉ phụ thuộc vào initialData
 
+  // Ref để theo dõi lần render và data trước đó
+  const previousDataRef = useRef();
+  const isInitialRender = useRef(true);
+
+  // Effect gửi dữ liệu lên component cha khi data thay đổi
   useEffect(() => {
-    if (JSON.stringify(data) !== JSON.stringify(initialData)) {
+    // Bỏ qua lần render đầu tiên
+    if (isInitialRender.current) {
+      isInitialRender.current = false;
+      previousDataRef.current = JSON.stringify(data);
+      return;
+    }
+
+    const currentDataString = JSON.stringify(data);
+    const prevDataString = previousDataRef.current;
+
+    // Chỉ cập nhật nếu data thực sự thay đổi so với lần trước
+    if (currentDataString !== prevDataString) {
       updateFormData({
         ...data,
         hasGrandChampion: false,
         hasBestInShow: false,
       });
-      console.log("Current formData:", data);
+      // Lưu data hiện tại cho lần so sánh tiếp theo
+      previousDataRef.current = currentDataString;
     }
-  }, [data]);
+  }, [data, updateFormData]); // Không phụ thuộc vào initialData
 
   useEffect(() => {
     fetchAccountTeam(1, 100);
@@ -236,11 +257,27 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
   // Thêm loại vé mới
   const handleAddTicketType = () => {
+    // Danh sách loại vé
+    const ticketTypes = ["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"];
+
+    // Tìm loại vé chưa được sử dụng
+    const usedTicketTypes = data.createTicketTypeRequests.map((t) => t.name);
+    const availableTicketTypes = ticketTypes.filter(
+      (type) => !usedTicketTypes.includes(type)
+    );
+
+    // Nếu đã sử dụng hết các loại vé
+    if (availableTicketTypes.length === 0) {
+      message.warning("Đã sử dụng hết tất cả các loại vé");
+      return;
+    }
+
+    // Thêm vé mới với loại vé còn trống đầu tiên
     setData((prevData) => ({
       ...prevData,
       createTicketTypeRequests: [
         ...prevData.createTicketTypeRequests,
-        { name: "Vé Thường", price: 0, availableQuantity: 0 }, // Mặc định là Vé Thường
+        { name: availableTicketTypes[0], price: 0, availableQuantity: 0 },
       ],
     }));
   };
@@ -275,31 +312,28 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     const newData = { ...data };
 
     if (!value) {
+      // Người dùng đã xóa chọn ngày (bấm X)
       newTimeErrors[field] = "Vui lòng chọn ngày.";
+      newData[field] = null; // Reset giá trị về null
     } else {
-      // Lưu giá trị mới vào newData
+      // Người dùng đã chọn ngày
       newData[field] = value.tz("Asia/Ho_Chi_Minh").format();
+      newTimeErrors[field] = ""; // Xóa lỗi
 
-      // Xóa lỗi cho trường hiện tại
-      newTimeErrors[field] = "";
-
-      // Nếu đang cập nhật ngày bắt đầu
+      // Kiểm tra logic giữa ngày bắt đầu và kết thúc
       if (field === "startDate") {
-        // Kiểm tra nếu ngày kết thúc hiện tại trước ngày bắt đầu mới
-        if (data.endDate && value.isAfter(dayjs(data.endDate))) {
-          // Tự động cập nhật ngày kết thúc thành ngày bắt đầu + 1 ngày
-          const newEndDate = value.add(1, "day");
-          newData.endDate = newEndDate.tz("Asia/Ho_Chi_Minh").format();
-
-          // Xóa lỗi cho ngày kết thúc
-          newTimeErrors.endDate = "";
+        if (data.endDate) {
+          const endDate = dayjs(data.endDate);
+          // Nếu ngày bắt đầu mới > ngày kết thúc hiện tại, cập nhật ngày kết thúc
+          if (value.isAfter(endDate)) {
+            // Cập nhật ngày kết thúc = ngày bắt đầu (cho phép cùng ngày)
+            newData.endDate = value.tz("Asia/Ho_Chi_Minh").format();
+          }
         }
-      }
-      // Nếu đang cập nhật ngày kết thúc
-      else if (field === "endDate") {
-        // Kiểm tra xem ngày kết thúc có trước ngày bắt đầu không
+      } else if (field === "endDate") {
+        // Không hiển thị lỗi khi ngày kết thúc = ngày bắt đầu, chỉ khi < ngày bắt đầu
         if (data.startDate && value.isBefore(dayjs(data.startDate))) {
-          newTimeErrors[field] = "Ngày kết thúc phải sau ngày bắt đầu.";
+          newTimeErrors[field] = "Ngày kết thúc không thể trước ngày bắt đầu.";
         }
       }
     }
@@ -421,6 +455,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             onChange={(value) => handleDateChange("startDate", value)}
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="Chọn ngày bắt đầu"
+            allowClear={true}
           />
           {timeErrors.startDate && (
             <p className="text-red-500 text-xs mt-1">{timeErrors.startDate}</p>
@@ -441,11 +476,12 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="Chọn ngày kết thúc"
             disabledDate={(current) => {
-              // Vô hiệu hóa tất cả các ngày trước ngày bắt đầu
+              // Chỉ vô hiệu hóa các ngày trước ngày bắt đầu, cho phép chọn cùng ngày
               return data.startDate
-                ? current && current < dayjs(data.startDate)
+                ? current && current.isBefore(dayjs(data.startDate), "day")
                 : false;
             }}
+            allowClear={true}
           />
           {timeErrors.endDate && (
             <p className="text-red-500 text-xs mt-1">{timeErrors.endDate}</p>
@@ -578,25 +614,24 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         </p>
       )}
 
-      <Collapse>
-        {data.createSponsorRequests.map((sponsor, index) => (
-          <Panel
-            header={`Nhà tài trợ ${index + 1}`}
-            key={index}
-            extra={
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                danger
-                onClick={(e) => {
-                  e.stopPropagation(); // Ngăn mở panel khi xóa
-                  handleRemoveSponsor(index);
-                }}
-              >
-                Xóa
-              </Button>
-            }
-          >
+      <Collapse
+        items={data.createSponsorRequests.map((sponsor, index) => ({
+          key: index,
+          label: `Nhà tài trợ ${index + 1}`,
+          extra: (
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              danger
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn mở panel khi xóa
+                handleRemoveSponsor(index);
+              }}
+            >
+              Xóa
+            </Button>
+          ),
+          children: (
             <Space direction="vertical" style={{ width: "100%" }}>
               {/* Tên Sponsor */}
               <div>
@@ -680,9 +715,9 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   )}
               </div>
             </Space>
-          </Panel>
-        ))}
-      </Collapse>
+          ),
+        }))}
+      />
 
       {/* Quản lý vé */}
       <h3 className="text-sm font-bold mb-4 text-gray-700">Quản lý vé</h3>
@@ -695,25 +730,25 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         <p className="text-red-500 text-xs mt-1">Cần có ít nhất một loại vé.</p>
       )}
 
-      <Collapse className="mt-4">
-        {data.createTicketTypeRequests.map((ticket, index) => (
-          <Panel
-            header={`Loại Vé ${index + 1}`}
-            key={index}
-            extra={
-              <Button
-                type="text"
-                icon={<DeleteOutlined />}
-                danger
-                onClick={(e) => {
-                  e.stopPropagation(); // Ngăn mở panel khi xóa
-                  handleRemoveTicketType(index);
-                }}
-              >
-                Xóa
-              </Button>
-            }
-          >
+      <Collapse
+        className="mt-4"
+        items={data.createTicketTypeRequests.map((ticket, index) => ({
+          key: index,
+          label: `Loại Vé ${index + 1}`,
+          extra: (
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              danger
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn mở panel khi xóa
+                handleRemoveTicketType(index);
+              }}
+            >
+              Xóa
+            </Button>
+          ),
+          children: (
             <Space direction="vertical" style={{ width: "100%" }}>
               {/* Tên Loại Vé */}
               <div>
@@ -728,9 +763,24 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   }
                   placeholder="Chọn loại vé"
                 >
-                  <Option value="Vé Thường">Vé Thường</Option>
-                  <Option value="Vé Cao Cấp">Vé Cao Cấp</Option>
-                  <Option value="Vé Triễn Lãm">Vé Triễn Lãm</Option>
+                  {["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"].map(
+                    (ticketType) => {
+                      // Kiểm tra xem loại vé này đã được sử dụng bởi vé khác chưa
+                      const isUsed = data.createTicketTypeRequests.some(
+                        (t, i) => t.name === ticketType && i !== index
+                      );
+
+                      return (
+                        <Option
+                          key={ticketType}
+                          value={ticketType}
+                          disabled={isUsed}
+                        >
+                          {ticketType}
+                        </Option>
+                      );
+                    }
+                  )}
                 </Select>
                 {showErrors && !ticket.name && (
                   <p className="text-red-500 text-xs mt-1">
@@ -792,9 +842,9 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   )}
               </div>
             </Space>
-          </Panel>
-        ))}
-      </Collapse>
+          ),
+        }))}
+      />
 
       <div className="flex space-x-4">
         {/* Select Manager */}
