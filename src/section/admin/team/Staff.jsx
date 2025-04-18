@@ -22,7 +22,7 @@ import useAccountTeam from "../../../hooks/useAccountTeam";
 import { updateStatus } from "../../../api/accountManage";
 import { Loading } from "../../../components";
 
-function Staff({ accounts = [], isLoading, role, userRole }) {
+function Staff({ accounts = [], isLoading, role }) {
   const { updateStatusAccount, fetchAccountTeam, updateAccountTeam } =
     useAccountTeam();
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -235,13 +235,6 @@ function Staff({ accounts = [], isLoading, role, userRole }) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
-        {userRole !== "Manager" && (
-          <Button type="primary" onClick={showModal} icon={<PlusOutlined />}>
-            Thêm mới
-          </Button>
-        )}
-      </div>
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loading />
