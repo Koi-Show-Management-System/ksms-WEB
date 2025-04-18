@@ -8,15 +8,22 @@ import Cookies from "js-cookie";
 
 function Team() {
   const { accountManage, fetchAccountTeam, isLoading } = useAccountTeam();
-  const [activeRole, setActiveRole] = useState("Manager"); // Default to "manager"
-  const userRole = Cookies.get("__role"); // Lấy role từ cookies
+  const userRole = Cookies.get("__role");
+  const [activeRole, setActiveRole] = useState(
+    userRole === "Manager" ? "Staff" : "Manager"
+  );
 
-  // Fetch accounts when component mounts or when the active role changes
   useEffect(() => {
-    fetchAccountTeam(1, 10, activeRole); // Call API with role
-  }, [activeRole]); // Khi role thay đổi, sẽ gọi lại API với role mới
+    const fetchData = async () => {
+      try {
+        await fetchAccountTeam(1, 10, activeRole);
+      } catch (error) {
+        console.error("Error fetching team data:", error);
+      }
+    };
+    fetchData();
+  }, [activeRole, fetchAccountTeam]);
 
-  // Tạo danh sách tabs dựa vào role của người dùng
   const getTabItems = () => {
     const tabItems = [
       {
@@ -45,7 +52,6 @@ function Team() {
       },
     ];
 
-    // Chỉ hiển thị tab Manager nếu người dùng không phải là Manager
     if (userRole !== "Manager") {
       tabItems.unshift({
         key: "Manager",
@@ -64,15 +70,7 @@ function Team() {
   };
 
   const handleTabChange = (key) => {
-    setActiveRole(key); // Set the role based on the selected tab
-  };
-
-  // Điều chỉnh tab mặc định dựa trên role của người dùng
-  const getDefaultActiveKey = () => {
-    if (userRole === "Manager") {
-      return "Staff"; // Nếu người dùng là Manager, mặc định hiển thị tab Staff
-    }
-    return "Manager"; // Ngược lại, giữ nguyên tab Manager
+    setActiveRole(key);
   };
 
   return (
@@ -80,9 +78,10 @@ function Team() {
       <div className="flex items-center justify-between mx-2">
         <div className="flex-1">
           <Tabs
-            defaultActiveKey={getDefaultActiveKey()}
+            defaultActiveKey={userRole === "Manager" ? "Staff" : "Manager"}
             items={getTabItems()}
-            onChange={handleTabChange} // Listen for tab change
+            onChange={handleTabChange}
+            destroyInactiveTabPane={false}
           />
         </div>
       </div>
