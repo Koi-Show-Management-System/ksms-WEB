@@ -53,6 +53,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   const [scanError, setScanError] = useState(null);
   const [showDetailScoring, setShowDetailScoring] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
+  const [facingMode, setFacingMode] = useState("environment");
 
   const {
     criteriaCompetitionRound,
@@ -202,7 +203,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
           errorMessage =
             "Mã QR không hợp lệ hoặc không tìm thấy. Vui lòng kiểm tra và thử lại.";
         } else if (typeof error === "object") {
-          errorMessage = error.message || JSON.stringify(error);
+          error.message = error.message || JSON.stringify(error);
         } else if (error) {
           errorMessage = error;
         }
@@ -391,8 +392,12 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     );
   };
 
+  const toggleCamera = () => {
+    setFacingMode(facingMode === "environment" ? "user" : "environment");
+  };
+
   return (
-    <div className="bg-white space-y-6 ">
+    <div className="bg-white space-y-6 p-3">
       <Title level={3} className="text-center mb-6 text-blue-700">
         <TrophyOutlined className="mr-2 my-3" />
         Hệ thống chấm điểm giám khảo
@@ -581,17 +586,17 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
           {showScanner && scannerEnabled && (
             <div className="mb-8">
-              <div className=" ">
-                <div className="flex flex-col items-center p-4">
-                  <div className="w-full max-w-md rounded-lg mb-4 overflow-hidden">
+              <div className="p-2">
+                <div className="flex flex-col items-center">
+                  <div className="w-full max-w-2xl rounded-lg mb-4 overflow-hidden shadow-lg">
                     <QrScanner
                       delay={300}
                       onError={handleError}
                       onScan={handleScan}
                       constraints={{
-                        video: { facingMode: "environment" },
+                        video: { facingMode: facingMode },
                       }}
-                      style={{ width: "150%", height: "300px" }}
+                      style={{ width: "100%", height: "500px" }}
                     />
                   </div>
                   <Text className="text-center text-gray-600 italic mb-4">
@@ -624,154 +629,247 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
           {refereeRoundData && !showDetailScoring && (
             <AntCard
-              className="shadow-sm mx-auto"
-              variant="borderless"
-              style={{ borderRadius: "12px", maxWidth: "700px" }}
+              className="mx-auto overflow-hidden"
+              style={{
+                borderRadius: "16px",
+                maxWidth: "900px",
+                boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
+                border: "none",
+              }}
+              bodyStyle={{ padding: 0 }}
             >
-              <Title level={5} className="mb-3 pb-5 border-b border-gray-200">
-                Thông tin cá
-              </Title>
-              <div className="mb-2">
-                <Text strong>
-                  Mã:{" "}
-                  <span className="text-blue-600">
-                    {refereeRoundData.registration?.registrationNumber || "-"}
-                  </span>
-                </Text>
-              </div>
-
-              {refereeRoundData.registration?.koiMedia &&
-                refereeRoundData.registration.koiMedia.length > 0 && (
-                  <div className="mb-4">
-                    {refereeRoundData.registration.koiMedia
-                      .filter((media) => media.mediaType === "Image")
-                      .slice(0, 1)
-                      .map((media, index) => (
-                        <div key={index} className="relative w-full">
-                          <img
-                            src={media.mediaUrl}
-                            alt="Hình ảnh cá"
-                            className="w-full h-[220px] object-cover rounded-md"
-                          />
-                        </div>
-                      ))}
-                  </div>
-                )}
-
-              {refereeRoundData.registration && (
-                <div>
-                  <div className="bg-gray-50 p-3 rounded-md mb-4">
-                    <div className="grid grid-cols-2 gap-y-2 gap-x-4 text-sm">
-                      <div>
-                        <Text type="secondary">Giống:</Text>
-                        <div className="font-medium">
-                          {refereeRoundData.registration.koiProfile?.variety
-                            ?.name || "N/A"}
-                        </div>
-                      </div>
-
-                      <div>
-                        <Text type="secondary">Kích thước:</Text>
-                        <div className="font-medium">
-                          {refereeRoundData.registration.koiSize
-                            ? `${refereeRoundData.registration.koiSize} cm`
-                            : "N/A"}
-                        </div>
-                      </div>
-
-                      <div>
-                        <Text type="secondary">Giới tính:</Text>
-                        <div className="font-medium">
-                          {refereeRoundData.registration?.koiProfile?.gender ||
-                            "Không có"}
-                        </div>
-                      </div>
-
-                      <div>
-                        <Text type="secondary">Người đăng ký:</Text>
-                        <div className="font-medium">
-                          {refereeRoundData.registration?.registerName || "N/A"}
-                        </div>
-                      </div>
+              <div className="flex flex-col md:flex-row">
+                {/* Phần hình ảnh cá */}
+                <div className="w-full md:w-2/5 relative">
+                  {refereeRoundData.registration?.koiMedia &&
+                  refereeRoundData.registration.koiMedia.length > 0 ? (
+                    <div className="h-full">
+                      <div
+                        className="h-[380px] md:h-full w-full relative"
+                        style={{
+                          backgroundImage: `url(${
+                            refereeRoundData.registration.koiMedia.find(
+                              (media) => media.mediaType === "Image"
+                            )?.mediaUrl ||
+                            "https://via.placeholder.com/300x450?text=No+Image"
+                          })`,
+                          backgroundSize: "cover",
+                          backgroundPosition: "center",
+                          minHeight: "450px",
+                        }}
+                      ></div>
                     </div>
-                  </div>
-
-                  <div className="mt-5">
-                    {postSubmitLoading ? (
-                      <div className="w-full text-center py-3">
-                        <Spin tip="Đang lưu kết quả chấm điểm..." />
-                        <div className="mt-2 text-blue-500 font-medium">
-                          Đã chấm điểm thành công!
+                  ) : (
+                    <div
+                      className="bg-gradient-to-r from-blue-50 to-blue-100 h-[380px] md:h-full w-full flex items-center justify-center"
+                      style={{ minHeight: "450px" }}
+                    >
+                      <div className="text-center p-8">
+                        <div className="text-blue-300 text-8xl mb-6">
+                          <AimOutlined />
                         </div>
+                        <Text className="text-blue-500 text-lg">
+                          Không có hình ảnh
+                        </Text>
                       </div>
-                    ) : selectedRoundType === "Preliminary" ? (
-                      <div className="flex justify-center gap-4">
-                        <Button
-                          type="primary"
-                          size="middle"
-                          icon={<CheckCircleOutlined />}
-                          onClick={() => handleScore(true)}
-                          loading={isScoring}
-                          style={{
-                            backgroundColor: "#52c41a",
-                            color: "white",
-                            borderColor: "#52c41a",
-                            borderRadius: "8px",
-                            fontWeight: "bold",
-                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                          }}
-                        >
-                          Đạt
-                        </Button>
-                        <Button
-                          danger
-                          size="middle"
-                          icon={<CloseCircleOutlined />}
-                          onClick={() => handleScore(false)}
-                          loading={isScoring}
-                          style={{
-                            borderRadius: "8px",
-                            fontWeight: "bold",
-                            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                          }}
-                        >
-                          Không Đạt
-                        </Button>
-                      </div>
-                    ) : (
-                      <Button
-                        type="primary"
-                        block
-                        icon={<PercentageOutlined />}
-                        onClick={() => handleScore(true)}
-                        loading={isScoring}
-                        style={{
-                          borderRadius: "8px",
-                          fontWeight: "bold",
-                          boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
-                        }}
-                      >
-                        Chấm điểm chi tiết
-                      </Button>
-                    )}
-                  </div>
-
-                  {!postSubmitLoading && (
-                    <div className="text-center mt-3">
-                      <Button
-                        icon={<ReloadOutlined />}
-                        onClick={handleReset}
-                        size="small"
-                        style={{
-                          borderRadius: "8px",
-                        }}
-                      >
-                        Quét lại
-                      </Button>
                     </div>
                   )}
                 </div>
-              )}
+
+                {/* Phần thông tin chi tiết */}
+                <div className="w-full md:w-3/5 p-0">
+                  <div className="flex flex-col h-full">
+                    {/* Tiêu đề */}
+                    <div className="bg-white p-6 border-b border-gray-100">
+                      <Title
+                        level={4}
+                        className="m-0 text-blue-800 flex items-center"
+                      >
+                        <TrophyOutlined
+                          className="mr-3"
+                          style={{ fontSize: "24px", color: "#1890ff" }}
+                        />
+                        Thông tin cá Koi
+                      </Title>
+                    </div>
+
+                    {/* Thông tin chi tiết */}
+                    <div className="flex-grow bg-white p-6">
+                      <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+                        {/* Mã cá Koi */}
+                        <div className="info-group col-span-2">
+                          <div className="bg-blue-50 rounded-lg p-3 mb-3">
+                            <Text
+                              type="secondary"
+                              className="block text-sm mb-1"
+                            >
+                              Mã cá Koi
+                            </Text>
+                            <div className="text-blue-600 font-bold text-xl tracking-wider">
+                              {refereeRoundData.registration
+                                ?.registrationNumber || "-"}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="info-group">
+                          <Text type="secondary" className="block text-sm mb-1">
+                            Giống
+                          </Text>
+                          <Text strong className="text-lg">
+                            {refereeRoundData.registration.koiProfile?.variety
+                              ?.name || "N/A"}
+                          </Text>
+                        </div>
+
+                        <div className="info-group">
+                          <Text type="secondary" className="block text-sm mb-1">
+                            Kích thước
+                          </Text>
+                          <Text strong className="text-lg">
+                            {refereeRoundData.registration.koiSize
+                              ? `${refereeRoundData.registration.koiSize} cm`
+                              : "N/A"}
+                          </Text>
+                        </div>
+
+                        <div className="info-group">
+                          <Text type="secondary" className="block text-sm mb-1">
+                            Giới tính
+                          </Text>
+                          <Text strong className="text-lg">
+                            {refereeRoundData.registration?.koiProfile
+                              ?.gender || "Không có"}
+                          </Text>
+                        </div>
+
+                        <div className="info-group">
+                          <Text type="secondary" className="block text-sm mb-1">
+                            Người đăng ký
+                          </Text>
+                          <Text strong className="text-lg">
+                            {refereeRoundData.registration?.registerName ||
+                              "N/A"}
+                          </Text>
+                        </div>
+
+                        <div className="info-group col-span-2">
+                          <Text type="secondary" className="block text-sm mb-1">
+                            Hạng mục thi đấu
+                          </Text>
+                          <Text strong className="text-lg">
+                            {refereeRoundData.registration?.competitionCategory
+                              ?.name || "N/A"}
+                          </Text>
+                        </div>
+
+                        {refereeRoundData.registration?.description && (
+                          <div className="info-group col-span-2">
+                            <Text
+                              type="secondary"
+                              className="block text-sm mb-1"
+                            >
+                              Mô tả
+                            </Text>
+                            <Paragraph
+                              ellipsis={{
+                                rows: 2,
+                                expandable: true,
+                                symbol: "Xem thêm",
+                              }}
+                              className="text-base"
+                            >
+                              {refereeRoundData.registration?.description}
+                            </Paragraph>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Phần nút đánh giá */}
+                    <div className="bg-gray-50 p-6 border-t border-gray-100">
+                      {postSubmitLoading ? (
+                        <div className="text-center py-3">
+                          <Spin tip="Đang lưu kết quả..." />
+                          <div className="mt-3 text-blue-500 font-medium">
+                            <CheckCircleOutlined className="mr-2" />
+                            Đã chấm điểm thành công!
+                          </div>
+                        </div>
+                      ) : selectedRoundType === "Preliminary" ? (
+                        <div className="flex justify-center gap-5">
+                          <Button
+                            type="primary"
+                            size="large"
+                            icon={<CheckCircleOutlined />}
+                            onClick={() => handleScore(true)}
+                            loading={isScoring}
+                            style={{
+                              backgroundColor: "#52c41a",
+                              borderColor: "#52c41a",
+                              height: "48px",
+                              borderRadius: "8px",
+                              fontWeight: "bold",
+                              width: "150px",
+                              boxShadow: "0 4px 12px rgba(82, 196, 26, 0.2)",
+                            }}
+                          >
+                            Đạt
+                          </Button>
+                          <Button
+                            danger
+                            size="large"
+                            icon={<CloseCircleOutlined />}
+                            onClick={() => handleScore(false)}
+                            loading={isScoring}
+                            style={{
+                              height: "48px",
+                              borderRadius: "8px",
+                              fontWeight: "bold",
+                              width: "150px",
+                              boxShadow: "0 4px 12px rgba(245, 34, 45, 0.1)",
+                            }}
+                          >
+                            Không Đạt
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex justify-center">
+                          <Button
+                            type="primary"
+                            size="large"
+                            icon={<PercentageOutlined />}
+                            onClick={() => handleScore(true)}
+                            loading={isScoring}
+                            style={{
+                              height: "48px",
+                              borderRadius: "8px",
+                              fontWeight: "bold",
+                              width: "100%",
+                              maxWidth: "350px",
+                              boxShadow: "0 4px 12px rgba(24, 144, 255, 0.2)",
+                            }}
+                          >
+                            Chấm điểm chi tiết
+                          </Button>
+                        </div>
+                      )}
+
+                      {!postSubmitLoading && (
+                        <div className="text-center mt-4">
+                          <Button
+                            type="link"
+                            icon={<ReloadOutlined />}
+                            onClick={handleReset}
+                          >
+                            Quét lại
+                          </Button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </AntCard>
           )}
         </div>
@@ -822,6 +920,23 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         }
         .custom-steps .ant-steps-item-active .ant-steps-item-icon {
           background: #1890ff;
+        }
+
+        @media (max-width: 768px) {
+          .ant-form-item-label {
+            padding-bottom: 4px;
+          }
+        }
+
+        @media (min-width: 768px) and (max-width: 1024px) {
+          /* Styles específicos para iPad */
+          .news-card-image-container {
+            height: 180px !important;
+          }
+
+          .custom-steps .ant-steps-item-title {
+            font-size: 14px;
+          }
         }
       `}</style>
     </div>

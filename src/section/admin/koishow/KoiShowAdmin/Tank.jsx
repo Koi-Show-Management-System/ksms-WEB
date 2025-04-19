@@ -300,64 +300,58 @@ function Tank({ showId }) {
   return (
     <div>
       <Card>
-        <div className="flex justify-between items-center mb-4">
-          <div className="flex justify-between items-center w-full">
-            {/* <Search
-              placeholder="Tìm kiếm bể cá"
-              allowClear
-              onSearch={handleSearch}
-              onChange={(e) => handleSearch(e.target.value)}
-              style={{ width: 250 }}
-            /> */}
-            <Select
-              placeholder="Chọn hạng mục "
-              style={{ width: 250 }}
-              allowClear
-              onChange={(value) => setSelectedCategoryId(value)}
-            >
-              {categories
-                .filter((category) => category.hasTank)
-                .map((category) => (
-                  <Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Option>
-                ))}
-            </Select>
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+          <Select
+            placeholder="Chọn hạng mục "
+            style={{ width: "100%", maxWidth: "250px" }}
+            allowClear
+            onChange={(value) => setSelectedCategoryId(value)}
+          >
+            {categories
+              .filter((category) => category.hasTank)
+              .map((category) => (
+                <Option key={category.id} value={category.id}>
+                  {category.name}
+                </Option>
+              ))}
+          </Select>
 
-            <Button
-              type="primary"
-              icon={<PlusOutlined />}
-              onClick={showCreateModal}
-            >
-              Thêm Bể Cá
-            </Button>
-          </div>
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={showCreateModal}
+          >
+            Thêm Bể Cá
+          </Button>
         </div>
 
-        <Table
-          columns={columns}
-          dataSource={filteredTanks || tanks}
-          rowKey="id"
-          loading={isLoading}
-          pagination={{
-            current: currentPage,
-            pageSize: pageSize,
-            total: totalItems,
-            showSizeChanger: true,
-            showTotal: (total, range) =>
-              `${range[0]}-${range[1]} trong ${total} mục`,
-          }}
-          onChange={handleTableChange}
-          locale={{
-            emptyText: (
-              <Empty
-                description="Không có dữ liệu"
-                image={Empty.PRESENTED_IMAGE_SIMPLE}
-                style={{ margin: "24px 0" }}
-              />
-            ),
-          }}
-        />
+        <div className="overflow-x-auto">
+          <Table
+            columns={columns}
+            dataSource={filteredTanks || tanks}
+            rowKey="id"
+            loading={isLoading}
+            pagination={{
+              current: currentPage,
+              pageSize: pageSize,
+              total: totalItems,
+              showSizeChanger: true,
+              showTotal: (total, range) =>
+                `${range[0]}-${range[1]} trong ${total} mục`,
+            }}
+            onChange={handleTableChange}
+            scroll={{ x: "max-content" }}
+            locale={{
+              emptyText: (
+                <Empty
+                  description="Không có dữ liệu"
+                  image={Empty.PRESENTED_IMAGE_SIMPLE}
+                  style={{ margin: "24px 0" }}
+                />
+              ),
+            }}
+          />
+        </div>
       </Card>
 
       {/* Sử dụng key để buộc Modal và Form render lại khi selectedTank thay đổi */}
@@ -366,7 +360,10 @@ function Tank({ showId }) {
         title={selectedTank ? "Chỉnh Sửa Bể Cá" : "Tạo Bể Cá Mới"}
         open={isModalVisible}
         onCancel={handleCancel}
-        width={700}
+        width={"90%"}
+        style={{ maxWidth: "700px" }}
+        maskClosable={true}
+        keyboard={true}
         destroyOnClose={true}
         footer={[
           <Button key="back" onClick={handleCancel}>
@@ -420,7 +417,7 @@ function Tank({ showId }) {
             <Input placeholder="Nhập tên bể cá" />
           </Form.Item>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Form.Item
               name="capacity"
               label="Sức chứa"
@@ -447,7 +444,7 @@ function Tank({ showId }) {
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Form.Item
               name="temperature"
               label="Nhiệt Độ (°C)"
@@ -476,7 +473,7 @@ function Tank({ showId }) {
             </Form.Item>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Form.Item
               name="size"
               label="Kích Thước (cm)"

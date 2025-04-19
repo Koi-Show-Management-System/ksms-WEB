@@ -160,6 +160,7 @@ function Category({ showId, statusShow }) {
           )}
         </div>
       ),
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
     {
       title: "Kích Thước",
@@ -174,6 +175,7 @@ function Category({ showId, statusShow }) {
           </Typography.Text>
         </span>
       ),
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
     // {
     //   title: "Giống",
@@ -214,12 +216,14 @@ function Category({ showId, statusShow }) {
       dataIndex: "minEntries",
       key: "minEntries",
       sorter: (a, b) => (a.minEntries || 0) - (b.minEntries || 0),
+      responsive: ["sm", "md", "lg", "xl"],
     },
     {
       title: "SL Koi tối đa",
       dataIndex: "maxEntries",
       key: "maxEntries",
       sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
+      responsive: ["sm", "md", "lg", "xl"],
     },
     {
       title: "Hành Động",
@@ -270,16 +274,17 @@ function Category({ showId, statusShow }) {
           )}
         </div>
       ),
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
   ];
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-        <div className="flex items-center space-x-2 mb-2 md:mb-0">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
+        <div className="flex items-center space-x-2 mb-2 sm:mb-0">
           <Search
             placeholder="Tìm kiếm danh mục..."
             onSearch={handleSearch}
-            className="w-full md:w-64"
+            className="w-full sm:w-64 md:w-80"
             allowClear
           />
         </div>
@@ -293,32 +298,41 @@ function Category({ showId, statusShow }) {
         )}
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={filteredData}
-        pagination={{
-          pageSize: 10,
-          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50"],
-        }}
-        className="bg-white rounded-lg"
-        loading={isLoading}
-        rowKey={(record) => record.id || record.key}
-      />
+      <div className="overflow-x-auto">
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          pagination={{
+            pageSize: 10,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} trong ${total}`,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50"],
+            size: "default",
+          }}
+          className="bg-white rounded-lg"
+          loading={isLoading}
+          rowKey={(record) => record.id || record.key}
+          scroll={{ x: true }}
+          size="middle"
+        />
+      </div>
 
       {/* Category Detail Drawer */}
       <Drawer
         title={selectedCategory?.name || "Chi tiết hạng mục"}
         placement="right"
-        width={720}
+        width={window.innerWidth < 768 ? "100%" : 720}
         onClose={() => setIsDetailDrawerVisible(false)}
         open={isDetailDrawerVisible}
       >
         {selectedCategory && (
-          <Tabs defaultActiveKey="1">
+          <Tabs
+            defaultActiveKey="1"
+            size={window.innerWidth < 768 ? "small" : "default"}
+          >
             <TabPane tab="Thông tin cơ bản" key="1">
-              <Descriptions bordered column={1} className="mb-4">
+              <Descriptions bordered column={1} className="mb-4" size="middle">
                 <Descriptions.Item label="Tên hạng mục">
                   {selectedCategory.name}
                 </Descriptions.Item>
@@ -421,7 +435,11 @@ function Category({ showId, statusShow }) {
             </TabPane>
 
             <TabPane tab="Tiêu chí đánh giá" key="4">
-              <Tabs defaultActiveKey="preliminary" tabPosition="left">
+              <Tabs
+                defaultActiveKey="preliminary"
+                tabPosition={window.innerWidth < 576 ? "top" : "left"}
+                size={window.innerWidth < 768 ? "small" : "default"}
+              >
                 <TabPane tab="Vòng sơ loại" key="preliminary">
                   <List
                     dataSource={
@@ -692,6 +710,8 @@ function Category({ showId, statusShow }) {
         okText="Xác nhận"
         cancelText="Hủy bỏ"
         okButtonProps={{ disabled: !cancelReason.trim() }}
+        width={520}
+        centered
       >
         <Form layout="vertical">
           <Form.Item

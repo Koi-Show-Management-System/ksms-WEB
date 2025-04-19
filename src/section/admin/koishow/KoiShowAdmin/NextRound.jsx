@@ -855,11 +855,15 @@ function NextRound({
         <Button
           type="default"
           disabled={true}
+          className="next-round-button"
           style={{
             backgroundColor: "#d9d9d9",
             color: "white",
             borderColor: "#d9d9d9",
-            width: "100%",
+            height: "32px",
+            fontSize: "14px",
+            padding: "0 15px",
+            borderRadius: "6px",
           }}
         >
           Không có vòng tiếp theo
@@ -870,11 +874,15 @@ function NextRound({
         <Button
           onClick={handleMoveToNextRound}
           loading={isMovingToNextRound || isLoadingAllFish}
+          className="next-round-button"
           style={{
             backgroundColor: "#52c41a",
             color: "white",
             borderColor: "#52c41a",
-            width: "100%",
+            height: "32px",
+            fontSize: "14px",
+            padding: "0 15px",
+            borderRadius: "6px",
           }}
         >
           Chuyển {isLoadingAllFish ? "..." : allPassingFish.length} cá sang vòng
@@ -884,6 +892,7 @@ function NextRound({
     }
   }
 
+  // Return just the button without a container div
   return buttonContent;
 }
 

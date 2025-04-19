@@ -262,6 +262,8 @@ function RoundResult({ showId }) {
             </Button>
           }
           width={900}
+          maskClosable={true}
+          keyboard={true}
         >
           {currentKoi && (
             <div className="p-4">
@@ -287,8 +289,7 @@ function RoundResult({ showId }) {
                           {currentKoi.registrationNumber}
                         </Typography.Paragraph>
                         <Typography.Paragraph>
-                          <strong>Chủ sở hữu:</strong>{" "}
-                          {currentKoi.registerName}
+                          <strong>Chủ sở hữu:</strong> {currentKoi.registerName}
                         </Typography.Paragraph>
                         <Typography.Paragraph>
                           <strong>Tên Koi:</strong> {currentKoi.koiName}
@@ -347,39 +348,67 @@ function RoundResult({ showId }) {
                             {currentKoi.media.find(
                               (media) => media.mediaType === "Image"
                             ) ? (
-                              <Image
-                                src={
-                                  currentKoi.media.find(
-                                    (media) => media.mediaType === "Image"
-                                  )?.mediaUrl
-                                }
-                                alt="Hình Ảnh Koi"
-                                style={{
-                                  width: "100%",
-                                  height: "300px",
-                                  objectFit: "contain",
-                                  borderRadius: "4px",
-                                }}
-                                placeholder={
-                                  <div
+                              <div className="relative">
+                                <div
+                                  className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                                  style={{ borderRadius: "8px" }}
+                                >
+                                  <Image
+                                    src={
+                                      currentKoi.media.find(
+                                        (media) => media.mediaType === "Image"
+                                      )?.mediaUrl
+                                    }
+                                    alt="Hình Ảnh Koi"
                                     style={{
-                                      width: "100%",
-                                      height: "300px",
-                                      display: "flex",
-                                      justifyContent: "center",
-                                      alignItems: "center",
+                                      maxWidth: "100%",
+                                      maxHeight: "100%",
+                                      objectFit: "contain",
+                                      margin: "0 auto",
+                                      display: "block",
+                                    }}
+                                    placeholder={
+                                      <div
+                                        style={{
+                                          width: "100%",
+                                          height: "300px",
+                                          display: "flex",
+                                          justifyContent: "center",
+                                          alignItems: "center",
+                                        }}
+                                      >
+                                        <Loading />
+                                      </div>
+                                    }
+                                    preview={{
+                                      mask: (
+                                        <EyeOutlined
+                                          style={{ fontSize: "18px" }}
+                                        />
+                                      ),
+                                      icons: false,
+                                    }}
+                                  />
+                                </div>
+                                {currentKoi.media.filter(
+                                  (media) => media.mediaType === "Image"
+                                ).length > 1 && (
+                                  <div
+                                    onClick={() => setMediaModalVisible(true)}
+                                    className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all"
+                                    style={{
+                                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
                                     }}
                                   >
-                                    <Loading />
+                                    <span className="text-white font-semibold text-xl bg-black bg-opacity-40 px-4 py-2 rounded-full">
+                                      +
+                                      {currentKoi.media.filter(
+                                        (media) => media.mediaType === "Image"
+                                      ).length - 1}
+                                    </span>
                                   </div>
-                                }
-                                preview={{
-                                  mask: (
-                                    <EyeOutlined style={{ fontSize: "18px" }} />
-                                  ),
-                                  icons: false,
-                                }}
-                              />
+                                )}
+                              </div>
                             ) : (
                               <div
                                 style={{
@@ -389,27 +418,11 @@ function RoundResult({ showId }) {
                                   justifyContent: "center",
                                   alignItems: "center",
                                   background: "#f0f0f0",
-                                  borderRadius: "4px",
+                                  borderRadius: "8px",
                                 }}
                               >
                                 Không có hình ảnh
                               </div>
-                            )}
-                            {currentKoi.media.filter(
-                              (media) => media.mediaType === "Image"
-                            ).length > 1 && (
-                              <Button
-                                type="text"
-                                icon={<EyeOutlined />}
-                                onClick={() => setMediaModalVisible(true)}
-                                style={{ marginTop: 8 }}
-                              >
-                                Xem thêm{" "}
-                                {currentKoi.media.filter(
-                                  (media) => media.mediaType === "Image"
-                                ).length - 1}{" "}
-                                hình ảnh
-                              </Button>
                             )}
                           </div>
                         </Col>
@@ -421,20 +434,45 @@ function RoundResult({ showId }) {
                             {currentKoi.media.find(
                               (media) => media.mediaType === "Video"
                             ) ? (
-                              <video
-                                controls
-                                src={
-                                  currentKoi.media.find(
-                                    (media) => media.mediaType === "Video"
-                                  )?.mediaUrl
-                                }
-                                style={{
-                                  width: "100%",
-                                  height: "270px",
-                                  objectFit: "contain",
-                                  borderRadius: "4px",
-                                }}
-                              />
+                              <div className="relative">
+                                <div
+                                  className="bg-gray-900 rounded-lg overflow-hidden h-[300px] flex items-center justify-center"
+                                  style={{ borderRadius: "8px" }}
+                                >
+                                  <video
+                                    controls
+                                    src={
+                                      currentKoi.media.find(
+                                        (media) => media.mediaType === "Video"
+                                      )?.mediaUrl
+                                    }
+                                    style={{
+                                      width: "100%",
+                                      height: "auto",
+                                      maxHeight: "100%",
+                                      borderRadius: "8px",
+                                    }}
+                                  />
+                                </div>
+                                {currentKoi.media.filter(
+                                  (media) => media.mediaType === "Video"
+                                ).length > 1 && (
+                                  <div
+                                    onClick={() => setMediaModalVisible(true)}
+                                    className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all"
+                                    style={{
+                                      boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                                    }}
+                                  >
+                                    <span className="text-white font-semibold text-xl bg-black bg-opacity-40 px-4 py-2 rounded-full">
+                                      +
+                                      {currentKoi.media.filter(
+                                        (media) => media.mediaType === "Video"
+                                      ).length - 1}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
                             ) : (
                               <div
                                 style={{
@@ -443,28 +481,13 @@ function RoundResult({ showId }) {
                                   display: "flex",
                                   justifyContent: "center",
                                   alignItems: "center",
-                                  background: "#f0f0f0",
-                                  borderRadius: "4px",
+                                  background: "#0f0f0f",
+                                  color: "#f0f0f0",
+                                  borderRadius: "8px",
                                 }}
                               >
                                 Không có video
                               </div>
-                            )}
-                            {currentKoi.media.filter(
-                              (media) => media.mediaType === "Video"
-                            ).length > 1 && (
-                              <Button
-                                type="text"
-                                icon={<EyeOutlined />}
-                                onClick={() => setMediaModalVisible(true)}
-                                style={{ marginTop: 8 }}
-                              >
-                                Xem thêm{" "}
-                                {currentKoi.media.filter(
-                                  (media) => media.mediaType === "Video"
-                                ).length - 1}{" "}
-                                video
-                              </Button>
                             )}
                           </div>
                         </Col>
@@ -483,7 +506,10 @@ function RoundResult({ showId }) {
           open={mediaModalVisible}
           onCancel={() => setMediaModalVisible(false)}
           footer={null}
-          width={900}
+          width={"90%"}
+          style={{ maxWidth: 900 }}
+          maskClosable={true}
+          keyboard={true}
         >
           {currentKoi?.media?.filter((media) => media.mediaType === "Image")
             .length > 0 && (
@@ -493,17 +519,23 @@ function RoundResult({ showId }) {
                 {currentKoi?.media
                   ?.filter((media) => media.mediaType === "Image")
                   .map((media, index) => (
-                    <Col span={12} key={`image-${media.id}`}>
-                      <Image
-                        src={media.mediaUrl}
-                        alt={`Hình Ảnh Koi ${index + 1}`}
-                        style={{
-                          width: "100%",
-                          height: "300px",
-                          objectFit: "contain",
-                          borderRadius: "4px",
-                        }}
-                      />
+                    <Col xs={24} sm={12} key={`image-${media.id}`}>
+                      <div
+                        className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                        style={{ borderRadius: "8px" }}
+                      >
+                        <Image
+                          src={media.mediaUrl}
+                          alt={`Hình Ảnh Koi ${index + 1}`}
+                          style={{
+                            maxWidth: "100%",
+                            maxHeight: "100%",
+                            objectFit: "contain",
+                            margin: "0 auto",
+                            display: "block",
+                          }}
+                        />
+                      </div>
                     </Col>
                   ))}
               </Row>
@@ -518,18 +550,22 @@ function RoundResult({ showId }) {
                 {currentKoi?.media
                   ?.filter((media) => media.mediaType === "Video")
                   .map((media, index) => (
-                    <Col span={12} key={`video-${media.id}`}>
-                      <video
-                        controls
-                        src={media.mediaUrl}
-                        style={{
-                          width: "100%",
-                          height: "300px",
-                          objectFit: "contain",
-                          background: "#f0f0f0",
-                          borderRadius: "4px",
-                        }}
-                      />
+                    <Col xs={24} sm={12} key={`video-${media.id}`}>
+                      <div
+                        className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                        style={{ borderRadius: "8px" }}
+                      >
+                        <video
+                          controls
+                          src={media.mediaUrl}
+                          style={{
+                            width: "100%",
+                            height: "auto",
+                            maxHeight: "100%",
+                            borderRadius: "8px",
+                          }}
+                        />
+                      </div>
                     </Col>
                   ))}
               </Row>

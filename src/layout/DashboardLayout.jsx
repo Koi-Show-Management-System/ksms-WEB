@@ -576,7 +576,7 @@ const DashboardLayout = React.memo(({ children }) => {
           </div>
         </header>
 
-        <Content className="mt-[70px] px-4 py-5">{children}</Content>
+        <Content className="mt-[70px] py-5">{children}</Content>
 
         {/* Modal Đổi mật khẩu */}
         <Modal

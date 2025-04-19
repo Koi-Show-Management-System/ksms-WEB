@@ -15,6 +15,9 @@ import {
   Image,
   List,
   Avatar,
+  Row,
+  Col,
+  Typography,
 } from "antd";
 import {
   EyeOutlined,
@@ -318,6 +321,7 @@ function Votes({ showId }) {
   const [maxVotes, setMaxVotes] = useState(0);
   const isDisablingRef = useRef(false);
   const [prevSortedOrder, setPrevSortedOrder] = useState([]);
+  const [mediaModalVisible, setMediaModalVisible] = useState(false);
 
   const {
     votes,
@@ -818,6 +822,8 @@ function Votes({ showId }) {
         width={720}
         onClose={() => setIsDetailDrawerVisible(false)}
         open={isDetailDrawerVisible}
+        maskClosable={true}
+        keyboard={true}
       >
         {currentRecord && (
           <Tabs defaultActiveKey="1">
@@ -883,42 +889,159 @@ function Votes({ showId }) {
                 </Descriptions>
 
                 {/* Images and Videos */}
-                <div className="space-y-4">
-                  <h3 className="font-medium text-lg">Hình ảnh</h3>
-                  <div className="grid grid-cols-2 gap-4">
-                    {currentRecord.koiMedia
-                      ?.filter((media) => media.mediaType === "Image")
-                      .map((media, index) => (
-                        <div
-                          key={`img-${index}`}
-                          className="border rounded-md overflow-hidden"
-                        >
-                          <img
-                            src={media.mediaUrl}
-                            alt={`Koi ${index + 1}`}
-                            className="w-full h-48 object-cover"
-                          />
-                        </div>
-                      ))}
-                  </div>
-
-                  <h3 className="font-medium text-lg mt-6">Video</h3>
-                  <div className="space-y-4">
-                    {currentRecord.koiMedia
-                      ?.filter((media) => media.mediaType === "Video")
-                      .map((media, index) => (
-                        <div
-                          key={`video-${index}`}
-                          className="border rounded-md overflow-hidden"
-                        >
-                          <video
-                            src={media.mediaUrl}
-                            controls
-                            className="w-full"
-                          />
-                        </div>
-                      ))}
-                  </div>
+                <div className="space-y-4 mt-6">
+                  <h3 className="font-medium text-lg">Hình ảnh & Video</h3>
+                  <Row gutter={[16, 16]}>
+                    <Col span={12}>
+                      <div>
+                        <Typography.Paragraph strong>
+                          Hình Ảnh:
+                        </Typography.Paragraph>
+                        {currentRecord.koiMedia?.find(
+                          (media) => media.mediaType === "Image"
+                        ) ? (
+                          <div className="relative">
+                            <div
+                              className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                              style={{ borderRadius: "8px" }}
+                            >
+                              <Image
+                                src={
+                                  currentRecord.koiMedia.find(
+                                    (media) => media.mediaType === "Image"
+                                  )?.mediaUrl || PLACEHOLDER_IMAGE
+                                }
+                                alt="Hình Ảnh Koi"
+                                style={{
+                                  maxWidth: "100%",
+                                  maxHeight: "100%",
+                                  objectFit: "contain",
+                                  margin: "0 auto",
+                                  display: "block",
+                                }}
+                                placeholder={
+                                  <div
+                                    style={{
+                                      width: "100%",
+                                      height: "300px",
+                                      display: "flex",
+                                      justifyContent: "center",
+                                      alignItems: "center",
+                                    }}
+                                  >
+                                    <Loading />
+                                  </div>
+                                }
+                                preview={{
+                                  mask: (
+                                    <EyeOutlined style={{ fontSize: "18px" }} />
+                                  ),
+                                  icons: false,
+                                }}
+                              />
+                            </div>
+                            {currentRecord.koiMedia.filter(
+                              (media) => media.mediaType === "Image"
+                            ).length > 1 && (
+                              <div
+                                onClick={() => setMediaModalVisible(true)}
+                                className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all"
+                                style={{
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                                }}
+                              >
+                                <span className="text-white font-semibold text-xl bg-black bg-opacity-40 px-4 py-2 rounded-full">
+                                  +
+                                  {currentRecord.koiMedia.filter(
+                                    (media) => media.mediaType === "Image"
+                                  ).length - 1}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "300px",
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              background: "#f0f0f0",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            Không có hình ảnh
+                          </div>
+                        )}
+                      </div>
+                    </Col>
+                    <Col span={12}>
+                      <div>
+                        <Typography.Paragraph strong>
+                          Video:
+                        </Typography.Paragraph>
+                        {currentRecord.koiMedia?.find(
+                          (media) => media.mediaType === "Video"
+                        ) ? (
+                          <div className="relative">
+                            <div
+                              className="bg-gray-900 rounded-lg overflow-hidden h-[300px] flex items-center justify-center"
+                              style={{ borderRadius: "8px" }}
+                            >
+                              <video
+                                controls
+                                src={
+                                  currentRecord.koiMedia.find(
+                                    (media) => media.mediaType === "Video"
+                                  )?.mediaUrl
+                                }
+                                style={{
+                                  width: "100%",
+                                  height: "auto",
+                                  maxHeight: "100%",
+                                  borderRadius: "8px",
+                                }}
+                              />
+                            </div>
+                            {currentRecord.koiMedia.filter(
+                              (media) => media.mediaType === "Video"
+                            ).length > 1 && (
+                              <div
+                                onClick={() => setMediaModalVisible(true)}
+                                className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all"
+                                style={{
+                                  boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
+                                }}
+                              >
+                                <span className="text-white font-semibold text-xl bg-black bg-opacity-40 px-4 py-2 rounded-full">
+                                  +
+                                  {currentRecord.koiMedia.filter(
+                                    (media) => media.mediaType === "Video"
+                                  ).length - 1}
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        ) : (
+                          <div
+                            style={{
+                              width: "100%",
+                              height: "300px",
+                              display: "flex",
+                              justifyContent: "center",
+                              alignItems: "center",
+                              background: "#0f0f0f",
+                              color: "#f0f0f0",
+                              borderRadius: "8px",
+                            }}
+                          >
+                            Không có video
+                          </div>
+                        )}
+                      </div>
+                    </Col>
+                  </Row>
                 </div>
               </div>
             </TabPane>
@@ -958,13 +1081,86 @@ function Votes({ showId }) {
                   </Descriptions.Item>
                 )}
                 <Descriptions.Item label="Bể thi đấu">
-                  {currentRecord.roundInfo?.tankNumber}
+                  {currentRecord.roundInfo?.tankNumber || "Chưa gán bể"}
                 </Descriptions.Item>
               </Descriptions>
             </TabPane>
           </Tabs>
         )}
       </Drawer>
+
+      {/* Modal hiển thị tất cả media */}
+      <Modal
+        title="Tất cả hình ảnh và video"
+        open={mediaModalVisible}
+        onCancel={() => setMediaModalVisible(false)}
+        footer={null}
+        width={"90%"}
+        style={{ maxWidth: 900 }}
+        maskClosable={true}
+        keyboard={true}
+      >
+        {currentRecord?.koiMedia?.filter((media) => media.mediaType === "Image")
+          .length > 0 && (
+          <>
+            <Typography.Title level={5}>Hình Ảnh</Typography.Title>
+            <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+              {currentRecord?.koiMedia
+                ?.filter((media) => media.mediaType === "Image")
+                .map((media, index) => (
+                  <Col xs={24} sm={12} key={`image-${media.id || index}`}>
+                    <div
+                      className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                      style={{ borderRadius: "8px" }}
+                    >
+                      <Image
+                        src={media.mediaUrl}
+                        alt={`Hình Ảnh Koi ${index + 1}`}
+                        style={{
+                          maxWidth: "100%",
+                          maxHeight: "100%",
+                          objectFit: "contain",
+                          margin: "0 auto",
+                          display: "block",
+                        }}
+                      />
+                    </div>
+                  </Col>
+                ))}
+            </Row>
+          </>
+        )}
+
+        {currentRecord?.koiMedia?.filter((media) => media.mediaType === "Video")
+          .length > 0 && (
+          <>
+            <Typography.Title level={5}>Video</Typography.Title>
+            <Row gutter={[16, 16]}>
+              {currentRecord?.koiMedia
+                ?.filter((media) => media.mediaType === "Video")
+                .map((media, index) => (
+                  <Col xs={24} sm={12} key={`video-${media.id || index}`}>
+                    <div
+                      className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                      style={{ borderRadius: "8px" }}
+                    >
+                      <video
+                        controls
+                        src={media.mediaUrl}
+                        style={{
+                          width: "100%",
+                          height: "auto",
+                          maxHeight: "100%",
+                          borderRadius: "8px",
+                        }}
+                      />
+                    </div>
+                  </Col>
+                ))}
+            </Row>
+          </>
+        )}
+      </Modal>
 
       {/* Enable Voting Modal */}
       <Modal
@@ -974,6 +1170,8 @@ function Votes({ showId }) {
         onOk={handleEnableVoting}
         okText="Xác nhận"
         cancelText="Hủy"
+        maskClosable={true}
+        keyboard={true}
       >
         <Form layout="vertical">
           <Form.Item label="Số phút bình chọn">

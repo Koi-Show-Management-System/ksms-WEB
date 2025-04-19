@@ -332,7 +332,7 @@ function KoiShow() {
       title: "Địa Điểm",
       dataIndex: "location",
       key: "location",
-      responsive: ["lg", "xl"],
+      responsive: ["md", "lg", "xl"],
     },
     {
       title: "Trạng Thái",
@@ -364,8 +364,8 @@ function KoiShow() {
 
   return (
     <div className="">
-      <div className="mb-6 rounded-lg shadow-sm">
-        <div className="flex flex-col md:flex-row md:items-end gap-4 mb-4">
+      <div className="mb-6 rounded-lg shadow-sm p-4">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
           <div className="flex-1">
             <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>
             <Input
@@ -373,10 +373,10 @@ function KoiShow() {
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               prefix={<SearchOutlined className="text-gray-400" />}
-              className="w-full md:max-w-md"
+              className="w-full"
             />
           </div>
-          <div className="flex-1 md:flex-initial">
+          <div className="flex-1 sm:flex-initial">
             <div className="mb-2 text-sm">Ngày:</div>
             <Space.Compact className="w-full">
               <DatePicker
@@ -384,7 +384,7 @@ function KoiShow() {
                 format="DD/MM/YYYY"
                 value={selectedDate}
                 onChange={(date) => setSelectedDate(date)}
-                className="w-full md:w-48"
+                className="w-full sm:w-36 md:w-48"
                 suffixIcon={<CalendarOutlined />}
               />
               <Button
@@ -404,32 +404,36 @@ function KoiShow() {
           columns={columns}
           dataSource={filteredData}
           pagination={false}
-          scroll={{ x: "max-content" }}
+          scroll={{ x: true }}
           locale={{
             emptyText: (
-              <div className="flex flex-col items-center justify-center py-12">
-                <h3 className="text-xl font-bold">Không có triển lãm nào</h3>
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12">
+                <h3 className="text-lg sm:text-xl font-bold">
+                  Không có triển lãm nào
+                </h3>
                 <img
                   src={NoKoiShow}
                   alt="No shows"
-                  className="w-32 h-32 md:w-64 md:h-64 object-contain"
+                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 object-contain"
                 />
               </div>
             ),
           }}
+          className="min-w-full"
+          size="middle"
         />
       </div>
 
-      <div className="flex flex-col md:flex-row  md:items-center gap-2 mt-4  p-3 rounded-lg justify-end">
-        <span className="text-sm text-gray-500">{`1-${filteredData.length} của ${totalItems}`}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 p-3 rounded-lg justify-center sm:justify-between">
+        <span className="text-sm text-gray-500 text-center sm:text-left">{`1-${filteredData.length} của ${totalItems}`}</span>
         <Pagination
           current={currentPage}
           total={totalItems}
           pageSize={pageSize}
           showSizeChanger
           onChange={handlePageChange}
-          size="small"
-          className="self-end md:self-auto"
+          size="default"
+          className="self-center sm:self-auto"
         />
       </div>
 
@@ -440,6 +444,8 @@ function KoiShow() {
         onCancel={handleModalCancel}
         okText="Xác nhận"
         cancelText="Hủy bỏ"
+        width={520}
+        centered
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -464,6 +470,8 @@ function KoiShow() {
         onCancel={() => setIsConfirmModalOpen(false)}
         okText="Xác nhận"
         cancelText="Hủy bỏ"
+        width={520}
+        centered
       >
         <p>
           Bạn có chắc chắn muốn thay đổi trạng thái từ "

@@ -397,14 +397,14 @@ function Ticket({ showId, statusShow }) {
         Quản lý đơn hàng vé
       </Title> */}
 
-      <div className="flex flex-wrap gap-4 mb-6">
+      <div className="flex flex-col sm:flex-row flex-wrap gap-4 mb-6">
         <Search
           placeholder="Tìm kiếm theo tên, email hoặc mã giao dịch"
           allowClear
           onSearch={(value) => setSearchTerm(value)}
           onChange={(e) => setSearchTerm(e.target.value)}
           value={searchTerm}
-          style={{ width: 300 }}
+          style={{ width: "100%", maxWidth: "300px" }}
         />
 
         <Select
@@ -413,7 +413,7 @@ function Ticket({ showId, statusShow }) {
             setOrderStatus(value);
             setCurrentPage(1); // Reset về trang đầu tiên khi thay đổi bộ lọc
           }}
-          style={{ width: 180 }}
+          style={{ width: "100%", maxWidth: "180px" }}
           placeholder="Trạng thái đơn hàng"
         >
           <Option value="all">Tất cả trạng thái</Option>
@@ -424,19 +424,22 @@ function Ticket({ showId, statusShow }) {
         </Select>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={filteredOrders}
-        rowKey="id"
-        pagination={false}
-        className="mb-6"
-        size="middle"
-        locale={{ emptyText: "Không tìm thấy đơn hàng vé nào" }}
-      />
+      <div className="overflow-x-auto">
+        <Table
+          columns={columns}
+          dataSource={filteredOrders}
+          rowKey="id"
+          pagination={false}
+          className="mb-6"
+          size="middle"
+          locale={{ emptyText: "Không tìm thấy đơn hàng vé nào" }}
+          scroll={{ x: "max-content" }}
+        />
+      </div>
 
       {totalItems > 0 && (
-        <div className="flex justify-end items-center mt-4">
-          <div className="mr-2 text-gray-600">
+        <div className="flex flex-col sm:flex-row justify-between sm:justify-end items-center mt-4">
+          <div className="mb-2 sm:mb-0 sm:mr-2 text-gray-600">
             {Math.min((currentPage - 1) * pageSize + 1, totalItems)}-
             {Math.min(currentPage * pageSize, totalItems)} trong {totalItems}
           </div>
@@ -480,7 +483,10 @@ function Ticket({ showId, statusShow }) {
         title="Chi tiết đơn hàng"
         open={isDetailsOpen}
         onCancel={handleCloseDetails}
-        width={800}
+        width={"90%"}
+        style={{ maxWidth: "800px" }}
+        maskClosable={true}
+        keyboard={true}
         footer={[
           statusShow === "cancelled" && (
             <Button
@@ -501,7 +507,7 @@ function Ticket({ showId, statusShow }) {
             <Loading />
           </div>
         ) : (
-          <div>
+          <div className="overflow-x-auto">
             {Array.isArray(ticketOrderDetails) &&
             ticketOrderDetails.length > 0 ? (
               <>
@@ -512,6 +518,7 @@ function Ticket({ showId, statusShow }) {
                   pagination={false}
                   size="small"
                   className="mb-4"
+                  scroll={{ x: "max-content" }}
                   summary={() => (
                     <Table.Summary.Row>
                       <Table.Summary.Cell index={0} colSpan={3} />

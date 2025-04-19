@@ -30,13 +30,13 @@ export const getEvaluationColumns = (props) => {
     hasTank = false,
   } = props;
 
-
   // Keep using the existing columns structure, but don't add criteria columns
   const columns = [
     {
       title: "Top",
       dataIndex: ["rank"],
       width: 60,
+      responsive: ["md"],
       render: (rank) => (
         <span style={{ color: "blue", fontWeight: "bold" }}>
           {rank ? `#${rank}` : "_"}
@@ -66,7 +66,7 @@ export const getEvaluationColumns = (props) => {
       title: "Hình ảnh",
       dataIndex: ["registration", "koiMedia"],
       key: "image",
-      width: 120,
+      width: 90,
       render: (koiMedia, record) => {
         const imageMedia =
           koiMedia && koiMedia.length > 0
@@ -106,6 +106,7 @@ export const getEvaluationColumns = (props) => {
       title: "Kích thước",
       dataIndex: ["registration", "koiSize"],
       key: "size",
+      responsive: ["md"],
       render: (size) => (size ? `${size} cm` : "—"),
     },
     {
@@ -113,6 +114,7 @@ export const getEvaluationColumns = (props) => {
       dataIndex: ["registration", "koiProfile", "variety", "name"],
       key: "variety",
       ellipsis: true,
+      responsive: ["lg"],
       render: (name) => name || "—",
     },
     {
@@ -135,7 +137,7 @@ export const getEvaluationColumns = (props) => {
       title: "Kết quả",
       dataIndex: ["roundResults", "0", "status"],
       key: "result",
-      width: 100,
+      width: 90,
       render: (status) => {
         if (!status) return <Tag color="gray">Chưa có</Tag>;
 
@@ -150,7 +152,7 @@ export const getEvaluationColumns = (props) => {
       title: "Trạng thái",
       dataIndex: "status",
       key: "status",
-      width: 130,
+      width: 120,
       render: (status) => {
         let color = "blue";
         let text = status;
@@ -183,6 +185,7 @@ export const getEvaluationColumns = (props) => {
       title: "Bể",
       dataIndex: "tankName",
       key: "tankName",
+      width: 90,
       render: (tankName, record) => {
         // Try to find the matching tank ID by comparing names
         let tankIdToUse = record.tankId;
@@ -227,6 +230,7 @@ export const getEvaluationColumns = (props) => {
                   ? "error"
                   : undefined
               }
+              dropdownMatchSelectWidth={false}
             >
               {competitionRoundTanks?.map((tank) => (
                 <Option key={tank.id} value={tank.id}>
@@ -244,6 +248,7 @@ export const getEvaluationColumns = (props) => {
     title: "Hành động",
     key: "action",
     fixed: "right",
+    width: 70,
     render: (_, record) => (
       <Button
         type="text"

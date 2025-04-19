@@ -346,11 +346,27 @@ function CheckOutKoi() {
                 }}
               >
                 {koiData.koiMedia && koiData.koiMedia.length > 0 ? (
-                  <Image
-                    src={koiData.koiMedia[0].mediaUrl}
-                    alt="Hình ảnh cá koi"
-                    style={{ maxHeight: "250px", objectFit: "contain" }}
-                  />
+                  (() => {
+                    const imageMedia = koiData.koiMedia.find(
+                      (media) => media.mediaType === "Image"
+                    );
+                    if (imageMedia) {
+                      return (
+                        <Image
+                          src={imageMedia.mediaUrl}
+                          alt="Hình ảnh cá koi"
+                          style={{ maxHeight: "350px", objectFit: "contain" }}
+                        />
+                      );
+                    } else {
+                      return (
+                        <Empty
+                          description="Không có hình ảnh"
+                          image={Empty.PRESENTED_IMAGE_SIMPLE}
+                        />
+                      );
+                    }
+                  })()
                 ) : (
                   <Empty
                     description="Không có hình ảnh"

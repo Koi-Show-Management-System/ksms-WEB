@@ -370,16 +370,16 @@ const NewsOverview = () => {
   };
 
   return (
-    <div className="news-container">
+    <div className="news-container p-4">
       {/* Header với tìm kiếm và các nút lọc */}
-      <div className="header-actions mb-6 flex flex-wrap justify-between gap-5">
-        <div className="search-and-filter flex flex-wrap items-center gap-3 flex-grow">
+      <div className="header-actions mb-6 flex flex-col md:flex-row md:justify-between gap-5">
+        <div className="search-and-filter flex flex-col sm:flex-row items-start sm:items-center gap-3 w-full md:w-auto">
           <Input
             placeholder="Tìm kiếm tin tức..."
             prefix={<SearchOutlined />}
             onChange={handleSearch}
             value={searchText}
-            style={{ width: 300 }}
+            style={{ width: "100%", maxWidth: "300px" }}
             allowClear
           />
 
@@ -388,6 +388,7 @@ const NewsOverview = () => {
             value={selectedCategory}
             onChange={handleCategoryChange}
             allowClear
+            style={{ width: "100%", maxWidth: "300px" }}
           >
             <Select.Option value="">Tất cả danh mục</Select.Option>
             {blogCategory.map((category) => (
@@ -402,6 +403,7 @@ const NewsOverview = () => {
           type="primary"
           icon={<PlusOutlined />}
           onClick={showCreateModal}
+          className="mt-3 md:mt-0"
         >
           Thêm tin mới
         </Button>
@@ -410,16 +412,16 @@ const NewsOverview = () => {
       {/* Hiển thị tin tức dạng lưới */}
       <Spin spinning={isLoadingBlogs} tip="Đang tải...">
         {filteredBlogs.length > 0 ? (
-          <Row gutter={[24, 24]}>
+          <Row gutter={[16, 16]}>
             {filteredBlogs.map((blog) => (
-              <Col xs={24} sm={12} md={8} lg={8} xl={8} key={blog.id}>
+              <Col xs={24} sm={12} md={12} lg={8} xl={8} key={blog.id}>
                 <Card
                   hoverable
                   className="news-card h-full"
                   cover={
                     <div
                       className="news-card-image-container"
-                      style={{ height: 200, overflow: "hidden" }}
+                      style={{ height: 180, overflow: "hidden" }}
                     >
                       <img
                         alt={blog.title}
@@ -548,7 +550,8 @@ const NewsOverview = () => {
         title={null}
         open={isDetailModalVisible}
         onCancel={handleDetailCancel}
-        width={900}
+        width={"95%"}
+        style={{ maxWidth: "900px" }}
         footer={[
           <Button key="close" onClick={handleDetailCancel}>
             Đóng
@@ -623,7 +626,8 @@ const NewsOverview = () => {
             {modalType === "create" ? "Tạo" : "Cập nhật"}
           </Button>,
         ]}
-        width={900}
+        width={"95%"}
+        style={{ maxWidth: "900px" }}
         confirmLoading={isSubmitting}
       >
         <Form form={form} layout="vertical">
@@ -650,7 +654,7 @@ const NewsOverview = () => {
           </Form.Item>
 
           <Form.Item label="Hình ảnh">
-            <Upload {...uploadProps}>
+            <Upload {...uploadProps} className="upload-container">
               {fileList.length < 1 && !isUploading && (
                 <div>
                   <UploadOutlined />
