@@ -17,6 +17,9 @@ import {
   Tabs,
   Collapse,
   Popconfirm,
+  Row,
+  Col,
+  Space,
 } from "antd";
 import {
   EditOutlined,
@@ -156,6 +159,7 @@ function Category({ showId, statusShow }) {
           )}
         </div>
       ),
+      ellipsis: true,
     },
     {
       title: "Kích Thước",
@@ -170,52 +174,21 @@ function Category({ showId, statusShow }) {
           </Typography.Text>
         </span>
       ),
+      responsive: ["md"],
     },
-    // {
-    //   title: "Giống",
-    //   key: "variety",
-    //   render: (_, record) => {
-    //     // Check if varieties exists and has items
-    //     if (
-    //       !record.varieties ||
-    //       !Array.isArray(record.varieties) ||
-    //       record.varieties.length === 0
-    //     ) {
-    //       return <span>N/A</span>;
-    //     }
-
-    //     // Join all variety names
-    //     return <span>{record.varieties.join(", ")}</span>;
-    //   },
-    //   filters: [
-    //     { text: "Kohaku", value: "Kohaku" },
-    //     { text: "Showa", value: "Showa" },
-    //     { text: "Sanke", value: "Sanke" },
-    //     { text: "Showa Sanshoku", value: "Showa Sanshoku" },
-    //   ],
-    //   onFilter: (value, record) => {
-    //     if (
-    //       !record.varieties ||
-    //       !Array.isArray(record.varieties) ||
-    //       record.varieties.length === 0
-    //     ) {
-    //       return false;
-    //     }
-
-    //     return record.varieties.some((variety) => variety === value);
-    //   },
-    // },
     {
-      title: "SL Koi tối thiểu",
+      title: "SL tối thiểu",
       dataIndex: "minEntries",
       key: "minEntries",
       sorter: (a, b) => (a.minEntries || 0) - (b.minEntries || 0),
+      responsive: ["lg"],
     },
     {
-      title: "SL Koi tối đa",
+      title: "SL tối đa",
       dataIndex: "maxEntries",
       key: "maxEntries",
       sorter: (a, b) => (a.maxEntries || 0) - (b.maxEntries || 0),
+      responsive: ["lg"],
     },
     {
       title: "Hành Động",
@@ -227,87 +200,103 @@ function Category({ showId, statusShow }) {
             icon={<EyeOutlined />}
             className="text-gray-500 hover:text-blue-500"
             onClick={() => showCategoryDetail(record.id)}
+            size="middle"
           />
         </div>
       ),
     },
   ];
   return (
-    <div className="p-4 bg-white rounded-lg shadow-md">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-4">
-        <div className="flex items-center space-x-2 mb-2 md:mb-0">
-          <Search
-            placeholder="Tìm kiếm danh mục..."
-            onSearch={handleSearch}
-            className="w-full md:w-64"
-            allowClear
-          />
-        </div>
+    <div className="p-2 md:p-4 bg-white rounded-lg shadow-md">
+      <div className="mb-4">
+        <Row gutter={[16, 16]}>
+          <Col xs={24} md={12}>
+            <Search
+              placeholder="Tìm kiếm danh mục..."
+              onSearch={handleSearch}
+              className="w-full"
+              size="large"
+              allowClear
+            />
+          </Col>
+        </Row>
       </div>
 
-      <Table
-        columns={columns}
-        dataSource={filteredData}
-        pagination={{
-          pageSize: 10,
-          showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
-          showSizeChanger: true,
-          pageSizeOptions: ["10", "20", "50"],
-        }}
-        className="bg-white rounded-lg"
-        loading={isLoading}
-        rowKey={(record) => record.id || record.key}
-      />
+      <div className="overflow-x-auto">
+        <Table
+          columns={columns}
+          dataSource={filteredData}
+          pagination={{
+            pageSize: 10,
+            showTotal: (total, range) =>
+              `${range[0]}-${range[1]} trong ${total}`,
+            showSizeChanger: true,
+            pageSizeOptions: ["10", "20", "50"],
+            size: "small",
+          }}
+          className="bg-white rounded-lg"
+          loading={isLoading}
+          rowKey={(record) => record.id || record.key}
+          scroll={{ x: "max-content" }}
+          size="middle"
+        />
+      </div>
 
       {/* Category Detail Drawer */}
       <Drawer
         title={selectedCategory?.name || "Chi tiết hạng mục"}
         placement="right"
-        width={720}
+        width={window.innerWidth < 768 ? "100%" : 720}
         onClose={() => setIsDetailDrawerVisible(false)}
         open={isDetailDrawerVisible}
+        className="category-detail-drawer"
       >
         {selectedCategory && (
-          <Tabs defaultActiveKey="1">
+          <Tabs
+            defaultActiveKey="1"
+            size={window.innerWidth < 768 ? "small" : "middle"}
+          >
             <TabPane tab="Thông tin cơ bản" key="1">
-              <Descriptions bordered column={1} className="mb-4">
-                <Descriptions.Item label="Tên hạng mục">
-                  {selectedCategory.name}
-                </Descriptions.Item>
-                <Descriptions.Item label="Kích thước">
-                  {selectedCategory.sizeMin} - {selectedCategory.sizeMax} cm
-                </Descriptions.Item>
-                <Descriptions.Item label="Số lượng tối đa">
-                  {selectedCategory.maxEntries}
-                </Descriptions.Item>
-                <Descriptions.Item label="Số lượng tối thiểu ">
-                  {selectedCategory.minEntries}
-                </Descriptions.Item>
-                {selectedCategory.status === "cancelled" && (
-                  <Descriptions.Item label="Trạng thái">
-                    <Tag color="red">Đã hủy</Tag>
+              <div className="overflow-auto">
+                <Descriptions bordered column={1} className="mb-4" size="small">
+                  <Descriptions.Item label="Tên hạng mục">
+                    {selectedCategory.name}
                   </Descriptions.Item>
-                )}
-                <Descriptions.Item label="Bể trưng bày">
-                  {selectedCategory.hasTank ? "Có" : "Không"}
-                </Descriptions.Item>
-                <Descriptions.Item label="Mô tả">
-                  {selectedCategory.description}
-                </Descriptions.Item>
-                <Descriptions.Item label="Giống">
-                  <div className="flex flex-wrap gap-2">
-                    {selectedCategory.categoryVarieties?.map((item) => (
-                      <Tag
-                        key={item.id}
-                        color="blue"
-                        className="text-sm py-1 px-3 rounded-full border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors duration-200"
-                      >
-                        {item.variety?.name}
-                      </Tag>
-                    ))}
-                  </div>
-                </Descriptions.Item>
-              </Descriptions>
+                  <Descriptions.Item label="Kích thước">
+                    {selectedCategory.sizeMin} - {selectedCategory.sizeMax} cm
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số lượng tối đa">
+                    {selectedCategory.maxEntries}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Số lượng tối thiểu ">
+                    {selectedCategory.minEntries}
+                  </Descriptions.Item>
+                  {selectedCategory.status === "cancelled" && (
+                    <Descriptions.Item label="Trạng thái">
+                      <Tag color="red">Đã hủy</Tag>
+                    </Descriptions.Item>
+                  )}
+                  <Descriptions.Item label="Bể trưng bày">
+                    {selectedCategory.hasTank ? "Có" : "Không"}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Mô tả">
+                    {selectedCategory.description}
+                  </Descriptions.Item>
+                  <Descriptions.Item label="Giống">
+                    <div className="flex flex-wrap gap-2">
+                      {selectedCategory.categoryVarieties?.map((item) => (
+                        <Tag
+                          key={item.id}
+                          color="blue"
+                          className="text-sm py-1 px-2 rounded-full border-2 border-blue-200 bg-blue-50 hover:bg-blue-100 transition-colors duration-200 my-1"
+                        >
+                          {item.variety?.name}
+                        </Tag>
+                      ))}
+                    </div>
+                  </Descriptions.Item>
+                </Descriptions>
+              </div>
             </TabPane>
 
             <TabPane tab="Giải thưởng" key="2" icon={<TrophyOutlined />}>
@@ -357,7 +346,7 @@ function Category({ showId, statusShow }) {
                           </div>
                         }
                       >
-                        <div className="p-4">
+                        <div className="p-2 md:p-4">
                           <div className="mb-2">
                             <strong>Tên giải:</strong> {award.name}
                           </div>
@@ -375,10 +364,15 @@ function Category({ showId, statusShow }) {
               </Collapse>
             </TabPane>
 
-            <TabPane tab="Tiêu chí đánh giá" key="4">
-              <Tabs defaultActiveKey="preliminary" tabPosition="left">
+            <TabPane tab="Tiêu chí" key="4">
+              <Tabs
+                defaultActiveKey="preliminary"
+                tabPosition={window.innerWidth < 768 ? "top" : "left"}
+                size={window.innerWidth < 768 ? "small" : "middle"}
+              >
                 <TabPane tab="Vòng sơ loại" key="preliminary">
                   <List
+                    size="small"
                     dataSource={
                       selectedCategory.criteriaCompetitionCategories
                         ?.filter((c) => c.roundType === "Preliminary")
@@ -387,7 +381,7 @@ function Category({ showId, statusShow }) {
                     renderItem={(item) => (
                       <List.Item>
                         <div className="w-full">
-                          <div className="flex justify-between items-center mb-2">
+                          <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <div className="font-medium">
                               {item.order}. {item.criteria?.name}
                             </div>
@@ -395,7 +389,7 @@ function Category({ showId, statusShow }) {
                               Trọng số: {(item.weight * 100).toFixed(0)}%
                             </Tag>
                           </div>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 text-sm">
                             {item.criteria?.description}
                           </p>
                         </div>
@@ -405,6 +399,7 @@ function Category({ showId, statusShow }) {
                 </TabPane>
                 <TabPane tab="Vòng đánh giá" key="evaluation">
                   <List
+                    size="small"
                     dataSource={
                       selectedCategory.criteriaCompetitionCategories
                         ?.filter((c) => c.roundType === "Evaluation")
@@ -413,7 +408,7 @@ function Category({ showId, statusShow }) {
                     renderItem={(item) => (
                       <List.Item>
                         <div className="w-full">
-                          <div className="flex justify-between items-center mb-2">
+                          <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <div className="font-medium">
                               {item.order}. {item.criteria?.name}
                             </div>
@@ -421,7 +416,7 @@ function Category({ showId, statusShow }) {
                               Trọng số: {(item.weight * 100).toFixed(0)}%
                             </Tag>
                           </div>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 text-sm">
                             {item.criteria?.description}
                           </p>
                         </div>
@@ -431,6 +426,7 @@ function Category({ showId, statusShow }) {
                 </TabPane>
                 <TabPane tab="Vòng chung kết" key="final">
                   <List
+                    size="small"
                     dataSource={
                       selectedCategory.criteriaCompetitionCategories
                         ?.filter((c) => c.roundType === "Final")
@@ -439,7 +435,7 @@ function Category({ showId, statusShow }) {
                     renderItem={(item) => (
                       <List.Item>
                         <div className="w-full">
-                          <div className="flex justify-between items-center mb-2">
+                          <div className="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <div className="font-medium">
                               {item.order}. {item.criteria?.name}
                             </div>
@@ -447,7 +443,7 @@ function Category({ showId, statusShow }) {
                               Trọng số: {(item.weight * 100).toFixed(0)}%
                             </Tag>
                           </div>
-                          <p className="text-gray-600">
+                          <p className="text-gray-600 text-sm">
                             {item.criteria?.description}
                           </p>
                         </div>
@@ -501,12 +497,12 @@ function Category({ showId, statusShow }) {
                       <Collapse.Panel
                         key={item.referee?.email}
                         header={
-                          <div className="flex items-center">
+                          <div className="flex items-center flex-wrap gap-2">
                             <UserOutlined style={{ color: "#1890ff" }} />
                             <span className="ml-2 font-medium">
                               {item.referee?.fullName}
                             </span>
-                            <div className="ml-auto">
+                            <div className="ml-auto flex flex-wrap gap-1">
                               {item.roundTypes.map((type) => (
                                 <Tag
                                   key={type}
@@ -528,7 +524,7 @@ function Category({ showId, statusShow }) {
                           </div>
                         }
                       >
-                        <div className="p-4">
+                        <div className="p-2 md:p-4">
                           <div className="mb-2">
                             <strong>Email:</strong> {item.referee?.email}
                           </div>
@@ -586,10 +582,10 @@ function Category({ showId, statusShow }) {
                   });
 
                 return (
-                  <div>
+                  <div className="space-y-4">
                     {groupedRounds.map((group) => (
-                      <div key={group.type} className="mb-6">
-                        <h3 className="text-lg font-medium mb-3">
+                      <div key={group.type} className="mb-4">
+                        <h3 className="text-lg font-medium mb-2">
                           {group.translatedType}
                         </h3>
                         <Collapse>
@@ -626,6 +622,7 @@ function Category({ showId, statusShow }) {
           </Tabs>
         )}
       </Drawer>
+
       {isEditModalVisible && (
         <EditCategory
           categoryId={editingCategoryId}
@@ -647,6 +644,8 @@ function Category({ showId, statusShow }) {
         okText="Xác nhận"
         cancelText="Hủy bỏ"
         okButtonProps={{ disabled: !cancelReason.trim() }}
+        width={window.innerWidth < 768 ? "95%" : 520}
+        centered
       >
         <Form layout="vertical">
           <Form.Item

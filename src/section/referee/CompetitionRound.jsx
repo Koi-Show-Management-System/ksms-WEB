@@ -18,13 +18,22 @@ import {
   Card,
   Empty,
   Collapse,
+  Steps,
 } from "antd";
-import { EyeOutlined, ReloadOutlined, TrophyOutlined } from "@ant-design/icons";
+import {
+  EyeOutlined,
+  ReloadOutlined,
+  TrophyOutlined,
+  AimOutlined,
+  QrcodeOutlined,
+  PercentageOutlined,
+} from "@ant-design/icons";
 import useCategory from "../../hooks/useCategory";
 import useRound from "../../hooks/useRound";
 import useRegistrationRound from "../../hooks/useRegistrationRound";
 import useScore from "../../hooks/useScore";
-import { Loading } from "../../components";
+const { Title, Text, Paragraph } = Typography;
+const { Step } = Steps;
 
 const { Option } = Select;
 
@@ -40,6 +49,8 @@ function CompetitionRound({ showId }) {
   const [isDetailDrawerVisible, setIsDetailDrawerVisible] = useState(false);
   const [currentRegistration, setCurrentRegistration] = useState(null);
   const [scoreDetails, setScoreDetails] = useState(null);
+  const [currentStep, setCurrentStep] = useState(0);
+
   const roundTypeLabels = {
     Preliminary: "Vòng Sơ Khảo",
     Evaluation: "Vòng Đánh Giá Chính",
@@ -133,21 +144,37 @@ function CompetitionRound({ showId }) {
     setLoadingImages((prev) => ({ ...prev, [id]: false }));
   };
 
+  // Update the current step based on selection states
+  useEffect(() => {
+    if (categoryId) {
+      setCurrentStep(0);
+    }
+    if (selectedRoundType) {
+      setCurrentStep(1);
+    }
+    if (selectedSubRound) {
+      setCurrentStep(2);
+    }
+  }, [categoryId, selectedRoundType, selectedSubRound]);
+
   const handleCategoryChange = (value) => {
     setCategoryId(value);
     setSelectedRoundType(null);
     setSelectedSubRound(null);
     setSubRounds([]);
+    setCurrentStep(0);
   };
 
   const handleRoundTypeChange = (value) => {
     setSelectedRoundType(value);
     setSelectedSubRound(null);
     setSubRounds([]);
+    setCurrentStep(1);
   };
 
   const handleSubRoundChange = (value) => {
     setSelectedSubRound(value);
+    setCurrentStep(2);
   };
 
   const handleTableChange = (pagination) => {
@@ -220,7 +247,7 @@ function CompetitionRound({ showId }) {
                 }}
                 placeholder={
                   <div className="w-full h-full flex items-center justify-center bg-gray-200">
-                    <Loading />
+                    <Spin size="small" />
                   </div>
                 }
                 fallback={PLACEHOLDER_IMAGE}
@@ -319,101 +346,129 @@ function CompetitionRound({ showId }) {
   ]);
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
-      <Row gutter={16}>
-        <Col xs={24} sm={8}>
-          <div className="mb-4">
-            <span className="block text-lg font-medium">Hạng Mục:</span>
-            <Select
-              value={categoryId}
-              onChange={handleCategoryChange}
-              allowClear
-              style={{ width: "100%" }}
-              className="border rounded-md"
-              loading={categoryLoading}
-              placeholder="Chọn danh mục"
-            >
-              {categories &&
-                categories.map((category) => (
-                  <Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Option>
-                ))}
-            </Select>
-          </div>
-        </Col>
+      <Title level={3} className="text-center mb-6 text-blue-700">
+        <TrophyOutlined className="mr-2 my-3" />
+        Kết quả thi đấu
+      </Title>
 
-        {categoryId && (
-          <Col xs={24} sm={8}>
-            <div className="mb-4">
-              <span className="block text-lg font-medium">Loại Vòng:</span>
+      <Steps
+        current={currentStep}
+        className="mb-8 custom-steps"
+        labelPlacement="vertical"
+        responsive
+        size="small"
+      >
+        <Step title="Hạng mục" icon={<AimOutlined />} />
+        <Step title="Vòng thi" icon={<TrophyOutlined />} />
+        <Step title="Xem kết quả" icon={<PercentageOutlined />} />
+      </Steps>
+
+      <Card className="overflow-hidden mb-6">
+        <div className="mb-4">
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-2">
+            <div className="w-full md:w-1/3">
+              <div className="text-lg font-medium mb-2">Hạng Mục:</div>
               <Select
-                value={selectedRoundType}
-                onChange={handleRoundTypeChange}
-                style={{ width: "100%" }}
-                className="border rounded-md"
-                loading={roundLoading}
-                placeholder="Chọn vòng thi"
+                placeholder="Chọn hạng mục"
+                onChange={handleCategoryChange}
+                allowClear
+                value={categoryId}
+                loading={categoryLoading}
+                className="w-full"
               >
-                {refereeRoundTypes &&
-                  refereeRoundTypes.map((roundType) => (
-                    <Option key={roundType} value={roundType}>
-                      {roundTypeLabels[roundType] || roundType}
+                {categories &&
+                  categories.map((category) => (
+                    <Option key={category.id} value={category.id}>
+                      {category.name}
                     </Option>
                   ))}
               </Select>
             </div>
-          </Col>
-        )}
 
-        {selectedRoundType && (
-          <Col xs={24} sm={8}>
-            <div className="mb-4">
-              <span className="block text-lg font-medium">Vòng:</span>
-              <Select
-                value={selectedSubRound}
-                onChange={handleSubRoundChange}
-                style={{ width: "100%" }}
-                className="border rounded-md"
-                placeholder="Chọn vòng nhỏ"
-              >
-                {subRounds.map((subRound) => (
-                  <Option key={subRound.id} value={subRound.id}>
-                    {subRound.name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-          </Col>
-        )}
-      </Row>
+            {categoryId && (
+              <div className="w-full md:w-1/3">
+                <div className="text-lg font-medium mb-2">Loại Vòng:</div>
+                <Select
+                  value={selectedRoundType}
+                  onChange={handleRoundTypeChange}
+                  className="w-full"
+                  placeholder={roundLoading ? "Đang tải..." : "Chọn vòng thi"}
+                  loading={roundLoading}
+                  disabled={!categoryId}
+                >
+                  {refereeRoundTypes &&
+                    refereeRoundTypes.map((roundType) => (
+                      <Option key={roundType} value={roundType}>
+                        {roundTypeLabels[roundType] || roundType}
+                      </Option>
+                    ))}
+                </Select>
+              </div>
+            )}
 
-      <Table
-        columns={columns}
-        dataSource={displayData}
-        loading={registrationLoading}
-        pagination={{
-          current: currentPage,
-          pageSize: pageSize,
-          total: totalItems,
-          showSizeChanger: true,
-          showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
-        }}
-        locale={{
-          emptyText: (
-            <Empty
-              description="Không có dữ liệu"
-              image={Empty.PRESENTED_IMAGE_SIMPLE}
-              style={{ margin: "24px 0" }}
-            />
-          ),
-        }}
-        onChange={handleTableChange}
-        className="mt-4"
-      />
+            {selectedRoundType && (
+              <div className="w-full md:w-1/3">
+                <div className="text-lg font-medium mb-2">Vòng:</div>
+                <Select
+                  value={selectedSubRound}
+                  onChange={handleSubRoundChange}
+                  className="w-full"
+                  placeholder="Chọn vòng"
+                  disabled={!selectedRoundType}
+                >
+                  {subRounds
+                    .sort((a, b) => {
+                      if (
+                        a.roundOrder !== undefined &&
+                        b.roundOrder !== undefined
+                      ) {
+                        return a.roundOrder - b.roundOrder;
+                      }
+                      return (a.name || "").localeCompare(b.name || "");
+                    })
+                    .map((subRound) => (
+                      <Option key={subRound.id} value={subRound.id}>
+                        {subRound.name}
+                      </Option>
+                    ))}
+                </Select>
+              </div>
+            )}
+          </div>
+        </div>
+      </Card>
+
+      <div className="overflow-x-auto">
+        <Table
+          columns={columns}
+          dataSource={displayData}
+          loading={registrationLoading}
+          pagination={{
+            current: currentPage,
+            pageSize: pageSize,
+            total: totalItems,
+            showSizeChanger: true,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total}`,
+            responsive: true,
+          }}
+          locale={{
+            emptyText: (
+              <Empty
+                description="Không có dữ liệu"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "24px 0" }}
+              />
+            ),
+          }}
+          onChange={handleTableChange}
+          className="mt-4"
+          scroll={{ x: "max-content" }}
+        />
+      </div>
 
       <Drawer
         title="Chi tiết kết quả"
-        width={600}
+        width={window.innerWidth > 768 ? 600 : "80%"}
         onClose={handleDrawerClose}
         open={isDetailDrawerVisible}
       >
@@ -450,7 +505,11 @@ function CompetitionRound({ showId }) {
                       >
                         <div className="bg-gray-50 p-4 mb-4 rounded-md">
                           <Row gutter={16} justify="space-between">
-                            <Col span={8} className="text-center">
+                            <Col
+                              xs={24}
+                              md={8}
+                              className="text-center mb-4 md:mb-0"
+                            >
                               <Typography.Text className="block text-gray-600">
                                 Điểm ban đầu
                               </Typography.Text>
@@ -458,7 +517,11 @@ function CompetitionRound({ showId }) {
                                 {scoreItem.initialScore.toFixed(1)}
                               </Typography.Text>
                             </Col>
-                            <Col span={8} className="text-center">
+                            <Col
+                              xs={24}
+                              md={8}
+                              className="text-center mb-4 md:mb-0"
+                            >
                               <Typography.Text className="block text-gray-600">
                                 Điểm trừ
                               </Typography.Text>
@@ -468,7 +531,7 @@ function CompetitionRound({ showId }) {
                                   : "0.0"}
                               </Typography.Text>
                             </Col>
-                            <Col span={8} className="text-center">
+                            <Col xs={24} md={8} className="text-center">
                               <Typography.Text className="block text-gray-600">
                                 Điểm cuối cùng
                               </Typography.Text>
@@ -612,6 +675,75 @@ function CompetitionRound({ showId }) {
           </Tabs>
         )}
       </Drawer>
+
+      <style jsx="true" global>{`
+        .custom-steps .ant-steps-item-icon {
+          background: #f0f7ff;
+          border-color: #1890ff;
+        }
+        .custom-steps .ant-steps-item-active .ant-steps-item-icon {
+          background: #1890ff;
+        }
+
+        @media (max-width: 768px) {
+          .ant-form-item-label {
+            padding-bottom: 4px;
+          }
+          .custom-steps .ant-steps-item-content {
+            min-height: auto;
+          }
+        }
+
+        @media (min-width: 768px) and (max-width: 1024px) {
+          .custom-steps .ant-steps-item-title {
+            font-size: 14px;
+          }
+          .ant-table-wrapper {
+            overflow-x: auto;
+          }
+          .ant-table {
+            min-width: 650px;
+          }
+          .ant-drawer-content-wrapper {
+            width: 70% !important;
+          }
+          .ant-collapse-content {
+            overflow-x: auto;
+          }
+          .ant-card-head-title,
+          .ant-card-extra {
+            padding: 12px 0;
+          }
+          .ant-select-selector {
+            height: 42px !important;
+          }
+          .ant-select-selection-item {
+            line-height: 40px !important;
+          }
+        }
+
+        /* Specific iPad optimization */
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
+          .ant-steps-item-icon {
+            margin: 0 auto 8px;
+          }
+          .ant-steps-item-title {
+            text-align: center;
+          }
+          .ant-table-cell {
+            padding: 12px 8px;
+          }
+          .ant-table {
+            font-size: 13px;
+          }
+        }
+
+        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
+          .ant-table {
+            min-width: 800px;
+          }
+        }
+      `}</style>
     </div>
   );
 }

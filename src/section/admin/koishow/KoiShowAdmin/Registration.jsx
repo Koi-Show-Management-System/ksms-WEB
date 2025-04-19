@@ -52,7 +52,6 @@ function Registration({ showId, statusShow }) {
     setSelectedRegistrations,
     selectAllCheckedInRegistrations,
     clearSelectedRegistrations,
-    setCurrentPage,
   } = useRegistration();
 
   const { categories, fetchCategories } = useCategory();
@@ -124,9 +123,14 @@ function Registration({ showId, statusShow }) {
   const [activeFilters, setActiveFilters] = useState([]);
 
   useEffect(() => {
+    console.log("Fetching categories with showId:", showId);
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
   }, []);
+
+  useEffect(() => {
+    console.log("Categories state:", categories);
+  }, [categories]);
 
   useEffect(() => {
     if (selectedStatus && selectedStatus.length > 0) {
@@ -171,7 +175,6 @@ function Registration({ showId, statusShow }) {
     });
 
     // Gọi API để lấy tất cả đăng ký có trạng thái checkin trong hạng mục đã chọn
-    // Đặt pageSize rất lớn để lấy tất cả dữ liệu trong một trang
     fetchRegistration(
       1,
       1000, // Số lượng lớn để lấy tất cả đăng ký
@@ -213,6 +216,65 @@ function Registration({ showId, statusShow }) {
         });
       }
     });
+  };
+
+  const handleCategoryChangeInModal = (categoryId) => {
+    setSelectedCategory(categoryId);
+
+    // Hiển thị loading khi chọn hạng mục
+    notification.info({
+      message: "Đang lấy dữ liệu",
+      description: "Đang lấy tất cả đăng ký đã check-in, vui lòng đợi...",
+      placement: "topRight",
+      duration: 2,
+    });
+
+    // Gọi API để lấy tất cả đăng ký có trạng thái checkin trong hạng mục đã chọn
+    fetchRegistration(
+      1,
+      1000, // Số lượng lớn để lấy tất cả đăng ký
+      showId,
+      [categoryId],
+      ["checkin"] // Chỉ lấy các đăng ký đã check-in
+    ).then((response) => {
+      if (response && response.registration) {
+        const checkedInFish = response.registration.filter(
+          (reg) =>
+            reg.status?.toLowerCase() === "checkin" &&
+            reg.competitionCategory?.id === categoryId
+        );
+
+        if (checkedInFish.length === 0) {
+          notification.warning({
+            message: "Không có đăng ký",
+            description: "Không có đăng ký nào đã check-in để gán vòng",
+            placement: "topRight",
+          });
+          setCheckinRegistrations([]);
+          setTotalCheckinRegistrations(0);
+        } else {
+          setCheckinRegistrations(checkedInFish);
+          setTotalCheckinRegistrations(checkedInFish.length);
+
+          notification.success({
+            message: "Đã lấy dữ liệu",
+            description: `Đã tìm thấy ${checkedInFish.length} đăng ký đã check-in`,
+            placement: "topRight",
+          });
+        }
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể lấy dữ liệu đăng ký",
+          placement: "topRight",
+        });
+      }
+    });
+
+    // Reset lại roundSelector nếu đang có
+    if (roundSelectorRef.current) {
+      roundSelectorRef.current.reset();
+    }
   };
 
   const closeAssignModal = () => {
@@ -656,7 +718,17 @@ function Registration({ showId, statusShow }) {
             onChange={handleCategoryChange}
             allowClear
             value={selectedCategory}
-          />
+          >
+            {categories && categories.length > 0 ? (
+              categories.map((category) => (
+                <Select.Option key={category.id} value={category.id}>
+                  {category.name}
+                </Select.Option>
+              ))
+            ) : (
+              <Select.Option disabled>Không có dữ liệu</Select.Option>
+            )}
+          </Select>
 
           <Select
             mode="multiple"
@@ -702,8 +774,6 @@ function Registration({ showId, statusShow }) {
                   );
                 }
               }
-              // Reset về trang đầu tiên khi thay đổi bộ lọc
-              setCurrentPage(1);
             }}
             style={{ width: "100%", maxWidth: 300 }}
             placeholder="Chọn trạng thái"
@@ -1452,6 +1522,164 @@ function Registration({ showId, statusShow }) {
               options={REFUND_TYPE_OPTIONS}
             />
           </div>
+        </Modal>
+        <Modal
+          title={
+            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+              <span>
+                Gán cá tham gia vào vòng{" "}
+                {checkinRegistrations.length > 0
+                  ? `- Tất cả ${checkinRegistrations.length} đăng ký đã check-in`
+                  : ""}
+              </span>
+            </div>
+          }
+          open={isAssignModalVisible}
+          onCancel={closeAssignModal}
+          footer={[
+            <Button key="cancel" onClick={closeAssignModal}>
+              Hủy
+            </Button>,
+            <Button
+              key="assign"
+              type="primary"
+              loading={assignLoading}
+              onClick={handleassignToRound}
+              disabled={selectedRegistrations?.length === 0 || !selectedRoundId}
+            >
+              Gán {selectedRegistrations?.length} đăng ký vào vòng
+            </Button>,
+          ]}
+          width={1000}
+        >
+          <div style={{ marginBottom: "24px" }}>
+            {!selectedCategory && (
+              <Alert
+                message="Vui lòng chọn hạng mục"
+                description="Hãy chọn hạng mục để xem danh sách đăng ký đã check-in"
+                type="info"
+                showIcon
+                style={{ marginBottom: "16px" }}
+              />
+            )}
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                marginBottom: "12px",
+              }}
+            >
+              <Typography.Text strong>Chọn vòng</Typography.Text>
+            </div>
+
+            <div style={{ display: "flex", alignItems: "center" }}>
+              <RoundSelector
+                ref={roundSelectorRef}
+                onRoundSelect={handleRoundSelect}
+                showId={showId}
+                categoryId={selectedCategory}
+                preSelectPreliminary={true}
+              />
+              {console.log("Rendering RoundSelector with showId:", showId)}
+            </div>
+          </div>
+
+          {selectedCategory && (
+            <>
+              {checkinRegistrations.length > 0 ? (
+                <Alert
+                  type="info"
+                  showIcon
+                  message="Tất cả đăng ký đã check-in của hạng mục này đang được hiển thị"
+                  description="Bạn có thể chọn và gán vòng cho tất cả đăng ký cùng một lúc"
+                  style={{ marginBottom: "16px" }}
+                />
+              ) : (
+                <Alert
+                  type="warning"
+                  showIcon
+                  message="Không có đăng ký"
+                  description="Không có đăng ký nào đã check-in cho hạng mục này"
+                  style={{ marginBottom: "16px" }}
+                />
+              )}
+            </>
+          )}
+
+          {selectedCategory &&
+            checkinRegistrations.length > 0 &&
+            selectedRoundId && (
+              <>
+                <div
+                  style={{
+                    borderTop: "1px solid #f0f0f0",
+                    paddingTop: "24px",
+                    marginBottom: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "space-between",
+                      marginBottom: "16px",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <CheckSquareOutlined
+                        style={{ color: "#1890ff", marginRight: "8px" }}
+                      />
+                      <Typography.Text strong>
+                        Danh sách cá đăng ký
+                      </Typography.Text>
+                    </div>
+
+                    <Button
+                      type={isAllSelected ? "default" : "primary"}
+                      onClick={handleSelectAllInModal}
+                      disabled={checkinRegistrations.length === 0}
+                    >
+                      {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                    </Button>
+                  </div>
+
+                  {selectedRegistrations?.length > 0 && (
+                    <Alert
+                      type="info"
+                      showIcon
+                      message={
+                        <span>
+                          Đã chọn{" "}
+                          <strong>{selectedRegistrations.length}</strong> /{" "}
+                          <strong>{checkinRegistrations.length}</strong> đăng ký
+                          để gán vào vòng <strong>{selectedRoundName}</strong>
+                          {selectedRegistrations.length ===
+                            checkinRegistrations.length && (
+                            <Tag color="green" style={{ marginLeft: 8 }}>
+                              Đã chọn tất cả
+                            </Tag>
+                          )}
+                        </span>
+                      }
+                      style={{ marginBottom: "16px" }}
+                    />
+                  )}
+
+                  <Table
+                    rowSelection={rowSelection}
+                    columns={columns.filter((col) => col.key !== "actions")}
+                    dataSource={checkinRegistrations}
+                    loading={isLoading}
+                    pagination={false}
+                    rowKey="id"
+                    size="small"
+                    bordered={false}
+                    scroll={{ y: 400 }}
+                  />
+                </div>
+              </>
+            )}
         </Modal>
       </Card>
     </ConfigProvider>
