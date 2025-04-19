@@ -35,6 +35,12 @@ const useAuth = create((set) => ({
       }
     } catch (err) {
       console.error("Error fetching userInfo", err);
+      // notification.error({
+      //   message: "Lỗi",
+      //   description:
+      //     err?.response?.data?.Error || "Không thể lấy thông tin người dùng",
+      //   placement: "topRight",
+      // });
       // Nếu lỗi 401 (Unauthorized), đăng xuất người dùng
       if (err.response && err.response.status === 401) {
         set({ isAuthenticated: false });

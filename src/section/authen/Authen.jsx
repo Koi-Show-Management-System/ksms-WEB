@@ -25,7 +25,6 @@ function Authen() {
     const token = Cookies.get("__token");
     const role = Cookies.get("__role");
 
-
     if (token && role) {
       // Nếu đã đăng nhập, chuyển hướng dựa vào role
       if (role === "Admin") {
@@ -103,25 +102,9 @@ function Authen() {
     } catch (error) {
       console.error("Login error:", error);
 
-      let errorMessage = "Email hoặc mật khẩu không hợp lệ. Vui lòng thử lại.";
-
-      if (error.response) {
-        if (error.response.status === 401) {
-          errorMessage = "Tài khoản hoặc mật khẩu không chính xác.";
-        } else if (error.response.status === 403) {
-          errorMessage =
-            "Tài khoản của bạn đã bị khóa. Vui lòng liên hệ quản trị viên.";
-        } else if (error.response.data && error.response.data.message) {
-          errorMessage = error.response.data.message;
-        }
-      } else if (error.request) {
-        errorMessage =
-          "Không thể kết nối đến máy chủ. Vui lòng kiểm tra kết nối mạng.";
-      }
-
       notification.error({
         message: "Đăng nhập không thành công",
-        description: errorMessage,
+        description: error?.response?.data?.Error || "Đăng nhập thất bại",
       });
     } finally {
       setIsLoggingIn(false);

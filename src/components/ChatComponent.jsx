@@ -135,7 +135,13 @@ const ChatComponent = ({ channel, chatClient }) => {
       {/* Messages area */}
       <div
         ref={messagesContainerRef}
-        className="h-[280px] overflow-y-auto px-4 py-3 bg-white/70"
+        className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 bg-white/70 isolate"
+        style={{
+          maxHeight: "450px",
+          height: "450px",
+          scrollbarWidth: "thin",
+          scrollbarColor: "#e0e0e0 transparent",
+        }}
       >
         {messages.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-gray-500">
@@ -149,7 +155,8 @@ const ChatComponent = ({ channel, chatClient }) => {
               return (
                 <div
                   key={msg.id}
-                  className={`flex ${isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end gap-2`}
+                  className={`flex ${isCurrentUser ? "flex-row-reverse" : "flex-row"} items-end gap-2 message-item`}
+                  style={{ minHeight: "80px" }}
                 >
                   <Avatar
                     src={

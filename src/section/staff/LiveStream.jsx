@@ -544,6 +544,55 @@ function LiveStream({ showId }) {
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState("");
     const [loadingCameras, setLoadingCameras] = useState(false);
+    const [switchingCamera, setSwitchingCamera] = useState(false);
+
+    // Hàm xử lý chuyển đổi camera
+    const handleSwitchCamera = async (deviceId) => {
+      try {
+        if (deviceId === selectedCamera) return;
+
+        setSwitchingCamera(true);
+        message.loading({
+          content: "Đang chuyển đổi camera...",
+          key: "switchCamera",
+        });
+
+        // Tắt camera hiện tại
+        if (camera.state.status === "enabled") {
+          await camera.disable();
+        }
+
+        // Bật camera mới với deviceId
+        await camera.enable(deviceId);
+
+        // Cập nhật camera đã chọn
+        setSelectedCamera(deviceId);
+
+        message.success({
+          content: "Đã chuyển đổi camera thành công",
+          key: "switchCamera",
+        });
+      } catch (error) {
+        console.error("Lỗi khi chuyển đổi camera:", error);
+        message.error({
+          content: "Không thể chuyển đổi camera: " + error.message,
+          key: "switchCamera",
+        });
+
+        // Thử bật lại camera cũ nếu có lỗi
+        try {
+          if (selectedCamera && selectedCamera !== "current") {
+            await camera.enable(selectedCamera);
+          } else {
+            await camera.enable();
+          }
+        } catch (enableError) {
+          console.error("Không thể bật lại camera cũ:", enableError);
+        }
+      } finally {
+        setSwitchingCamera(false);
+      }
+    };
 
     // Lấy danh sách camera khi component mount
     useEffect(() => {
@@ -784,7 +833,7 @@ function LiveStream({ showId }) {
     };
 
     return (
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 w-auto min-w-[300px] max-w-[600px] py-3 px-5 bg-black/80 rounded-xl backdrop-blur-md shadow-lg z-40">
+      <div className="w-auto min-w-[300px] max-w-[600px] py-3 px-5 bg-black/80 rounded-xl backdrop-blur-md shadow-lg z-40">
         {/* Thông tin thời gian và người xem */}
         <div className="flex justify-between items-center">
           <div className="flex items-center space-x-3">
@@ -823,7 +872,7 @@ function LiveStream({ showId }) {
                   className={isCamEnabled ? "text-white" : "text-red-500"}
                 />
               }
-              onClick={() => camera.toggle()}
+              onClick={() => handleSwitchCamera(selectedCamera)}
               className="hover:bg-white/10"
             />
 
@@ -892,7 +941,7 @@ function LiveStream({ showId }) {
                       type={
                         selectedCamera === device.deviceId ? "primary" : "text"
                       }
-                      onClick={() => handleLiveToggle()}
+                      onClick={() => handleSwitchCamera(device.deviceId)}
                       className={`text-left w-full h-auto py-2.5 px-3 rounded-lg flex items-center overflow-hidden transition-all ${
                         selectedCamera === device.deviceId
                           ? "border-none bg-blue-500"
@@ -947,7 +996,7 @@ function LiveStream({ showId }) {
                           message.info(
                             "Đang thử chuyển camera. Vui lòng đợi..."
                           );
-                          handleLiveToggle();
+                          handleSwitchCamera(device.deviceId);
                         }}
                         icon={<SyncOutlined />}
                         className="ml-11 text-xs py-0 pb-1"
@@ -965,7 +1014,7 @@ function LiveStream({ showId }) {
                   <Space direction="vertical" className="w-full">
                     <Button
                       type="primary"
-                      onClick={() => handleLiveToggle()}
+                      onClick={() => handleSwitchCamera(selectedCamera)}
                       className="text-left w-full py-2.5 px-3 rounded-lg mb-2.5 h-auto"
                     >
                       <div className="flex items-center">
@@ -1128,7 +1177,7 @@ function LiveStream({ showId }) {
   return (
     <Card
       title={<Title level={3}>Quản lý Livestream</Title>}
-      className="w-full rounded-2xl shadow-lg overflow-hidden livestream-card border-0 pb-15"
+      className="w-full rounded-2xl shadow-lg overflow-hidden livestream-card border-0"
     >
       {isLoading ? (
         <Flex justify="center" align="center" className="min-h-[400px]">
@@ -1148,10 +1197,7 @@ function LiveStream({ showId }) {
             }}
           >
             <Flex vertical gap="24px" className="h-full">
-              <Row
-                gutter={[16, 16]}
-                className="h-[calc(100vh-200px)] flex items-stretch"
-              >
+              <Row gutter={[16, 16]} className="flex items-stretch">
                 <Col span={24} md={14} className="flex">
                   {/* Hiển thị video của chính người dùng */}
                   <Card
@@ -1162,9 +1208,9 @@ function LiveStream({ showId }) {
                       </Space>
                     }
                     bordered={false}
-                    className="w-full h-full shadow-md rounded-xl overflow-hidden bg-gray-900 camera-card"
+                    className="w-full shadow-md rounded-xl overflow-hidden bg-gray-900 camera-card"
                     bodyStyle={{
-                      height: "calc(100% - 57px)",
+                      height: "450px",
                       padding: "0",
                       position: "relative",
                       overflow: "hidden",
@@ -1173,6 +1219,7 @@ function LiveStream({ showId }) {
                       borderBottom: "1px solid rgba(255,255,255,0.1)",
                       backgroundColor: "rgba(0,0,0,0.3)",
                       color: "white",
+                      height: "57px",
                     }}
                     extra={
                       <Space>
@@ -1202,14 +1249,17 @@ function LiveStream({ showId }) {
                       </Space>
                     }
                     bordered={false}
-                    className="w-full h-full shadow-md rounded-xl overflow-hidden bg-white chat-card"
+                    className="w-full shadow-md rounded-xl overflow-hidden bg-white chat-card"
                     bodyStyle={{
-                      height: "calc(100% - 57px)",
+                      height: "450px",
                       padding: 0,
                       position: "relative",
                       overflow: "hidden",
                     }}
-                    headStyle={{ borderBottom: "1px solid #f0f0f0" }}
+                    headStyle={{
+                      borderBottom: "1px solid #f0f0f0",
+                      height: "57px",
+                    }}
                   >
                     {channel && chatClient ? (
                       <ChatComponent
@@ -1238,10 +1288,9 @@ function LiveStream({ showId }) {
               </Row>
 
               {/* Thanh điều khiển đơn giản */}
-              <LiveStreamControls call={call} />
-
-              {/* Thêm khoảng trống ở cuối */}
-              <div className="h-5"></div>
+              <div className="flex justify-center w-full mt-3">
+                <LiveStreamControls call={call} />
+              </div>
             </Flex>
           </StreamCall>
         </StreamVideo>

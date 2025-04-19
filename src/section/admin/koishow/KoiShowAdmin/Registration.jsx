@@ -52,6 +52,7 @@ function Registration({ showId, statusShow }) {
     setSelectedRegistrations,
     selectAllCheckedInRegistrations,
     clearSelectedRegistrations,
+    setCurrentPage,
   } = useRegistration();
 
   const { categories, fetchCategories } = useCategory();
@@ -612,33 +613,10 @@ function Registration({ showId, statusShow }) {
       render: (category) => category?.name || "N/A",
     },
     {
-      title: () => (
-        <span>
-          Trạng thái
-          {activeFilters.length > 0 && (
-            <Tag color="blue" style={{ marginLeft: 8 }}>
-              {activeFilters.length}
-            </Tag>
-          )}
-        </span>
-      ),
+      title: "Trạng thái",
       dataIndex: "status",
       key: "status",
       render: renderStatus,
-      filters: Object.entries(STATUS_CONFIG).map(([key, config]) => ({
-        text: config.label,
-        value: key,
-      })),
-      filterMode: "menu",
-      filterMultiple: true,
-      filteredValue: selectedStatus || null,
-      filterSearch: false,
-      filterDropdownProps: {
-        locale: {
-          filterReset: "Xóa",
-          filterConfirm: "Đồng ý",
-        },
-      },
     },
     {
       title: "Thao tác",
@@ -671,9 +649,9 @@ function Registration({ showId, statusShow }) {
             Quản lý đăng ký
           </Typography.Title> */}
         </Flex>
-        <Flex justify="space-between" align="center" className="mb-4">
+        <div className="flex flex-wrap gap-4 mb-6">
           <Select
-            style={{ width: "25%" }}
+            style={{ width: 300 }}
             placeholder="Chọn hạng mục"
             onChange={handleCategoryChange}
             allowClear
@@ -686,6 +664,80 @@ function Registration({ showId, statusShow }) {
             ))}
           </Select>
 
+          <Select
+            mode="multiple"
+            value={selectedStatus}
+            onChange={(values) => {
+              // Check if "all" is selected
+              if (values.includes("all")) {
+                setSelectedStatus(null);
+                setActiveFilters([]);
+                fetchRegistration(
+                  1,
+                  pageSize,
+                  showId,
+                  selectedCategory ? [selectedCategory] : undefined,
+                  null
+                );
+              } else {
+                // Filter out "all" if it was previously selected
+                const filteredValues = values.filter((v) => v !== "all");
+                setSelectedStatus(filteredValues);
+
+                if (filteredValues && filteredValues.length > 0) {
+                  const statusLabels = filteredValues.map(
+                    (status) => STATUS_CONFIG[status]?.label || status
+                  );
+                  setActiveFilters(statusLabels);
+                  fetchRegistration(
+                    1,
+                    pageSize,
+                    showId,
+                    selectedCategory ? [selectedCategory] : undefined,
+                    filteredValues
+                  );
+                } else {
+                  // If no status is selected, show all
+                  setActiveFilters([]);
+                  fetchRegistration(
+                    1,
+                    pageSize,
+                    showId,
+                    selectedCategory ? [selectedCategory] : undefined,
+                    null
+                  );
+                }
+              }
+              // Reset về trang đầu tiên khi thay đổi bộ lọc
+              setCurrentPage(1);
+            }}
+            style={{ width: 300 }}
+            placeholder="Chọn trạng thái"
+            allowClear
+            maxTagCount="responsive"
+            tagRender={(props) => {
+              const { label, value, closable, onClose } = props;
+              const color = STATUS_CONFIG[value]?.color || "default";
+              return (
+                <Tag
+                  color={color}
+                  closable={closable}
+                  onClose={onClose}
+                  style={{ marginRight: 3 }}
+                >
+                  {label}
+                </Tag>
+              );
+            }}
+          >
+            <Select.Option value="all">Tất cả trạng thái</Select.Option>
+            {Object.entries(STATUS_CONFIG).map(([key, config]) => (
+              <Select.Option key={key} value={key}>
+                {config.label}
+              </Select.Option>
+            ))}
+          </Select>
+
           {filteredData.some(
             (item) => item.status?.toLowerCase() === "checkin"
           ) && (
@@ -693,34 +745,12 @@ function Registration({ showId, statusShow }) {
               type="primary"
               icon={<SendOutlined />}
               onClick={showAssignModal}
+              style={{ marginLeft: "auto" }}
             >
               Gán vòng
             </Button>
           )}
-        </Flex>
-
-        {activeFilters.length > 0 && (
-          <Alert
-            type="info"
-            showIcon
-            message={
-              <Space>
-                <Typography.Text strong>
-                  Đang lọc theo trạng thái:
-                </Typography.Text>
-                {activeFilters.map((filter) => (
-                  <Tag color="blue" key={filter} style={{ marginRight: 8 }}>
-                    {filter}
-                  </Tag>
-                ))}
-                <Button type="link" size="small" onClick={clearAllFilters}>
-                  Xóa bộ lọc
-                </Button>
-              </Space>
-            }
-            style={{ marginBottom: 16 }}
-          />
-        )}
+        </div>
 
         <Table
           columns={columns}

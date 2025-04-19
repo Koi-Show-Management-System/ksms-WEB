@@ -31,19 +31,19 @@ const getRegistration = (
     }
   }
 
-  if (statuses && statuses.length > 0) {
-    params.Status = statuses.join(",");
-  }
-
   // Thêm registrationNumber nếu có
   if (registrationNumber) {
     params.RegistrationNumber = registrationNumber;
   }
 
-  return axiosClient.get(
-    "/registration/get-paging-registration-for-current-account",
-    { params }
-  );
+  // Xử lý nhiều status
+  let url = "/registration/get-paging-registration-for-current-account";
+  if (statuses && statuses.length > 0) {
+    const statusParams = statuses.map((status) => `Status=${status}`).join("&");
+    url += `?${statusParams}`;
+  }
+
+  return axiosClient.get(url, { params });
 };
 
 const updateStatusRegistration = (id, status, rejectedReason, refundType) => {
