@@ -1273,7 +1273,18 @@ function CompetitionRound({ showId }) {
   // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
   const columns = getColumnsForRoundType;
 
-  // Cập nhật hàm công khai điểm để sử dụng state
+  // Thêm state để theo dõi xem fish đã được chuyển sang vòng tiếp theo chưa
+  const [fishMoved, setFishMoved] = useState(false);
+  const [isNoNextRound, setIsNoNextRound] = useState(false);
+  const prevSelectedSubRoundRef = useRef(null); // Thêm ref để lưu giá trị trước đó
+
+  // Xử lý khi NextRound cập nhật trạng thái chuyển cá
+  const handleFishMoveStatus = useCallback((moved, noNextRound) => {
+    setFishMoved(moved);
+    setIsNoNextRound(noNextRound);
+  }, []);
+
+  // Cập nhật hàm công khai điểm để hiển thị nút chuyển cá ngay lập tức
   const handlePublishRoundResults = useCallback(async () => {
     if (!selectedSubRound) return;
 
@@ -1287,8 +1298,11 @@ function CompetitionRound({ showId }) {
           description: "Đã công khai điểm vòng thi thành công",
         });
 
-        // Cập nhật trạng thái để ẩn nút ngay lập tức
+        // Cập nhật trạng thái để ẩn nút công khai điểm và hiển thị NextRound
         setAreResultsPublished(true);
+
+        // Reset fishMoved để đảm bảo nút chuyển cá hiển thị ngay cả khi trước đó đã được chuyển
+        setFishMoved(false);
 
         // Cập nhật dữ liệu từ API để cập nhật UI
         fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
@@ -1313,17 +1327,6 @@ function CompetitionRound({ showId }) {
     currentPage,
     pageSize,
   ]);
-
-  // Thêm state để theo dõi xem fish đã được chuyển sang vòng tiếp theo chưa
-  const [fishMoved, setFishMoved] = useState(false);
-  const [isNoNextRound, setIsNoNextRound] = useState(false);
-  const prevSelectedSubRoundRef = useRef(null); // Thêm ref để lưu giá trị trước đó
-
-  // Xử lý khi NextRound cập nhật trạng thái chuyển cá
-  const handleFishMoveStatus = useCallback((moved, noNextRound) => {
-    setFishMoved(moved);
-    setIsNoNextRound(noNextRound);
-  }, []);
 
   return (
     <Card className="overflow-hidden">
@@ -1466,44 +1469,37 @@ function CompetitionRound({ showId }) {
           )}
 
           {/* Adjust NextRound component to show when round is published */}
-          {selectedSubRound && isRoundPublished() && !fishMoved && (
-            <div className="w-full md:w-1/3">
-              {/* Thêm debug log ở đây */}
-              {(() => {
-                const currentRound = round?.find(
-                  (r) => r.id === selectedSubRound
-                );
-                // Thêm log chi tiết hơn, cả dữ liệu round
+          {selectedSubRound &&
+            ((isRoundPublished() && !fishMoved) ||
+              (areResultsPublished && !fishMoved)) && (
+              <div className="w-full md:w-1/3">
+                <NextRound
+                  registrationRound={registrationRound}
+                  selectedSubRound={selectedSubRound}
+                  selectedCategory={selectedCategory}
+                  selectedRoundType={selectedRoundType}
+                  roundTypes={roundTypes}
+                  fetchRegistrationRound={fetchRegistrationRound}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onFishMoveStatusChange={handleFishMoveStatus}
+                  roundStatus={(() => {
+                    if (!selectedSubRound) {
+                      console.log(
+                        "No selectedSubRound, not passing roundStatus"
+                      );
+                      return null;
+                    }
 
-                return null;
-              })()}
-              <NextRound
-                registrationRound={registrationRound}
-                selectedSubRound={selectedSubRound}
-                selectedCategory={selectedCategory}
-                selectedRoundType={selectedRoundType}
-                roundTypes={roundTypes}
-                fetchRegistrationRound={fetchRegistrationRound}
-                currentPage={currentPage}
-                pageSize={pageSize}
-                onFishMoveStatusChange={handleFishMoveStatus}
-                roundStatus={(() => {
-                  // Chỉ lấy roundStatus khi có selectedSubRound cụ thể
-                  if (!selectedSubRound) {
-                    console.log("No selectedSubRound, not passing roundStatus");
-                    return null;
-                  }
+                    const currentRound = round?.find(
+                      (r) => r.id === selectedSubRound
+                    );
 
-                  // Tìm trong danh sách round
-                  const currentRound = round?.find(
-                    (r) => r.id === selectedSubRound
-                  );
-
-                  return currentRound?.status || null;
-                })()}
-              />
-            </div>
-          )}
+                    return currentRound?.status || null;
+                  })()}
+                />
+              </div>
+            )}
         </div>
       </div>
 
