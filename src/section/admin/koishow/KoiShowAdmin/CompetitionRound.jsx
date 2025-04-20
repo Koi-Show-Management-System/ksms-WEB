@@ -859,7 +859,19 @@ function CompetitionRound({ showId }) {
               scoreItem.refereeAccount?.fullName ||
               scoreItem.refereeAccount?.username ||
               "Không xác định";
-            const scoreDate = new Date(scoreItem.createdAt).toLocaleString();
+            const scoreDate = new Date(scoreItem.createdAt).toLocaleString(
+              "vi-VN",
+              {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              }
+            );
+            const comments = scoreItem.comments || "";
 
             return (
               <Collapse.Panel
@@ -928,14 +940,23 @@ function CompetitionRound({ showId }) {
                         </Typography.Title>
                       </Col>
                     </Row>
+                    <Divider style={{ margin: "12px 0" }} />
+                    <Row>
+                      <Col span={24}>
+                        <div className="flex ">
+                          <Typography.Text
+                            strong
+                            style={{ minWidth: "70px", marginRight: "8px" }}
+                          >
+                            Ghi chú:
+                          </Typography.Text>
+                          <Typography.Text>
+                            {comments || "Không có ghi chú"}
+                          </Typography.Text>
+                        </div>
+                      </Col>
+                    </Row>
                   </Card>
-
-                  {scoreItem.comments && (
-                    <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                      <Typography.Text strong>Nhận xét: </Typography.Text>
-                      <Typography.Text>{scoreItem.comments}</Typography.Text>
-                    </div>
-                  )}
 
                   {scoreItem.criteriaWithErrors &&
                   scoreItem.criteriaWithErrors.length > 0 ? (
@@ -1000,7 +1021,7 @@ function CompetitionRound({ showId }) {
                                         <div className="flex flex-col">
                                           <div className="mb-1">
                                             <Typography.Text strong>
-                                              Lỗi nhỏ: {error.errorTypeName}
+                                              Lỗi: {error.errorTypeName}
                                             </Typography.Text>
                                           </div>
                                           <div className="mb-1">

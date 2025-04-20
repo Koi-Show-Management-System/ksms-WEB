@@ -19,6 +19,7 @@ import {
   Empty,
   Collapse,
   Steps,
+  Divider,
 } from "antd";
 import {
   EyeOutlined,
@@ -492,15 +493,25 @@ function CompetitionRound({ showId }) {
                   renderItem={(scoreItem) => (
                     <List.Item>
                       <Card
-                        title="Điểm số của trọng tài"
-                        extra={
-                          <Tag
-                            color={
-                              scoreItem.status === "Pass" ? "green" : "red"
-                            }
-                          >
-                            {scoreItem.status === "Pass" ? "Đạt" : "Không đạt"}
-                          </Tag>
+                        title={
+                          <div className="flex justify-between items-center">
+                            <span>Điểm số của trọng tài</span>
+                            <Typography.Text className="text-sm">
+                              Thời gian:{" "}
+                              {scoreItem.createdAt
+                                ? new Date(
+                                    scoreItem.createdAt
+                                  ).toLocaleDateString("vi-VN", {
+                                    day: "2-digit",
+                                    month: "2-digit",
+                                    year: "numeric",
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                    second: "2-digit",
+                                  })
+                                : "—"}
+                            </Typography.Text>
+                          </div>
                         }
                       >
                         <div className="bg-gray-50 p-4 mb-4 rounded-md">
@@ -543,14 +554,27 @@ function CompetitionRound({ showId }) {
                               </Typography.Text>
                             </Col>
                           </Row>
+                          <Divider style={{ margin: "12px 0" }} />
+                          <Row>
+                            <Col span={24}>
+                              <div className="flex ">
+                                <Typography.Text
+                                  strong
+                                  style={{
+                                    minWidth: "70px",
+                                    marginRight: "8px",
+                                  }}
+                                >
+                                  Ghi chú:
+                                </Typography.Text>
+                                <Typography.Text>
+                                  {scoreItem.comments || "Không có ghi chú"}
+                                </Typography.Text>
+                              </div>
+                            </Col>
+                          </Row>
                         </div>
 
-                        <p>
-                          <strong>Thời gian:</strong>{" "}
-                          {scoreItem.createdAt
-                            ? new Date(scoreItem.createdAt).toLocaleString()
-                            : "—"}
-                        </p>
                         {scoreItem.criteriaWithErrors &&
                         scoreItem.criteriaWithErrors.length > 0 ? (
                           <div className="mt-4">
@@ -623,8 +647,7 @@ function CompetitionRound({ showId }) {
                                               <div className="flex flex-col">
                                                 <div className="mb-1">
                                                   <Typography.Text strong>
-                                                    Lỗi nhỏ:{" "}
-                                                    {error.errorTypeName}
+                                                    Lỗi : {error.errorTypeName}
                                                   </Typography.Text>
                                                 </div>
                                                 <div className="mb-1">

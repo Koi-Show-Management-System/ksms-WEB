@@ -93,7 +93,7 @@ function LiveStream({ showId }) {
 
     try {
       // Lấy userId trực tiếp từ cookies với key __id
-      const userId = Cookies.get("__id");
+      let userId = Cookies.get("__id");
 
       if (!userId) {
         console.warn("Không tìm thấy userId trong cookies");

@@ -753,16 +753,6 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                           </Text>
                         </div>
 
-                        <div className="info-group col-span-2">
-                          <Text type="secondary" className="block text-sm mb-1">
-                            Hạng mục thi đấu
-                          </Text>
-                          <Text strong className="text-lg">
-                            {refereeRoundData.registration?.competitionCategory
-                              ?.name || "N/A"}
-                          </Text>
-                        </div>
-
                         {refereeRoundData.registration?.description && (
                           <div className="info-group col-span-2">
                             <Text

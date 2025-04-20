@@ -419,7 +419,7 @@ const EvaluationScoreSheet = ({
         registrationRoundId,
         initialScore,
         totalPointMinus: totalDeduction,
-        comment: comments,
+        comments: comments,
         createScoreDetailErrors,
       };
 
