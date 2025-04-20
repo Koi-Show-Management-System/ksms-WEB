@@ -1,187 +1,141 @@
 import React, { useState, useEffect } from "react";
-import { Tabs, Typography, Card, Space, Button } from "antd";
+import { Tabs } from "antd";
 import ScanQr from "./ScanQr";
 import ScanTicketQr from "./ScanTicketQr";
-import { QrcodeOutlined, TagOutlined, ScanOutlined } from "@ant-design/icons";
-
-const { Title } = Typography;
+import { QrcodeOutlined, TagOutlined } from "@ant-design/icons";
 
 function ScanQrWrapper() {
-  const [isMobile, setIsMobile] = useState(false);
-  const [isTablet, setIsTablet] = useState(false);
+  const [screenSize, setScreenSize] = useState("default");
 
-  // Kiểm tra kích thước màn hình khi component mount và khi window resize
   useEffect(() => {
     const checkScreenSize = () => {
-      setIsMobile(window.innerWidth < 768);
-      setIsTablet(window.innerWidth >= 768 && window.innerWidth <= 1024);
+      if (window.innerWidth < 640) {
+        setScreenSize("mobile");
+      } else if (window.innerWidth < 1024) {
+        setScreenSize("tablet");
+      } else {
+        setScreenSize("desktop");
+      }
     };
 
     checkScreenSize();
     window.addEventListener("resize", checkScreenSize);
-
-    return () => {
-      window.removeEventListener("resize", checkScreenSize);
-    };
+    return () => window.removeEventListener("resize", checkScreenSize);
   }, []);
+
+  const isTablet = screenSize === "tablet";
+  const isMobile = screenSize === "mobile";
 
   const tabItems = [
     {
       key: "koiRegistration",
       label: (
-        <Space size="small">
-          <QrcodeOutlined style={{ fontSize: isTablet ? "18px" : "16px" }} />
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
+        <div className="flex items-center space-x-2 py-1">
+          <QrcodeOutlined
+            className={`${isTablet ? "text-xl" : isMobile ? "text-base" : "text-lg"}`}
+          />
+          <span
+            className={`${isTablet ? "text-base" : isMobile ? "text-xs" : "text-sm"} font-medium`}
+          >
             Check-in Đơn Đăng Ký
           </span>
-        </Space>
+        </div>
       ),
-      children: <ScanQr />,
+      children: (
+        <div className="py-3">
+          <ScanQr />
+        </div>
+      ),
     },
     {
       key: "ticket",
       label: (
-        <Space size="small">
-          <TagOutlined style={{ fontSize: isTablet ? "18px" : "16px" }} />
-          <span style={{ fontSize: isTablet ? "16px" : "14px" }}>
+        <div className="flex items-center space-x-2 py-1">
+          <TagOutlined
+            className={`${isTablet ? "text-xl" : isMobile ? "text-base" : "text-lg"}`}
+          />
+          <span
+            className={`${isTablet ? "text-base" : isMobile ? "text-xs" : "text-sm"} font-medium`}
+          >
             Check-in Vé Tham Dự
           </span>
-        </Space>
+        </div>
       ),
-      children: <ScanTicketQr />,
+      children: (
+        <div className="py-3">
+          <ScanTicketQr />
+        </div>
+      ),
     },
   ];
 
   return (
-    <div
-      className="scan-qr-wrapper mx-auto"
-      style={{ padding: isTablet ? "20px" : "16px" }}
-    >
-      <div className={`scan-container ${isTablet ? "tablet-mode" : ""}`}>
-        <div
-          className="bg-white/90 backdrop-blur-sm"
-          style={{
-            borderRadius: "16px",
-            overflow: "hidden",
-            transition: "all 0.3s ease",
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.08)",
-          }}
-        >
-          <Tabs
-            defaultActiveKey="koiRegistration"
-            items={tabItems}
-            centered
-            size={isTablet ? "large" : "middle"}
-            animated={{ inkBar: true, tabPane: true }}
-            className={`custom-tabs ${isTablet ? "tablet-tabs" : ""}`}
-            tabBarGutter={isTablet ? 40 : 24}
-          />
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-50 p-4 sm:p-6 md:p-8">
+      <div className="max-w-3xl mx-auto">
+        {/* Title */}
+        <h1 className="text-center text-2xl md:text-3xl font-bold mb-6 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-500">
+          Hệ Thống Check-in
+        </h1>
+
+        {/* Scanner Container */}
+        <div className="bg-white/95 backdrop-blur-md rounded-2xl overflow-hidden transition-all duration-300 shadow-lg border border-gray-100 hover:shadow-xl">
+          <div className="pt-4 pb-2 px-4 md:px-6">
+            <Tabs
+              defaultActiveKey="koiRegistration"
+              items={tabItems}
+              centered
+              size={isTablet || isMobile ? "middle" : "large"}
+              animated={{ inkBar: true, tabPane: true }}
+              className="qr-scan-tabs"
+              tabBarGutter={isTablet ? 36 : isMobile ? 24 : 48}
+            />
+          </div>
+        </div>
+
+        {/* Info Card */}
+        <div className="mt-6 bg-white/80 backdrop-blur-sm rounded-xl p-4 shadow-md border border-gray-100">
+          <p className="text-sm text-gray-600 text-center">
+            Di chuyển mã QR vào vùng quét để check-in
+          </p>
         </div>
       </div>
 
-      <style jsx="true" global>{`
-        /* Tablet-specific styles */
-        .tablet-mode {
-          max-width: 100%;
-          margin: 0 auto;
-        }
-
-        .tablet-tabs .ant-tabs-nav {
-          margin-bottom: 28px;
-        }
-
-        .tablet-tabs .ant-tabs-tab {
-          padding: 16px 30px;
-        }
-
-        /* Styles for scanner components on tablet */
-        .tablet-mode .scanner-container {
-          width: 90%;
-          max-width: 600px;
-          margin: 0 auto;
-        }
-
-        /* Tablet optimizations for QR scanner */
-        .tablet-mode .react-qr-scanner video {
-          width: 100% !important;
-          height: auto !important;
-          aspect-ratio: 4/3;
-          object-fit: cover;
-        }
-
-        /* Larger buttons for touch screens */
-        .tablet-mode button {
-          min-height: 48px;
-          min-width: 120px;
-          font-size: 16px;
-          touch-action: manipulation;
-        }
-
-        /* Base styles */
-        .text-gradient {
-          background: linear-gradient(90deg, #1677ff, #00b96b);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
-          display: inline-block;
-        }
-
-        .custom-tabs .ant-tabs-nav {
-          margin-bottom: 24px;
-        }
-
-        .custom-tabs .ant-tabs-tab {
-          padding: 12px 24px;
-          transition: all 0.3s ease;
-        }
-
-        .custom-tabs .ant-tabs-tab:hover {
-          color: #1677ff;
-          transform: translateY(-2px);
-        }
-
-        .custom-tabs .ant-tabs-tab-active {
-          font-weight: 600;
-        }
-
-        .custom-tabs .ant-tabs-ink-bar {
-          height: 3px;
-          border-radius: 3px;
-          background: linear-gradient(90deg, #1677ff, #00b96b);
-        }
-
-        /* Landscape mode for tablets */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: landscape) {
-          .scan-qr-wrapper {
-            padding: 16px 24px;
+      {/* Inline styles for Ant Design components - not from index.css */}
+      <style jsx="true">
+        {`
+          /* Custom styling for Ant Design Tabs */
+          .qr-scan-tabs .ant-tabs-ink-bar {
+            height: 3px;
+            border-radius: 3px;
+            background: linear-gradient(90deg, #3b82f6, #6366f1);
           }
 
-          .tablet-mode .scanner-container {
-            max-width: 70%;
-          }
-        }
-
-        /* Portrait mode for tablets */
-        @media (min-width: 768px) and (max-width: 1024px) and (orientation: portrait) {
-          .scan-qr-wrapper {
-            padding: 20px;
+          .qr-scan-tabs .ant-tabs-nav {
+            margin-bottom: 0.5rem;
           }
 
-          .tablet-mode .scanner-container {
-            max-width: 90%;
-          }
-        }
-
-        /* Mobile styles */
-        @media (max-width: 640px) {
-          .scan-qr-wrapper {
-            padding: 12px;
+          .qr-scan-tabs .ant-tabs-tab:hover {
+            color: #4f46e5;
           }
 
-          .custom-tabs .ant-tabs-tab {
-            padding: 8px 16px;
+          .qr-scan-tabs .ant-tabs-tab-active .ant-tabs-tab-btn {
+            color: #4f46e5;
+            font-weight: 500;
           }
-        }
-      `}</style>
+
+          /* Scanner video element customization */
+          .qr-scan-tabs .react-qr-reader {
+            width: 100% !important;
+            max-width: 400px !important;
+            margin: 0 auto !important;
+          }
+
+          .qr-scan-tabs .react-qr-reader video {
+            border-radius: 0.5rem !important;
+            object-fit: cover !important;
+          }
+        `}
+      </style>
     </div>
   );
 }

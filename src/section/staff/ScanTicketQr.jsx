@@ -22,6 +22,16 @@ import {
 
 const { Title, Text } = Typography;
 
+// Định nghĩa các props mặc định thay vì dựa vào defaultProps của QrScanner
+const DEFAULT_DELAY = 300;
+const DEFAULT_CONSTRAINTS = {
+  video: {
+    facingMode: "environment",
+    width: { ideal: 1280 },
+    height: { ideal: 720 },
+  },
+};
+
 function ScanTicketQr() {
   const [qrResult, setQrResult] = useState(null);
   const [scannerEnabled, setScannerEnabled] = useState(true);
@@ -29,6 +39,7 @@ function ScanTicketQr() {
   const [showScanner, setShowScanner] = useState(false);
   const [ticketInfo, setTicketInfo] = useState(null);
   const [isTablet, setIsTablet] = useState(false);
+  const [scanning, setScanning] = useState(false);
 
   // Detect tablet size
   useEffect(() => {
@@ -43,6 +54,15 @@ function ScanTicketQr() {
       window.removeEventListener("resize", checkScreenSize);
     };
   }, []);
+
+  // Animation effect for scanning
+  useEffect(() => {
+    if (showScanner && scannerEnabled) {
+      setScanning(true);
+    } else {
+      setScanning(false);
+    }
+  }, [showScanner, scannerEnabled]);
 
   const {
     isLoading,
@@ -164,6 +184,7 @@ function ScanTicketQr() {
               height: isTablet ? "56px" : "40px",
               fontSize: isTablet ? "16px" : "14px",
               padding: isTablet ? "0 32px" : "0 20px",
+              borderRadius: "8px",
             }}
           >
             Bắt đầu quét QR
@@ -173,44 +194,85 @@ function ScanTicketQr() {
 
       {showScanner && scannerEnabled && (
         <div
-          className={`mb-6 shadow-md ${isTablet ? "tablet-scanner" : ""}`}
+          className={`mb-6 shadow-lg ${isTablet ? "tablet-scanner" : ""}`}
           style={{
-            borderRadius: "12px",
-            maxWidth: isTablet ? "600px" : "400px",
+            borderRadius: "16px",
+            maxWidth: isTablet ? "800px" : "600px",
             margin: "0 auto",
+            overflow: "hidden",
+            backgroundColor: "#f8f8f8",
+            border: "1px solid #e0e0e0",
           }}
         >
-          <div className="scanner-container flex flex-col items-center">
-            <div
-              className="qr-scanner-wrapper border-3 p-2 rounded-lg mb-4"
+          <div className="scanner-header bg-blue-600 text-white py-3 px-4 flex items-center justify-center">
+            <ScanOutlined className="mr-2" style={{ fontSize: "18px" }} />
+            <Text
+              strong
               style={{
-                width: "100%",
+                color: "white",
+                fontSize: isTablet ? "18px" : "16px",
+                margin: 0,
               }}
             >
+              Quét mã QR
+            </Text>
+          </div>
+
+          <div className="scanner-container flex flex-col items-center px-4 py-4">
+            <div
+              className="qr-scanner-wrapper mb-4 relative"
+              style={{
+                width: "100%",
+                position: "relative",
+                borderRadius: "8px",
+                overflow: "hidden",
+                boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+              }}
+            >
+              <div className="scanner-corners">
+                <div className="scanner-corner-tl"></div>
+                <div className="scanner-corner-tr"></div>
+                <div className="scanner-corner-bl"></div>
+                <div className="scanner-corner-br"></div>
+              </div>
+
+              {scanning && <div className="scanner-line"></div>}
+
               <QrScanner
-                delay={300}
+                delay={DEFAULT_DELAY}
                 onError={handleError}
                 onScan={handleScan}
-                constraints={{
-                  video: { facingMode: "environment" },
+                constraints={DEFAULT_CONSTRAINTS}
+                style={{
+                  width: "100%",
+                  height: isTablet ? "500px" : "350px",
+                  objectFit: "cover",
                 }}
-                style={{}}
               />
             </div>
+
             <Text
-              className="text-center text-gray-600 italic mb-2"
-              style={{ fontSize: isTablet ? "16px" : "14px" }}
+              className="text-center text-gray-600 italic mb-3"
+              style={{
+                fontSize: isTablet ? "16px" : "14px",
+                backgroundColor: "rgba(255, 255, 255, 0.8)",
+                padding: "8px 16px",
+                borderRadius: "20px",
+                boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+              }}
             >
               Hướng camera vào mã QR để quét
             </Text>
+
             <Button
               onClick={() => setShowScanner(false)}
-              className="mb-4"
+              className="mb-3"
               danger
               size={isTablet ? "large" : "middle"}
               style={{
-                height: isTablet ? "48px" : "32px",
-                minWidth: isTablet ? "120px" : "80px",
+                height: isTablet ? "48px" : "36px",
+                minWidth: isTablet ? "140px" : "100px",
+                borderRadius: "8px",
               }}
             >
               Hủy quét
@@ -401,44 +463,126 @@ function ScanTicketQr() {
         </Card>
       )}
 
-      <style jsx="true" global>{`
-        /* Tablet optimization styles */
-        .tablet-scanner {
-          width: 90% !important;
-          max-width: 600px !important;
-          margin: 0 auto;
-        }
+      <style jsx="true">
+        {`
+          /* Tablet optimization styles */
+          .tablet-scanner {
+            width: 95% !important;
+            max-width: 800px !important;
+          }
 
-        .tablet-scanner .qr-scanner-wrapper {
-          border: 2px solid rgba(0, 0, 0, 0.1);
-          border-radius: 16px;
-          overflow: hidden;
-        }
+          /* Scanner frame and corners */
+          .scanner-corners {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 10;
+            pointer-events: none;
+          }
 
-        .tablet-scan-button {
-          border-radius: 8px;
-        }
+          .scanner-corner-tl,
+          .scanner-corner-tr,
+          .scanner-corner-bl,
+          .scanner-corner-br {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            z-index: 10;
+          }
 
-        .tablet-card {
-          padding: 24px;
-        }
+          .scanner-corner-tl {
+            top: 10px;
+            left: 10px;
+            border-top: 3px solid #1890ff;
+            border-left: 3px solid #1890ff;
+          }
 
-        .tablet-card .ant-card-body {
-          padding: 24px;
-        }
+          .scanner-corner-tr {
+            top: 10px;
+            right: 10px;
+            border-top: 3px solid #1890ff;
+            border-right: 3px solid #1890ff;
+          }
 
-        /* Larger touch targets for tablet */
-        @media (min-width: 768px) and (max-width: 1024px) {
+          .scanner-corner-bl {
+            bottom: 10px;
+            left: 10px;
+            border-bottom: 3px solid #1890ff;
+            border-left: 3px solid #1890ff;
+          }
+
+          .scanner-corner-br {
+            bottom: 10px;
+            right: 10px;
+            border-bottom: 3px solid #1890ff;
+            border-right: 3px solid #1890ff;
+          }
+
+          /* Scanning animation */
+          .scanner-line {
+            position: absolute;
+            height: 2px;
+            width: 100%;
+            background: linear-gradient(
+              to right,
+              rgba(24, 144, 255, 0),
+              rgba(24, 144, 255, 0.8),
+              rgba(24, 144, 255, 0)
+            );
+            z-index: 9;
+            top: 10%;
+            box-shadow: 0 0 8px rgba(24, 144, 255, 0.8);
+            animation: scanning 2s linear infinite;
+            pointer-events: none;
+          }
+
+          @keyframes scanning {
+            0% {
+              top: 10%;
+            }
+            50% {
+              top: 90%;
+            }
+            100% {
+              top: 10%;
+            }
+          }
+
+          /* QR Scanner styles */
           .react-qr-scanner video {
+            position: relative !important;
+            object-fit: cover !important;
+            max-width: 100% !important;
             width: 100% !important;
-            height: auto !important;
           }
 
-          button {
-            min-height: 44px;
+          .tablet-card {
+            padding: 24px;
           }
-        }
-      `}</style>
+
+          /* Larger touch targets for tablet */
+          @media (min-width: 768px) and (max-width: 1024px) {
+            button {
+              min-height: 44px;
+            }
+
+            .scanner-corner-tl,
+            .scanner-corner-tr,
+            .scanner-corner-bl,
+            .scanner-corner-br {
+              width: 30px;
+              height: 30px;
+              border-width: 4px;
+            }
+
+            .react-qr-scanner video {
+              height: 500px !important;
+            }
+          }
+        `}
+      </style>
     </div>
   );
 }

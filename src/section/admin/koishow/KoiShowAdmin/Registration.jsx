@@ -112,6 +112,7 @@ function Registration({ showId, statusShow }) {
 
   const [showAllMedia, setShowAllMedia] = useState(false);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [mediaType, setMediaType] = useState("all");
   const [rejectionReason, setRejectionReason] = useState("");
   const [isRejectModalVisible, setIsRejectModalVisible] = useState(false);
   const [rejectionId, setRejectionId] = useState(null);
@@ -709,6 +710,11 @@ function Registration({ showId, statusShow }) {
     }).format(new Date(dateString));
   };
 
+  const openMediaModal = (type) => {
+    setMediaType(type);
+    setMediaModalVisible(true);
+  };
+
   return (
     <ConfigProvider
       locale={{
@@ -986,7 +992,7 @@ function Registration({ showId, statusShow }) {
                         marginBottom: "8px",
                       }}
                     >
-                      <strong style={{ color: "#096dd9" }}>Lưu ý:</strong>
+                      <strong style={{ color: "#096dd9" }}>Ghi chú:</strong>
                       <span style={{ marginLeft: "8px" }}>
                         {currentKoi.notes}
                       </span>
@@ -1206,7 +1212,10 @@ function Registration({ showId, statusShow }) {
                           (media) => media.mediaType === "Image"
                         ).length > 1 && (
                           <div
-                            onClick={() => setMediaModalVisible(true)}
+                            onClick={() => {
+                              setMediaType("image");
+                              setMediaModalVisible(true);
+                            }}
                             className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all"
                             style={{
                               boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
@@ -1294,7 +1303,10 @@ function Registration({ showId, statusShow }) {
                           (media) => media.mediaType === "Video"
                         ).length > 1 && (
                           <div
-                            onClick={() => setMediaModalVisible(true)}
+                            onClick={() => {
+                              setMediaType("video");
+                              setMediaModalVisible(true);
+                            }}
                             className="absolute inset-0 bg-black bg-opacity-40 rounded-lg flex items-center justify-center cursor-pointer hover:bg-opacity-50 transition-all"
                             style={{
                               boxShadow: "0 2px 8px rgba(0,0,0,0.15)",
@@ -1384,11 +1396,18 @@ function Registration({ showId, statusShow }) {
                 fontSize: "18px",
                 fontWeight: "600",
                 color: "#262626",
-                borderLeft: "4px solid #722ed1",
+                borderLeft:
+                  mediaType === "video"
+                    ? "4px solid #722ed1"
+                    : "4px solid #1890ff",
                 paddingLeft: "12px",
               }}
             >
-              Tất cả hình ảnh và video
+              {mediaType === "image"
+                ? "Tất cả hình ảnh"
+                : mediaType === "video"
+                  ? "Tất cả video"
+                  : "Tất cả hình ảnh và video"}
             </div>
           }
           open={mediaModalVisible}
@@ -1397,136 +1416,138 @@ function Registration({ showId, statusShow }) {
           width={"90%"}
           style={{ maxWidth: 900 }}
         >
-          {currentKoi?.koiMedia?.filter((media) => media.mediaType === "Image")
-            .length > 0 && (
-            <>
-              <Typography.Title
-                level={5}
-                style={{
-                  marginBottom: "16px",
-                  position: "relative",
-                  paddingLeft: "16px",
-                }}
-              >
-                <div
+          {mediaType !== "video" &&
+            currentKoi?.koiMedia?.filter((media) => media.mediaType === "Image")
+              .length > 0 && (
+              <>
+                <Typography.Title
+                  level={5}
                   style={{
-                    position: "absolute",
-                    left: 0,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#1890ff",
+                    marginBottom: "16px",
+                    position: "relative",
+                    paddingLeft: "16px",
                   }}
-                ></div>
-                Hình Ảnh
-              </Typography.Title>
-              <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                {currentKoi?.koiMedia
-                  ?.filter((media) => media.mediaType === "Image")
-                  .map((media, index) => (
-                    <Col xs={24} sm={12} key={`image-${media.id}`}>
-                      <Card
-                        bordered={true}
-                        hoverable
-                        style={{
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          boxShadow:
-                            "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
-                        }}
-                      >
-                        <div
-                          className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#1890ff",
+                    }}
+                  ></div>
+                  Hình Ảnh
+                </Typography.Title>
+                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                  {currentKoi?.koiMedia
+                    ?.filter((media) => media.mediaType === "Image")
+                    .map((media, index) => (
+                      <Col xs={24} sm={12} key={`image-${media.id}`}>
+                        <Card
+                          bordered={true}
+                          hoverable
                           style={{
-                            borderRadius: "4px",
-                            border: "1px solid #f0f0f0",
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            boxShadow:
+                              "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
                           }}
                         >
-                          <Image
-                            src={media.mediaUrl}
-                            alt={`Hình Ảnh Koi ${index + 1}`}
+                          <div
+                            className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
                             style={{
-                              maxWidth: "100%",
-                              maxHeight: "100%",
-                              objectFit: "contain",
-                              margin: "0 auto",
-                              display: "block",
-                            }}
-                          />
-                        </div>
-                      </Card>
-                    </Col>
-                  ))}
-              </Row>
-            </>
-          )}
-
-          {currentKoi?.koiMedia?.filter((media) => media.mediaType === "Video")
-            .length > 0 && (
-            <>
-              <Typography.Title
-                level={5}
-                style={{
-                  marginBottom: "16px",
-                  position: "relative",
-                  paddingLeft: "16px",
-                }}
-              >
-                <div
-                  style={{
-                    position: "absolute",
-                    left: 0,
-                    top: "50%",
-                    transform: "translateY(-50%)",
-                    width: "8px",
-                    height: "8px",
-                    borderRadius: "50%",
-                    background: "#722ed1",
-                  }}
-                ></div>
-                Video
-              </Typography.Title>
-              <Row gutter={[16, 16]}>
-                {currentKoi?.koiMedia
-                  ?.filter((media) => media.mediaType === "Video")
-                  .map((media, index) => (
-                    <Col xs={24} sm={12} key={`video-${media.id}`}>
-                      <Card
-                        bordered={true}
-                        hoverable
-                        style={{
-                          borderRadius: "8px",
-                          overflow: "hidden",
-                          boxShadow:
-                            "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
-                        }}
-                      >
-                        <div
-                          className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
-                          style={{
-                            borderRadius: "4px",
-                            border: "1px solid #1f1f1f",
-                          }}
-                        >
-                          <video
-                            controls
-                            src={media.mediaUrl}
-                            style={{
-                              width: "100%",
-                              height: "auto",
-                              maxHeight: "100%",
                               borderRadius: "4px",
+                              border: "1px solid #f0f0f0",
                             }}
-                          />
-                        </div>
-                      </Card>
-                    </Col>
-                  ))}
-              </Row>
-            </>
-          )}
+                          >
+                            <Image
+                              src={media.mediaUrl}
+                              alt={`Hình Ảnh Koi ${index + 1}`}
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100%",
+                                objectFit: "contain",
+                                margin: "0 auto",
+                                display: "block",
+                              }}
+                            />
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                </Row>
+              </>
+            )}
+
+          {mediaType !== "image" &&
+            currentKoi?.koiMedia?.filter((media) => media.mediaType === "Video")
+              .length > 0 && (
+              <>
+                <Typography.Title
+                  level={5}
+                  style={{
+                    marginBottom: "16px",
+                    position: "relative",
+                    paddingLeft: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#722ed1",
+                    }}
+                  ></div>
+                  Video
+                </Typography.Title>
+                <Row gutter={[16, 16]}>
+                  {currentKoi?.koiMedia
+                    ?.filter((media) => media.mediaType === "Video")
+                    .map((media, index) => (
+                      <Col xs={24} sm={12} key={`video-${media.id}`}>
+                        <Card
+                          bordered={true}
+                          hoverable
+                          style={{
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            boxShadow:
+                              "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
+                          }}
+                        >
+                          <div
+                            className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                            style={{
+                              borderRadius: "4px",
+                              border: "1px solid #1f1f1f",
+                            }}
+                          >
+                            <video
+                              controls
+                              src={media.mediaUrl}
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                maxHeight: "100%",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                </Row>
+              </>
+            )}
         </Modal>
         <Modal
           title="Từ Chối Đăng Ký"
