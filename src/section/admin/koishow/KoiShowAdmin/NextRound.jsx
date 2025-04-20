@@ -6,13 +6,6 @@ import React, {
   useMemo,
 } from "react";
 import { Button, notification, Modal, Space, Tooltip, message } from "antd";
-import {
-  ArrowRightOutlined,
-  ReloadOutlined,
-  CheckCircleOutlined,
-  RightCircleOutlined,
-  ConsoleSqlOutlined,
-} from "@ant-design/icons";
 import useRegistration from "../../../../hooks/useRegistration";
 import useRound from "../../../../hooks/useRound";
 import axios from "axios";

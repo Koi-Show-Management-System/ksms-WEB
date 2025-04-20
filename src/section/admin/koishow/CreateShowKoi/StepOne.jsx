@@ -11,11 +11,16 @@ import {
   Space,
   Collapse,
   InputNumber,
+  Spin,
+  Divider,
+  Tooltip,
 } from "antd";
 import {
   DeleteOutlined,
   PlusOutlined,
   UploadOutlined,
+  ReloadOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import dayjs from "dayjs";
 import { Cloudinary } from "@cloudinary/url-gen";
@@ -49,6 +54,9 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     minParticipants: "",
     maxParticipants: "",
   });
+  const [loading, setLoading] = useState(false);
+  const managerSelectRef = useRef(null);
+  const staffSelectRef = useRef(null);
 
   // Effect xử lý initialData thay đổi
   useEffect(() => {
@@ -398,6 +406,52 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
     // Luôn cập nhật data để lưu giá trị người dùng đã nhập
     setData(newData);
+  };
+
+  const handleRefreshTeams = async () => {
+    try {
+      setLoading(true);
+      await fetchAccountTeam(1, 100);
+      message.success("Cập nhật danh sách thành công!");
+    } catch (error) {
+      message.error("Không thể cập nhật danh sách!");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Render nút refresh trong dropdown
+  const renderDropdownWithRefresh = (menu) => {
+    return (
+      <div>
+        {menu}
+        <Divider style={{ margin: "4px 0" }} />
+        <div style={{ padding: "8px", textAlign: "center" }}>
+          <Tooltip title="Làm mới danh sách">
+            <Button
+              icon={<ReloadOutlined />}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn đóng dropdown khi click
+                handleRefreshTeams();
+              }}
+              loading={loading}
+              type="text"
+              style={{ width: "100%" }}
+            >
+              Làm mới
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  };
+
+  // Hàm để mở dropdown
+  const openDropdown = (selectRef) => {
+    if (selectRef.current) {
+      selectRef.current.focus();
+    }
   };
 
   return (
@@ -853,6 +907,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             Chọn Quản Lý
           </label>
           <Select
+            ref={managerSelectRef}
             mode="multiple"
             className="w-full"
             placeholder="Chọn quản lý"
@@ -860,6 +915,8 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             onChange={(value) =>
               setData({ ...data, assignManagerRequests: value })
             }
+            loading={loading}
+            dropdownRender={renderDropdownWithRefresh}
           >
             {managers.map((manager) => (
               <Option key={manager.id} value={manager.id}>
@@ -881,6 +938,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             Chọn Nhân Viên
           </label>
           <Select
+            ref={staffSelectRef}
             mode="multiple"
             className="w-full"
             placeholder="Chọn nhân viên"
@@ -888,6 +946,8 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             onChange={(value) =>
               setData({ ...data, assignStaffRequests: value })
             }
+            loading={loading}
+            dropdownRender={renderDropdownWithRefresh}
           >
             {staff.map((s) => (
               <Option key={s.id} value={s.id}>

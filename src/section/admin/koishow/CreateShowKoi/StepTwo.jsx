@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import {
   Button,
   Card,
@@ -10,8 +10,16 @@ import {
   message,
   Tag,
   InputNumber,
+  Divider,
+  Tooltip,
+  Spin,
 } from "antd";
-import { DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  DeleteOutlined,
+  PlusOutlined,
+  ReloadOutlined,
+  DownOutlined,
+} from "@ant-design/icons";
 import { DatePicker, TimePicker } from "antd";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -57,7 +65,13 @@ const hasAllRequiredAwardTypes = (awards) => {
 function StepTwo({ updateFormData, initialData, showErrors }) {
   const { variety, fetchVariety, isLoading } = useVariety();
   const { accountManage, fetchAccountTeam } = useAccountTeam();
-  const { criteria, fetchCriteria } = useCriteria();
+  const { criteria, fetchCriteria, isLoading: criteriaLoading } = useCriteria();
+  const [varietyLoading, setVarietyLoading] = useState(false);
+  const varietySelectRefs = useRef([]);
+  const [criteriaRefreshLoading, setCriteriaRefreshLoading] = useState(false);
+  const criteriaSelectRefs = useRef([]);
+  const [refereeRefreshLoading, setRefereeRefreshLoading] = useState(false);
+  const refereeSelectRefs = useRef([]);
 
   const referee = accountManage.referees || [];
   // const adminId =
@@ -93,6 +107,53 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     fetchVariety();
     fetchAccountTeam(1, 100);
   }, []);
+
+  // Hàm làm mới danh sách giống cá Koi
+  const handleRefreshVariety = async () => {
+    try {
+      setVarietyLoading(true);
+      await fetchVariety();
+      message.success("Cập nhật danh sách giống cá thành công!");
+    } catch (error) {
+      message.error("Không thể cập nhật danh sách giống cá!");
+    } finally {
+      setVarietyLoading(false);
+    }
+  };
+
+  // Render nút refresh trong dropdown của giống cá Koi
+  const renderDropdownWithRefreshVariety = (menu) => {
+    return (
+      <div>
+        {menu}
+        <Divider style={{ margin: "4px 0" }} />
+        <div style={{ padding: "8px", textAlign: "center" }}>
+          <Tooltip title="Làm mới danh sách giống cá">
+            <Button
+              icon={<ReloadOutlined />}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn đóng dropdown khi click
+                handleRefreshVariety();
+              }}
+              loading={varietyLoading}
+              type="text"
+              style={{ width: "100%" }}
+            >
+              Làm mới
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  };
+
+  // Hàm để mở dropdown
+  const openDropdown = (index) => {
+    if (varietySelectRefs.current[index]) {
+      varietySelectRefs.current[index].focus();
+    }
+  };
 
   const handleCategoryChange = (index, field, value) => {
     if (field === "registrationFee") {
@@ -635,6 +696,94 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     return total === 100 ? "green" : "red";
   };
 
+  // Hàm làm mới danh sách tiêu chí đánh giá
+  const handleRefreshCriteria = async () => {
+    try {
+      setCriteriaRefreshLoading(true);
+      await fetchCriteria(1, 100);
+      message.success("Cập nhật danh sách tiêu chí thành công!");
+    } catch (error) {
+      message.error("Không thể cập nhật danh sách tiêu chí!");
+    } finally {
+      setCriteriaRefreshLoading(false);
+    }
+  };
+
+  // Render nút refresh trong dropdown của tiêu chí
+  const renderDropdownWithRefreshCriteria = (menu) => {
+    return (
+      <div>
+        {menu}
+        <Divider style={{ margin: "4px 0" }} />
+        <div style={{ padding: "8px", textAlign: "center" }}>
+          <Tooltip title="Làm mới danh sách tiêu chí">
+            <Button
+              icon={<ReloadOutlined />}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn đóng dropdown khi click
+                handleRefreshCriteria();
+              }}
+              loading={criteriaRefreshLoading}
+              type="text"
+              style={{ width: "100%" }}
+            >
+              Làm mới
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  };
+
+  // Hàm để mở dropdown tiêu chí
+  const openCriteriaDropdown = (index, roundValue) => {
+    const refKey = `${index}_${roundValue}`;
+    if (criteriaSelectRefs.current[refKey]) {
+      criteriaSelectRefs.current[refKey].focus();
+    }
+  };
+
+  // Hàm làm mới danh sách trọng tài
+  const handleRefreshReferees = async () => {
+    try {
+      setRefereeRefreshLoading(true);
+      await fetchAccountTeam(1, 100);
+      message.success("Cập nhật danh sách trọng tài thành công!");
+    } catch (error) {
+      message.error("Không thể cập nhật danh sách trọng tài!");
+    } finally {
+      setRefereeRefreshLoading(false);
+    }
+  };
+
+  // Render nút refresh trong dropdown của trọng tài
+  const renderDropdownWithRefreshReferees = (menu) => {
+    return (
+      <div>
+        {menu}
+        <Divider style={{ margin: "4px 0" }} />
+        <div style={{ padding: "8px", textAlign: "center" }}>
+          <Tooltip title="Làm mới danh sách trọng tài">
+            <Button
+              icon={<ReloadOutlined />}
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation(); // Ngăn đóng dropdown khi click
+                handleRefreshReferees();
+              }}
+              loading={refereeRefreshLoading}
+              type="text"
+              style={{ width: "100%" }}
+            >
+              Làm mới
+            </Button>
+          </Tooltip>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <>
       <h2 className="text-2xl font-semibold mb-6">
@@ -698,13 +847,16 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                       </p>
                     )}
                     <div className="flex-1 mt-4 ">
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Chọn giống cá Koi
-                      </label>
-                      {isLoading ? (
+                      <div className="flex justify-between items-center mb-1">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Chọn giống cá Koi
+                        </label>
+                      </div>
+                      {isLoading || varietyLoading ? (
                         <Loading />
                       ) : (
                         <Select
+                          ref={(el) => (varietySelectRefs.current[index] = el)}
                           mode="multiple"
                           placeholder="Chọn giống cá koi"
                           className="w-full"
@@ -712,6 +864,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                           onChange={(values) =>
                             handleVarietyChange(index, values)
                           }
+                          dropdownRender={renderDropdownWithRefreshVariety}
                         >
                           {variety.map((item) => (
                             <Option key={item.id} value={item.id}>
@@ -1223,71 +1376,94 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                           >
                             <div className="space-y-4">
                               <div className="flex items-center space-x-2 mb-4">
-                                <Select
-                                  mode="multiple"
-                                  placeholder="Chọn tiêu chí"
-                                  className="w-full"
-                                  value={criteriaInRound.map((c) => {
-                                    const criteriaDetail = criteria.find(
-                                      (cr) => cr.id === c.criteriaId
-                                    );
-                                    return criteriaDetail?.name || c.criteriaId;
-                                  })}
-                                  onChange={(values) => {
-                                    // Kiểm tra trùng lặp trong vòng hiện tại
-                                    const hasDuplicates = values.some(
-                                      (value, index) =>
-                                        values.indexOf(value) !== index
-                                    );
-
-                                    if (hasDuplicates) {
-                                      message.error(
-                                        "Không được chọn trùng tiêu chí trong cùng một vòng"
-                                      );
-                                      return;
-                                    }
-
-                                    // Xóa các tiêu chí cũ của vòng này
-                                    const otherCriteria =
-                                      category.createCriteriaCompetitionCategoryRequests?.filter(
-                                        (c) => c.roundType !== round.value
-                                      ) || [];
-
-                                    // Thêm các tiêu chí mới với weight mặc định là 0
-                                    const newCriteria = values.map(
-                                      (criteriaName, index) => {
-                                        const criteriaDetail = criteria.find(
-                                          (cr) => cr.name === criteriaName
-                                        );
-                                        return {
-                                          criteriaId: criteriaDetail?.id,
-                                          roundType: round.value,
-                                          weight: 0,
-                                          order: index + 1,
-                                        };
+                                <div className="flex-1">
+                                  <label className="block text-sm font-medium text-gray-700">
+                                    Tiêu chí đánh giá - {round.label}
+                                  </label>
+                                  {criteriaLoading || criteriaRefreshLoading ? (
+                                    <Loading />
+                                  ) : (
+                                    <Select
+                                      ref={(el) =>
+                                        (criteriaSelectRefs.current[
+                                          `${index}_${round.value}`
+                                        ] = el)
                                       }
-                                    );
+                                      mode="multiple"
+                                      placeholder="Chọn tiêu chí"
+                                      className="w-full"
+                                      value={criteriaInRound.map((c) => {
+                                        const criteriaDetail = criteria.find(
+                                          (cr) => cr.id === c.criteriaId
+                                        );
+                                        return (
+                                          criteriaDetail?.name || c.criteriaId
+                                        );
+                                      })}
+                                      onChange={(values) => {
+                                        // Kiểm tra trùng lặp trong vòng hiện tại
+                                        const hasDuplicates = values.some(
+                                          (value, index) =>
+                                            values.indexOf(value) !== index
+                                        );
 
-                                    handleCategoryChange(
-                                      index,
-                                      "createCriteriaCompetitionCategoryRequests",
-                                      [...otherCriteria, ...newCriteria]
-                                    );
-                                  }}
-                                >
-                                  {criteria
-                                    .filter(
-                                      (item) =>
-                                        !criteriaInRound.some(
-                                          (c) => c.criteriaId === item.id
+                                        if (hasDuplicates) {
+                                          message.error(
+                                            "Không được chọn trùng tiêu chí trong cùng một vòng"
+                                          );
+                                          return;
+                                        }
+
+                                        // Xóa các tiêu chí cũ của vòng này
+                                        const otherCriteria =
+                                          category.createCriteriaCompetitionCategoryRequests?.filter(
+                                            (c) => c.roundType !== round.value
+                                          ) || [];
+
+                                        // Thêm các tiêu chí mới với weight mặc định là 0
+                                        const newCriteria = values.map(
+                                          (criteriaName, index) => {
+                                            const criteriaDetail =
+                                              criteria.find(
+                                                (cr) => cr.name === criteriaName
+                                              );
+                                            return {
+                                              criteriaId: criteriaDetail?.id,
+                                              roundType: round.value,
+                                              weight: 0,
+                                              order: index + 1,
+                                            };
+                                          }
+                                        );
+
+                                        handleCategoryChange(
+                                          index,
+                                          "createCriteriaCompetitionCategoryRequests",
+                                          [...otherCriteria, ...newCriteria]
+                                        );
+                                      }}
+                                      dropdownRender={
+                                        renderDropdownWithRefreshCriteria
+                                      }
+                                    >
+                                      {criteria
+                                        .filter(
+                                          (item) =>
+                                            !criteriaInRound.some(
+                                              (c) => c.criteriaId === item.id
+                                            )
                                         )
-                                    )
-                                    .map((item) => (
-                                      <Option key={item.id} value={item.name}>
-                                        {item.name}
-                                      </Option>
-                                    ))}
-                                </Select>
+                                        .map((item) => (
+                                          <Option
+                                            key={item.id}
+                                            value={item.name}
+                                          >
+                                            {item.name}
+                                          </Option>
+                                        ))}
+                                    </Select>
+                                  )}
+                                </div>
                               </div>
 
                               {criteriaInRound.length > 0 && (
@@ -1632,21 +1808,29 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Chọn trọng tài
                     </label>
-                    <Select
-                      mode="multiple"
-                      placeholder="Chọn trọng tài"
-                      className="w-full"
-                      value={category.createRefereeAssignmentRequests.map(
-                        (r) => r.refereeAccountId
-                      )}
-                      onChange={(values) => handleRefereeChange(index, values)}
-                    >
-                      {referee.map((r) => (
-                        <Option key={r.id} value={r.id}>
-                          {r.fullName}
-                        </Option>
-                      ))}
-                    </Select>
+                    {refereeRefreshLoading ? (
+                      <Loading />
+                    ) : (
+                      <Select
+                        ref={(el) => (refereeSelectRefs.current[index] = el)}
+                        mode="multiple"
+                        placeholder="Chọn trọng tài"
+                        className="w-full"
+                        value={category.createRefereeAssignmentRequests.map(
+                          (r) => r.refereeAccountId
+                        )}
+                        onChange={(values) =>
+                          handleRefereeChange(index, values)
+                        }
+                        dropdownRender={renderDropdownWithRefreshReferees}
+                      >
+                        {referee.map((r) => (
+                          <Option key={r.id} value={r.id}>
+                            {r.fullName}
+                          </Option>
+                        ))}
+                      </Select>
+                    )}
 
                     {/* Hiển thị lỗi nếu không có trọng tài nào */}
                     {showErrors &&

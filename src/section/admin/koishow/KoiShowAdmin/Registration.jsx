@@ -696,6 +696,19 @@ function Registration({ showId, statusShow }) {
     },
   ];
 
+  const formatDateTime = (dateString) => {
+    if (!dateString) return "-";
+    return new Intl.DateTimeFormat("vi-VN", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: false,
+    }).format(new Date(dateString));
+  };
+
   return (
     <ConfigProvider
       locale={{
@@ -966,6 +979,18 @@ function Registration({ showId, statusShow }) {
                         {currentKoi.koiAge}
                       </span>
                     </div>
+                    <div
+                      style={{
+                        padding: "8px 0",
+                        borderBottom: "1px dashed #f0f0f0",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <strong style={{ color: "#096dd9" }}>Lưu ý:</strong>
+                      <span style={{ marginLeft: "8px" }}>
+                        {currentKoi.notes}
+                      </span>
+                    </div>
                   </Col>
                   <Col xs={24} md={12}>
                     <div
@@ -1025,7 +1050,31 @@ function Registration({ showId, statusShow }) {
                         <strong style={{ color: "#096dd9" }}>Ngày Tạo:</strong>
                         <span style={{ marginLeft: "8px" }}>
                           {currentKoi.createdAt
-                            ? new Date(currentKoi.createdAt).toLocaleString()
+                            ? (() => {
+                                const d = new Date(currentKoi.createdAt);
+                                const day = String(d.getDate()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                const month = String(d.getMonth() + 1).padStart(
+                                  2,
+                                  "0"
+                                );
+                                const year = d.getFullYear();
+                                const hour = String(d.getHours()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                const minute = String(d.getMinutes()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                const second = String(d.getSeconds()).padStart(
+                                  2,
+                                  "0"
+                                );
+                                return `${day}/${month}/${year} ${hour}:${minute}:${second}`;
+                              })()
                             : "-"}
                         </span>
                       </div>
