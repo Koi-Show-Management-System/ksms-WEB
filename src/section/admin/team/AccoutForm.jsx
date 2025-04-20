@@ -27,7 +27,7 @@ function AccountForm({ isVisible, onCancel, title = "Thêm Tài Khoản Mới" }
     }
 
     await createAccount(formData);
-    fetchAccountTeam(1, 10);
+    fetchAccountTeam(1, 10, values.role);
     form.resetFields();
     setFileList([]);
     setPreviewImage("");

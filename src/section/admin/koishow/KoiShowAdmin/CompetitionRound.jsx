@@ -1469,37 +1469,33 @@ function CompetitionRound({ showId }) {
           )}
 
           {/* Adjust NextRound component to show when round is published */}
-          {selectedSubRound &&
-            ((isRoundPublished() && !fishMoved) ||
-              (areResultsPublished && !fishMoved)) && (
-              <div className="w-full md:w-1/3">
-                <NextRound
-                  registrationRound={registrationRound}
-                  selectedSubRound={selectedSubRound}
-                  selectedCategory={selectedCategory}
-                  selectedRoundType={selectedRoundType}
-                  roundTypes={roundTypes}
-                  fetchRegistrationRound={fetchRegistrationRound}
-                  currentPage={currentPage}
-                  pageSize={pageSize}
-                  onFishMoveStatusChange={handleFishMoveStatus}
-                  roundStatus={(() => {
-                    if (!selectedSubRound) {
-                      console.log(
-                        "No selectedSubRound, not passing roundStatus"
-                      );
-                      return null;
-                    }
+          {selectedSubRound && areResultsPublished && !fishMoved && (
+            <div className="w-full md:w-1/3">
+              <NextRound
+                registrationRound={registrationRound}
+                selectedSubRound={selectedSubRound}
+                selectedCategory={selectedCategory}
+                selectedRoundType={selectedRoundType}
+                roundTypes={roundTypes}
+                fetchRegistrationRound={fetchRegistrationRound}
+                currentPage={currentPage}
+                pageSize={pageSize}
+                onFishMoveStatusChange={handleFishMoveStatus}
+                roundStatus={(() => {
+                  if (!selectedSubRound) {
+                    console.log("No selectedSubRound, not passing roundStatus");
+                    return null;
+                  }
 
-                    const currentRound = round?.find(
-                      (r) => r.id === selectedSubRound
-                    );
+                  const currentRound = round?.find(
+                    (r) => r.id === selectedSubRound
+                  );
 
-                    return currentRound?.status || null;
-                  })()}
-                />
-              </div>
-            )}
+                  return currentRound?.status || null;
+                })()}
+              />
+            </div>
+          )}
         </div>
       </div>
 
