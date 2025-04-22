@@ -17,6 +17,7 @@ import {
   Tooltip,
   Input,
   Slider,
+  Popconfirm,
 } from "antd";
 import {
   PlusOutlined,
@@ -858,9 +859,23 @@ const EvaluationScoreSheet = ({
               type="primary"
               icon={<SaveOutlined />}
               loading={loading}
-              onClick={handleSubmit}
               block
               size="large"
+              onClick={() => {
+                Modal.confirm({
+                  title: "Xác nhận lưu kết quả đánh giá",
+                  content: "Bạn có chắc chắn muốn lưu kết quả đánh giá này?",
+                  okText: "Xác nhận",
+                  cancelText: "Hủy",
+                  onOk: handleSubmit,
+                  centered: true,
+                  maskClosable: false,
+                  okButtonProps: {
+                    style: { backgroundColor: "#1890ff" },
+                  },
+                  icon: <SaveOutlined style={{ color: "#1890ff" }} />,
+                });
+              }}
             >
               Lưu kết quả đánh giá
             </Button>

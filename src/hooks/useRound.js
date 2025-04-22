@@ -18,7 +18,6 @@ const useRound = create((set, get) => ({
       const res = await getRound(competitionCategoryId, roundType, page, size);
 
       if (res && res.status === 200) {
-
         let round = [];
         let total = 0;
         let totalPages = 1;
@@ -101,6 +100,7 @@ const useRound = create((set, get) => ({
       const res = await getNextRound(roundId);
       if (res?.status === 200) {
         set({ nextRound: res.data, isLoading: false });
+        return res.data; // Trả về data
       } else {
         set({ error: res || "Unknown error", isLoading: false });
       }

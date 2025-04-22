@@ -68,6 +68,52 @@ const roundTypeLabels = {
 // Placeholder image for missing images
 const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
 
+// Add PassingFishCounter component
+const PassingFishCounter = ({ roundId, onCountUpdate, refreshTrigger }) => {
+  const [isLoading, setIsLoading] = useState(false);
+  const [count, setCount] = useState(0);
+  const { fetchAllRegistrationRoundByStatus } = useRegistrationRound();
+
+  const fetchPassingFishCount = useCallback(async () => {
+    if (!roundId) return;
+
+    try {
+      setIsLoading(true);
+      const response = await fetchAllRegistrationRoundByStatus(roundId, "Pass");
+
+      let fishData = [];
+      if (response && Array.isArray(response)) {
+        fishData = response;
+      } else if (response && response.data && Array.isArray(response.data)) {
+        fishData = response.data;
+      }
+
+      setCount(fishData.length);
+      if (typeof onCountUpdate === "function") {
+        onCountUpdate(fishData.length);
+      }
+    } catch (error) {
+      console.error("Error fetching passing fish count:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [roundId, fetchAllRegistrationRoundByStatus, onCountUpdate]);
+
+  // Run on mount and when roundId changes
+  useEffect(() => {
+    fetchPassingFishCount();
+  }, [roundId, fetchPassingFishCount]);
+
+  // Run when refreshTrigger changes
+  useEffect(() => {
+    if (refreshTrigger) {
+      fetchPassingFishCount();
+    }
+  }, [refreshTrigger, fetchPassingFishCount]);
+
+  return null; // This component doesn't render anything
+};
+
 function CompetitionRound({ showId }) {
   // Tracking mount state to prevent updates after unmount
   const isMounted = useRef(true);
@@ -84,6 +130,12 @@ function CompetitionRound({ showId }) {
   // Current step state for the Steps component
   const [currentStep, setCurrentStep] = useState(0);
 
+  // Add state to track total passed fish
+  const [totalPassedFish, setTotalPassedFish] = useState(0);
+
+  // Add refresh trigger state
+  const [refreshCounter, setRefreshCounter] = useState(0);
+
   // Registration and tank states
   const {
     registrationRound,
@@ -94,6 +146,7 @@ function CompetitionRound({ showId }) {
     currentPage,
     pageSize,
     totalPages,
+    fetchAllRegistrationRoundByStatus,
   } = useRegistrationRound();
 
   const { competitionRoundTanks, fetchTanks } = useTank();
@@ -1312,6 +1365,22 @@ function CompetitionRound({ showId }) {
     setIsNoNextRound(noNextRound);
   }, []);
 
+  // Add function to receive count of passing fish from NextRound component
+  const handlePassingFishCount = useCallback((count) => {
+    if (count !== undefined && count >= 0) {
+      setTotalPassedFish(count);
+    }
+  }, []);
+
+  // Update refresh button handler
+  const handleRefreshData = useCallback(() => {
+    if (selectedSubRound) {
+      fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+      // Trigger refresh for PassingFishCounter
+      setRefreshCounter((prev) => prev + 1);
+    }
+  }, [selectedSubRound, fetchRegistrationRound, currentPage, pageSize]);
+
   // Cập nhật hàm công khai điểm để hiển thị nút chuyển cá ngay lập tức
   const handlePublishRoundResults = useCallback(async () => {
     if (!selectedSubRound) return;
@@ -1371,6 +1440,15 @@ function CompetitionRound({ showId }) {
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md competition-round">
+      {/* Add PassingFishCounter component */}
+      {selectedSubRound && (
+        <PassingFishCounter
+          roundId={selectedSubRound}
+          onCountUpdate={handlePassingFishCount}
+          refreshTrigger={refreshCounter}
+        />
+      )}
+
       <Title level={3} className="text-center mb-6 text-blue-700">
         <TrophyOutlined className="mr-2 my-3" />
         Quản lý vòng thi
@@ -1542,6 +1620,7 @@ function CompetitionRound({ showId }) {
                   currentPage={currentPage}
                   pageSize={pageSize}
                   onFishMoveStatusChange={handleFishMoveStatus}
+                  onPassingFishCount={handlePassingFishCount}
                   roundStatus={(() => {
                     if (!selectedSubRound) {
                       console.log(
@@ -1588,18 +1667,23 @@ function CompetitionRound({ showId }) {
       >
         <div className="flex justify-between items-center mb-3">
           <Typography.Text strong>
-            {displayData.length > 0 &&
-              `Tổng số: ${registrationTotalItems || displayData.length} cá thi đấu`}
+            {displayData.length > 0 && (
+              <>
+                Tổng số: {registrationTotalItems || displayData.length} cá thi
+                đấu
+                {totalPassedFish > 0 && (
+                  <Tag color="green" className="ml-2">
+                    <CheckCircleOutlined /> {totalPassedFish} cá đạt
+                  </Tag>
+                )}
+              </>
+            )}
           </Typography.Text>
           <Button
             type="default"
             size="small"
             icon={<ReloadOutlined />}
-            onClick={() => {
-              if (selectedSubRound) {
-                fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
-              }
-            }}
+            onClick={handleRefreshData}
             disabled={!selectedSubRound || registrationLoading}
           >
             Làm mới

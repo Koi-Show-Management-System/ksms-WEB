@@ -40,6 +40,7 @@ function ScanTicketQr() {
   const [ticketInfo, setTicketInfo] = useState(null);
   const [isTablet, setIsTablet] = useState(false);
   const [scanning, setScanning] = useState(false);
+  const [errorTicket, setErrorTicket] = useState(null);
 
   // Detect tablet size
   useEffect(() => {
@@ -76,14 +77,21 @@ function ScanTicketQr() {
     if (data && data.text) {
       setQrResult(data.text);
       setScannerEnabled(false);
+
       try {
         // Assumes QR code contains the ticket ID
         const result = await fetchInfoByQrCode(data.text);
-        if (result.success) {
+
+        if (result && result.success) {
           setTicketInfo(result.data.data);
-        }
+        } 
       } catch (error) {
-        console.error("Error fetching ticket data:", error);
+        // Handle unexpected errors
+        const errorMessage =
+          error?.response?.data?.Error || "Đã xảy ra lỗi khi quét mã QR";
+        console.error("Error fetching ticket data:", errorMessage);
+        setErrorTicket(errorMessage);
+        setScannerEnabled(true); // Allow scanning again
       }
     }
   };
@@ -294,7 +302,7 @@ function ScanTicketQr() {
 
       {error && (
         <Alert
-          message="Mã QR này đã được check-in rồi!"
+          message={errorTicket}
           description="Vui lòng quét mã QR khác"
           type="error"
           className="mb-6"

@@ -10,6 +10,7 @@ import {
   getInfoByQrCode,
   updateTicketCheckIn,
 } from "../api/ticketTypeApi";
+import { notification } from "antd";
 
 const useTicketType = create((set, get) => ({
   isLoading: false,
@@ -57,21 +58,26 @@ const useTicketType = create((set, get) => ({
       const response = await getInfoByQrCode(ticketId);
       if (response?.data?.statusCode === 200) {
         set({ isLoading: false });
-        return { success: true, data: response.data };
-      } else {
-        set({
-          error: response?.data?.message || "Failed to fetch info by qr code",
-          isLoading: false,
+        notification.success({
+          message: "Thành công",
+          description: response.data?.message,
         });
-        return {
-          success: false,
-          message: response?.data?.message || "Failed to fetch info by qr code",
-        };
+        return { success: true, data: response.data };
       }
     } catch (error) {
-      console.error("Error fetching info by qr code:", error);
-      set({ error: error.message || "An error occurred", isLoading: false });
-      return { success: false, message: error.message || "An error occurred" };
+      set({
+        isLoading: false,
+        error: error?.response?.data?.Error || "Đã xảy ra lỗi",
+      });
+      notification.error({
+        message: "Lỗi",
+        description:
+          error?.response?.data?.Error || "Đã xảy ra lỗi khi quét mã QR",
+      });
+      return {
+        success: false,
+        error: error?.response?.data?.Error || "Đã xảy ra lỗi",
+      };
     }
   },
 

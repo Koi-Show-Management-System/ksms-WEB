@@ -17,6 +17,8 @@ import {
   Divider,
   Image,
   Progress,
+  Popconfirm,
+  Modal,
 } from "antd";
 import useCategory from "../../hooks/useCategory";
 import useRound from "../../hooks/useRound";
@@ -39,7 +41,6 @@ import { Loading } from "../../components";
 const { Option } = Select;
 const { Title, Text, Paragraph } = Typography;
 const { Step } = Steps;
-
 function ScanQrByReferee({ showId, refereeAccountId }) {
   const [categoryId, setCategoryId] = useState(null);
   const [selectedRoundType, setSelectedRoundType] = useState(null);
@@ -54,6 +55,11 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   const [showDetailScoring, setShowDetailScoring] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [facingMode, setFacingMode] = useState("environment");
+  const [showPreliminaryGuideModal, setShowPreliminaryGuideModal] =
+    useState(false);
+  const [preliminaryGuideConfirmed, setPreliminaryGuideConfirmed] =
+    useState(false);
+  const [numberRegisToAdvance, setNumberRegisToAdvance] = useState(null);
 
   const {
     criteriaCompetitionRound,
@@ -79,6 +85,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     refereeRoundTypes,
     fetchRound,
     fetchRoundByReferee,
+    fetchNextRound,
     isLoading: roundLoading,
   } = useRound();
 
@@ -149,6 +156,27 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
     if (selectedSubRound) {
       setCurrentStep(2);
+
+      // Hiển thị modal LƯU Ý QUAN TRỌNG khi chọn vòng trong Preliminary
+      if (selectedRoundType === "Preliminary" && !preliminaryGuideConfirmed) {
+        // Lấy thông tin vòng tiếp theo
+        const getNextRoundInfo = async () => {
+          try {
+            const data = await fetchNextRound(selectedSubRound);
+            if (data && data.data) {
+              const numberRegisToAdvance =
+                data.data.nextRoundNumberRegistrationToAdvance;
+              setNumberRegisToAdvance(numberRegisToAdvance); // Need to add this state variable
+              console.log("Next round info:", numberRegisToAdvance);
+            }
+          } catch (error) {
+            console.error("Error fetching next round:", error);
+          }
+        };
+
+        getNextRoundInfo();
+        setShowPreliminaryGuideModal(true);
+      }
     }
   }, [
     categoryId,
@@ -156,6 +184,8 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     selectedRoundType,
     fetchCriteriaCompetitionRound,
     resetCriteriaCompetitionRound,
+    preliminaryGuideConfirmed,
+    fetchNextRound,
   ]);
 
   useEffect(() => {
@@ -253,6 +283,10 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setScanError(null);
     setShowDetailScoring(false);
     setCurrentStep(1);
+
+    if (value === "Preliminary") {
+      setPreliminaryGuideConfirmed(false);
+    }
   };
 
   const handleSubRoundChange = (value) => {
@@ -396,12 +430,173 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     setFacingMode(facingMode === "environment" ? "user" : "environment");
   };
 
+  const handlePreliminaryGuideConfirm = () => {
+    setPreliminaryGuideConfirmed(true);
+    setShowPreliminaryGuideModal(false);
+  };
+
   return (
     <div className="bg-white space-y-6 p-3">
       <Title level={3} className="text-center mb-6 text-blue-700">
         <TrophyOutlined className="mr-2 my-3" />
         Hệ thống chấm điểm giám khảo
       </Title>
+
+      <Modal
+        title={null}
+        open={showPreliminaryGuideModal}
+        footer={null}
+        closable={false}
+        maskClosable={false}
+        centered
+        width={800}
+        className="referee-guide-modal"
+        styles={{
+          body: { padding: 0, borderRadius: "12px", overflow: "hidden" },
+        }}
+      >
+        <div>
+          {/* Header */}
+          <div className="p-6 text-center bg-gradient-to-r from-indigo-900 to-indigo-800 border-b border-opacity-10 border-white">
+            <div className="flex justify-center mb-2">
+              <div className="p-3 rounded-full bg-white bg-opacity-15 shadow-lg">
+                <TrophyOutlined className="text-3xl text-yellow-400" />
+              </div>
+            </div>
+            <Typography.Title
+              level={3}
+              style={{ color: "white" }}
+              className="m-0 mt-2 font-semibold"
+            >
+              LƯU Ý QUAN TRỌNG CHO TRỌNG TÀI
+            </Typography.Title>
+            <div className="mt-1">
+              <Tag
+                color="#FFD700"
+                className="rounded-xl text-sm px-3 py-0.5 font-medium"
+              >
+                VÒNG SƠ KHẢO
+              </Tag>
+            </div>
+          </div>
+
+          {/* Content */}
+          <div className="p-6 bg-white">
+            <div className="mb-6">
+              <div className="flex items-start mb-5">
+                <div className="mr-4 mt-1">
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-white text-2xl font-bold shadow-md bg-gradient-to-r from-orange-500 to-orange-600">
+                    !
+                  </div>
+                </div>
+                <div>
+                  <Typography.Title
+                    level={4}
+                    className="m-0 mb-4 text-gray-800"
+                  >
+                    Kính gửi Quý Trọng tài,
+                  </Typography.Title>
+                  <Typography.Paragraph className="text-base text-gray-600 leading-relaxed">
+                    Vòng sơ khảo có vai trò{" "}
+                    <span className="font-semibold text-indigo-900">
+                      đặc biệt quan trọng
+                    </span>{" "}
+                    trong việc đảm bảo tiến trình của cuộc thi. Trong vòng sơ
+                    khảo, tất cả cá đạt tiêu chuẩn (Pass) sẽ được tiếp tục vào
+                    vòng đánh giá chính.
+                  </Typography.Paragraph>
+                  <Typography.Paragraph className="text-base text-gray-600 leading-relaxed">
+                    Nếu số lượng cá Pass từ vòng sơ khảo không đủ, quá trình thi
+                    đấu sẽ gặp khó khăn ở các vòng sau.
+                  </Typography.Paragraph>
+                </div>
+              </div>
+
+              <div className="p-6 rounded-xl bg-gradient-to-r from-amber-50 to-amber-100 border border-amber-200 shadow-md">
+                <div className="flex items-center mb-4">
+                  <AimOutlined className="text-2xl text-amber-700 mr-2" />
+                  <Typography.Title level={4} className="m-0 text-amber-700">
+                    Hướng dẫn đánh giá
+                  </Typography.Title>
+                </div>
+
+                <ul className="pl-5 list-none">
+                  {[
+                    {
+                      text: (
+                        <>
+                          Số lượng cá qua vòng sơ khảo phải{" "}
+                          <span className="font-semibold text-red-700">
+                            nhiều hơn
+                          </span>{" "}
+                          số cá qua vòng ở vòng đánh giá chính là{" "}
+                          <strong>{numberRegisToAdvance} cá</strong>
+                        </>
+                      ),
+                      icon: <PercentageOutlined className="text-red-700" />,
+                    },
+                    {
+                      text: (
+                        <>
+                          Chỉ đánh{" "}
+                          <span className="font-semibold text-red-700">
+                            Fail
+                          </span>{" "}
+                          những cá rõ ràng KHÔNG đạt tiêu chuẩn cơ bản
+                        </>
+                      ),
+                      icon: <CloseCircleOutlined className="text-red-700" />,
+                    },
+                    {
+                      text: (
+                        <>
+                          Với những cá ở mức giới hạn, hãy{" "}
+                          <span className="font-semibold text-green-800">
+                            ưu tiên cho Pass
+                          </span>
+                        </>
+                      ),
+                      icon: <CheckCircleOutlined className="text-green-800" />,
+                    },
+                    {
+                      text: (
+                        <>
+                          Vòng sơ khảo nhằm loại bỏ những cá không đạt chuẩn,{" "}
+                          <span className="font-semibold text-red-700">
+                            KHÔNG phải
+                          </span>{" "}
+                          để chọn ra số lượng giới hạn cá xuất sắc nhất
+                        </>
+                      ),
+                      icon: <TrophyOutlined className="text-indigo-900" />,
+                    },
+                  ].map((item, index) => (
+                    <li key={index} className="mb-4 flex items-start">
+                      <div className="mr-3 flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-full bg-white shadow">
+                        {item.icon}
+                      </div>
+                      <Typography.Text className="text-base text-gray-800 leading-relaxed">
+                        {item.text}
+                      </Typography.Text>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <div className="mt-8 text-center flex justify-center">
+              <Button
+                onClick={handlePreliminaryGuideConfirm}
+                size="large"
+                className="hover-scale-button  px-9 h-12 rounded-full border-none font-bold text-white shadow-lg bg-gradient-to-r from-blue-600 to-blue-800 flex items-center justify-center transition-all duration-300"
+              >
+                <CheckCircleOutlined className="mr-2 text-lg" />
+                Tôi đã đọc, hiểu rõ và cam kết tuân thủ
+              </Button>
+            </div>
+          </div>
+        </div>
+      </Modal>
 
       <Steps
         current={currentStep}
@@ -636,7 +831,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 boxShadow: "0 10px 30px rgba(0, 0, 0, 0.08)",
                 border: "none",
               }}
-              bodyStyle={{ padding: 0 }}
+              styles={{ body: { padding: 0 } }}
             >
               <div className="flex flex-col md:flex-row">
                 {/* Phần hình ảnh cá */}
@@ -787,42 +982,62 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                           </div>
                         </div>
                       ) : selectedRoundType === "Preliminary" ? (
-                        <div className="flex justify-center gap-5">
-                          <Button
-                            type="primary"
-                            size="large"
-                            icon={<CheckCircleOutlined />}
-                            onClick={() => handleScore(true)}
-                            loading={isScoring}
-                            style={{
-                              backgroundColor: "#52c41a",
-                              borderColor: "#52c41a",
-                              height: "48px",
-                              borderRadius: "8px",
-                              fontWeight: "bold",
-                              width: "150px",
-                              boxShadow: "0 4px 12px rgba(82, 196, 26, 0.2)",
-                            }}
-                          >
-                            Đạt
-                          </Button>
-                          <Button
-                            danger
-                            size="large"
-                            icon={<CloseCircleOutlined />}
-                            onClick={() => handleScore(false)}
-                            loading={isScoring}
-                            style={{
-                              height: "48px",
-                              borderRadius: "8px",
-                              fontWeight: "bold",
-                              width: "150px",
-                              boxShadow: "0 4px 12px rgba(245, 34, 45, 0.1)",
-                            }}
-                          >
-                            Không Đạt
-                          </Button>
-                        </div>
+                        <>
+                          <div className="flex justify-center gap-5">
+                            <Popconfirm
+                              title="Xác nhận chấm điểm"
+                              description="Bạn có chắc chắn muốn chấm ĐẠT cho cá này?"
+                              onConfirm={() => handleScore(true)}
+                              okText="Đồng ý"
+                              cancelText="Hủy"
+                              placement="top"
+                            >
+                              <Button
+                                type="primary"
+                                size="large"
+                                icon={<CheckCircleOutlined />}
+                                loading={isScoring}
+                                style={{
+                                  backgroundColor: "#52c41a",
+                                  borderColor: "#52c41a",
+                                  height: "48px",
+                                  borderRadius: "8px",
+                                  fontWeight: "bold",
+                                  width: "150px",
+                                  boxShadow:
+                                    "0 4px 12px rgba(82, 196, 26, 0.2)",
+                                }}
+                              >
+                                Đạt
+                              </Button>
+                            </Popconfirm>
+                            <Popconfirm
+                              title="Xác nhận chấm điểm"
+                              description="Bạn có chắc chắn muốn chấm KHÔNG ĐẠT cho cá này?"
+                              onConfirm={() => handleScore(false)}
+                              okText="Đồng ý"
+                              cancelText="Hủy"
+                              placement="top"
+                            >
+                              <Button
+                                danger
+                                size="large"
+                                icon={<CloseCircleOutlined />}
+                                loading={isScoring}
+                                style={{
+                                  height: "48px",
+                                  borderRadius: "8px",
+                                  fontWeight: "bold",
+                                  width: "150px",
+                                  boxShadow:
+                                    "0 4px 12px rgba(245, 34, 45, 0.1)",
+                                }}
+                              >
+                                Không Đạt
+                              </Button>
+                            </Popconfirm>
+                          </div>
+                        </>
                       ) : (
                         <div className="flex justify-center">
                           <Button
@@ -831,14 +1046,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                             icon={<PercentageOutlined />}
                             onClick={() => handleScore(true)}
                             loading={isScoring}
-                            style={{
-                              height: "48px",
-                              borderRadius: "8px",
-                              fontWeight: "bold",
-                              width: "100%",
-                              maxWidth: "350px",
-                              boxShadow: "0 4px 12px rgba(24, 144, 255, 0.2)",
-                            }}
+                            className="h-12 rounded-lg font-semibold w-full max-w-xs shadow-md bg-blue-500 hover:bg-blue-600 border-none transition-all duration-300"
                           >
                             Chấm điểm chi tiết
                           </Button>
@@ -927,6 +1135,21 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
           .custom-steps .ant-steps-item-title {
             font-size: 14px;
           }
+        }
+
+        .referee-guide-modal .ant-modal-content {
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+        }
+
+        .hover-scale-button:hover {
+          transform: translateY(-2px);
+          box-shadow: 0 8px 20px rgba(21, 101, 192, 0.4) !important;
+        }
+
+        .bg-opacity-15 {
+          background-color: rgba(255, 255, 255, 0.15);
         }
       `}</style>
     </div>

@@ -425,7 +425,7 @@ function Tank({ showId }) {
             >
               <InputNumber
                 min={0}
-                max={14}
+                max={100}
                 style={{ width: "100%" }}
                 placeholder="Nhập sức chứa"
               />

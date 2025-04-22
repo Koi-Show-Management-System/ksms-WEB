@@ -51,6 +51,7 @@ function CompetitionRound({ showId }) {
   const [currentRegistration, setCurrentRegistration] = useState(null);
   const [scoreDetails, setScoreDetails] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
+  const [currentRoundType, setCurrentRoundType] = useState(null);
 
   const roundTypeLabels = {
     Preliminary: "Vòng Sơ Khảo",
@@ -197,6 +198,9 @@ function CompetitionRound({ showId }) {
   const handleViewDetails = async (record) => {
     setCurrentRegistration(record);
     setIsDetailDrawerVisible(true);
+
+    // Lưu loại vòng hiện tại vào state để sử dụng trong Drawer
+    setCurrentRoundType(selectedRoundType);
 
     // Fetch score details when opening the drawer
     if (record && record.id) {
@@ -398,11 +402,21 @@ function CompetitionRound({ showId }) {
                   disabled={!categoryId}
                 >
                   {refereeRoundTypes &&
-                    refereeRoundTypes.map((roundType) => (
-                      <Option key={roundType} value={roundType}>
-                        {roundTypeLabels[roundType] || roundType}
-                      </Option>
-                    ))}
+                    // Sắp xếp các loại vòng theo thứ tự ưu tiên: Preliminary -> Evaluation -> Final
+                    [...refereeRoundTypes]
+                      .sort((a, b) => {
+                        const order = {
+                          Preliminary: 1,
+                          Evaluation: 2,
+                          Final: 3,
+                        };
+                        return (order[a] || 99) - (order[b] || 99);
+                      })
+                      .map((roundType) => (
+                        <Option key={roundType} value={roundType}>
+                          {roundTypeLabels[roundType] || roundType}
+                        </Option>
+                      ))}
                 </Select>
               </div>
             )}
@@ -484,9 +498,11 @@ function CompetitionRound({ showId }) {
               }
               key="2"
             >
-              {scoreDetails &&
-              scoreDetails.data &&
-              scoreDetails.data.length > 0 ? (
+              {selectedRoundType === "Preliminary" ? (
+                <Empty description="Vòng sơ khảo không có chi tiết điểm số" />
+              ) : scoreDetails &&
+                scoreDetails.data &&
+                scoreDetails.data.length > 0 ? (
                 <List
                   grid={{ gutter: 16, column: 1 }}
                   dataSource={scoreDetails.data}

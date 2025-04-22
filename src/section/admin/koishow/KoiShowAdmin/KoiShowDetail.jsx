@@ -53,7 +53,13 @@ function KoiShowDetail() {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const showStatus = searchParams.get("status");
-  const isEditDisabled = showStatus === "published";
+  const isEditDisabled = [
+    "published",
+    "upcoming",
+    "inprogress",
+    "finished",
+    "cancelled",
+  ].includes(showStatus);
   const { koiShowDetail, isLoading, fetchKoiShowDetail, updateKoiShow } =
     useKoiShow();
   const [form] = Form.useForm();

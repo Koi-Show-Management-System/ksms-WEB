@@ -43,7 +43,7 @@ function ScanQr() {
   const [showScanner, setShowScanner] = useState(false);
   const [isTablet, setIsTablet] = useState(false);
   const [scanning, setScanning] = useState(false);
-
+  const [errorScan, setErrorScan] = useState(null);
   // Detect tablet size
   useEffect(() => {
     const checkScreenSize = () => {
@@ -85,7 +85,11 @@ function ScanQr() {
         // Giả sử QR code chứa registration ID
         await fetchRegistrationPayment(data.text);
       } catch (error) {
-        console.error("Error fetching registration data:", error);
+        console.error(
+          "Error fetching registration data:",
+          error?.response?.data?.Error
+        );
+        setErrorScan(error?.response?.data?.Error);
       }
     }
   };
@@ -270,7 +274,7 @@ function ScanQr() {
 
       {error && (
         <Alert
-          message="Mã QR này đã được check-in rồi!"
+          message={errorScan}
           description="Vui lòng quét mã QR khác"
           type="error"
           className="mb-6"
