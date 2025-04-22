@@ -861,7 +861,7 @@ function Votes({ showId }) {
                   {currentRecord.bloodline}
                 </Descriptions.Item>
                 <Descriptions.Item label="Bể">
-                  {currentRecord.roundInfo?.tankNumber}
+                  {currentRecord.roundInfo?.tankNumber ?? "Không có bể"}{" "}
                 </Descriptions.Item>
               </Descriptions>
             </TabPane>
@@ -1081,7 +1081,7 @@ function Votes({ showId }) {
                   </Descriptions.Item>
                 )}
                 <Descriptions.Item label="Bể thi đấu">
-                  {currentRecord.roundInfo?.tankNumber || "Chưa gán bể"}
+                  {currentRecord.roundInfo?.tankNumber ?? "Không có bể"}
                 </Descriptions.Item>
               </Descriptions>
             </TabPane>

@@ -31,7 +31,6 @@ import {
 import useRegistration from "../../../../hooks/useRegistration";
 import useCategory from "../../../../hooks/useCategory";
 import RoundSelector from "./RoundSelector";
-import { Loading } from "../../../../components";
 
 // Placeholder image for missing images
 const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
@@ -124,14 +123,11 @@ function Registration({ showId, statusShow }) {
   const [activeFilters, setActiveFilters] = useState([]);
 
   useEffect(() => {
-    console.log("Fetching categories with showId:", showId);
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
   }, []);
 
-  useEffect(() => {
-    console.log("Categories state:", categories);
-  }, [categories]);
+  useEffect(() => {}, [categories]);
 
   useEffect(() => {
     if (selectedStatus && selectedStatus.length > 0) {
@@ -1101,7 +1097,6 @@ function Registration({ showId, statusShow }) {
                       currentKoi.rejectedReason && (
                         <div
                           style={{
-                            padding: "8px 0",
                             marginBottom: "8px",
                             background: "#fff2f0",
                             border: "1px solid #ffccc7",
@@ -1651,7 +1646,6 @@ function Registration({ showId, statusShow }) {
                 categoryId={selectedCategory}
                 preSelectPreliminary={true}
               />
-              {console.log("Rendering RoundSelector with showId:", showId)}
             </div>
           </div>
 

@@ -77,7 +77,6 @@ const useCategory = create((set, get) => ({
       const res = await getDetail(categoryId);
 
       if (res && res.status === 200) {
-        console.log("Category detail response:", res.data);
 
         let categoryDetail = null;
 

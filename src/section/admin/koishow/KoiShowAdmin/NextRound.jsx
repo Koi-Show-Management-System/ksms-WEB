@@ -28,7 +28,6 @@ function NextRound({
   currentPage,
   pageSize,
   onFishMoveStatusChange,
-  onPassingFishCount,
   roundStatus,
 }) {
   const [isMovingToNextRound, setIsMovingToNextRound] = useState(false);
@@ -885,13 +884,6 @@ function NextRound({
       );
     }
   }
-
-  // Add useEffect to send allPassingFish count to parent component
-  useEffect(() => {
-    if (typeof onPassingFishCount === "function") {
-      onPassingFishCount(allPassingFish.length);
-    }
-  }, [allPassingFish, onPassingFishCount]);
 
   // Return just the button without a container div
   return buttonContent;

@@ -310,7 +310,7 @@ function ScanQr() {
 
                 <Card className="bg-gray-50 border-0">
                   <div className="mb-3">
-                    <Text type="secondary">Danh mục thi đấu:</Text>
+                    <Text type="secondary">Hạng mục thi đấu:</Text>
                     <div className="font-semibold">
                       {
                         registrationPayment.data.registration

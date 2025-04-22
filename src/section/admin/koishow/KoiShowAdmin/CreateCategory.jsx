@@ -773,7 +773,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
       </Button>
 
       <Modal
-        title="Tạo Danh Mục Mới"
+        title="Tạo Hạng Mục Mới"
         open={isModalVisible}
         onCancel={handleCancel}
         width={800}

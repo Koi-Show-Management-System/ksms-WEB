@@ -146,7 +146,7 @@ function Category({ showId, statusShow }) {
 
   const columns = [
     {
-      title: "Tên Danh Mục",
+      title: "Tên Hạng Mục",
       dataIndex: "name",
       key: "name",
       sorter: (a, b) => (a.name || "").localeCompare(b.name || ""),
