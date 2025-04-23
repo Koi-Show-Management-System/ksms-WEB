@@ -113,9 +113,70 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       const values = await form.validateFields();
       const formData = form.getFieldsValue(true);
 
+      // Validate awards
+      if (!validateAwards(formData.awards)) {
+        setActiveTab("3"); // Switch to the awards tab
+        return;
+      }
+
+      // Validate criteria for each round
+      const criteriaByRound = {};
+      mainRounds.forEach((round) => {
+        criteriaByRound[round.value] = (
+          formData.criteriaCompetitionCategories || []
+        ).filter((c) => c.roundType === round.value);
+      });
+
+      let hasCriteriaError = false;
+      let criteriaErrorMessage = "";
+
+      Object.entries(criteriaByRound).forEach(([roundType, criteriaList]) => {
+        // Check if each round has at least one criterion
+        if (criteriaList.length < 1) {
+          hasCriteriaError = true;
+          criteriaErrorMessage = `${roundLabelMap[roundType]} cần ít nhất 1 tiêu chí`;
+        }
+
+        // Check if total weight equals 100%
+        const totalWeight = criteriaList.reduce(
+          (total, c) => total + (c.weight * 100 || 0),
+          0
+        );
+
+        // Allow small floating point errors (99.9, 100.1)
+        if (totalWeight < 99.5 || totalWeight > 100.5) {
+          hasCriteriaError = true;
+          criteriaErrorMessage = `${roundLabelMap[roundType]} phải có tổng trọng số bằng 100% (hiện tại: ${totalWeight.toFixed(1)}%)`;
+        }
+      });
+
+      if (hasCriteriaError) {
+        message.error(criteriaErrorMessage);
+        setActiveTab("4"); // Switch to the criteria tab
+        return;
+      }
+
       const refereeAssignments = processRefereeAssignments(
         formData.refereeAssignments || []
       );
+
+      // Validate referee assignments
+      if (refereeAssignments.length === 0) {
+        message.error("Vui lòng chọn ít nhất một trọng tài");
+        setActiveTab("5"); // Switch to the referee tab
+        return;
+      }
+
+      // Check if all referees have assigned rounds
+      const refereesWithoutRounds = refereeAssignments.filter(
+        (r) => !r.roundTypes || r.roundTypes.length === 0
+      );
+
+      if (refereesWithoutRounds.length > 0) {
+        message.error("Vui lòng chọn vòng chấm điểm cho tất cả trọng tài");
+        setActiveTab("5"); // Switch to the referee tab
+        return;
+      }
 
       const updatePayload = {
         id: categoryId,
@@ -233,6 +294,107 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       (item) => item.roundTypes.length > 0
     );
   };
+
+  const hasAllRequiredAwardTypes = (awards) => {
+    if (!awards || awards.length === 0) return false;
+
+    // Check if we have at least one award of each required type
+    const requiredTypes = ["first", "second", "third", "honorable"];
+    const awardTypes = awards.map((award) => award.awardType);
+
+    // First check: ensure all required types exist
+    return requiredTypes.every((type) => awardTypes.includes(type));
+  };
+
+  const validateAwards = (awards) => {
+    if (!awards || awards.length === 0) {
+      message.error(
+        "Vui lòng thêm ít nhất các giải thưởng bắt buộc: Giải Nhất, Giải Nhì, Giải Ba và Giải Khuyến Khích"
+      );
+      return false;
+    }
+
+    // Check if any award doesn't have a type selected
+    const awardsMissingType = awards.filter((award) => !award.awardType);
+    if (awardsMissingType.length > 0) {
+      message.error(
+        `Vui lòng chọn loại giải thưởng cho tất cả giải thưởng đã thêm`
+      );
+      return false;
+    }
+
+    const requiredTypes = {
+      first: "Giải Nhất",
+      second: "Giải Nhì",
+      third: "Giải Ba",
+      honorable: "Giải Khuyến Khích",
+    };
+
+    const awardTypes = awards.map((award) => award.awardType);
+
+    // Check for duplicate award types - not allowed
+    const typeCounts = {};
+    awardTypes.forEach((type) => {
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+
+    const duplicateTypes = Object.entries(typeCounts)
+      .filter(([_, count]) => count > 1)
+      .map(([type, _]) => {
+        switch (type) {
+          case "first":
+            return "Giải Nhất";
+          case "second":
+            return "Giải Nhì";
+          case "third":
+            return "Giải Ba";
+          case "honorable":
+            return "Giải Khuyến Khích";
+          default:
+            return type;
+        }
+      });
+
+    if (duplicateTypes.length > 0) {
+      message.error(
+        `Không thể có nhiều giải thưởng cùng loại: ${duplicateTypes.join(", ")}`
+      );
+      return false;
+    }
+
+    // Check for missing required award types
+    const missingTypes = Object.entries(requiredTypes)
+      .filter(([type]) => !awardTypes.includes(type))
+      .map(([_, label]) => label);
+
+    if (missingTypes.length > 0) {
+      message.error(
+        `Vui lòng thêm các giải thưởng còn thiếu: ${missingTypes.join(", ")}`
+      );
+      return false;
+    }
+
+    // Validate prize value for each award
+    const invalidPrizes = awards.filter(
+      (award) => !award.prizeValue || award.prizeValue <= 0
+    );
+    if (invalidPrizes.length > 0) {
+      message.error("Giá trị giải thưởng phải lớn hơn 0");
+      return false;
+    }
+
+    // Check for award description
+    const missingDescriptions = awards.filter(
+      (award) => !award.description?.trim()
+    );
+    if (missingDescriptions.length > 0) {
+      message.error("Tất cả giải thưởng cần có mô tả");
+      return false;
+    }
+
+    return true;
+  };
+
   // Handle adding a new award
   const handleAddAward = () => {
     const currentAwards = form.getFieldValue("awards") || [];
@@ -245,23 +407,88 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     setEditingAwardIndex(currentAwards.length);
   };
 
-  // Handle removing an award
-  const handleRemoveAward = (index) => {
+  // Handle removing an award by award field name
+  const handleRemoveAward = (fieldName) => {
     const currentAwards = form.getFieldValue("awards") || [];
     form.setFieldsValue({
-      awards: currentAwards.filter((_, i) => i !== index),
+      awards: currentAwards.filter((_, i) => i !== fieldName),
     });
     setEditingAwardIndex(null);
   };
 
   // Handle editing an award
-  const handleEditAward = (index) => {
-    setEditingAwardIndex(index);
+  const handleEditAward = (fieldName) => {
+    setEditingAwardIndex(fieldName);
   };
 
   // Handle saving award changes
   const handleSaveAward = () => {
     setEditingAwardIndex(null);
+  };
+
+  // Handle award type change to update award name
+  const handleAwardTypeChange = (type, fieldName) => {
+    let awardName = "";
+    switch (type) {
+      case "first":
+        awardName = "Giải Nhất";
+        break;
+      case "second":
+        awardName = "Giải Nhì";
+        break;
+      case "third":
+        awardName = "Giải Ba";
+        break;
+      case "honorable":
+        awardName = "Giải Khuyến Khích";
+        break;
+      default:
+        awardName = "";
+    }
+
+    // Check if this award type already exists
+    const currentAwards = form.getFieldValue("awards") || [];
+    const otherAwards = currentAwards.filter((_, i) => i !== fieldName);
+
+    if (otherAwards.some((award) => award.awardType === type)) {
+      message.error(`Không thể có hai giải thưởng cùng loại: ${awardName}`);
+      return;
+    }
+
+    // Maintain the proper order of award types
+    const hasFirst =
+      otherAwards.some((a) => a.awardType === "first") || type === "first";
+    const hasSecond =
+      otherAwards.some((a) => a.awardType === "second") || type === "second";
+    const hasThird =
+      otherAwards.some((a) => a.awardType === "third") || type === "third";
+
+    // Validate the award type selection order
+    if (type === "second" && !hasFirst) {
+      message.error("Không thể chọn Giải Nhì khi chưa có Giải Nhất");
+      return;
+    }
+
+    if (type === "third" && (!hasFirst || !hasSecond)) {
+      message.error(
+        "Không thể chọn Giải Ba khi chưa có Giải Nhất hoặc Giải Nhì"
+      );
+      return;
+    }
+
+    if (type === "honorable" && (!hasFirst || !hasSecond || !hasThird)) {
+      message.error(
+        "Không thể chọn Giải Khuyến Khích khi chưa có đủ Giải Nhất, Nhì, và Ba"
+      );
+      return;
+    }
+
+    // Update the award name based on type
+    currentAwards[fieldName].name = awardName;
+    currentAwards[fieldName].awardType = type;
+    form.setFieldsValue({
+      awards: currentAwards,
+    });
   };
 
   // Handle criteria selection
@@ -533,10 +760,33 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     setTempSelectedCriteria([]);
   };
 
+  // Add a sort function for award types by priority
+  const getAwardTypeOrder = (type) => {
+    switch (type) {
+      case "first":
+        return 1;
+      case "second":
+        return 2;
+      case "third":
+        return 3;
+      case "honorable":
+        return 4;
+      default:
+        return 99; // Unknown types at the end
+    }
+  };
+
+  // Sort awards by their type
+  const sortAwardsByType = (awards) => {
+    return [...awards].sort(
+      (a, b) => getAwardTypeOrder(a.awardType) - getAwardTypeOrder(b.awardType)
+    );
+  };
+
   return (
     <Modal
       open={true}
-      title="Chỉnh sửa Danh Mục"
+      title="Chỉnh sửa Hạng Mục"
       onCancel={onClose}
       width={800}
       footer={[
@@ -891,176 +1141,213 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
               </div>
 
               <Form.List name="awards">
-                {(fields) => (
-                  <div>
-                    {fields.map((field, index) => (
-                      <Card
-                        key={field.key}
-                        title={
-                          form.getFieldValue(["awards", field.name, "name"]) ||
-                          `Giải thưởng ${index + 1}`
-                        }
-                        className="mb-3"
-                        size="small"
-                        extra={
-                          <Space>
-                            {editingAwardIndex === index ? (
-                              <Tooltip title="Lưu">
+                {(fields) => {
+                  // Sort fields by award type - this is just for display
+                  const sortedFields = fields
+                    .map((field) => ({
+                      field,
+                      award: form.getFieldValue(["awards", field.name]),
+                    }))
+                    .sort((a, b) => {
+                      const typeA = a.award?.awardType || "";
+                      const typeB = b.award?.awardType || "";
+                      return (
+                        getAwardTypeOrder(typeA) - getAwardTypeOrder(typeB)
+                      );
+                    });
+
+                  return (
+                    <div>
+                      {sortedFields.map(({ field }, index) => (
+                        <Card
+                          key={field.key}
+                          title={(() => {
+                            const awardType = form.getFieldValue([
+                              "awards",
+                              field.name,
+                              "awardType",
+                            ]);
+                            switch (awardType) {
+                              case "first":
+                                return "Giải Nhất";
+                              case "second":
+                                return "Giải Nhì";
+                              case "third":
+                                return "Giải Ba";
+                              case "honorable":
+                                return "Giải Khuyến Khích";
+                              default:
+                                return `Giải thưởng ${index + 1}`;
+                            }
+                          })()}
+                          className="mb-3"
+                          size="small"
+                          extra={
+                            <Space>
+                              {editingAwardIndex === field.name ? (
+                                <Tooltip title="Lưu">
+                                  <Button
+                                    type="text"
+                                    icon={
+                                      <CheckOutlined
+                                        style={{ color: "#52c41a" }}
+                                      />
+                                    }
+                                    onClick={handleSaveAward}
+                                  />
+                                </Tooltip>
+                              ) : (
+                                <Tooltip title="Chỉnh sửa">
+                                  <Button
+                                    type="text"
+                                    icon={
+                                      <EditOutlined
+                                        style={{ color: "#1890ff" }}
+                                      />
+                                    }
+                                    onClick={() => handleEditAward(field.name)}
+                                  />
+                                </Tooltip>
+                              )}
+                              <Tooltip title="Xóa">
                                 <Button
                                   type="text"
-                                  icon={
-                                    <CheckOutlined
-                                      style={{ color: "#52c41a" }}
-                                    />
-                                  }
-                                  onClick={handleSaveAward}
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => handleRemoveAward(field.name)}
                                 />
                               </Tooltip>
-                            ) : (
-                              <Tooltip title="Chỉnh sửa">
-                                <Button
-                                  type="text"
-                                  icon={
-                                    <EditOutlined
-                                      style={{ color: "#1890ff" }}
-                                    />
-                                  }
-                                  onClick={() => handleEditAward(index)}
-                                />
-                              </Tooltip>
-                            )}
-                            <Tooltip title="Xóa">
-                              <Button
-                                type="text"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => handleRemoveAward(index)}
-                              />
-                            </Tooltip>
-                          </Space>
-                        }
-                      >
-                        {editingAwardIndex === index ? (
-                          <Row gutter={16}>
-                            <Col span={12}>
+                            </Space>
+                          }
+                        >
+                          {editingAwardIndex === field.name ? (
+                            <Row gutter={16}>
+                              {/* Hide the name field from UI, but keep it in form data */}
                               <Form.Item
                                 name={[field.name, "name"]}
-                                label="Tên giải thưởng"
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Vui lòng nhập tên giải thưởng",
-                                  },
-                                ]}
+                                hidden={true}
                               >
-                                <Input placeholder="Nhập tên giải thưởng" />
+                                <Input />
                               </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                              <Form.Item
-                                name={[field.name, "awardType"]}
-                                label="Loại giải thưởng"
-                                rules={[
-                                  {
-                                    required: true,
-                                    message: "Vui lòng nhập loại giải thưởng",
-                                  },
-                                ]}
-                              >
-                                <Select placeholder="Chọn loại giải thưởng">
-                                  <Option value="first">Giải Nhất</Option>
-                                  <Option value="second">Giải Nhì</Option>
-                                  <Option value="third">Giải Ba</Option>
-                                  <Option value="honorable">
-                                    Giải Khuyến Khích
-                                  </Option>
-                                </Select>
-                              </Form.Item>
-                            </Col>
-                            <Col span={12}>
-                              <Form.Item
-                                name={[field.name, "prizeValue"]}
-                                label="Giá trị giải thưởng"
-                                rules={[
-                                  {
-                                    required: true,
-                                    message:
-                                      "Vui lòng nhập giá trị giải thưởng",
-                                  },
-                                ]}
-                              >
-                                <InputNumber
-                                  placeholder="Nhập giá trị (VND)"
-                                  formatter={(value) =>
-                                    `${value}`.replace(
-                                      /\B(?=(\d{3})+(?!\d))/g,
-                                      ","
-                                    )
+                              <Col span={12}>
+                                <Form.Item
+                                  name={[field.name, "awardType"]}
+                                  label="Loại giải thưởng"
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message: "Vui lòng nhập loại giải thưởng",
+                                    },
+                                  ]}
+                                >
+                                  <Select
+                                    placeholder="Chọn loại giải thưởng"
+                                    onChange={(value) =>
+                                      handleAwardTypeChange(value, field.name)
+                                    }
+                                  >
+                                    <Option value="first">Giải Nhất</Option>
+                                    <Option value="second">Giải Nhì</Option>
+                                    <Option value="third">Giải Ba</Option>
+                                    <Option value="honorable">
+                                      Giải Khuyến Khích
+                                    </Option>
+                                  </Select>
+                                </Form.Item>
+                              </Col>
+                              <Col span={12}>
+                                <Form.Item
+                                  name={[field.name, "prizeValue"]}
+                                  label="Giá trị giải thưởng"
+                                  rules={[
+                                    {
+                                      required: true,
+                                      message:
+                                        "Vui lòng nhập giá trị giải thưởng",
+                                    },
+                                  ]}
+                                >
+                                  <InputNumber
+                                    placeholder="Nhập giá trị (VND)"
+                                    formatter={(value) =>
+                                      `${value}`.replace(
+                                        /\B(?=(\d{3})+(?!\d))/g,
+                                        ","
+                                      )
+                                    }
+                                    parser={(value) =>
+                                      value.replace(/\$\s?|(,*)/g, "")
+                                    }
+                                    className="w-full"
+                                  />
+                                </Form.Item>
+                              </Col>
+                              <Col span={24}>
+                                <Form.Item
+                                  name={[field.name, "description"]}
+                                  label="Mô tả giải thưởng"
+                                >
+                                  <TextArea
+                                    rows={2}
+                                    placeholder="Nhập mô tả giải thưởng"
+                                  />
+                                </Form.Item>
+                              </Col>
+                            </Row>
+                          ) : (
+                            <Descriptions column={1} size="small">
+                              {/* Don't show name field in view mode */}
+                              <Descriptions.Item label="Loại giải thưởng">
+                                {(() => {
+                                  const awardType = form.getFieldValue([
+                                    "awards",
+                                    field.name,
+                                    "awardType",
+                                  ]);
+                                  switch (awardType) {
+                                    case "first":
+                                      return "Giải Nhất";
+                                    case "second":
+                                      return "Giải Nhì";
+                                    case "third":
+                                      return "Giải Ba";
+                                    case "honorable":
+                                      return "Giải Khuyến Khích";
+                                    default:
+                                      return awardType;
                                   }
-                                  parser={(value) =>
-                                    value.replace(/\$\s?|(,*)/g, "")
-                                  }
-                                  className="w-full"
-                                />
-                              </Form.Item>
-                            </Col>
-                            <Col span={24}>
-                              <Form.Item
-                                name={[field.name, "description"]}
-                                label="Mô tả giải thưởng"
-                              >
-                                <TextArea
-                                  rows={2}
-                                  placeholder="Nhập mô tả giải thưởng"
-                                />
-                              </Form.Item>
-                            </Col>
-                          </Row>
-                        ) : (
-                          <Descriptions column={1} size="small">
-                            <Descriptions.Item label="Tên giải thưởng">
-                              {form.getFieldValue([
-                                "awards",
-                                field.name,
-                                "name",
-                              ])}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Loại giải thưởng">
-                              {form.getFieldValue([
-                                "awards",
-                                field.name,
-                                "awardType",
-                              ])}
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Giá trị">
-                              {form
-                                .getFieldValue([
+                                })()}
+                              </Descriptions.Item>
+                              <Descriptions.Item label="Giá trị">
+                                {form
+                                  .getFieldValue([
+                                    "awards",
+                                    field.name,
+                                    "prizeValue",
+                                  ])
+                                  .toLocaleString()}
+                                VND
+                              </Descriptions.Item>
+                              <Descriptions.Item label="Mô tả">
+                                {form.getFieldValue([
                                   "awards",
                                   field.name,
-                                  "prizeValue",
-                                ])
-                                .toLocaleString()}
-                              VND
-                            </Descriptions.Item>
-                            <Descriptions.Item label="Mô tả">
-                              {form.getFieldValue([
-                                "awards",
-                                field.name,
-                                "description",
-                              ])}
-                            </Descriptions.Item>
-                          </Descriptions>
-                        )}
-                      </Card>
-                    ))}
+                                  "description",
+                                ])}
+                              </Descriptions.Item>
+                            </Descriptions>
+                          )}
+                        </Card>
+                      ))}
 
-                    {fields.length === 0 && (
-                      <div className="text-center text-gray-500 py-4">
-                        Chưa có giải thưởng nào. Vui lòng thêm giải thưởng.
-                      </div>
-                    )}
-                  </div>
-                )}
+                      {fields.length === 0 && (
+                        <div className="text-center text-gray-500 py-4">
+                          Chưa có giải thưởng nào. Vui lòng thêm giải thưởng.
+                        </div>
+                      )}
+                    </div>
+                  );
+                }}
               </Form.List>
             </Tabs.TabPane>
             <Tabs.TabPane tab="Tiêu chí đánh giá" key="4">
