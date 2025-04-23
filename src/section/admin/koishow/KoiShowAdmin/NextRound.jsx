@@ -308,7 +308,6 @@ function NextRound({
     // Chỉ gọi fetchRound nếu không có roundStatus từ props
     try {
       const result = await fetchRound(selectedCategory, selectedRoundType);
-
       const roundData = Array.isArray(result)
         ? result.find((r) => r.id === selectedSubRound)
         : result;
@@ -318,7 +317,6 @@ function NextRound({
       const status = roundData?.status || null;
 
       if (status === "completed") {
-        console.log("⭐ SETTING ROUND AS COMPLETED ⭐");
         setCurrentRoundStatus("completed");
         setFishAlreadyMoved(true);
         setProcessedRounds((prev) => {
