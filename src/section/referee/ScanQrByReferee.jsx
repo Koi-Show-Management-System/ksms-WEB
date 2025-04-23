@@ -74,6 +74,9 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
     Final: "Vòng Chung Kết",
   };
 
+  // Thứ tự hiển thị cho loại vòng
+  const roundTypeOrder = ["Preliminary", "Evaluation", "Final"];
+
   const {
     categories,
     fetchCategories,
@@ -525,12 +528,13 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                     {
                       text: (
                         <>
-                          Số lượng cá qua vòng sơ khảo phải{" "}
+                          Số lượng cá vượt qua vòng sơ khảo phải{" "}
                           <span className="font-semibold text-red-700">
-                            nhiều hơn
+                            nhiều hơn ít nhất 10 con
                           </span>{" "}
-                          số cá qua vòng ở vòng đánh giá chính là{" "}
-                          <strong>{numberRegisToAdvance} cá</strong>
+                          so với số lượng cá được chọn ở vòng đánh giá chính là{" "}
+                          <strong>{numberRegisToAdvance} cá</strong>, nhằm đảm
+                          bảo tính sàng lọc và chất lượng cho vòng sau
                         </>
                       ),
                       icon: <PercentageOutlined className="text-red-700" />,
@@ -540,7 +544,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                         <>
                           Chỉ đánh{" "}
                           <span className="font-semibold text-red-700">
-                            Fail
+                            Không Đạt
                           </span>{" "}
                           những cá rõ ràng KHÔNG đạt tiêu chuẩn cơ bản
                         </>
@@ -552,7 +556,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                         <>
                           Với những cá ở mức giới hạn, hãy{" "}
                           <span className="font-semibold text-green-800">
-                            ưu tiên cho Pass
+                            ưu tiên cho Đạt
                           </span>
                         </>
                       ),
@@ -655,11 +659,17 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 disabled={!categoryId}
                 suffixIcon={<TrophyOutlined />}
               >
-                {refereeRoundTypes?.map((roundType) => (
-                  <Option key={roundType} value={roundType}>
-                    {roundTypeLabels[roundType] || roundType}
-                  </Option>
-                ))}
+                {refereeRoundTypes
+                  ?.sort((a, b) => {
+                    const orderA = roundTypeOrder.indexOf(a);
+                    const orderB = roundTypeOrder.indexOf(b);
+                    return orderA - orderB;
+                  })
+                  .map((roundType) => (
+                    <Option key={roundType} value={roundType}>
+                      {roundTypeLabels[roundType] || roundType}
+                    </Option>
+                  ))}
               </Select>
             </div>
           </Col>

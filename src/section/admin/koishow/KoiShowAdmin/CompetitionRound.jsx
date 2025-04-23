@@ -29,6 +29,7 @@ import {
   message,
   Modal,
   Steps,
+  Tooltip,
 } from "antd";
 import {
   EyeOutlined,
@@ -40,6 +41,8 @@ import {
   ReloadOutlined,
   CheckCircleOutlined,
   AimOutlined,
+  RightCircleOutlined,
+  ArrowRightOutlined,
 } from "@ant-design/icons";
 import useCategory from "../../../../hooks/useCategory";
 import useRound from "../../../../hooks/useRound";
@@ -79,7 +82,15 @@ function CompetitionRound({ showId }) {
   // Round state
   const [selectedRoundType, setSelectedRoundType] = useState(null);
   const [selectedSubRound, setSelectedSubRound] = useState(null);
-  const { round, fetchRound, isLoading: roundLoading } = useRound();
+  const {
+    round,
+    fetchRound,
+    fetchNextRound,
+    isLoading: roundLoading,
+  } = useRound();
+
+  // Add state for next round info
+  const [nextRoundInfo, setNextRoundInfo] = useState(null);
 
   // Current step state for the Steps component
   const [currentStep, setCurrentStep] = useState(0);
@@ -360,6 +371,31 @@ function CompetitionRound({ showId }) {
               error
             );
           }
+
+          // Fetch next round info
+          try {
+            fetchNextRound(value)
+              .then((data) => {
+                if (isMounted.current && data) {
+                  console.log("Next round info received:", data);
+                  // Save the entire response data directly
+                  setNextRoundInfo(data);
+                }
+              })
+              .catch((err) => {
+                console.error(
+                  "[handleSubRoundChange] Error fetching next round info:",
+                  err
+                );
+                setNextRoundInfo(null);
+              });
+          } catch (error) {
+            console.error(
+              "[handleSubRoundChange] Error fetching next round info:",
+              error
+            );
+            setNextRoundInfo(null);
+          }
         }
       }
     },
@@ -373,6 +409,7 @@ function CompetitionRound({ showId }) {
       areResultsPublished, // Include this in dependencies to properly compare current value
       isMounted,
       round,
+      fetchNextRound,
     ]
   );
 
@@ -1588,8 +1625,46 @@ function CompetitionRound({ showId }) {
       >
         <div className="flex justify-between items-center mb-3">
           <Typography.Text strong>
-            {displayData.length > 0 &&
-              `Tổng số: ${registrationTotalItems || displayData.length} cá thi đấu`}
+            {displayData.length > 0 && (
+              <>
+                Tổng số: {registrationTotalItems || displayData.length} cá thi
+                đấu
+                {nextRoundInfo &&
+                  nextRoundInfo.data &&
+                  nextRoundInfo.data.nextRoundNumberRegistrationToAdvance &&
+                  selectedRoundType !== "Final" && (
+                    <div className="inline-block ml-3">
+                      <Tooltip
+                        title={`${nextRoundInfo.data.nextRoundNumberRegistrationToAdvance} cá được chọn vào vòng ${nextRoundInfo.data.nextRoundName || "tiếp theo"}`}
+                      >
+                        <Tag
+                          color={
+                            selectedRoundType === "Preliminary"
+                              ? "blue"
+                              : "geekblue"
+                          }
+                          icon={
+                            selectedRoundType === "Preliminary" ? (
+                              <ArrowRightOutlined />
+                            ) : (
+                              <RightCircleOutlined />
+                            )
+                          }
+                          className="px-2 py-1 text-sm rounded-full flex items-center"
+                        >
+                          <span className="font-medium">
+                            Số cá qua vòng tiếp theo không được ít hơn{" "}
+                            {
+                              nextRoundInfo.data
+                                .nextRoundNumberRegistrationToAdvance
+                            }
+                          </span>
+                        </Tag>
+                      </Tooltip>
+                    </div>
+                  )}
+              </>
+            )}
           </Typography.Text>
           <Button
             type="default"
@@ -1598,6 +1673,18 @@ function CompetitionRound({ showId }) {
             onClick={() => {
               if (selectedSubRound) {
                 fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+                // Also refresh next round info when refreshing
+                fetchNextRound(selectedSubRound)
+                  .then((data) => {
+                    if (isMounted.current && data) {
+                      console.log("Refreshed next round info:", data);
+                      // Save the entire response data directly
+                      setNextRoundInfo(data);
+                    }
+                  })
+                  .catch((err) => {
+                    console.error("Error refreshing next round info:", err);
+                  });
               }
             }}
             disabled={!selectedSubRound || registrationLoading}
