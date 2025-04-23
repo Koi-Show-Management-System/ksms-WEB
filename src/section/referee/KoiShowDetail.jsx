@@ -30,6 +30,7 @@ function KoiShowDetail() {
   const refereeId = Cookies.get("__id");
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTabKey, setActiveTabKey] = useState("category");
 
   const statusMapping = {
     RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
@@ -42,6 +43,27 @@ function KoiShowDetail() {
     Completed: { label: "Hoàn Thành ", color: "gray" },
     Exhibition: { label: "Triễn Lãm ", color: "teal" },
     Finished: { label: "Kết Thúc", color: "brown" },
+  };
+
+  const renderTabContent = (key) => {
+    if (key !== activeTabKey) return null;
+
+    if (!koiShowDetail?.data) return null;
+
+    const showRule = koiShowDetail?.data?.showRules;
+
+    switch (key) {
+      case "category":
+        return <Category showId={id} />;
+      case "scanQrByReferee":
+        return <ScanQrByReferee refereeAccountId={refereeId} />;
+      case "competitionRound":
+        return <CompetitionRound />;
+      case "rules":
+        return <Rules showId={id} showRule={showRule} />;
+      default:
+        return null;
+    }
   };
 
   const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
@@ -68,22 +90,22 @@ function KoiShowDetail() {
     {
       key: "category",
       label: "Danh Mục",
-      children: <Category showId={id} />,
+      children: renderTabContent("category"),
     },
     {
       key: "scanQrByReferee",
       label: "Quét QR Chấm Điểm",
-      children: <ScanQrByReferee refereeAccountId={refereeId} />,
+      children: renderTabContent("scanQrByReferee"),
     },
     {
       key: "competitionRound",
       label: "Lịch Sử Chấm Điểm",
-      children: <CompetitionRound />,
+      children: renderTabContent("competitionRound"),
     },
     {
       key: "rules",
       label: "Quy Tắc",
-      children: <Rules showId={id} showRule={showRule} />,
+      children: renderTabContent("rules"),
     },
   ];
 
@@ -356,6 +378,8 @@ function KoiShowDetail() {
       <div className="mt-2 md:mt-4 p-2 md:p-4">
         <Tabs
           defaultActiveKey="category"
+          activeKey={activeTabKey}
+          onChange={setActiveTabKey}
           items={items}
           size="small"
           tabBarGutter={12}

@@ -27,71 +27,106 @@ function KoiShowDetail() {
 
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activeTabKey, setActiveTabKey] = useState("category");
+
+  const renderTabContent = (key) => {
+    if (key !== activeTabKey) return null;
+
+    if (!koiShowDetail?.data) return null;
+
+    const showRule = koiShowDetail?.data?.showRules;
+
+    switch (key) {
+      case "category":
+        return (
+          <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />
+        );
+      case "registration":
+        return <Registration showId={id} />;
+      case "ticket":
+        return <Ticket showId={id} />;
+      case "tank":
+        return <Tank showId={id} />;
+      case "scanQr":
+        return <ScanQrWrapper />;
+      case "competitionRound":
+        return <CompetitionRound showId={id} />;
+      case "roundResult":
+        return <RoundResult showId={id} />;
+      case "votes":
+        return <Votes showId={id} />;
+      case "checkOutKoi":
+        return <CheckOutKoi showId={id} />;
+      case "rules":
+        return <Rules showId={id} showRule={showRule} />;
+      case "liveStream":
+        return <LiveStream showId={id} />;
+      default:
+        return null;
+    }
+  };
 
   const items = useMemo(() => {
     if (!koiShowDetail?.data) return [];
 
-    const showRule = koiShowDetail?.data?.showRules;
     return [
       {
         key: "category",
         label: "Danh Mục",
-        children: (
-          <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />
-        ),
+        children: renderTabContent("category"),
       },
       {
         key: "registration",
         label: "Đơn Đăng Ký",
-        children: <Registration showId={id} />,
+        children: renderTabContent("registration"),
       },
       {
         key: "ticket",
         label: "Quản lý vé",
-        children: <Ticket showId={id} />,
+        children: renderTabContent("ticket"),
       },
       {
         key: "tank",
         label: "Quản Lý bể",
-        children: <Tank showId={id} />,
+        children: renderTabContent("tank"),
       },
       {
         key: "scanQr",
         label: "Quét mã",
-        children: <ScanQrWrapper />,
+        children: renderTabContent("scanQr"),
       },
       {
         key: "competitionRound",
         label: "Vòng thi",
-        children: <CompetitionRound showId={id} />,
+        children: renderTabContent("competitionRound"),
       },
       {
         key: "roundResult",
         label: "Kết quả cuối cùng",
-        children: <RoundResult showId={id} />,
+        children: renderTabContent("roundResult"),
       },
       {
         key: "votes",
         label: "Bình chọn",
-        children: <Votes showId={id} />,
+        children: renderTabContent("votes"),
       },
       {
         key: "checkOutKoi",
         label: "Check out",
-        children: <CheckOutKoi showId={id} />,
+        children: renderTabContent("checkOutKoi"),
       },
       {
         key: "rules",
         label: "Quy tắc",
-        children: <Rules showId={id} showRule={showRule} />,
+        children: renderTabContent("rules"),
       },
       {
         key: "liveStream",
         label: "LiveStream",
-        children: <LiveStream showId={id} />,
+        children: renderTabContent("liveStream"),
       },
     ];
-  }, [id, koiShowDetail?.data]);
+  }, [id, koiShowDetail?.data, activeTabKey]);
 
   useEffect(() => {
     fetchKoiShowDetail(id);
@@ -395,6 +430,8 @@ function KoiShowDetail() {
       <div className="mt-2 md:mt-4 p-2 md:p-4">
         <Tabs
           defaultActiveKey="category"
+          activeKey={activeTabKey}
+          onChange={setActiveTabKey}
           items={items}
           size="small"
           tabBarGutter={12}

@@ -259,12 +259,10 @@ const useAccountTeam = create((set, get) => ({
 
       if (isFormData) {
         // Log nội dung FormData
-        console.log("FormData content:");
         for (let pair of accountData.entries()) {
           console.log(pair[0], pair[1]);
         }
       } else {
-        console.log("Dữ liệu gửi đi:", accountData);
 
         // Nếu dữ liệu không phải FormData, chuyển đổi thành FormData
         const formData = new FormData();
@@ -285,7 +283,6 @@ const useAccountTeam = create((set, get) => ({
         }
       }
 
-      console.log("Gửi request đến API với accountId:", accountId);
 
       const res = await updateAccount(accountId, accountData);
 

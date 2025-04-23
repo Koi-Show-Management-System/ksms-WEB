@@ -84,13 +84,22 @@ function ScanTicketQr() {
 
         if (result && result.success) {
           setTicketInfo(result.data.data);
-        } 
+        } else if (result && !result.success) {
+          // Handle API error responses where the request succeeded but returned an error
+          setErrorTicket(
+            result.message || result.error || "Đã xảy ra lỗi khi quét mã QR"
+          );
+        }
       } catch (error) {
-        // Handle unexpected errors
-        const errorMessage =
-          error?.response?.data?.Error || "Đã xảy ra lỗi khi quét mã QR";
-        console.error("Error fetching ticket data:", errorMessage);
-        setErrorTicket(errorMessage);
+    
+
+        // Simplify error handling to match ScanQr.jsx pattern
+        setErrorTicket(
+          error?.response?.data?.Error ||
+            error?.response?.data?.message ||
+            error?.message ||
+            "Đã xảy ra lỗi khi quét mã QR"
+        );
         setScannerEnabled(true); // Allow scanning again
       }
     }
@@ -105,6 +114,7 @@ function ScanTicketQr() {
     setScannerEnabled(true);
     setShowScanner(true);
     setTicketInfo(null);
+    setErrorTicket(null);
     resetError();
   };
 
@@ -300,7 +310,7 @@ function ScanTicketQr() {
         </div>
       )}
 
-      {error && (
+      {errorTicket && (
         <Alert
           message={errorTicket}
           description="Vui lòng quét mã QR khác"

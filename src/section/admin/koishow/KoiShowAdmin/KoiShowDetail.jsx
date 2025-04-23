@@ -83,6 +83,7 @@ function KoiShowDetail() {
   const displaySponsors = showAll ? sponsors : sponsors.slice(0, 2);
   const extraCount = sponsors.length - 2;
   const showRule = koiShowDetail?.data?.showRules;
+  const [activeTabKey, setActiveTabKey] = useState("category");
 
   const statusMapping = {
     RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
@@ -298,58 +299,88 @@ function KoiShowDetail() {
       <p className="text-red-500 text-center">Không có thông tin triển lãm.</p>
     );
   }
+
+  const renderTabContent = (key) => {
+    if (key !== activeTabKey) return null;
+
+    switch (key) {
+      case "category":
+        return <Category showId={id} statusShow={showStatus} />;
+      case "koiList":
+        return (
+          <Registration showId={id} statusShow={koiShowDetail.data.status} />
+        );
+      case "ticket":
+        return <Ticket showId={id} statusShow={koiShowDetail.data.status} />;
+      case "manageShow":
+        return <ManageShow showId={id} />;
+      case "tank":
+        return <Tank showId={id} />;
+      case "competitionRound":
+        return <CompetitionRound showId={id} />;
+      case "roundResult":
+        return <RoundResult showId={id} />;
+      case "votes":
+        return <Votes showId={id} />;
+      case "rules":
+        return <Rules showId={id} showRule={showRule} />;
+      case "sponsor":
+        return <Sponsor showId={id} />;
+      default:
+        return null;
+    }
+  };
+
   const items = [
     {
       key: "category",
       label: "Hạng Mục",
-      children: <Category showId={id} statusShow={showStatus} />,
+      children: renderTabContent("category"),
     },
     {
       key: "koiList",
       label: "Đơn Đăng Ký",
-      children: (
-        <Registration showId={id} statusShow={koiShowDetail.data.status} />
-      ),
+      children: renderTabContent("koiList"),
     },
     {
       key: "ticket",
       label: "Quản lý vé",
-      children: <Ticket showId={id} statusShow={koiShowDetail.data.status} />,
+      children: renderTabContent("ticket"),
     },
     {
       key: "manageShow",
       label: "Quản Lý Triển Lãm",
-      children: <ManageShow showId={id} />,
+      children: renderTabContent("manageShow"),
     },
     {
       key: "tank",
       label: "Quản Lý Bể",
-      children: <Tank showId={id} />,
+      children: renderTabContent("tank"),
     },
     {
       key: "competitionRound",
       label: "Vòng Thi",
-      children: <CompetitionRound showId={id} />,
+      children: renderTabContent("competitionRound"),
     },
     {
       key: "roundResult",
       label: "Kết Quả Cuối Cùng",
-      children: <RoundResult showId={id} />,
+      children: renderTabContent("roundResult"),
     },
     {
       key: "votes",
       label: "Bình Chọn",
-      children: <Votes showId={id} />,
+      children: renderTabContent("votes"),
     },
     {
       key: "rules",
       label: "Quy Tắc",
-      children: <Rules showId={id} showRule={showRule} />,
+      children: renderTabContent("rules"),
     },
     {
       key: "sponsor",
       label: "Tài Trợ",
-      children: <Sponsor showId={id} />,
+      children: renderTabContent("sponsor"),
     },
   ];
 
@@ -752,6 +783,8 @@ function KoiShowDetail() {
       <div className="mt-2 md:mt-4 p-2 md:p-4 ">
         <Tabs
           defaultActiveKey="category"
+          activeKey={activeTabKey}
+          onChange={setActiveTabKey}
           items={items}
           size="small"
           tabBarGutter={12}
