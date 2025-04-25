@@ -53,6 +53,9 @@ function CreateShow() {
       if (!formData.name?.trim()) {
         errorDetails.push("tên chương trình");
         stepOneHasError = true;
+      } else if (formData.name.length > 100) {
+        errorDetails.push("tên chương trình không được vượt quá 100 ký tự");
+        stepOneHasError = true;
       }
       if (!formData.description?.trim()) {
         errorDetails.push("mô tả chương trình");
@@ -83,6 +86,14 @@ function CreateShow() {
           errorDetails.push("số lượng tối thiểu phải nhỏ hơn số lượng tối đa");
           stepOneHasError = true;
         }
+
+        // Check for maximum participant values
+        if (min > 10000 || max > 10000) {
+          errorDetails.push(
+            "số lượng người tham gia không được vượt quá 10.000"
+          );
+          stepOneHasError = true;
+        }
       }
 
       // Kiểm tra nhà tài trợ
@@ -90,12 +101,25 @@ function CreateShow() {
         errorDetails.push("cần có ít nhất một nhà tài trợ");
         stepOneHasError = true;
       } else {
+        // Check for duplicate sponsor names
+        const sponsorNames = formData.createSponsorRequests
+          .map((sponsor) => sponsor.name?.trim())
+          .filter(Boolean);
+        const hasDuplicateNames =
+          sponsorNames.length !== new Set(sponsorNames).size;
+
+        if (hasDuplicateNames) {
+          errorDetails.push("tên các nhà tài trợ không được trùng nhau");
+          stepOneHasError = true;
+        }
+
         const invalidSponsors = formData.createSponsorRequests.filter(
           (sponsor) =>
             !sponsor.name?.trim() ||
             !sponsor.logoUrl ||
             !sponsor.investMoney ||
-            sponsor.investMoney <= 0
+            sponsor.investMoney <= 0 ||
+            sponsor.investMoney > 100000000000 // 100 billion VND
         );
 
         if (invalidSponsors.length > 0) {
@@ -116,8 +140,10 @@ function CreateShow() {
             !ticket.name?.trim() ||
             !ticket.price ||
             ticket.price <= 0 ||
+            ticket.price > 10000000 || // 10 million VND
             !ticket.availableQuantity ||
-            ticket.availableQuantity <= 0
+            ticket.availableQuantity <= 0 ||
+            ticket.availableQuantity > 1000000 // 1 million tickets
         );
 
         if (invalidTickets.length > 0) {
@@ -169,6 +195,23 @@ function CreateShow() {
     if (currentStep === 2) {
       // Kiểm tra hạng mục
       if (formData.createCategorieShowRequests.length > 0) {
+        // Check for duplicate category names
+        const categoryNames = formData.createCategorieShowRequests
+          .map((cat) => cat.name?.trim())
+          .filter(Boolean);
+        const hasDuplicateNames =
+          categoryNames.length !== new Set(categoryNames).size;
+
+        if (hasDuplicateNames) {
+          notification.error({
+            message: "Trùng tên hạng mục",
+            description: "Các hạng mục không được có tên trùng nhau",
+            placement: "topRight",
+            duration: 5,
+          });
+          hasError = true;
+        }
+
         formData.createCategorieShowRequests.forEach(
           (category, categoryIndex) => {
             let categoryHasError = false;
@@ -178,27 +221,47 @@ function CreateShow() {
             if (!category.name?.trim()) {
               errorDetails.push("tên hạng mục");
               categoryHasError = true;
+            } else if (category.name.length > 100) {
+              errorDetails.push("tên hạng mục không được vượt quá 100 ký tự");
+              categoryHasError = true;
             }
+
             if (!category.sizeMin) {
               errorDetails.push("kích thước tối thiểu");
               categoryHasError = true;
+            } else if (Number(category.sizeMin) > 100) {
+              errorDetails.push(
+                "kích thước tối thiểu không được vượt quá 100cm"
+              );
+              categoryHasError = true;
             }
+
             if (!category.sizeMax) {
               errorDetails.push("kích thước tối đa");
               categoryHasError = true;
+            } else if (Number(category.sizeMax) > 100) {
+              errorDetails.push("kích thước tối đa không được vượt quá 100cm");
+              categoryHasError = true;
             }
+
             if (!category.description?.trim()) {
               errorDetails.push("mô tả");
               categoryHasError = true;
             }
+
             if (!category.registrationFee) {
               errorDetails.push("phí đăng ký");
               categoryHasError = true;
+            } else if (Number(category.registrationFee) > 10000000) {
+              errorDetails.push("phí đăng ký không được vượt quá 10 triệu VND");
+              categoryHasError = true;
             }
+
             if (category.hasTank === undefined) {
               errorDetails.push("thông tin bể trưng bày");
               categoryHasError = true;
             }
+
             if (
               !category.createCompetionCategoryVarieties ||
               category.createCompetionCategoryVarieties.length === 0
@@ -222,6 +285,20 @@ function CreateShow() {
               if (Number(category.minEntries) > Number(category.maxEntries)) {
                 errorDetails.push(
                   "số lượng tham gia tối thiểu phải nhỏ hơn số lượng tối đa"
+                );
+                categoryHasError = true;
+              }
+
+              if (Number(category.minEntries) > 1000) {
+                errorDetails.push(
+                  "số lượng tham gia tối thiểu không được vượt quá 1.000"
+                );
+                categoryHasError = true;
+              }
+
+              if (Number(category.maxEntries) > 1000) {
+                errorDetails.push(
+                  "số lượng tham gia tối đa không được vượt quá 1.000"
                 );
                 categoryHasError = true;
               }
@@ -311,13 +388,28 @@ function CreateShow() {
                 (award) =>
                   !award.name?.trim() ||
                   !award.prizeValue ||
+                  award.prizeValue <= 0 ||
+                  award.prizeValue > 100000000000 || // 100 billion VND
                   !award.description?.trim() ||
                   !award.awardType
               );
 
               if (invalidAwards.length > 0) {
                 errorDetails.push(
-                  `${invalidAwards.length} giải thưởng thiếu thông tin`
+                  `${invalidAwards.length} giải thưởng thiếu thông tin hoặc có thông tin không hợp lệ`
+                );
+                categoryHasError = true;
+              }
+
+              // Check if any award has prize value exceeding 100 billion
+              const oversizedAwards =
+                category.createAwardCateShowRequests.filter(
+                  (award) => award.prizeValue > 100000000000
+                );
+
+              if (oversizedAwards.length > 0) {
+                errorDetails.push(
+                  `${oversizedAwards.length} giải thưởng có giá trị vượt quá 100 tỷ VND`
                 );
                 categoryHasError = true;
               }

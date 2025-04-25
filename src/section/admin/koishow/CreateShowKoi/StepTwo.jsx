@@ -74,10 +74,19 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   const refereeSelectRefs = useRef([]);
   // Thêm state để quản lý lỗi cho giá trị giải thưởng
   const [awardErrors, setAwardErrors] = useState({});
+  // Thêm state để quản lý lỗi cho tên hạng mục
+  const [categoryNameErrors, setCategoryNameErrors] = useState({});
 
   const referee = accountManage.referees || [];
   // const adminId =
   //   accountManage.admin.length > 0 ? accountManage.admin[0].id : null;
+
+  // Constants for validation limits
+  const MAX_NAME_LENGTH = 100;
+  const MAX_SIZE = 100;
+  const MAX_REGISTRATION_FEE = 10000000; // 10 million VND
+  const MAX_ENTRIES = 1000;
+  const MAX_PRIZE_VALUE = 100000000000; // 100 billion VND
 
   useEffect(() => {
     fetchCriteria(1, 100);
@@ -158,9 +167,35 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   };
 
   const handleCategoryChange = (index, field, value) => {
+    // Validate fields with max values
     if (field === "registrationFee") {
       if (value < 0) {
         message.error(`${field} không được nhỏ hơn 0`);
+        return;
+      }
+
+      if (value > MAX_REGISTRATION_FEE) {
+        message.error(
+          `Phí đăng ký không được vượt quá ${MAX_REGISTRATION_FEE.toLocaleString("vi-VN")} VND (10 triệu)`
+        );
+        return;
+      }
+    }
+
+    // Validate fields with max size
+    if (field === "sizeMin" || field === "sizeMax") {
+      if (value > MAX_SIZE) {
+        message.error(`Kích thước không được vượt quá ${MAX_SIZE} cm`);
+        return;
+      }
+    }
+
+    // Validate fields with max entries
+    if (field === "minEntries" || field === "maxEntries") {
+      if (value > MAX_ENTRIES) {
+        message.error(
+          `Số lượng tham gia không được vượt quá ${MAX_ENTRIES.toLocaleString("vi-VN")}`
+        );
         return;
       }
     }
@@ -326,6 +361,14 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   const handleAwardChange = (categoryIndex, awardIndex, field, value) => {
     if (field === "prizeValue" && value < 0) {
       message.error("Giá trị giải thưởng không được nhỏ hơn 0");
+      return;
+    }
+
+    // Validate max prize value
+    if (field === "prizeValue" && value > MAX_PRIZE_VALUE) {
+      message.error(
+        `Giá trị giải thưởng không được vượt quá ${MAX_PRIZE_VALUE.toLocaleString("vi-VN")} VND (100 tỷ)`
+      );
       return;
     }
 
@@ -766,12 +809,38 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   };
 
   const handleCategoryNameChange = (index, value) => {
+    // Check for max length
+    if (value.length > MAX_NAME_LENGTH) {
+      const newCategoryNameErrors = { ...categoryNameErrors };
+      newCategoryNameErrors[index] =
+        `Tên hạng mục không được vượt quá ${MAX_NAME_LENGTH} ký tự`;
+      setCategoryNameErrors(newCategoryNameErrors);
+      return;
+    }
+
+    // Check for duplicate names
+    const isDuplicate = categories.some(
+      (cat, i) =>
+        i !== index &&
+        cat.name?.trim() === value?.trim() &&
+        value?.trim() !== ""
+    );
+
+    const newCategoryNameErrors = { ...categoryNameErrors };
+    if (isDuplicate) {
+      newCategoryNameErrors[index] = "Tên hạng mục không được trùng lặp";
+    } else {
+      newCategoryNameErrors[index] = "";
+    }
+    setCategoryNameErrors(newCategoryNameErrors);
+
     setCategories((prevCategories) =>
       prevCategories.map((category, i) =>
         i === index ? { ...category, name: value } : category
       )
     );
   };
+
   const handleRemoveCriteria = (categoryIndex, criteriaId) => {
     setCategories((prev) => {
       const updatedCategories = [...prev];
@@ -944,10 +1013,16 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                       onChange={(e) =>
                         handleCategoryNameChange(index, e.target.value)
                       }
+                      maxLength={MAX_NAME_LENGTH}
                     />
+                    {categoryNameErrors[index] && (
+                      <p className="text-red-500 text-xs mt-1">
+                        {categoryNameErrors[index]}
+                      </p>
+                    )}
                     {showErrors && !category.name && (
                       <p className="text-red-500 text-xs mt-1">
-                        Địa điểm tổ chức là bắt buộc.{" "}
+                        Tên hạng mục là bắt buộc.{" "}
                       </p>
                     )}
                     <div className="flex-1 mt-4 ">
@@ -1059,6 +1134,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                           }
                         }}
                         min={0}
+                        max={MAX_SIZE}
                       />
                       {sizeErrors[index]?.sizeMin && (
                         <p className="text-red-500 text-xs mt-1">
@@ -1092,6 +1168,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                           }
                         }}
                         min={0}
+                        max={MAX_SIZE}
                       />
                       {sizeErrors[index]?.sizeMax && (
                         <p className="text-red-500 text-xs mt-1">
@@ -1159,6 +1236,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
 
                       <InputNumber
                         min={0}
+                        max={MAX_REGISTRATION_FEE}
                         style={{ width: "100%" }}
                         formatter={(value) =>
                           `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -1184,6 +1262,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                       <Input
                         type="number"
                         min={1}
+                        max={MAX_ENTRIES}
                         placeholder="Nhập số lượng tối thiểu"
                         value={category.minEntries || ""}
                         onChange={(e) => {
@@ -1217,6 +1296,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                       <Input
                         type="number"
                         min={1}
+                        max={MAX_ENTRIES}
                         placeholder="Nhập số lượng tối đa"
                         value={category.maxEntries || ""}
                         onChange={(e) => {
@@ -1846,6 +1926,7 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                 </label>
                                 <InputNumber
                                   min={0}
+                                  max={MAX_PRIZE_VALUE}
                                   style={{ width: "100%" }}
                                   formatter={(value) =>
                                     `${value}`.replace(

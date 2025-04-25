@@ -172,6 +172,27 @@ function CreateCategory({ showId, onCategoryCreated }) {
   };
 
   const handleCategoryChange = (field, value) => {
+    // Add validation for different fields
+    if (field === "name" && value && value.length > 100) {
+      message.error("Tên hạng mục không được vượt quá 100 ký tự!");
+      return;
+    }
+
+    if ((field === "sizeMin" || field === "sizeMax") && value > 100) {
+      message.error("Kích thước không được vượt quá 100cm!");
+      return;
+    }
+
+    if (field === "registrationFee" && value > 10000000) {
+      message.error("Phí đăng ký không được vượt quá 10 triệu VND!");
+      return;
+    }
+
+    if ((field === "minEntries" || field === "maxEntries") && value > 1000) {
+      message.error("Số lượng tham gia không được vượt quá 1000!");
+      return;
+    }
+
     setCategory((prev) => ({
       ...prev,
       [field]: value,
@@ -244,6 +265,12 @@ function CreateCategory({ showId, onCategoryCreated }) {
     // Kiểm tra giá trị giải thưởng
     if (field === "prizeValue" && value < 0) {
       message.error("Giá trị giải thưởng không được nhỏ hơn 0");
+      return;
+    }
+
+    // Add validation for prize value
+    if (field === "prizeValue" && value > 100000000000) {
+      message.error("Giá trị giải thưởng không được vượt quá 100 tỷ VND!");
       return;
     }
 
@@ -900,10 +927,16 @@ function CreateCategory({ showId, onCategoryCreated }) {
               placeholder="Nhập tên hạng mục"
               value={category.name}
               onChange={(e) => handleCategoryChange("name", e.target.value)}
+              maxLength={100}
             />
             {showErrors && !category.name && (
               <p className="text-red-500 text-xs mt-1">
                 Tên hạng mục là bắt buộc.
+              </p>
+            )}
+            {category.name && (
+              <p className="text-gray-500 text-xs mt-1">
+                {category.name.length}/100 ký tự
               </p>
             )}
           </div>
@@ -972,11 +1005,16 @@ function CreateCategory({ showId, onCategoryCreated }) {
               <Input
                 type="number"
                 min={0}
+                max={100}
                 placeholder="Nhập kích thước tối thiểu"
                 value={category.sizeMin}
                 onChange={(e) => {
                   const value = parseFloat(e.target.value);
                   if (value < 0) return;
+                  if (value > 100) {
+                    message.error("Kích thước không được vượt quá 100cm!");
+                    return;
+                  }
                   handleCategoryChange("sizeMin", e.target.value);
                 }}
               />
@@ -993,11 +1031,16 @@ function CreateCategory({ showId, onCategoryCreated }) {
               <Input
                 type="number"
                 min={0}
+                max={100}
                 placeholder="Nhập kích thước tối đa"
                 value={category.sizeMax}
                 onChange={(e) => {
                   const value = parseFloat(e.target.value);
                   if (value < 0) return;
+                  if (value > 100) {
+                    message.error("Kích thước không được vượt quá 100cm!");
+                    return;
+                  }
                   handleCategoryChange("sizeMax", e.target.value);
                 }}
               />
@@ -1062,6 +1105,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
               </label>
               <InputNumber
                 min={1}
+                max={1000}
                 placeholder="Nhập số lượng tham gia tối thiểu"
                 value={category.minEntries}
                 onChange={(value) => handleCategoryChange("minEntries", value)}
@@ -1080,6 +1124,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
               </label>
               <InputNumber
                 min={1}
+                max={1000}
                 placeholder="Nhập số lượng tối đa"
                 value={category.maxEntries}
                 onChange={(value) => handleCategoryChange("maxEntries", value)}
@@ -1544,6 +1589,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                           </label>
                           <InputNumber
                             min={0}
+                            max={100000000000}
                             style={{ width: "100%" }}
                             formatter={(value) =>
                               `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")

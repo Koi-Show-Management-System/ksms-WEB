@@ -59,6 +59,11 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   const [isAddModalVisible, setIsAddModalVisible] = useState(false);
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
+  // Add state for validation errors
+  const [titleError, setTitleError] = useState("");
+
+  // Add constant for max title length
+  const MAX_TITLE_LENGTH = 100;
 
   // Lấy thông tin thời gian triển lãm từ initialData
   const exhibitionStartDate = initialData.startDate
@@ -260,8 +265,15 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
   const addRule = () => {
     if (newRule.title.trim() && newRule.content.trim()) {
+      // Check title length
+      if (newRule.title.length > MAX_TITLE_LENGTH) {
+        setTitleError(`Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự`);
+        return;
+      }
+
       setRules([...rules, newRule]);
       setNewRule({ title: "", content: "" });
+      setTitleError(""); // Clear error message
       setIsAddModalVisible(false);
     } else {
       Modal.error({
@@ -287,6 +299,12 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
   // Chỉnh sửa quy tắc trực tiếp
   const handleEditRule = (index, field, value) => {
+    // Validate title length when editing
+    if (field === "title" && value.length > MAX_TITLE_LENGTH) {
+      message.error(`Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự`);
+      return;
+    }
+
     const updatedRules = [...rules];
     updatedRules[index][field] = value;
     setRules(updatedRules);
@@ -662,6 +680,19 @@ function StepThree({ updateFormData, initialData, showErrors }) {
     }
   };
 
+  // Update input change handler for new rule
+  const handleNewRuleTitleChange = (e) => {
+    const value = e.target.value;
+
+    if (value.length > MAX_TITLE_LENGTH) {
+      setTitleError(`Tiêu đề không được vượt quá ${MAX_TITLE_LENGTH} ký tự`);
+    } else {
+      setTitleError("");
+    }
+
+    setNewRule({ ...newRule, title: value });
+  };
+
   return (
     <div>
       <style>{timezoneCss}</style>
@@ -705,6 +736,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       handleEditRule(index, "title", e.target.value)
                     }
                     className="mb-2 text-sm"
+                    maxLength={MAX_TITLE_LENGTH}
                   />
                   <Input.TextArea
                     value={rule.content}
@@ -756,16 +788,24 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         title="Thêm Quy Tắc Mới"
         open={isAddModalVisible}
         onOk={addRule}
-        onCancel={() => setIsAddModalVisible(false)}
+        onCancel={() => {
+          setIsAddModalVisible(false);
+          setTitleError(""); // Clear error when closing
+          setNewRule({ title: "", content: "" });
+        }}
         okText="Thêm"
         cancelText="Hủy"
       >
         <Space direction="vertical" className="w-full">
           <Input
             value={newRule.title}
-            onChange={(e) => setNewRule({ ...newRule, title: e.target.value })}
+            onChange={handleNewRuleTitleChange}
             placeholder="Tiêu đề quy tắc..."
+            maxLength={MAX_TITLE_LENGTH}
           />
+          {titleError && (
+            <p className="text-red-500 text-xs mt-1">{titleError}</p>
+          )}
           <Input.TextArea
             value={newRule.content}
             onChange={(e) =>

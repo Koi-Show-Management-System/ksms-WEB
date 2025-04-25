@@ -114,6 +114,43 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       const values = await form.validateFields();
       const formData = form.getFieldsValue(true);
 
+      // Validate field limits
+      if (values.name && values.name.length > 100) {
+        message.error("Tên hạng mục không được vượt quá 100 ký tự!");
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.sizeMin > 100) {
+        message.error("Kích thước tối thiểu không được vượt quá 100cm!");
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.sizeMax > 100) {
+        message.error("Kích thước tối đa không được vượt quá 100cm!");
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.registrationFee > 10000000) {
+        message.error("Phí đăng ký không được vượt quá 10 triệu VND!");
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.minEntries > 1000) {
+        message.error("Số lượng tham gia tối thiểu không được vượt quá 1000!");
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.maxEntries > 1000) {
+        message.error("Số lượng tham gia tối đa không được vượt quá 1000!");
+        setActiveTab("1");
+        return;
+      }
+
       // Validate awards
       if (!validateAwards(formData.awards)) {
         setActiveTab("3"); // Switch to the awards tab
@@ -801,6 +838,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       return;
     }
 
+    if (value > 100000000000) {
+      message.error("Giá trị giải thưởng không được vượt quá 100 tỷ VND!");
+      return;
+    }
+
     // Cập nhật giá trị trong form
     const currentAwards = form.getFieldValue("awards") || [];
     form.setFieldsValue({
@@ -945,9 +987,17 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                         required: true,
                         message: "Vui lòng nhập tên hạng mục",
                       },
+                      {
+                        max: 100,
+                        message: "Tên hạng mục không được vượt quá 100 ký tự!",
+                      },
                     ]}
                   >
-                    <Input placeholder="Nhập tên hạng mục" />
+                    <Input
+                      placeholder="Nhập tên hạng mục"
+                      maxLength={100}
+                      showCount
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={24}>
@@ -983,10 +1033,18 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                         required: true,
                         message: "Vui lòng nhập kích thước tối thiểu",
                       },
+                      {
+                        type: "number",
+                        max: 100,
+                        message:
+                          "Kích thước tối thiểu không được vượt quá 100cm!",
+                      },
                     ]}
                   >
-                    <Input
-                      type="number"
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      className="w-full"
                       placeholder="Nhập kích thước tối thiểu"
                     />
                   </Form.Item>
@@ -1000,31 +1058,79 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                         required: true,
                         message: "Vui lòng nhập kích thước tối đa",
                       },
+                      {
+                        type: "number",
+                        max: 100,
+                        message: "Kích thước tối đa không được vượt quá 100cm!",
+                      },
                     ]}
                   >
-                    <Input type="number" placeholder="Nhập kích thước tối đa" />
+                    <InputNumber
+                      min={0}
+                      max={100}
+                      className="w-full"
+                      placeholder="Nhập kích thước tối đa"
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
                   <Form.Item
                     name="minEntries"
                     label="Số lượng tham gia tối thiểu"
+                    rules={[
+                      {
+                        type: "number",
+                        max: 1000,
+                        message:
+                          "Số lượng tham gia tối thiểu không được vượt quá 1000!",
+                      },
+                    ]}
                   >
-                    <Input
-                      type="number"
+                    <InputNumber
+                      min={1}
+                      max={1000}
+                      className="w-full"
                       placeholder="Nhập số lượng tối thiểu"
                     />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="maxEntries" label="Số lượng tham gia tối đa">
-                    <Input type="number" placeholder="Nhập số lượng tối đa" />
+                  <Form.Item
+                    name="maxEntries"
+                    label="Số lượng tham gia tối đa"
+                    rules={[
+                      {
+                        type: "number",
+                        max: 1000,
+                        message:
+                          "Số lượng tham gia tối đa không được vượt quá 1000!",
+                      },
+                    ]}
+                  >
+                    <InputNumber
+                      min={1}
+                      max={1000}
+                      className="w-full"
+                      placeholder="Nhập số lượng tối đa"
+                    />
                   </Form.Item>
                 </Col>
                 <Col span={12}>
-                  <Form.Item name="registrationFee" label="Phí tham gia">
+                  <Form.Item
+                    name="registrationFee"
+                    label="Phí tham gia"
+                    rules={[
+                      {
+                        type: "number",
+                        max: 10000000,
+                        message:
+                          "Phí đăng ký không được vượt quá 10 triệu VND!",
+                      },
+                    ]}
+                  >
                     <InputNumber
                       min={0}
+                      max={10000000}
                       placeholder="Nhập phí tham gia"
                       className="w-full"
                       formatter={(value) =>
@@ -1389,10 +1495,18 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                       message:
                                         "Vui lòng nhập giá trị giải thưởng",
                                     },
+                                    {
+                                      type: "number",
+                                      max: 100000000000,
+                                      message:
+                                        "Giá trị giải thưởng không được vượt quá 100 tỷ VND!",
+                                    },
                                   ]}
                                 >
                                   <InputNumber
                                     placeholder="Nhập giá trị (VND)"
+                                    min={0}
+                                    max={100000000000}
                                     formatter={(value) =>
                                       `${value}`.replace(
                                         /\B(?=(\d{3})+(?!\d))/g,

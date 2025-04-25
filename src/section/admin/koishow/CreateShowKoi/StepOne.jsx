@@ -54,9 +54,19 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     minParticipants: "",
     maxParticipants: "",
   });
+  const [nameError, setNameError] = useState("");
+  const [sponsorErrors, setSponsorErrors] = useState([]);
+  const [ticketErrors, setTicketErrors] = useState([]);
   const [loading, setLoading] = useState(false);
   const managerSelectRef = useRef(null);
   const staffSelectRef = useRef(null);
+
+  // Constants for validation limits
+  const MAX_NAME_LENGTH = 100;
+  const MAX_INVESTMENT = 100000000000; // 100 billion VND
+  const MAX_TICKET_PRICE = 10000000; // 10 million VND
+  const MAX_TICKET_QUANTITY = 1000000; // 1 million tickets
+  const MAX_PARTICIPANTS = 10000; // Max participants
 
   // Effect xử lý initialData thay đổi
   useEffect(() => {
@@ -188,20 +198,59 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     }
   };
 
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+
+    if (value.length > MAX_NAME_LENGTH) {
+      setNameError(
+        `Tên chương trình không được vượt quá ${MAX_NAME_LENGTH} ký tự`
+      );
+    } else {
+      setNameError("");
+    }
+
+    setData({ ...data, name: value });
+  };
+
   const handleAddSponsor = () => {
     setData((prevData) => ({
       ...prevData,
       createSponsorRequests: [
         ...prevData.createSponsorRequests,
-        { name: "", logoUrl: "", investMoney: 0 }, // Mỗi sponsor mới có 3 mục
+        { name: "", logoUrl: "", investMoney: 0 },
       ],
     }));
+    // Add a new empty error slot for the new sponsor
+    setSponsorErrors([...sponsorErrors, ""]);
   };
 
   const handleSponsorChange = (index, field, value) => {
     if (field === "investMoney" && value < 0) {
       message.error("Số tiền đầu tư không được nhỏ hơn 0");
       return;
+    }
+
+    // Check for maximum investment amount
+    if (field === "investMoney" && value > MAX_INVESTMENT) {
+      message.error(
+        `Số tiền đầu tư không được vượt quá ${MAX_INVESTMENT.toLocaleString("vi-VN")} VND (100 tỷ)`
+      );
+      return;
+    }
+
+    // Check for duplicate sponsor names
+    if (field === "name") {
+      const isDuplicate = data.createSponsorRequests.some(
+        (sponsor, i) => i !== index && sponsor.name === value
+      );
+
+      const newSponsorErrors = [...sponsorErrors];
+      if (isDuplicate) {
+        newSponsorErrors[index] = "Tên nhà tài trợ không được trùng lặp";
+      } else {
+        newSponsorErrors[index] = "";
+      }
+      setSponsorErrors(newSponsorErrors);
     }
 
     setData((prevData) => {
@@ -263,7 +312,6 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     setData({ ...data, createSponsorRequests: newSponsorRequests });
   };
 
-  // Thêm loại vé mới
   const handleAddTicketType = () => {
     // Danh sách loại vé
     const ticketTypes = ["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"];
@@ -288,9 +336,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         { name: availableTicketTypes[0], price: 0, availableQuantity: 0 },
       ],
     }));
+
+    // Add a new empty error slot for the new ticket
+    setTicketErrors([...ticketErrors, ""]);
   };
 
-  // Cập nhật thông tin loại vé
   const handleTicketTypeChange = (index, field, value) => {
     if (field === "price" && value < 0) {
       message.error("Giá vé không được nhỏ hơn 0");
@@ -302,12 +352,27 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       return;
     }
 
+    // Check for maximum ticket price
+    if (field === "price" && value > MAX_TICKET_PRICE) {
+      message.error(
+        `Giá vé không được vượt quá ${MAX_TICKET_PRICE.toLocaleString("vi-VN")} VND (10 triệu)`
+      );
+      return;
+    }
+
+    // Check for maximum ticket quantity
+    if (field === "availableQuantity" && value > MAX_TICKET_QUANTITY) {
+      message.error(
+        `Số lượng vé không được vượt quá ${MAX_TICKET_QUANTITY.toLocaleString("vi-VN")} vé (1 triệu)`
+      );
+      return;
+    }
+
     const newTicketTypes = [...data.createTicketTypeRequests];
     newTicketTypes[index] = { ...newTicketTypes[index], [field]: value };
     setData({ ...data, createTicketTypeRequests: newTicketTypes });
   };
 
-  // Xóa loại vé
   const handleRemoveTicketType = (index) => {
     const newTicketTypes = data.createTicketTypeRequests.filter(
       (_, i) => i !== index
@@ -366,6 +431,14 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
     // Tạo bản sao của state lỗi
     const newParticipantErrors = { ...participantErrors };
+
+    // Check for maximum participants
+    if (numValue > MAX_PARTICIPANTS) {
+      newParticipantErrors[field] =
+        `Giá trị không được vượt quá ${MAX_PARTICIPANTS.toLocaleString("vi-VN")}`;
+      setParticipantErrors(newParticipantErrors);
+      return;
+    }
 
     // Luôn cập nhật giá trị vào state, ngay cả khi có lỗi
     const newData = { ...data, [field]: value };
@@ -467,8 +540,10 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         <Input
           placeholder="Nhập tên chương trình"
           value={data.name}
-          onChange={(e) => setData({ ...data, name: e.target.value })}
+          onChange={handleNameChange}
+          maxLength={MAX_NAME_LENGTH}
         />
+        {nameError && <p className="text-red-500 text-xs mt-1">{nameError}</p>}
         {showErrors && !data.name && (
           <p className="text-red-500 text-xs mt-1">
             Tên chương trình là bắt buộc
@@ -564,6 +639,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
               handleNumberChange("minParticipants", parseInt(e.target.value))
             }
             min={0}
+            max={MAX_PARTICIPANTS}
           />
           {participantErrors.minParticipants && (
             <p className="text-red-500 text-xs mt-1">
@@ -589,6 +665,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
               handleNumberChange("maxParticipants", parseInt(e.target.value))
             }
             min={0}
+            max={MAX_PARTICIPANTS}
           />
           {participantErrors.maxParticipants && (
             <p className="text-red-500 text-xs mt-1">
@@ -703,6 +780,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   }
                   placeholder="Nhập tên nhà tài trợ"
                 />
+                {sponsorErrors[index] && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {sponsorErrors[index]}
+                  </p>
+                )}
                 {showErrors && !sponsor.name && (
                   <p className="text-red-500 text-xs mt-1">
                     Tên nhà tài trợ là bắt buộc.
@@ -752,6 +834,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                 </label>
                 <InputNumber
                   min={0}
+                  max={MAX_INVESTMENT}
                   style={{ width: "100%" }}
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -854,6 +937,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                 </label>
                 <InputNumber
                   min={0}
+                  max={MAX_TICKET_PRICE}
                   style={{ width: "100%" }}
                   formatter={(value) =>
                     `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
@@ -890,6 +974,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   }
                   placeholder="Nhập số lượng vé"
                   min={0}
+                  max={MAX_TICKET_QUANTITY}
                 />
                 {showErrors &&
                   (!ticket.availableQuantity ||
