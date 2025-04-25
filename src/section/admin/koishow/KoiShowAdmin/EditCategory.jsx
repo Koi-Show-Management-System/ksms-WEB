@@ -62,6 +62,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const [tempSelectedCriteria, setTempSelectedCriteria] = useState([]);
   const [selectedRoundForCriteria, setSelectedRoundForCriteria] =
     useState(null);
+  const [awardErrors, setAwardErrors] = useState({});
 
   const referee = accountManage.referees || [];
 
@@ -418,6 +419,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
   // Handle editing an award
   const handleEditAward = (fieldName) => {
+    // Xóa lỗi khi mở form chỉnh sửa
+    const newAwardErrors = { ...awardErrors };
+    delete newAwardErrors[fieldName];
+    setAwardErrors(newAwardErrors);
+
     setEditingAwardIndex(fieldName);
   };
 
@@ -428,6 +434,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
   // Handle award type change to update award name
   const handleAwardTypeChange = (type, fieldName) => {
+    // Xóa lỗi khi thay đổi loại giải
+    const newAwardErrors = { ...awardErrors };
+    delete newAwardErrors[fieldName];
+    setAwardErrors(newAwardErrors);
+
     let awardName = "";
     switch (type) {
       case "first":
@@ -781,6 +792,119 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     return [...awards].sort(
       (a, b) => getAwardTypeOrder(a.awardType) - getAwardTypeOrder(b.awardType)
     );
+  };
+
+  // Thêm handler chuyên biệt cho việc thay đổi giá trị giải thưởng
+  const handleAwardPrizeValueChange = (value, fieldName) => {
+    if (value < 0) {
+      message.error("Giá trị giải thưởng không được nhỏ hơn 0");
+      return;
+    }
+
+    // Cập nhật giá trị trong form
+    const currentAwards = form.getFieldValue("awards") || [];
+    form.setFieldsValue({
+      awards: currentAwards.map((award, index) =>
+        index === fieldName ? { ...award, prizeValue: value } : award
+      ),
+    });
+
+    // Validate giá trị giải thưởng theo thứ tự: Nhất > Nhì > Ba > Khuyến Khích
+    if (value) {
+      const currentAward = currentAwards[fieldName];
+      const allAwards = currentAwards;
+
+      // Cập nhật state lỗi
+      const newAwardErrors = { ...awardErrors };
+
+      // Xóa lỗi cũ trước khi kiểm tra lại
+      newAwardErrors[fieldName] = "";
+
+      // Kiểm tra giá trị giải thưởng dựa trên loại giải
+      if (currentAward.awardType === "first") {
+        // Giải Nhất phải có giá trị cao nhất
+        const hasInvalidValue = allAwards.some(
+          (award) =>
+            award.awardType !== "first" &&
+            award.prizeValue &&
+            Number(award.prizeValue) >= Number(value)
+        );
+
+        if (hasInvalidValue) {
+          newAwardErrors[fieldName] = "Giải Nhất phải có giá trị cao nhất";
+        }
+      } else if (currentAward.awardType === "second") {
+        // Giải Nhì phải nhỏ hơn giải Nhất và lớn hơn giải Ba, Khuyến Khích
+        const firstAward = allAwards.find(
+          (award) => award.awardType === "first"
+        );
+
+        if (
+          firstAward &&
+          firstAward.prizeValue &&
+          Number(value) >= Number(firstAward.prizeValue)
+        ) {
+          newAwardErrors[fieldName] =
+            "Giải Nhì phải có giá trị nhỏ hơn Giải Nhất";
+        } else {
+          const hasLowerAwardWithHigherValue = allAwards.some(
+            (award) =>
+              (award.awardType === "third" ||
+                award.awardType === "honorable") &&
+              award.prizeValue &&
+              Number(award.prizeValue) >= Number(value)
+          );
+
+          if (hasLowerAwardWithHigherValue) {
+            newAwardErrors[fieldName] =
+              "Giải Nhì phải có giá trị cao hơn Giải Ba và Giải Khuyến Khích";
+          }
+        }
+      } else if (currentAward.awardType === "third") {
+        // Giải Ba phải nhỏ hơn giải Nhì và lớn hơn giải Khuyến Khích
+        const secondAward = allAwards.find(
+          (award) => award.awardType === "second"
+        );
+
+        if (
+          secondAward &&
+          secondAward.prizeValue &&
+          Number(value) >= Number(secondAward.prizeValue)
+        ) {
+          newAwardErrors[fieldName] =
+            "Giải Ba phải có giá trị nhỏ hơn Giải Nhì";
+        } else {
+          const hasHonorableWithHigherValue = allAwards.some(
+            (award) =>
+              award.awardType === "honorable" &&
+              award.prizeValue &&
+              Number(award.prizeValue) >= Number(value)
+          );
+
+          if (hasHonorableWithHigherValue) {
+            newAwardErrors[fieldName] =
+              "Giải Ba phải có giá trị cao hơn Giải Khuyến Khích";
+          }
+        }
+      } else if (currentAward.awardType === "honorable") {
+        // Giải Khuyến Khích phải có giá trị thấp nhất
+        const hasHigherAward = allAwards.some(
+          (award) =>
+            (award.awardType === "first" ||
+              award.awardType === "second" ||
+              award.awardType === "third") &&
+            award.prizeValue &&
+            Number(award.prizeValue) <= Number(value)
+        );
+
+        if (hasHigherAward) {
+          newAwardErrors[fieldName] =
+            "Giải Khuyến Khích phải có giá trị thấp nhất";
+        }
+      }
+
+      setAwardErrors(newAwardErrors);
+    }
   };
 
   return (
@@ -1279,8 +1403,19 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                       value.replace(/\$\s?|(,*)/g, "")
                                     }
                                     className="w-full"
+                                    onChange={(value) =>
+                                      handleAwardPrizeValueChange(
+                                        value,
+                                        field.name
+                                      )
+                                    }
                                   />
                                 </Form.Item>
+                                {awardErrors[field.name] && (
+                                  <div className="text-red-500 text-xs mb-2 mt-1">
+                                    {awardErrors[field.name]}
+                                  </div>
+                                )}
                               </Col>
                               <Col span={24}>
                                 <Form.Item
@@ -1328,6 +1463,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                   .toLocaleString()}
                                 VND
                               </Descriptions.Item>
+                              {awardErrors[field.name] && (
+                                <Descriptions.Item className="text-red-500 text-xs">
+                                  {awardErrors[field.name]}
+                                </Descriptions.Item>
+                              )}
                               <Descriptions.Item label="Mô tả">
                                 {form.getFieldValue([
                                   "awards",

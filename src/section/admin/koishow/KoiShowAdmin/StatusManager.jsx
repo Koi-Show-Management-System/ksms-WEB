@@ -510,8 +510,8 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                           {status.statusName === "Finished" ? (
                             // Nếu là trạng thái Finished, chỉ hiển thị thời gian kết thúc
                             <>
-                              {formatDate(status.endDate)} ,
-                              {formatTime(status.endDate)}
+                              {formatDate(status.startDate)},{" "}
+                              {formatTime(status.startDate)}
                             </>
                           ) : sameDay ? (
                             // If same date, show one date with start and end times
@@ -787,30 +787,48 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                         };
                                         const currentStatusOrder =
                                           statusOrder[status.statusName] || 0;
-                                        const prevStatusName = Object.keys(
+
+                                        // Kiểm tra với trạng thái tiếp theo
+                                        const nextStatusName = Object.keys(
                                           statusOrder
                                         ).find(
                                           (key) =>
                                             statusOrder[key] ===
-                                            currentStatusOrder - 1
+                                            currentStatusOrder + 1
                                         );
 
+                                        // Kiểm tra thời gian kết thúc không được sớm hơn thời gian bắt đầu
                                         if (
-                                          prevStatusName &&
-                                          editingStatuses[prevStatusName]
-                                            ?.endDate
+                                          newDate.isBefore(
+                                            editingStatuses[status.statusName]
+                                              .startDate
+                                          )
                                         ) {
-                                          const prevStatus =
-                                            editingStatuses[prevStatusName];
-                                          // Thời gian bắt đầu không được sớm hơn thời gian kết thúc của trạng thái trước đó
+                                          message.error(
+                                            `Thời gian kết thúc không được sớm hơn thời gian bắt đầu`
+                                          );
+                                          return;
+                                        }
+
+                                        // Kiểm tra với trạng thái tiếp theo nếu có
+                                        if (
+                                          nextStatusName &&
+                                          editingStatuses[nextStatusName]
+                                            ?.startDate
+                                        ) {
+                                          const nextStatus =
+                                            editingStatuses[nextStatusName];
+                                          // Thời gian kết thúc không được muộn hơn thời gian bắt đầu của trạng thái tiếp theo
                                           if (
-                                            newDate.isBefore(prevStatus.endDate)
+                                            newDate.isAfter(
+                                              nextStatus.startDate
+                                            )
                                           ) {
                                             message.error(
-                                              `Thời gian bắt đầu phải từ thời gian kết thúc của ${
-                                                statusMapping[prevStatusName]
-                                                  ?.label || prevStatusName
-                                              } trở đi`
+                                              `Thời gian kết thúc phải trước thời gian bắt đầu của ${
+                                                statusMapping[nextStatusName]
+                                                  ?.label || nextStatusName
+                                              }`
                                             );
                                             return;
                                           }
@@ -1010,7 +1028,7 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                     size="small"
                                     value={
                                       editingStatuses[status.statusName]
-                                        ?.endDate
+                                        ?.startDate
                                     }
                                     onChange={(value) => {
                                       // Tìm trạng thái Award
@@ -1030,33 +1048,37 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                       }
 
                                       // Nếu đã có giờ từ trước, giữ nguyên giờ đó
-                                      let newValue = value;
+                                      let newStartValue = value;
                                       if (
                                         value &&
                                         editingStatuses[status.statusName]
-                                          ?.endDate
+                                          ?.startDate
                                       ) {
-                                        newValue = value
+                                        newStartValue = value
                                           .hour(
                                             editingStatuses[
                                               status.statusName
-                                            ].endDate.hour()
+                                            ].startDate.hour()
                                           )
                                           .minute(
                                             editingStatuses[
                                               status.statusName
-                                            ].endDate.minute()
+                                            ].startDate.minute()
                                           )
                                           .second(0);
                                       }
+
+                                      // Tự động tính endDate = startDate + 30 phút
+                                      const newEndValue = newStartValue
+                                        .clone()
+                                        .add(30, "minutes");
 
                                       // Tự động cập nhật startDate bằng thời gian kết thúc của Award
                                       setEditingStatuses((prev) => ({
                                         ...prev,
                                         [status.statusName]: {
-                                          startDate:
-                                            awardStatus.endDate.clone(),
-                                          endDate: newValue,
+                                          startDate: newStartValue,
+                                          endDate: newEndValue,
                                         },
                                       }));
                                     }}
@@ -1104,13 +1126,13 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                     size="small"
                                     value={
                                       editingStatuses[status.statusName]
-                                        ?.endDate
+                                        ?.startDate
                                     }
                                     onChange={(value) => {
                                       if (
                                         value &&
                                         editingStatuses[status.statusName]
-                                          ?.endDate
+                                          ?.startDate
                                       ) {
                                         // Tìm trạng thái Award
                                         const awardStatus =
@@ -1129,19 +1151,21 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                         }
 
                                         // Tạo ngày kết thúc với ngày hiện tại và giờ mới
-                                        const newEndDate = editingStatuses[
+                                        const newStartDate = editingStatuses[
                                           status.statusName
-                                        ].endDate
+                                        ].startDate
                                           .hour(value.hour())
                                           .minute(value.minute())
                                           .second(0);
 
                                         // Kiểm tra giờ kết thúc phải sau giờ kết thúc của Award
                                         if (
-                                          newEndDate.isBefore(
+                                          newStartDate.isBefore(
                                             awardStatus.endDate
                                           ) ||
-                                          newEndDate.isSame(awardStatus.endDate)
+                                          newStartDate.isSame(
+                                            awardStatus.endDate
+                                          )
                                         ) {
                                           message.error(
                                             "Giờ kết thúc sự kiện phải sau giờ kết thúc của Lễ trao giải"
@@ -1149,12 +1173,16 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                           return;
                                         }
 
+                                        // Tự động tính endDate = startDate + 30 phút
+                                        const newEndDate = newStartDate
+                                          .clone()
+                                          .add(30, "minutes");
+
                                         // Cập nhật cả startDate và endDate
                                         setEditingStatuses((prev) => ({
                                           ...prev,
                                           [status.statusName]: {
-                                            startDate:
-                                              awardStatus.endDate.clone(),
+                                            startDate: newStartDate,
                                             endDate: newEndDate,
                                           },
                                         }));
@@ -1182,10 +1210,10 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                           // Nếu cùng ngày và cùng giờ với Award
                                           if (
                                             editingStatuses[status.statusName]
-                                              ?.endDate &&
+                                              ?.startDate &&
                                             editingStatuses[
                                               status.statusName
-                                            ].endDate.format("YYYY-MM-DD") ===
+                                            ].startDate.format("YYYY-MM-DD") ===
                                               awardStatus.endDate.format(
                                                 "YYYY-MM-DD"
                                               ) &&
@@ -1219,10 +1247,10 @@ const StatusManager = ({ showId, showStatuses, disabled = false }) => {
                                         // Nếu cùng ngày với Award
                                         if (
                                           editingStatuses[status.statusName]
-                                            ?.endDate &&
+                                            ?.startDate &&
                                           editingStatuses[
                                             status.statusName
-                                          ].endDate.format("YYYY-MM-DD") ===
+                                          ].startDate.format("YYYY-MM-DD") ===
                                             awardStatus.endDate.format(
                                               "YYYY-MM-DD"
                                             )
