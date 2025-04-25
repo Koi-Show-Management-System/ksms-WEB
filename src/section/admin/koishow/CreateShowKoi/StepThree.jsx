@@ -60,6 +60,14 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   const [newRule, setNewRule] = useState({ title: "", content: "" });
   const [searchText, setSearchText] = useState("");
 
+  // Lấy thông tin thời gian triển lãm từ initialData
+  const exhibitionStartDate = initialData.startDate
+    ? dayjs(initialData.startDate).tz("Asia/Ho_Chi_Minh")
+    : null;
+  const exhibitionEndDate = initialData.endDate
+    ? dayjs(initialData.endDate).tz("Asia/Ho_Chi_Minh")
+    : null;
+
   // CSS cho thông báo múi giờ
   const timezoneCss = `
     .timezone-popup .ant-picker-footer {
@@ -169,21 +177,32 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         statusName: status.statusName,
         description: status.description,
         startDate: status.startDate
-          ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+          ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format() // Đã bao gồm timezone
           : null,
         endDate:
           // Use the endDate for all statuses if it exists
           status.endDate
-            ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format()
+            ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format() // Đã bao gồm timezone
             : status.startDate
-              ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+              ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format() // Đã bao gồm timezone
               : null,
       }));
+
+    // Format date objects in availableStatuses to ISO strings with timezone
+    const formattedAvailableStatuses = availableStatuses.map((status) => ({
+      ...status,
+      startDate: status.startDate
+        ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+        : null,
+      endDate: status.endDate
+        ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format()
+        : null,
+    }));
 
     updateFormData({
       createShowRuleRequests: rules,
       createShowStatusRequests: selectedStatuses,
-      availableStatuses: availableStatuses, // Thêm truyền toàn bộ thông tin trạng thái
+      availableStatuses: formattedAvailableStatuses, // Sử dụng bản đã format
     });
 
     setFilteredRules(rules);
@@ -257,28 +276,60 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
     // Kiểm tra tính hợp lệ của ngày tháng
     if (value) {
-      // Kiểm tra ngày kết thúc phải sau ngày bắt đầu
+      // Đối với các giai đoạn khác RegistrationOpen, không tự động đặt giờ 00:00:00
+      // Giữ nguyên giờ có thể là null để người dùng có thể chọn sau
       if (
-        dateType === "endDate" &&
-        currentStatus.startDate &&
-        currentStatus.startDate.format("HH:mm:ss") !== "00:00:00" &&
-        value.format("HH:mm:ss") !== "00:00:00" &&
-        value.isBefore(currentStatus.startDate)
+        statusName !== "RegistrationOpen" &&
+        value.format("HH:mm:ss") === "00:00:00"
       ) {
-        message.error("Giờ kết thúc phải sau giờ bắt đầu");
-        return;
+        // Đây là trường hợp người dùng chỉ mới chọn ngày, chưa chọn giờ
+        // Không làm gì, giữ nguyên value mà không set giờ 00:00:00
+      } else {
+        // Trường hợp người dùng đã chọn cả ngày và giờ, hoặc đây là RegistrationOpen
+        // Kiểm tra ngày kết thúc phải sau ngày bắt đầu
+        if (
+          dateType === "endDate" &&
+          currentStatus.startDate &&
+          currentStatus.startDate.format("HH:mm:ss") !== "00:00:00" &&
+          value.format("HH:mm:ss") !== "00:00:00" &&
+          value.isBefore(currentStatus.startDate)
+        ) {
+          message.error("Giờ kết thúc phải sau giờ bắt đầu");
+          return;
+        }
+
+        // Kiểm tra ngày bắt đầu phải trước ngày kết thúc
+        if (
+          dateType === "startDate" &&
+          currentStatus.endDate &&
+          currentStatus.endDate.format("HH:mm:ss") !== "00:00:00" &&
+          value.format("HH:mm:ss") !== "00:00:00" &&
+          value.isAfter(currentStatus.endDate)
+        ) {
+          message.error("Ngày bắt đầu phải trước ngày kết thúc");
+          return;
+        }
       }
 
-      // Kiểm tra ngày bắt đầu phải trước ngày kết thúc
-      if (
-        dateType === "startDate" &&
-        currentStatus.endDate &&
-        currentStatus.endDate.format("HH:mm:ss") !== "00:00:00" &&
-        value.format("HH:mm:ss") !== "00:00:00" &&
-        value.isAfter(currentStatus.endDate)
-      ) {
-        message.error("Ngày bắt đầu phải trước ngày kết thúc");
-        return;
+      // Kiểm tra RegistrationOpen phải diễn ra trước thời gian triển lãm
+      if (statusName === "RegistrationOpen" && exhibitionStartDate) {
+        // Kiểm tra xem ngày có phải là trước ngày triển lãm
+        const selectedDay = value.startOf("day");
+        const exhibitionDay = exhibitionStartDate.startOf("day");
+
+        if (dateType === "startDate" && !selectedDay.isBefore(exhibitionDay)) {
+          message.error(
+            "Ngày bắt đầu đăng ký phải trước ngày bắt đầu triển lãm"
+          );
+          return;
+        }
+
+        if (dateType === "endDate" && !selectedDay.isBefore(exhibitionDay)) {
+          message.error(
+            "Ngày kết thúc đăng ký phải trước ngày bắt đầu triển lãm"
+          );
+          return;
+        }
       }
 
       // Định nghĩa thứ tự các trạng thái
@@ -311,7 +362,10 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       // Kiểm tra thứ tự thời gian với trạng thái trước
       if (prevStatusName) {
         const prevStatus = availableStatuses.find(
-          (s) => s.statusName === prevStatusName && s.selected
+          (s) =>
+            s.selected &&
+            s.endDate &&
+            statusOrder[s.statusName] === currentOrder - 1
         );
 
         if (prevStatus?.endDate && dateType === "startDate") {
@@ -332,10 +386,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       // Kiểm tra thứ tự thời gian với trạng thái tiếp theo
       if (nextStatusName) {
         const nextStatus = availableStatuses.find(
-          (s) => s.statusName === nextStatusName && s.selected
+          (s) =>
+            s.selected &&
+            s.startDate &&
+            statusOrder[s.statusName] === currentOrder + 1
         );
 
-        if (nextStatus?.startDate && dateType === "endDate") {
+        if (nextStatus?.endDate && dateType === "endDate") {
           // Nếu có trạng thái tiếp theo và có thời gian bắt đầu, thì thời gian kết thúc của trạng thái hiện tại không được sau thời gian bắt đầu đó
           if (
             nextStatus.startDate.format("HH:mm:ss") !== "00:00:00" &&
@@ -364,7 +421,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
           if (lastStatusName) {
             const lastStatus = availableStatuses.find(
-              (s) => s.statusName === lastStatusName && s.selected
+              (s) => s.selected && s.statusName === lastStatusName
             );
 
             if (
@@ -398,7 +455,12 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
           if (finishedIndex !== -1) {
             // Cập nhật thời gian bắt đầu của Finished bằng thời gian kết thúc của Award
-            updatedStatuses[finishedIndex].startDate = value.clone();
+            // Chỉ cập nhật startDate nếu có time, không tự động set giờ 00:00
+            if (value.format("HH:mm:ss") !== "00:00:00") {
+              updatedStatuses[finishedIndex].startDate = value.clone();
+            } else {
+              updatedStatuses[finishedIndex].startDate = value;
+            }
 
             // Nếu chưa có endDate hoặc endDate trước startDate mới, cập nhật endDate
             if (
@@ -406,10 +468,14 @@ function StepThree({ updateFormData, initialData, showErrors }) {
               (updatedStatuses[finishedIndex].endDate &&
                 updatedStatuses[finishedIndex].endDate.isBefore(value))
             ) {
-              // Tự động đặt giờ kết thúc +1 giờ so với giờ bắt đầu
-              updatedStatuses[finishedIndex].endDate = value
-                .clone()
-                .add(1, "hour");
+              // Chỉ tự động đặt giờ kết thúc +1 giờ nếu có giờ bắt đầu
+              if (value.format("HH:mm:ss") !== "00:00:00") {
+                updatedStatuses[finishedIndex].endDate = value
+                  .clone()
+                  .add(1, "hour");
+              } else {
+                updatedStatuses[finishedIndex].endDate = value;
+              }
             }
           }
         }
@@ -430,6 +496,62 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       return status.statusName === "Finished"
         ? "Thời gian kết thúc là bắt buộc"
         : "Ngày là bắt buộc";
+    }
+
+    // Kiểm tra xem ngày/giờ có nằm trong khoảng thời gian của triển lãm không (trừ RegistrationOpen)
+    if (
+      status.statusName !== "RegistrationOpen" &&
+      status.statusName !== "Finished" &&
+      dateType === "startDate" &&
+      status.startDate &&
+      exhibitionStartDate &&
+      exhibitionEndDate
+    ) {
+      if (
+        status.startDate.isBefore(exhibitionStartDate) ||
+        status.startDate.isAfter(exhibitionEndDate)
+      ) {
+        return "Thời gian phải nằm trong khoảng thời gian của triển lãm";
+      }
+    }
+
+    if (
+      status.statusName !== "RegistrationOpen" &&
+      status.statusName !== "Finished" &&
+      dateType === "endDate" &&
+      status.endDate &&
+      exhibitionStartDate &&
+      exhibitionEndDate
+    ) {
+      if (
+        status.endDate.isBefore(exhibitionStartDate) ||
+        status.endDate.isAfter(exhibitionEndDate)
+      ) {
+        return "Thời gian phải nằm trong khoảng thời gian của triển lãm";
+      }
+    }
+
+    // Kiểm tra RegistrationOpen phải diễn ra trước thời gian triển lãm
+    if (status.statusName === "RegistrationOpen" && exhibitionStartDate) {
+      const startDay = status.startDate?.startOf("day");
+      const endDay = status.endDate?.startOf("day");
+      const exhibitionDay = exhibitionStartDate.startOf("day");
+
+      if (
+        dateType === "startDate" &&
+        status.startDate &&
+        !startDay.isBefore(exhibitionDay)
+      ) {
+        return "Ngày bắt đầu đăng ký phải trước ngày bắt đầu triển lãm";
+      }
+
+      if (
+        dateType === "endDate" &&
+        status.endDate &&
+        !endDay.isBefore(exhibitionDay)
+      ) {
+        return "Ngày kết thúc đăng ký phải trước ngày bắt đầu triển lãm";
+      }
     }
 
     if (status.statusName === "RegistrationOpen") {
@@ -651,6 +773,23 @@ function StepThree({ updateFormData, initialData, showErrors }) {
           kiện.
         </p>
 
+        {exhibitionStartDate && exhibitionEndDate && (
+          <div className="p-3 bg-blue-50 rounded-md mb-4 border border-blue-200">
+            <p className="text-blue-700">
+              <InfoCircleOutlined className="mr-2" />
+              Thời gian triển lãm: từ{" "}
+              <strong>
+                {exhibitionStartDate.format("DD/MM/YYYY HH:mm")}
+              </strong>{" "}
+              đến{" "}
+              <strong>{exhibitionEndDate.format("DD/MM/YYYY HH:mm")}</strong>.
+              Các trạng thái của sự kiện (trừ Đăng ký và Kết thúc) phải diễn ra
+              trong khoảng thời gian này. Giai đoạn đăng ký chỉ được diễn ra
+              trước khoảng thời gian triển lãm.
+            </p>
+          </div>
+        )}
+
         <Row gutter={[16, 16]}>
           {availableStatuses.map((status, index) => (
             <Col xs={24} md={12} key={index}>
@@ -693,27 +832,29 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         format="YYYY-MM-DD"
                         placeholder="Chọn ngày"
                         disabledDate={(current) => {
+                          // Vô hiệu hóa ngày nằm ngoài khoảng thời gian triển lãm
+                          if (exhibitionEndDate) {
+                            const startDay = exhibitionStartDate.startOf("day");
+                            const endDay = exhibitionEndDate.startOf("day");
+
+                            if (
+                              current.isBefore(startDay) ||
+                              current.isAfter(endDay)
+                            ) {
+                              return true;
+                            }
+
+                            // Đã vượt qua điều kiện trên thì sẽ cho phép chọn ngày trong khoảng (bao gồm cả ngày 24)
+                            return false;
+                          }
+
                           // Mặc định vô hiệu hóa ngày trong quá khứ
                           if (current && current.isBefore(dayjs(), "day")) {
                             return true;
                           }
 
-                          // Tìm trạng thái Award (Lễ trao giải)
-                          const awardStatus = availableStatuses.find(
-                            (s) =>
-                              s.statusName === "Award" &&
-                              s.selected &&
-                              s.endDate
-                          );
-
-                          // Nếu có trạng thái Award, chỉ cho phép chọn từ ngày của Award trở đi
-                          if (awardStatus && awardStatus.endDate) {
-                            return (
-                              current &&
-                              current.isBefore(awardStatus.endDate, "day")
-                            );
-                          }
-
+                          // Bỏ qua các điều kiện khác vì chúng có thể gây xung đột
+                          // và làm disable ngày 24 một cách không mong muốn
                           return false;
                         }}
                       />
@@ -735,6 +876,35 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                               .minute(value.minute())
                               .second(value.second());
 
+                            // Kiểm tra giờ kết thúc có nằm trong khoảng thời gian của triển lãm
+                            if (exhibitionStartDate && exhibitionEndDate) {
+                              if (
+                                newEndDate.isBefore(exhibitionStartDate) ||
+                                newEndDate.isAfter(exhibitionEndDate)
+                              ) {
+                                message.error(
+                                  "Giờ kết thúc phải nằm trong khoảng thời gian của triển lãm"
+                                );
+                                return;
+                              }
+                            }
+
+                            // Kiểm tra xem giờ kết thúc có sau giờ bắt đầu không
+                            const hasStartTime =
+                              status.startDate &&
+                              status.startDate.format("HH:mm:ss") !==
+                                "00:00:00";
+                            if (
+                              hasStartTime &&
+                              (newEndDate.isBefore(status.startDate) ||
+                                newEndDate.isSame(status.startDate))
+                            ) {
+                              message.error(
+                                "Giờ kết thúc phải sau giờ bắt đầu"
+                              );
+                              return;
+                            }
+
                             handleDateChange(index, "endDate", newEndDate);
                           }
                         }}
@@ -742,15 +912,14 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         placeholder="Giờ kết thúc"
                         popupClassName="timezone-popup"
                         renderExtraFooter={() => (
-                          <div className="text-xs text-gray-500 text-right">
-                            Giờ Việt Nam (UTC+7)
-                          </div>
+                          <div className="text-xs text-gray-500 text-right"></div>
                         )}
                         allowClear={true}
-                        disabledHours={() => {
-                          const hoursDisabled = [];
+                        disabledTime={(selectedHour) => {
+                          // Đơn giản hóa các ràng buộc về giờ
+                          const disabledHours = [];
 
-                          // Vô hiệu hóa giờ đã qua trong ngày hiện tại
+                          // Chỉ vô hiệu hóa các giờ trong quá khứ của ngày hiện tại
                           const now = dayjs().tz("Asia/Ho_Chi_Minh");
                           const isToday =
                             status.endDate &&
@@ -760,87 +929,25 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
                           if (isToday) {
                             for (let i = 0; i < now.hour(); i++) {
-                              hoursDisabled.push(i);
+                              disabledHours.push(i);
                             }
                           }
 
-                          // Tìm trạng thái Award
-                          const awardStatus = availableStatuses.find(
-                            (s) =>
-                              s.statusName === "Award" &&
-                              s.selected &&
-                              s.endDate
-                          );
+                          return {
+                            disabledHours: () => disabledHours,
+                            disabledMinutes: (selectedHour) => {
+                              const minutesDisabled = [];
 
-                          // Nếu có trạng thái Award và cùng ngày
-                          if (
-                            awardStatus &&
-                            awardStatus.endDate &&
-                            status.endDate &&
-                            status.endDate.format("YYYY-MM-DD") ===
-                              awardStatus.endDate.format("YYYY-MM-DD")
-                          ) {
-                            // Vô hiệu hóa tất cả các giờ trước giờ kết thúc của Award
-                            for (
-                              let i = 0;
-                              i < awardStatus.endDate.hour();
-                              i++
-                            ) {
-                              if (!hoursDisabled.includes(i)) {
-                                hoursDisabled.push(i);
+                              // Chỉ vô hiệu hóa phút trong quá khứ nếu là giờ hiện tại
+                              if (isToday && selectedHour === now.hour()) {
+                                for (let i = 0; i < now.minute(); i++) {
+                                  minutesDisabled.push(i);
+                                }
                               }
-                            }
-                          }
 
-                          return hoursDisabled;
-                        }}
-                        disabledMinutes={(selectedHour) => {
-                          const minutesDisabled = [];
-
-                          // Vô hiệu hóa phút đã qua trong giờ hiện tại
-                          const now = dayjs().tz("Asia/Ho_Chi_Minh");
-                          const isToday =
-                            status.endDate &&
-                            now.date() === status.endDate.date() &&
-                            now.month() === status.endDate.month() &&
-                            now.year() === status.endDate.year();
-
-                          if (isToday && selectedHour === now.hour()) {
-                            for (let i = 0; i < now.minute(); i++) {
-                              minutesDisabled.push(i);
-                            }
-                          }
-
-                          // Tìm trạng thái Award
-                          const awardStatus = availableStatuses.find(
-                            (s) =>
-                              s.statusName === "Award" &&
-                              s.selected &&
-                              s.endDate
-                          );
-
-                          // Nếu có Award và cùng ngày và cùng giờ
-                          if (
-                            awardStatus &&
-                            awardStatus.endDate &&
-                            status.endDate &&
-                            status.endDate.format("YYYY-MM-DD") ===
-                              awardStatus.endDate.format("YYYY-MM-DD") &&
-                            selectedHour === awardStatus.endDate.hour()
-                          ) {
-                            // Vô hiệu hóa tất cả các phút trước hoặc bằng phút kết thúc của Award
-                            for (
-                              let i = 0;
-                              i <= awardStatus.endDate.minute();
-                              i++
-                            ) {
-                              if (!minutesDisabled.includes(i)) {
-                                minutesDisabled.push(i);
-                              }
-                            }
-                          }
-
-                          return minutesDisabled;
+                              return minutesDisabled;
+                            },
+                          };
                         }}
                       />
                     </div>
@@ -864,10 +971,12 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         showNow={false}
                         popupClassName="timezone-popup"
                         renderExtraFooter={() => (
-                          <div className="text-xs text-gray-500 text-right">
-                            Giờ Việt Nam (UTC+7)
-                          </div>
+                          <div className="text-xs text-gray-500 text-right"></div>
                         )}
+                        disabledDate={(current) => {
+                          // Không vô hiệu hóa ngày sau triển lãm, chỉ hiện thông báo lỗi
+                          return false; // Cho phép chọn tất cả các ngày
+                        }}
                       />
                       {getDateError(status, "startDate") && (
                         <p className="text-red-500 text-xs mt-1">
@@ -893,10 +1002,20 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         showNow={false}
                         popupClassName="timezone-popup"
                         renderExtraFooter={() => (
-                          <div className="text-xs text-gray-500 text-right">
-                            Giờ Việt Nam (UTC+7)
-                          </div>
+                          <div className="text-xs text-gray-500 text-right"></div>
                         )}
+                        disabledDate={(current) => {
+                          // Chỉ vô hiệu hóa ngày trước ngày bắt đầu của giai đoạn đăng ký
+                          if (
+                            status.startDate &&
+                            current.isBefore(status.startDate, "day")
+                          ) {
+                            return true;
+                          }
+
+                          // Không vô hiệu hóa ngày sau triển lãm, chỉ hiện thông báo lỗi
+                          return false; // Cho phép chọn tất cả các ngày
+                        }}
                       />
                       {getDateError(status, "endDate") && (
                         <p className="text-red-500 text-xs mt-1">
@@ -916,109 +1035,65 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         disabled={!status.selected}
                         value={status.startDate}
                         onChange={(value) => {
-                          // Chỉ cập nhật phần ngày, KHÔNG tự động thêm giờ 00:00
-                          let newValue = value;
-                          if (
-                            value &&
-                            status.startDate &&
-                            status.startDate.format("HH:mm:ss") !== "00:00:00"
-                          ) {
-                            // Chỉ giữ lại thời gian từ startDate nếu đã có giờ được thiết lập rõ ràng (khác 00:00:00)
-                            newValue = value
-                              .hour(status.startDate.hour())
-                              .minute(status.startDate.minute())
-                              .second(status.startDate.second());
-                          }
-                          handleDateChange(index, "startDate", newValue);
+                          // Chỉ cập nhật ngày, KHÔNG tự động thêm giờ 00:00
+                          if (value) {
+                            // KHÔNG tự động thêm giờ 00:00 mà để giờ là null
+                            const dateOnly = value;
+                            handleDateChange(index, "startDate", dateOnly);
 
-                          // Cập nhật cùng ngày cho endDate nếu đã có
-                          if (value && status.endDate) {
-                            const newEndDate = value
-                              .hour(status.endDate.hour())
-                              .minute(status.endDate.minute())
-                              .second(status.endDate.second());
-                            handleDateChange(index, "endDate", newEndDate);
+                            // Cập nhật cùng ngày cho endDate nếu đã có
+                            if (status.endDate) {
+                              let newEndDate;
+                              if (
+                                status.endDate.hour() ||
+                                status.endDate.minute() ||
+                                status.endDate.second()
+                              ) {
+                                // Nếu endDate đã có giờ cụ thể, giữ lại giờ đó
+                                newEndDate = value
+                                  .hour(status.endDate.hour())
+                                  .minute(status.endDate.minute())
+                                  .second(status.endDate.second());
+                              } else {
+                                // Nếu endDate chưa có giờ, đặt cùng ngày không giờ
+                                newEndDate = value;
+                              }
+                              handleDateChange(index, "endDate", newEndDate);
+                            }
+                          } else {
+                            // Trường hợp xóa ngày
+                            handleDateChange(index, "startDate", null);
+                            // Nếu không có ngày, cũng xóa giờ
+                            if (status.endDate) {
+                              handleDateChange(index, "endDate", null);
+                            }
                           }
                         }}
                         format="YYYY-MM-DD"
                         placeholder="Chọn ngày"
-                        // Không cho phép chọn ngày trước ngày KoiCheckIn nếu là trạng thái sau KoiCheckIn
                         disabledDate={(current) => {
-                          // Mặc định vô hiệu hóa ngày trong quá khứ
-                          if (current && current.isBefore(dayjs(), "day")) {
-                            return true;
-                          }
+                          // Giới hạn ngày chỉ trong khoảng thời gian triển lãm
+                          if (exhibitionStartDate && exhibitionEndDate) {
+                            // Lấy ngày bắt đầu và kết thúc của triển lãm (không có giờ)
+                            const startExhDay =
+                              exhibitionStartDate.startOf("day");
+                            const endExhDay = exhibitionEndDate.startOf("day");
 
-                          // Tìm trạng thái đăng ký
-                          const registrationStatus = availableStatuses.find(
-                            (s) =>
-                              s.statusName === "RegistrationOpen" &&
-                              s.selected &&
-                              s.endDate
-                          );
-
-                          // Nếu đây không phải là trạng thái đăng ký và trạng thái đăng ký đã được thiết lập
-                          if (
-                            status.statusName !== "RegistrationOpen" &&
-                            registrationStatus &&
-                            registrationStatus.endDate
-                          ) {
-                            // Vô hiệu hóa tất cả các ngày trước hoặc bằng ngày kết thúc đăng ký
-                            // Nghĩa là chỉ cho phép chọn từ ngày sau ngày kết thúc đăng ký trở đi
+                            // Chỉ cho phép chọn ngày trong khoảng của triển lãm
                             if (
-                              current &&
-                              (current.isSame(
-                                registrationStatus.endDate,
-                                "day"
-                              ) ||
-                                current.isBefore(
-                                  registrationStatus.endDate,
-                                  "day"
-                                ))
+                              current.isBefore(startExhDay, "day") ||
+                              current.isAfter(endExhDay, "day")
                             ) {
+                              return true; // Vô hiệu hóa ngày
+                            }
+                          } else {
+                            // Nếu không có thông tin về triển lãm, chỉ vô hiệu hóa ngày trong quá khứ
+                            if (current.isBefore(dayjs(), "day")) {
                               return true;
                             }
                           }
 
-                          // Các điều kiện bổ sung cho các trạng thái cụ thể sau KoiCheckIn
-                          const koiCheckInStatus = availableStatuses.find(
-                            (s) =>
-                              s.statusName === "KoiCheckIn" &&
-                              s.selected &&
-                              s.startDate
-                          );
-
-                          // Nếu trạng thái KoiCheckIn được chọn và có ngày bắt đầu
-                          if (koiCheckInStatus && koiCheckInStatus.startDate) {
-                            // Danh sách các trạng thái phải diễn ra sau KoiCheckIn
-                            const statusesAfterKoiCheckIn = [
-                              "Preliminary",
-                              "Evaluation",
-                              "Final",
-                              "Exhibition",
-                              "PublicResult",
-                              "Award",
-                            ];
-
-                            // Nếu trạng thái hiện tại nằm trong danh sách phải diễn ra sau KoiCheckIn
-                            // và ngày bắt đầu KoiCheckIn là sau ngày kết thúc đăng ký
-                            // thì vô hiệu hóa cả ngày trước KoiCheckIn
-                            if (
-                              statusesAfterKoiCheckIn.includes(
-                                status.statusName
-                              )
-                            ) {
-                              return (
-                                current &&
-                                current.isBefore(
-                                  koiCheckInStatus.startDate,
-                                  "day"
-                                )
-                              );
-                            }
-                          }
-
-                          return false;
+                          return false; // Cho phép chọn ngày
                         }}
                       />
                       {getDateError(status, "startDate") && (
@@ -1045,11 +1120,26 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                                 .minute(value.minute())
                                 .second(value.second());
 
+                              // Kiểm tra giờ bắt đầu có nằm trong khoảng thời gian của triển lãm
+                              if (exhibitionStartDate && exhibitionEndDate) {
+                                if (
+                                  newDate.isBefore(exhibitionStartDate) ||
+                                  newDate.isAfter(exhibitionEndDate)
+                                ) {
+                                  message.error(
+                                    "Giờ bắt đầu phải nằm trong khoảng thời gian của triển lãm"
+                                  );
+                                  return;
+                                }
+                              }
+
                               // Kiểm tra xem giờ bắt đầu có trước giờ kết thúc không nếu đã có giờ kết thúc
-                              if (
+                              const hasEndTime =
                                 status.endDate &&
                                 status.endDate.format("HH:mm:ss") !==
-                                  "00:00:00" &&
+                                  "00:00:00";
+                              if (
+                                hasEndTime &&
                                 (newDate.isAfter(status.endDate) ||
                                   newDate.isSame(status.endDate))
                               ) {
@@ -1065,7 +1155,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                               handleDateChange(
                                 index,
                                 "startDate",
-                                status.startDate.startOf("day")
+                                status.startDate // Giữ nguyên ngày, không có giờ
                               );
                             }
                           }}
@@ -1073,15 +1163,14 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                           placeholder="Giờ bắt đầu"
                           popupClassName="timezone-popup"
                           renderExtraFooter={() => (
-                            <div className="text-xs text-gray-500 text-right">
-                              Giờ Việt Nam (UTC+7)
-                            </div>
+                            <div className="text-xs text-gray-500 text-right"></div>
                           )}
                           allowClear={true}
-                          disabledHours={() => {
-                            const hoursDisabled = [];
+                          disabledTime={(selectedHour) => {
+                            // Đơn giản hóa các ràng buộc về giờ
+                            const disabledHours = [];
 
-                            // Vô hiệu hóa giờ đã qua trong ngày hiện tại
+                            // Chỉ vô hiệu hóa các giờ trong quá khứ của ngày hiện tại
                             const now = dayjs().tz("Asia/Ho_Chi_Minh");
                             const isToday =
                               status.startDate &&
@@ -1090,135 +1179,26 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                               now.year() === status.startDate.year();
 
                             if (isToday) {
-                              // Vô hiệu hóa tất cả các giờ đã qua trong ngày hiện tại
                               for (let i = 0; i < now.hour(); i++) {
-                                hoursDisabled.push(i);
+                                disabledHours.push(i);
                               }
                             }
 
-                            // Tìm trạng thái trước đó dựa vào thứ tự các trạng thái
-                            const statusOrder = {
-                              RegistrationOpen: 1,
-                              KoiCheckIn: 2,
-                              TicketCheckIn: 3,
-                              Preliminary: 4,
-                              Evaluation: 5,
-                              Final: 6,
-                              Exhibition: 7,
-                              PublicResult: 8,
-                              Award: 9,
-                              Finished: 10,
-                            };
+                            return {
+                              disabledHours: () => disabledHours,
+                              disabledMinutes: (selectedHour) => {
+                                const minutesDisabled = [];
 
-                            // Lấy thứ tự của trạng thái hiện tại
-                            const currentOrder = statusOrder[status.statusName];
-
-                            // Tìm trạng thái trước đó
-                            const prevStatus = availableStatuses.find(
-                              (s) =>
-                                s.selected &&
-                                s.endDate &&
-                                statusOrder[s.statusName] === currentOrder - 1
-                            );
-
-                            // Nếu có trạng thái trước đó và cùng ngày với trạng thái hiện tại
-                            if (prevStatus && prevStatus.endDate) {
-                              if (
-                                status.startDate &&
-                                status.startDate.format("YYYY-MM-DD") ===
-                                  prevStatus.endDate.format("YYYY-MM-DD")
-                              ) {
-                                // Vô hiệu hóa tất cả các giờ TRƯỚC giờ kết thúc của trạng thái trước đó
-                                for (
-                                  let i = 0;
-                                  i < prevStatus.endDate.hour();
-                                  i++
-                                ) {
-                                  if (!hoursDisabled.includes(i)) {
-                                    hoursDisabled.push(i);
+                                // Chỉ vô hiệu hóa phút trong quá khứ nếu là giờ hiện tại
+                                if (isToday && selectedHour === now.hour()) {
+                                  for (let i = 0; i < now.minute(); i++) {
+                                    minutesDisabled.push(i);
                                   }
                                 }
-                                // Nếu phút kết thúc của trạng thái trước là 59, vô hiệu hóa luôn giờ kết thúc
-                                if (prevStatus.endDate.minute() === 59) {
-                                  if (
-                                    !hoursDisabled.includes(
-                                      prevStatus.endDate.hour()
-                                    )
-                                  ) {
-                                    hoursDisabled.push(
-                                      prevStatus.endDate.hour()
-                                    );
-                                  }
-                                }
-                              }
-                            }
 
-                            return hoursDisabled;
-                          }}
-                          disabledMinutes={(selectedHour) => {
-                            const minutesDisabled = [];
-
-                            // Vô hiệu hóa phút đã qua trong giờ hiện tại
-                            const now = dayjs().tz("Asia/Ho_Chi_Minh");
-                            const isToday =
-                              status.startDate &&
-                              now.date() === status.startDate.date() &&
-                              now.month() === status.startDate.month() &&
-                              now.year() === status.startDate.year();
-
-                            if (isToday && selectedHour === now.hour()) {
-                              for (let i = 0; i < now.minute(); i++) {
-                                minutesDisabled.push(i);
-                              }
-                            }
-
-                            // Tìm trạng thái trước đó dựa vào thứ tự các trạng thái
-                            const statusOrder = {
-                              RegistrationOpen: 1,
-                              KoiCheckIn: 2,
-                              TicketCheckIn: 3,
-                              Preliminary: 4,
-                              Evaluation: 5,
-                              Final: 6,
-                              Exhibition: 7,
-                              PublicResult: 8,
-                              Award: 9,
-                              Finished: 10,
+                                return minutesDisabled;
+                              },
                             };
-
-                            // Lấy thứ tự của trạng thái hiện tại
-                            const currentOrder = statusOrder[status.statusName];
-
-                            // Tìm trạng thái trước đó
-                            const prevStatus = availableStatuses.find(
-                              (s) =>
-                                s.selected &&
-                                s.endDate &&
-                                statusOrder[s.statusName] === currentOrder - 1
-                            );
-
-                            // Nếu có trạng thái trước đó và nếu giờ được chọn trùng với giờ kết thúc của trạng thái trước
-                            if (
-                              prevStatus &&
-                              prevStatus.endDate &&
-                              selectedHour === prevStatus.endDate.hour() &&
-                              status.startDate &&
-                              status.startDate.format("YYYY-MM-DD") ===
-                                prevStatus.endDate.format("YYYY-MM-DD")
-                            ) {
-                              // Vô hiệu hóa tất cả các phút từ 0 đến phút kết thúc của trạng thái trước
-                              for (
-                                let i = 0;
-                                i <= prevStatus.endDate.minute();
-                                i++
-                              ) {
-                                if (!minutesDisabled.includes(i)) {
-                                  minutesDisabled.push(i);
-                                }
-                              }
-                            }
-
-                            return minutesDisabled;
                           }}
                         />
                       </div>
@@ -1238,10 +1218,25 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                                 .minute(value.minute())
                                 .second(value.second());
 
+                              // Kiểm tra giờ kết thúc có nằm trong khoảng thời gian của triển lãm
+                              if (exhibitionStartDate && exhibitionEndDate) {
+                                if (
+                                  newEndDate.isBefore(exhibitionStartDate) ||
+                                  newEndDate.isAfter(exhibitionEndDate)
+                                ) {
+                                  message.error(
+                                    "Giờ kết thúc phải nằm trong khoảng thời gian của triển lãm"
+                                  );
+                                  return;
+                                }
+                              }
+
                               // Kiểm tra xem giờ kết thúc có sau giờ bắt đầu không
-                              if (
+                              const hasStartTime =
                                 status.startDate.format("HH:mm:ss") !==
-                                  "00:00:00" &&
+                                "00:00:00";
+                              if (
+                                hasStartTime &&
                                 (newEndDate.isBefore(status.startDate) ||
                                   newEndDate.isSame(status.startDate))
                               ) {
@@ -1257,7 +1252,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                               handleDateChange(
                                 index,
                                 "endDate",
-                                status.startDate.startOf("day")
+                                status.startDate // Giữ nguyên ngày, không có giờ
                               );
                             }
                           }}
@@ -1265,15 +1260,15 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                           placeholder="Giờ kết thúc"
                           popupClassName="timezone-popup"
                           renderExtraFooter={() => (
-                            <div className="text-xs text-gray-500 text-right">
-                              Giờ Việt Nam (UTC+7)
-                            </div>
+                            <div className="text-xs text-gray-500 text-right"></div>
                           )}
                           allowClear={true}
-                          disabledHours={() => {
-                            const hoursDisabled = [];
+                          // Loại bỏ disabledDate - chỉ dựa vào ngày đã chọn từ datepicker
+                          disabledTime={(selectedHour) => {
+                            // Đơn giản hóa các ràng buộc về giờ
+                            const disabledHours = [];
 
-                            // Vô hiệu hóa giờ đã qua trong ngày hiện tại
+                            // Chỉ vô hiệu hóa các giờ trong quá khứ của ngày hiện tại
                             const now = dayjs().tz("Asia/Ho_Chi_Minh");
                             const isToday =
                               status.startDate &&
@@ -1282,188 +1277,26 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                               now.year() === status.startDate.year();
 
                             if (isToday) {
-                              // Vô hiệu hóa tất cả các giờ đã qua trong ngày hiện tại
                               for (let i = 0; i < now.hour(); i++) {
-                                hoursDisabled.push(i);
+                                disabledHours.push(i);
                               }
                             }
 
-                            // Tìm trạng thái trước đó dựa vào thứ tự các trạng thái
-                            const statusOrder = {
-                              RegistrationOpen: 1,
-                              KoiCheckIn: 2,
-                              TicketCheckIn: 3,
-                              Preliminary: 4,
-                              Evaluation: 5,
-                              Final: 6,
-                              Exhibition: 7,
-                              PublicResult: 8,
-                              Award: 9,
-                              Finished: 10,
-                            };
+                            return {
+                              disabledHours: () => disabledHours,
+                              disabledMinutes: (selectedHour) => {
+                                const minutesDisabled = [];
 
-                            // Lấy thứ tự của trạng thái hiện tại
-                            const currentOrder = statusOrder[status.statusName];
-
-                            // Tìm trạng thái trước đó
-                            const prevStatus = availableStatuses.find(
-                              (s) =>
-                                s.selected &&
-                                s.endDate &&
-                                statusOrder[s.statusName] === currentOrder - 1
-                            );
-
-                            // Nếu có trạng thái trước đó và cùng ngày với trạng thái hiện tại
-                            if (prevStatus && prevStatus.endDate) {
-                              if (
-                                status.startDate &&
-                                status.startDate.format("YYYY-MM-DD") ===
-                                  prevStatus.endDate.format("YYYY-MM-DD")
-                              ) {
-                                // Vô hiệu hóa tất cả các giờ TRƯỚC giờ kết thúc của trạng thái trước đó
-                                for (
-                                  let i = 0;
-                                  i < prevStatus.endDate.hour();
-                                  i++
-                                ) {
-                                  if (!hoursDisabled.includes(i)) {
-                                    hoursDisabled.push(i);
+                                // Chỉ vô hiệu hóa phút trong quá khứ nếu là giờ hiện tại
+                                if (isToday && selectedHour === now.hour()) {
+                                  for (let i = 0; i < now.minute(); i++) {
+                                    minutesDisabled.push(i);
                                   }
                                 }
-                              }
-                            }
 
-                            // Kiểm tra tất cả các trạng thái có cùng ngày
-                            if (status.startDate) {
-                              // Tìm trạng thái tiếp theo dựa vào thứ tự các trạng thái
-                              const statusOrder = {
-                                RegistrationOpen: 1,
-                                KoiCheckIn: 2,
-                                TicketCheckIn: 3,
-                                Preliminary: 4,
-                                Evaluation: 5,
-                                Final: 6,
-                                Exhibition: 7,
-                                PublicResult: 8,
-                                Award: 9,
-                                Finished: 10,
-                              };
-
-                              // Lấy thứ tự của trạng thái hiện tại
-                              const currentOrder =
-                                statusOrder[status.statusName];
-
-                              // Tìm trạng thái tiếp theo
-                              const nextStatus = availableStatuses.find(
-                                (s) =>
-                                  s.selected &&
-                                  s.startDate &&
-                                  statusOrder[s.statusName] === currentOrder + 1
-                              );
-
-                              // Nếu có trạng thái tiếp theo và cùng ngày với trạng thái hiện tại
-                              if (nextStatus && nextStatus.startDate) {
-                                if (
-                                  status.startDate.format("YYYY-MM-DD") ===
-                                  nextStatus.startDate.format("YYYY-MM-DD")
-                                ) {
-                                  // Chỉ vô hiệu hóa tất cả các giờ SAU giờ bắt đầu của trạng thái tiếp theo
-                                  // KHÔNG vô hiệu hóa chính giờ bắt đầu, để người dùng có thể chọn đến đúng giờ đó
-                                  for (
-                                    let i = nextStatus.startDate.hour() + 1;
-                                    i < 24;
-                                    i++
-                                  ) {
-                                    if (!hoursDisabled.includes(i)) {
-                                      hoursDisabled.push(i);
-                                    }
-                                  }
-                                }
-                              }
-                            }
-
-                            return hoursDisabled;
-                          }}
-                          disabledMinutes={(selectedHour) => {
-                            const minutesDisabled = [];
-
-                            // Vô hiệu hóa phút đã qua trong giờ hiện tại
-                            const now = dayjs().tz("Asia/Ho_Chi_Minh");
-                            const isToday =
-                              status.startDate &&
-                              now.date() === status.startDate.date() &&
-                              now.month() === status.startDate.month() &&
-                              now.year() === status.startDate.year();
-
-                            if (isToday && selectedHour === now.hour()) {
-                              for (let i = 0; i < now.minute(); i++) {
-                                minutesDisabled.push(i);
-                              }
-                            }
-
-                            // Nếu đây là thời gian bắt đầu và cùng giờ với thời gian bắt đầu đã chọn
-                            if (
-                              status.startDate &&
-                              selectedHour === status.startDate.hour()
-                            ) {
-                              for (
-                                let i = 0;
-                                i <= status.startDate.minute();
-                                i++
-                              ) {
-                                if (!minutesDisabled.includes(i)) {
-                                  minutesDisabled.push(i);
-                                }
-                              }
-                            }
-
-                            // Tìm trạng thái trước đó dựa vào thứ tự các trạng thái
-                            const statusOrder = {
-                              RegistrationOpen: 1,
-                              KoiCheckIn: 2,
-                              TicketCheckIn: 3,
-                              Preliminary: 4,
-                              Evaluation: 5,
-                              Final: 6,
-                              Exhibition: 7,
-                              PublicResult: 8,
-                              Award: 9,
-                              Finished: 10,
+                                return minutesDisabled;
+                              },
                             };
-
-                            // Lấy thứ tự của trạng thái hiện tại
-                            const currentOrder = statusOrder[status.statusName];
-
-                            // Tìm trạng thái trước đó
-                            const prevStatus = availableStatuses.find(
-                              (s) =>
-                                s.selected &&
-                                s.endDate &&
-                                statusOrder[s.statusName] === currentOrder - 1
-                            );
-
-                            // Nếu có trạng thái trước đó và nếu giờ được chọn trùng với giờ kết thúc của trạng thái trước
-                            if (
-                              prevStatus &&
-                              prevStatus.endDate &&
-                              selectedHour === prevStatus.endDate.hour() &&
-                              status.startDate &&
-                              status.startDate.format("YYYY-MM-DD") ===
-                                prevStatus.endDate.format("YYYY-MM-DD")
-                            ) {
-                              // Vô hiệu hóa tất cả các phút trước và bằng phút kết thúc của trạng thái trước
-                              for (
-                                let i = 0;
-                                i <= prevStatus.endDate.minute();
-                                i++
-                              ) {
-                                if (!minutesDisabled.includes(i)) {
-                                  minutesDisabled.push(i);
-                                }
-                              }
-                            }
-
-                            return minutesDisabled;
                           }}
                         />
                       </div>

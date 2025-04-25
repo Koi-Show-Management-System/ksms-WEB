@@ -510,6 +510,10 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="Chọn ngày bắt đầu"
             allowClear={true}
+            disabledDate={(current) => {
+              // Disable dates before today, but allow today to be selected
+              return current && current.isBefore(dayjs(), "day");
+            }}
           />
           {timeErrors.startDate && (
             <p className="text-red-500 text-xs mt-1">{timeErrors.startDate}</p>
