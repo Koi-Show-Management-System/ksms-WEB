@@ -60,6 +60,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   const [preliminaryGuideConfirmed, setPreliminaryGuideConfirmed] =
     useState(false);
   const [numberRegisToAdvance, setNumberRegisToAdvance] = useState(null);
+  const [scanning, setScanning] = useState(false);
 
   const {
     criteriaCompetitionRound,
@@ -194,6 +195,15 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
   useEffect(() => {
     resetCriteriaCompetitionRound();
   }, [categoryId, selectedRoundType, resetCriteriaCompetitionRound]);
+
+  // Track scanning state for animation
+  useEffect(() => {
+    if (showScanner && scannerEnabled) {
+      setScanning(true);
+    } else {
+      setScanning(false);
+    }
+  }, [showScanner, scannerEnabled]);
 
   const handleScan = async (data) => {
     if (data && data.text && selectedSubRound) {
@@ -739,7 +749,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
           {!showScanner && !qrResult && !scanError && (
             <div className="flex flex-col items-center mb-5">
-              <div className="w-full md:w-3/4 lg:w-1/2 text-center p-3  ">
+              <div className="w-full md:w-3/4 lg:w-1/2 text-center p-5 bg-white rounded-xl shadow-sm">
                 <QrcodeOutlined
                   style={{
                     fontSize: "48px",
@@ -758,10 +768,126 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                   size="large"
                   icon={<QrcodeOutlined />}
                   onClick={() => setShowScanner(true)}
-                  className="px-8 h-12 rounded-lg shadow-md hover:shadow-lg transition-shadow"
+                  style={{
+                    height: "56px",
+                    fontSize: "16px",
+                    padding: "0 32px",
+                    borderRadius: "8px",
+                    boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
+                  }}
                 >
                   Bắt đầu quét QR
                 </Button>
+              </div>
+            </div>
+          )}
+
+          {showScanner && scannerEnabled && (
+            <div className="mb-8">
+              <div
+                className="mb-6 shadow-lg"
+                style={{
+                  borderRadius: "16px",
+                  maxWidth: "800px",
+                  margin: "0 auto",
+                  overflow: "hidden",
+                  backgroundColor: "#f8f8f8",
+                  border: "1px solid #e0e0e0",
+                }}
+              >
+                <div className="scanner-header bg-blue-600 text-white py-3 px-4 flex items-center justify-center">
+                  <QrcodeOutlined
+                    className="mr-2"
+                    style={{ fontSize: "18px" }}
+                  />
+                  <Text
+                    strong
+                    style={{
+                      color: "white",
+                      fontSize: "18px",
+                      margin: 0,
+                    }}
+                  >
+                    Quét mã QR
+                  </Text>
+                </div>
+
+                <div className="scanner-container flex flex-col items-center px-4 py-4">
+                  <div
+                    className="qr-scanner-wrapper mb-4 relative"
+                    style={{
+                      width: "100%",
+                      position: "relative",
+                      borderRadius: "8px",
+                      overflow: "hidden",
+                      boxShadow: "0 4px 12px rgba(0, 0, 0, 0.15)",
+                    }}
+                  >
+                    <div className="scanner-corners">
+                      <div className="scanner-corner-tl"></div>
+                      <div className="scanner-corner-tr"></div>
+                      <div className="scanner-corner-bl"></div>
+                      <div className="scanner-corner-br"></div>
+                    </div>
+
+                    {scanning && <div className="scanner-line"></div>}
+
+                    <QrScanner
+                      delay={300}
+                      onError={handleError}
+                      onScan={handleScan}
+                      constraints={{
+                        video: { facingMode: facingMode },
+                      }}
+                      style={{
+                        width: "100%",
+                        height: "500px",
+                        objectFit: "cover",
+                      }}
+                    />
+                  </div>
+
+                  <Text
+                    className="text-center text-gray-600 italic mb-3"
+                    style={{
+                      fontSize: "16px",
+                      backgroundColor: "rgba(255, 255, 255, 0.8)",
+                      padding: "8px 16px",
+                      borderRadius: "20px",
+                      boxShadow: "0 2px 4px rgba(0, 0, 0, 0.05)",
+                    }}
+                  >
+                    Hướng camera vào mã QR để quét
+                  </Text>
+
+                  <Space>
+                    <Button
+                      onClick={() => setShowScanner(false)}
+                      danger
+                      icon={<CloseCircleOutlined />}
+                      size="large"
+                      style={{
+                        height: "48px",
+                        minWidth: "140px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      Hủy quét
+                    </Button>
+                    {/* <Button
+                      onClick={toggleCamera}
+                      icon={<ReloadOutlined />}
+                      size="large"
+                      style={{
+                        height: "48px",
+                        minWidth: "140px",
+                        borderRadius: "8px",
+                      }}
+                    >
+                      Đổi camera
+                    </Button> */}
+                  </Space>
+                </div>
               </div>
             </div>
           )}
@@ -774,6 +900,11 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 type="error"
                 showIcon
                 className="mb-4 shadow-sm"
+                style={{
+                  borderRadius: "8px",
+                  maxWidth: "800px",
+                  margin: "0 auto",
+                }}
               />
               <div className="flex justify-center">
                 <Button
@@ -785,41 +916,6 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                 >
                   Quét lại
                 </Button>
-              </div>
-            </div>
-          )}
-
-          {showScanner && scannerEnabled && (
-            <div className="mb-8">
-              <div className="p-2">
-                <div className="flex flex-col items-center">
-                  <div className="w-full max-w-2xl rounded-lg mb-4 overflow-hidden shadow-lg">
-                    <QrScanner
-                      delay={300}
-                      onError={handleError}
-                      onScan={handleScan}
-                      constraints={{
-                        video: { facingMode: facingMode },
-                      }}
-                      style={{ width: "100%", height: "500px" }}
-                    />
-                  </div>
-                  <Text className="text-center text-gray-600 italic mb-4">
-                    <AimOutlined className="mr-2" />
-                    Hướng camera vào mã QR để quét
-                  </Text>
-                  <Space>
-                    <Button
-                      onClick={() => setShowScanner(false)}
-                      danger
-                      icon={<CloseCircleOutlined />}
-                      size="large"
-                      className="px-6 rounded-lg"
-                    >
-                      Hủy quét
-                    </Button>
-                  </Space>
-                </div>
               </div>
             </div>
           )}
@@ -1160,6 +1256,93 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
         .bg-opacity-15 {
           background-color: rgba(255, 255, 255, 0.15);
+        }
+
+        /* Scanner frame and corners */
+        .scanner-corners {
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          z-index: 10;
+          pointer-events: none;
+        }
+
+        .scanner-corner-tl,
+        .scanner-corner-tr,
+        .scanner-corner-bl,
+        .scanner-corner-br {
+          position: absolute;
+          width: 30px;
+          height: 30px;
+          z-index: 10;
+        }
+
+        .scanner-corner-tl {
+          top: 10px;
+          left: 10px;
+          border-top: 4px solid #1890ff;
+          border-left: 4px solid #1890ff;
+        }
+
+        .scanner-corner-tr {
+          top: 10px;
+          right: 10px;
+          border-top: 4px solid #1890ff;
+          border-right: 4px solid #1890ff;
+        }
+
+        .scanner-corner-bl {
+          bottom: 10px;
+          left: 10px;
+          border-bottom: 4px solid #1890ff;
+          border-left: 4px solid #1890ff;
+        }
+
+        .scanner-corner-br {
+          bottom: 10px;
+          right: 10px;
+          border-bottom: 4px solid #1890ff;
+          border-right: 4px solid #1890ff;
+        }
+
+        /* Scanning animation */
+        .scanner-line {
+          position: absolute;
+          height: 2px;
+          width: 100%;
+          background: linear-gradient(
+            to right,
+            rgba(24, 144, 255, 0),
+            rgba(24, 144, 255, 0.8),
+            rgba(24, 144, 255, 0)
+          );
+          z-index: 9;
+          top: 10%;
+          box-shadow: 0 0 8px rgba(24, 144, 255, 0.8);
+          animation: scanning 2s linear infinite;
+          pointer-events: none;
+        }
+
+        @keyframes scanning {
+          0% {
+            top: 10%;
+          }
+          50% {
+            top: 90%;
+          }
+          100% {
+            top: 10%;
+          }
+        }
+
+        /* QR Scanner styles */
+        .react-qr-scanner video {
+          position: relative !important;
+          object-fit: cover !important;
+          max-width: 100% !important;
+          width: 100% !important;
         }
       `}</style>
     </div>

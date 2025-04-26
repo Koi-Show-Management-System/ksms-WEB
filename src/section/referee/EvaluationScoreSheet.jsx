@@ -674,130 +674,134 @@ const EvaluationScoreSheet = ({
 
       <Collapse defaultActiveKey={["criteria"]} className="mb-4">
         <Panel header="Tiêu chí đánh giá và bảng chấm điểm" key="criteria">
-          {criteriaList.map((criteria) => {
-            // Đảm bảo lấy đúng ID của tiêu chí
-            const criteriaId = criteria.criteria?.id || criteria.id;
+          {[...criteriaList]
+            .sort((a, b) => (b.weight || 0) - (a.weight || 0))
+            .map((criteria) => {
+              // Đảm bảo lấy đúng ID của tiêu chí
+              const criteriaId = criteria.criteria?.id || criteria.id;
 
-            // Debug để xem đang sử dụng ID nào
-            console.log("Rendering criteria with ID:", criteriaId);
+              // Debug để xem đang sử dụng ID nào
+              console.log("Rendering criteria with ID:", criteriaId);
 
-            // Lấy danh sách lỗi cho tiêu chí này
-            const errors = criteriaErrors[criteriaId] || [];
+              // Lấy danh sách lỗi cho tiêu chí này
+              const errors = criteriaErrors[criteriaId] || [];
 
-            const criteriaName = criteria.criteria?.name || criteria.name;
-            const weight = criteria.weight || 0;
+              const criteriaName = criteria.criteria?.name || criteria.name;
+              const weight = criteria.weight || 0;
 
-            // Calculate total deduction for this criteria
-            const criteriaDeduction = errors.reduce(
-              (sum, error) => sum + (error.pointMinus || 0),
-              0
-            );
+              // Calculate total deduction for this criteria
+              const criteriaDeduction = errors.reduce(
+                (sum, error) => sum + (error.pointMinus || 0),
+                0
+              );
 
-            return (
-              <Card
-                key={criteriaId}
-                title={
-                  <div className="flex justify-between items-center">
-                    <span>{criteriaName}</span>
-                    <Tag color="blue">
-                      Trọng số: {(weight * 100).toFixed(0)}%
-                    </Tag>
-                  </div>
-                }
-                className="mb-4"
-                extra={
-                  <Button
-                    type="primary"
-                    icon={<PlusOutlined />}
-                    onClick={() => showAddErrorModal(criteria)}
-                  >
-                    Thêm lỗi
-                  </Button>
-                }
-              >
-                {errors.length > 0 ? (
-                  <div>
-                    <Table
-                      dataSource={errors.map((error, index) => ({
-                        ...error,
-                        key: index,
-                      }))}
-                      pagination={false}
-                      size="small"
-                      columns={[
-                        {
-                          title: "Tên lỗi",
-                          dataIndex: "errorName",
-                          key: "errorName",
-                        },
-                        {
-                          title: "Mức độ",
-                          dataIndex: "severity",
-                          key: "severity",
-                          render: (severity) => {
-                            const severityObj = severityLevels.find(
-                              (s) => s.value === severity
-                            );
-                            let color = "green";
-                            if (severity === "mb") color = "orange";
-                            if (severity === "sb") color = "red";
-                            return (
-                              <Tag color={color}>
-                                {severity === "eb"
-                                  ? "Lỗi nhẹ"
-                                  : severity === "mb"
-                                    ? "Lỗi trung bình"
-                                    : severity === "sb"
-                                      ? "Lỗi nghiêm trọng"
-                                      : severityObj?.label || severity}
-                              </Tag>
-                            );
-                          },
-                        },
-                        {
-                          title: "Phần trăm",
-                          dataIndex: "percentage",
-                          key: "percentage",
-                          render: (percentage) => `${percentage}%`,
-                        },
-                        {
-                          title: "Điểm trừ",
-                          dataIndex: "pointMinus",
-                          key: "pointMinus",
-                          render: (pointMinus) => (
-                            <span className="text-red-500">-{pointMinus}</span>
-                          ),
-                        },
-                        {
-                          title: "Hành động",
-                          key: "action",
-                          render: (_, record, index) => (
-                            <Space>
-                              <Button
-                                type="text"
-                                icon={<EditOutlined />}
-                                onClick={() =>
-                                  handleEditError(criteriaId, record, index)
-                                }
-                              />
-                              <Button
-                                type="text"
-                                danger
-                                icon={<DeleteOutlined />}
-                                onClick={() => removeError(criteriaId, index)}
-                              />
-                            </Space>
-                          ),
-                        },
-                      ]}
-                    />
-                    <div className="mt-3 text-right">
-                      <Text strong>Tổng điểm trừ: </Text>
-                      <Text strong className="text-red-500">
-                        -{criteriaDeduction.toFixed(2)}
-                      </Text>
+              return (
+                <Card
+                  key={criteriaId}
+                  title={
+                    <div className="flex justify-between items-center">
+                      <span>{criteriaName}</span>
+                      <Tag color="blue">
+                        Trọng số: {(weight * 100).toFixed(0)}%
+                      </Tag>
                     </div>
-                    {/* <div className="flex justify-between mt-2">
+                  }
+                  className="mb-4"
+                  extra={
+                    <Button
+                      type="primary"
+                      icon={<PlusOutlined />}
+                      onClick={() => showAddErrorModal(criteria)}
+                    >
+                      Thêm lỗi
+                    </Button>
+                  }
+                >
+                  {errors.length > 0 ? (
+                    <div>
+                      <Table
+                        dataSource={errors.map((error, index) => ({
+                          ...error,
+                          key: index,
+                        }))}
+                        pagination={false}
+                        size="small"
+                        columns={[
+                          {
+                            title: "Tên lỗi",
+                            dataIndex: "errorName",
+                            key: "errorName",
+                          },
+                          {
+                            title: "Mức độ",
+                            dataIndex: "severity",
+                            key: "severity",
+                            render: (severity) => {
+                              const severityObj = severityLevels.find(
+                                (s) => s.value === severity
+                              );
+                              let color = "green";
+                              if (severity === "mb") color = "orange";
+                              if (severity === "sb") color = "red";
+                              return (
+                                <Tag color={color}>
+                                  {severity === "eb"
+                                    ? "Lỗi nhẹ"
+                                    : severity === "mb"
+                                      ? "Lỗi trung bình"
+                                      : severity === "sb"
+                                        ? "Lỗi nghiêm trọng"
+                                        : severityObj?.label || severity}
+                                </Tag>
+                              );
+                            },
+                          },
+                          {
+                            title: "Phần trăm",
+                            dataIndex: "percentage",
+                            key: "percentage",
+                            render: (percentage) => `${percentage}%`,
+                          },
+                          {
+                            title: "Điểm trừ",
+                            dataIndex: "pointMinus",
+                            key: "pointMinus",
+                            render: (pointMinus) => (
+                              <span className="text-red-500">
+                                -{pointMinus}
+                              </span>
+                            ),
+                          },
+                          {
+                            title: "Hành động",
+                            key: "action",
+                            render: (_, record, index) => (
+                              <Space>
+                                <Button
+                                  type="text"
+                                  icon={<EditOutlined />}
+                                  onClick={() =>
+                                    handleEditError(criteriaId, record, index)
+                                  }
+                                />
+                                <Button
+                                  type="text"
+                                  danger
+                                  icon={<DeleteOutlined />}
+                                  onClick={() => removeError(criteriaId, index)}
+                                />
+                              </Space>
+                            ),
+                          },
+                        ]}
+                      />
+                      <div className="mt-3 text-right">
+                        <Text strong>Tổng điểm trừ: </Text>
+                        <Text strong className="text-red-500">
+                          -{criteriaDeduction.toFixed(2)}
+                        </Text>
+                      </div>
+                      {/* <div className="flex justify-between mt-2">
                       <Button
                         type="default"
                         size="small"
@@ -810,17 +814,17 @@ const EvaluationScoreSheet = ({
                         Làm mới
                       </Button>
                     </div> */}
-                  </div>
-                ) : (
-                  <Alert
-                    message="Chưa có lỗi nào được ghi nhận"
-                    type="info"
-                    showIcon
-                  />
-                )}
-              </Card>
-            );
-          })}
+                    </div>
+                  ) : (
+                    <Alert
+                      message="Chưa có lỗi nào được ghi nhận"
+                      type="info"
+                      showIcon
+                    />
+                  )}
+                </Card>
+              );
+            })}
         </Panel>
       </Collapse>
 
