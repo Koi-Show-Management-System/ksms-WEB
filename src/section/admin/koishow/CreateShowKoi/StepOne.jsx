@@ -389,8 +389,8 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       newTimeErrors[field] = "Vui lòng chọn ngày.";
       newData[field] = null; // Reset giá trị về null
     } else {
-      // Người dùng đã chọn ngày
-      newData[field] = value.tz("Asia/Ho_Chi_Minh").format();
+      // Người dùng đã chọn ngày - không chuyển đổi múi giờ
+      newData[field] = value.format("YYYY-MM-DDTHH:mm:ss.SSS");
       newTimeErrors[field] = ""; // Xóa lỗi
 
       // Kiểm tra logic giữa ngày bắt đầu và kết thúc
@@ -400,7 +400,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
           // Nếu ngày bắt đầu mới > ngày kết thúc hiện tại, cập nhật ngày kết thúc
           if (value.isAfter(endDate)) {
             // Cập nhật ngày kết thúc = ngày bắt đầu (cho phép cùng ngày)
-            newData.endDate = value.tz("Asia/Ho_Chi_Minh").format();
+            newData.endDate = value.format("YYYY-MM-DDTHH:mm:ss.SSS");
           }
         }
       } else if (field === "endDate") {
@@ -576,11 +576,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
           <DatePicker
             showTime
             className="w-full"
-            value={
-              data.startDate
-                ? dayjs(data.startDate).tz("Asia/Ho_Chi_Minh")
-                : null
-            }
+            value={data.startDate ? dayjs(data.startDate) : null}
             onChange={(value) => handleDateChange("startDate", value)}
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="Chọn ngày bắt đầu"
@@ -602,9 +598,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
           <DatePicker
             showTime
             className="w-full"
-            value={
-              data.endDate ? dayjs(data.endDate).tz("Asia/Ho_Chi_Minh") : null
-            }
+            value={data.endDate ? dayjs(data.endDate) : null}
             onChange={(value) => handleDateChange("endDate", value)}
             format="YYYY-MM-DD HH:mm:ss"
             placeholder="Chọn ngày kết thúc"

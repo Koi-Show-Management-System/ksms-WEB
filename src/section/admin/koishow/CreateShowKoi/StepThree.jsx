@@ -65,12 +65,12 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   // Add constant for max title length
   const MAX_TITLE_LENGTH = 100;
 
-  // Lấy thông tin thời gian triển lãm từ initialData
+  // Lấy thông tin thời gian triển lãm từ initialData - không chuyển đổi múi giờ
   const exhibitionStartDate = initialData.startDate
-    ? dayjs(initialData.startDate).tz("Asia/Ho_Chi_Minh")
+    ? dayjs(initialData.startDate)
     : null;
   const exhibitionEndDate = initialData.endDate
-    ? dayjs(initialData.endDate).tz("Asia/Ho_Chi_Minh")
+    ? dayjs(initialData.endDate)
     : null;
 
   // CSS cho thông báo múi giờ
@@ -150,11 +150,9 @@ function StepThree({ updateFormData, initialData, showErrors }) {
           updatedStatuses[index] = {
             ...updatedStatuses[index],
             startDate: savedStatus.startDate
-              ? dayjs(savedStatus.startDate).tz("Asia/Ho_Chi_Minh")
+              ? dayjs(savedStatus.startDate)
               : null,
-            endDate: savedStatus.endDate
-              ? dayjs(savedStatus.endDate).tz("Asia/Ho_Chi_Minh")
-              : null,
+            endDate: savedStatus.endDate ? dayjs(savedStatus.endDate) : null,
             selected: true,
           };
 
@@ -211,15 +209,16 @@ function StepThree({ updateFormData, initialData, showErrors }) {
             : true)
       )
       .map((status) => {
-        // Đảm bảo rằng Finished status sử dụng startDate và endDate độc lập
+        // Lưu giá trị thời gian gốc, không chuyển đổi múi giờ
+        // Server cần time ở định dạng ISO và sẽ xử lý múi giờ
         let formattedStartDate = status.startDate
-          ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+          ? status.startDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
           : null;
 
         let formattedEndDate = status.endDate
-          ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format()
+          ? status.endDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
           : status.startDate
-            ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+            ? status.startDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
             : null;
 
         return {
@@ -230,21 +229,21 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         };
       });
 
-    // Format date objects in availableStatuses to ISO strings with timezone
+    // Format date objects in availableStatuses không đổi múi giờ
     const formattedAvailableStatuses = availableStatuses.map((status) => ({
       ...status,
       startDate: status.startDate
-        ? dayjs(status.startDate).tz("Asia/Ho_Chi_Minh").format()
+        ? status.startDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
         : null,
       endDate: status.endDate
-        ? dayjs(status.endDate).tz("Asia/Ho_Chi_Minh").format()
+        ? status.endDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
         : null,
     }));
 
     updateFormData({
       createShowRuleRequests: rules,
       createShowStatusRequests: selectedStatuses,
-      availableStatuses: formattedAvailableStatuses, // Sử dụng bản đã format
+      availableStatuses: formattedAvailableStatuses,
     });
 
     setFilteredRules(rules);
