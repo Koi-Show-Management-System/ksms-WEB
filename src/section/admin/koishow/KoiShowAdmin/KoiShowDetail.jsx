@@ -209,12 +209,8 @@ function KoiShowDetail() {
         ...values,
         startDate: values.startDate?.format("YYYY-MM-DDTHH:mm:ss"),
         endDate: values.endDate?.format("YYYY-MM-DDTHH:mm:ss"),
-        startExhibitionDate: values.startExhibitionDate?.format(
-          "YYYY-MM-DDTHH:mm:ss"
-        ),
-        endExhibitionDate: values.endExhibitionDate?.format(
-          "YYYY-MM-DDTHH:mm:ss"
-        ),
+        startExhibitionDate: null,
+        endExhibitionDate: null,
       };
 
       if (uploadedImages.length > 0) {
@@ -225,7 +221,7 @@ function KoiShowDetail() {
 
       const updateData = Object.fromEntries(
         Object.entries(formattedValues).filter(
-          ([_, value]) => value !== undefined && value !== null && value !== ""
+          ([_, value]) => value !== undefined && value !== ""
         )
       );
 
@@ -769,6 +765,8 @@ function KoiShowDetail() {
                       <StatusManager
                         showId={id}
                         showStatuses={koiShowDetail.data.showStatuses}
+                        showStartDate={koiShowDetail.data.startDate}
+                        showEndDate={koiShowDetail.data.endDate}
                         disabled={isStaff || isEditDisabled}
                       />
                     </div>
