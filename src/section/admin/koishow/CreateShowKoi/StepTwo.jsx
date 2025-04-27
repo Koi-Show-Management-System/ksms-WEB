@@ -13,6 +13,7 @@ import {
   Divider,
   Tooltip,
   Spin,
+  notification,
 } from "antd";
 import {
   DeleteOutlined,
@@ -632,6 +633,33 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     refereeId,
     selectedRounds
   ) => {
+    // Check if the selected rounds includes "Preliminary"
+    if (selectedRounds.includes("Preliminary")) {
+      // Check if any other referee is already assigned to Preliminary
+      const otherRefereeHasPreliminary = categories[
+        categoryIndex
+      ]?.createRefereeAssignmentRequests.some(
+        (referee) =>
+          referee.refereeAccountId !== refereeId &&
+          referee.roundTypes?.includes("Preliminary")
+      );
+
+      // If another referee already has Preliminary round, remove it from selectedRounds
+      if (otherRefereeHasPreliminary) {
+        notification.warning({
+          message: "Chỉ 1 trọng tài được chấm vòng sơ khảo",
+          description:
+            "Đã có trọng tài khác được chọn chấm vòng sơ khảo. Mỗi hạng mục chỉ được 1 trọng tài chấm vòng sơ khảo.",
+          placement: "topRight",
+          duration: 5,
+        });
+        // Remove Preliminary from selected rounds
+        selectedRounds = selectedRounds.filter(
+          (round) => round !== "Preliminary"
+        );
+      }
+    }
+
     setCategories((prevCategories) =>
       prevCategories.map((category, i) => {
         if (i !== categoryIndex) return category; // Chỉ cập nhật đúng hạng mục

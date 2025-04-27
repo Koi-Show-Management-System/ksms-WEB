@@ -1,4 +1,11 @@
-import React, { useEffect, useState, useCallback, useMemo } from "react";
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  useLayoutEffect,
+} from "react";
 import { Collapse, Timeline, Card, Image, Tabs, Modal, message } from "antd";
 import dayjs from "dayjs";
 import { EyeOutlined } from "@ant-design/icons";
@@ -21,6 +28,44 @@ import CheckOutKoi from "./CheckOutKoi";
 import Votes from "../admin/koishow/KoiShowAdmin/Votes";
 import StatusManager from "../admin/koishow/KoiShowAdmin/StatusManager";
 
+// Tạo một component LiveStream độc lập để ngăn re-render
+function PersistentLiveStream({ showId, visible }) {
+  // Dùng ref để lưu trữ phiên bản LiveStream được tạo một lần duy nhất
+  const streamContainerRef = useRef(null);
+  const streamInstanceRef = useRef(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // Chỉ khởi tạo LiveStream một lần duy nhất
+  useEffect(() => {
+    if (!streamInstanceRef.current) {
+      console.log("TẠO MỚI LIVESTREAM COMPONENT", new Date().toISOString());
+      streamInstanceRef.current = <LiveStream showId={showId} />;
+      setInitialized(true);
+    }
+  }, [showId]);
+
+  // Chỉ ẩn/hiện container khi cần thiết
+  useLayoutEffect(() => {
+    if (streamContainerRef.current) {
+      streamContainerRef.current.style.display = visible ? "block" : "none";
+    }
+  }, [visible]);
+
+  return (
+    <div
+      ref={streamContainerRef}
+      className="persistent-livestream-wrapper"
+      style={{
+        display: visible ? "block" : "none",
+        position: "relative",
+        zIndex: 10,
+      }}
+    >
+      {initialized && streamInstanceRef.current}
+    </div>
+  );
+}
+
 function KoiShowDetail() {
   const { id } = useParams();
   const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
@@ -29,9 +74,12 @@ function KoiShowDetail() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTabKey, setActiveTabKey] = useState("category");
 
-  const renderTabContent = (key) => {
-    if (key !== activeTabKey) return null;
+  // Xác định có hiển thị LiveStream hay không
+  const isLiveStreamVisible = activeTabKey === "liveStream";
 
+  // Các tab thông thường
+  const renderNormalTab = (key) => {
+    if (key !== activeTabKey) return null;
     if (!koiShowDetail?.data) return null;
 
     const showRule = koiShowDetail?.data?.showRules;
@@ -59,13 +107,12 @@ function KoiShowDetail() {
         return <CheckOutKoi showId={id} />;
       case "rules":
         return <Rules showId={id} showRule={showRule} />;
-      case "liveStream":
-        return <LiveStream showId={id} />;
       default:
         return null;
     }
   };
 
+  // Xây dựng danh sách tabs
   const items = useMemo(() => {
     if (!koiShowDetail?.data) return [];
 
@@ -73,57 +120,57 @@ function KoiShowDetail() {
       {
         key: "category",
         label: "Danh Mục",
-        children: renderTabContent("category"),
+        children: renderNormalTab("category"),
       },
       {
         key: "registration",
         label: "Đơn Đăng Ký",
-        children: renderTabContent("registration"),
+        children: renderNormalTab("registration"),
       },
       {
         key: "ticket",
         label: "Quản lý vé",
-        children: renderTabContent("ticket"),
+        children: renderNormalTab("ticket"),
       },
       {
         key: "tank",
         label: "Quản Lý bể",
-        children: renderTabContent("tank"),
+        children: renderNormalTab("tank"),
       },
       {
         key: "scanQr",
         label: "Quét mã",
-        children: renderTabContent("scanQr"),
+        children: renderNormalTab("scanQr"),
       },
       {
         key: "competitionRound",
         label: "Vòng thi",
-        children: renderTabContent("competitionRound"),
+        children: renderNormalTab("competitionRound"),
       },
       {
         key: "roundResult",
         label: "Kết quả cuối cùng",
-        children: renderTabContent("roundResult"),
+        children: renderNormalTab("roundResult"),
       },
       {
         key: "votes",
         label: "Bình chọn",
-        children: renderTabContent("votes"),
+        children: renderNormalTab("votes"),
       },
       {
         key: "checkOutKoi",
         label: "Check out",
-        children: renderTabContent("checkOutKoi"),
+        children: renderNormalTab("checkOutKoi"),
       },
       {
         key: "rules",
         label: "Quy tắc",
-        children: renderTabContent("rules"),
+        children: renderNormalTab("rules"),
       },
       {
         key: "liveStream",
         label: "LiveStream",
-        children: renderTabContent("liveStream"),
+        children: <div className="livestream-placeholder"></div>,
       },
     ];
   }, [id, koiShowDetail?.data, activeTabKey]);
@@ -427,7 +474,7 @@ function KoiShowDetail() {
         ]}
       />
 
-      <div className="mt-2 md:mt-4 p-2 md:p-4">
+      <div className="mt-2 md:mt-4 p-2 md:p-4 relative">
         <Tabs
           defaultActiveKey="category"
           activeKey={activeTabKey}
@@ -437,6 +484,9 @@ function KoiShowDetail() {
           tabBarGutter={12}
           className="koishow-tabs"
         />
+
+        {/* Component LiveStream hoàn toàn tách biệt, tạo một lần duy nhất và không bao giờ bị re-render */}
+        <PersistentLiveStream showId={id} visible={isLiveStreamVisible} />
       </div>
     </div>
   );

@@ -17,6 +17,7 @@ import {
   Tabs,
   Collapse,
   Popconfirm,
+  Empty,
 } from "antd";
 import {
   EditOutlined,
@@ -315,6 +316,15 @@ function Category({ showId, statusShow }) {
           rowKey={(record) => record.id || record.key}
           scroll={{ x: true }}
           size="middle"
+          locale={{
+            emptyText: (
+              <Empty
+                description="Không có dữ liệu"
+                image={Empty.PRESENTED_IMAGE_SIMPLE}
+                style={{ margin: "24px 0" }}
+              />
+            ),
+          }}
         />
       </div>
 

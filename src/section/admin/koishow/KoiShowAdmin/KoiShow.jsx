@@ -247,9 +247,7 @@ function KoiShow() {
     // Chỉ cho phép cập nhật 3 trạng thái đầu
     if (currentStatus === "pending") {
       return statusOptions.filter((option) =>
-        ["pending", "internalpublished", "published", "cancelled"].includes(
-          option.value
-        )
+        ["internalpublished"].includes(option.value)
       );
     } else if (currentStatus === "internalpublished") {
       return statusOptions.filter((option) =>
@@ -341,21 +339,47 @@ function KoiShow() {
       sorter: (a, b) => a.status.localeCompare(b.status),
       render: (status, record) => {
         const availableOptions = getAvailableStatusOptions(status);
+        const statusOption = statusOptions.find(
+          (option) => option.value === status
+        );
+
+        // Get the Vietnamese label for the current status
+        const statusLabel = statusOption ? statusOption.label : status;
+        const statusColor = statusOption ? statusOption.color : "black";
 
         return (
-          <Select
-            value={status}
-            style={{ width: "100%", minWidth: 120 }}
-            onChange={(value) => handleStatusChange(value, record.id)}
-            options={availableOptions.map((opt) => ({
-              value: opt.value,
-              label: <span style={{ color: opt.color }}>{opt.label}</span>,
-            }))}
-            dropdownStyle={{ minWidth: 150 }}
-            disabled={
-              !["pending", "internalpublished", "published"].includes(status)
-            }
-          />
+          <>
+            <style>
+              {`
+                .status-select-${record.id} .ant-select-selection-item {
+                  color: ${statusColor} !important;
+                  font-weight: 500;
+                }
+              `}
+            </style>
+            <Select
+              value={statusLabel}
+              style={{ width: "100%", minWidth: 120 }}
+              className={`status-select-${record.id}`}
+              onChange={(value, option) => {
+                // Get status code from key since we're showing labels
+                const statusCode = option.key;
+                handleStatusChange(statusCode, record.id);
+              }}
+              dropdownStyle={{ minWidth: 150 }}
+              disabled={
+                !["pending", "internalpublished", "published"].includes(status)
+              }
+            >
+              {availableOptions.map((opt) => (
+                <Select.Option key={opt.value} value={opt.label}>
+                  <span style={{ color: opt.color, fontWeight: 500 }}>
+                    {opt.label}
+                  </span>
+                </Select.Option>
+              ))}
+            </Select>
+          </>
         );
       },
       responsive: ["xs", "sm", "md", "lg", "xl"],

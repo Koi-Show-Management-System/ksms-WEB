@@ -18,6 +18,7 @@ import {
   Tag,
   Space,
   Tooltip,
+  notification,
 } from "antd";
 import {
   PlusOutlined,
@@ -712,6 +713,31 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   // Handle referee round assignment
   const handleRefereeRoundChange = (refereeId, selectedRounds) => {
     const currentAssignments = form.getFieldValue("refereeAssignments") || [];
+
+    // Check if the selected rounds includes "Preliminary"
+    if (selectedRounds.includes("Preliminary")) {
+      // Check if any other referee is already assigned to Preliminary
+      const otherRefereeHasPreliminary = currentAssignments.some(
+        (assignment) =>
+          (assignment.refereeAccount?.id || assignment.refereeAccountId) !==
+            refereeId && assignment.roundType === "Preliminary"
+      );
+
+      // If another referee already has Preliminary round, remove it from selectedRounds
+      if (otherRefereeHasPreliminary) {
+        notification.warning({
+          message: "Chỉ 1 trọng tài được chấm vòng sơ khảo",
+          description:
+            "Đã có trọng tài khác được chọn chấm vòng sơ khảo. Mỗi hạng mục chỉ được 1 trọng tài chấm vòng sơ khảo.",
+          placement: "topRight",
+          duration: 5,
+        });
+        // Remove Preliminary from selected rounds
+        selectedRounds = selectedRounds.filter(
+          (round) => round !== "Preliminary"
+        );
+      }
+    }
 
     // Lọc ra các phân công của trọng tài khác
     const otherAssignments = currentAssignments.filter(

@@ -16,6 +16,8 @@ import {
   Typography,
   Row,
   Col,
+  Tooltip,
+  Progress,
 } from "antd";
 import {
   UsergroupAddOutlined,
@@ -38,6 +40,8 @@ import {
   EditOutlined,
   PhoneOutlined,
   MailOutlined,
+  CheckCircleFilled,
+  CloseCircleFilled,
 } from "@ant-design/icons";
 import Cookies from "js-cookie";
 import PropTypes from "prop-types";
@@ -79,6 +83,13 @@ const DashboardLayout = React.memo(({ children }) => {
   const [isEditMode, setIsEditMode] = useState(false);
   const [uploadedAvatar, setUploadedAvatar] = useState([]);
   const [avatarUrl, setAvatarUrl] = useState("");
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    length: false,
+    uppercase: false,
+    lowercase: false,
+    number: false,
+    special: false,
+  });
 
   // Theo dõi kích thước màn hình để đáp ứng thiết bị
   useEffect(() => {
@@ -335,11 +346,113 @@ const DashboardLayout = React.memo(({ children }) => {
     passwordForm.resetFields();
   };
 
-  // Xử lý đổi mật khẩu
+  // Kiểm tra độ mạnh của mật khẩu
+  const checkPasswordStrength = (password) => {
+    const requirements = {
+      length: password?.length >= 6,
+      uppercase: /[A-Z]/.test(password || ""),
+      lowercase: /[a-z]/.test(password || ""),
+      number: /[0-9]/.test(password || ""),
+      special: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password || ""),
+    };
+
+    // Tính số yêu cầu đã đạt được
+    const strength = Object.values(requirements).filter(Boolean).length;
+    return { strength, requirements };
+  };
+
+  // Component hiển thị các yêu cầu mật khẩu
+  const PasswordRequirementsList = ({ password }) => {
+    // Chỉ hiển thị khi người dùng đã bắt đầu nhập
+    if (!password || password.length === 0) {
+      return null;
+    }
+
+    // Tính toán các yêu cầu ở đây mà không cập nhật state
+    const { strength, requirements } = checkPasswordStrength(password);
+
+    // Đếm số lượng yêu cầu chưa được đáp ứng
+    const unmetRequirements = Object.values(requirements).filter(
+      (req) => !req
+    ).length;
+
+    return (
+      <div className=" mb-2">
+        {/* Thanh tiến trình */}
+        <div className="">
+          <Progress
+            percent={strength * 20}
+            showInfo={false}
+            strokeColor={
+              strength < 3 ? "#ff4d4f" : strength < 5 ? "#faad14" : "#52c41a"
+            }
+            size="small"
+          />
+        </div>
+
+        {/* Hiển thị status */}
+        {strength === 5 ? (
+          <div className="text-xs text-green-500 flex items-center">
+            <CheckCircleFilled className="mr-1" /> Mật khẩu đáp ứng tất cả yêu
+            cầu
+          </div>
+        ) : (
+          <div className="text-xs text-orange-500">
+            Còn {unmetRequirements} yêu cầu chưa đáp ứng:
+          </div>
+        )}
+
+        {/* Chỉ hiển thị các yêu cầu chưa đáp ứng */}
+        <div className="text-xs grid grid-cols-2 gap-x-2 gap-y-0.5 mt-0.5">
+          {!requirements.length && (
+            <div className="text-red-500 flex items-center">
+              <CloseCircleFilled className="mr-1 text-[10px]" /> Ít nhất 6 ký tự
+            </div>
+          )}
+          {!requirements.uppercase && (
+            <div className="text-red-500 flex items-center">
+              <CloseCircleFilled className="mr-1 text-[10px]" /> Ít nhất một chữ
+              in hoa
+            </div>
+          )}
+          {!requirements.lowercase && (
+            <div className="text-red-500 flex items-center">
+              <CloseCircleFilled className="mr-1 text-[10px]" /> Ít nhất một chữ
+              thường
+            </div>
+          )}
+          {!requirements.number && (
+            <div className="text-red-500 flex items-center">
+              <CloseCircleFilled className="mr-1 text-[10px]" /> Ít nhất một chữ
+              số
+            </div>
+          )}
+          {!requirements.special && (
+            <div className="text-red-500 flex items-center">
+              <CloseCircleFilled className="mr-1 text-[10px]" /> Ít nhất một ký
+              tự đặc biệt
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Sửa lại hàm xử lý đổi mật khẩu để kiểm tra tất cả các yêu cầu
   const handlePasswordChange = async (values) => {
     setIsSubmitting(true);
 
     try {
+      const { strength } = checkPasswordStrength(values.newPassword);
+      if (strength < 5) {
+        notification.error({
+          message: "Lỗi",
+          description: "Mật khẩu không đáp ứng đủ các yêu cầu về bảo mật!",
+        });
+        setIsSubmitting(false);
+        return;
+      }
+
       if (values.newPassword !== values.confirmNewPassword) {
         notification.error({
           message: "Lỗi",
@@ -612,12 +725,24 @@ const DashboardLayout = React.memo(({ children }) => {
                   message: "Vui lòng nhập mật khẩu mới!",
                 },
                 {
-                  min: 6,
-                  message: "Mật khẩu phải có ít nhất 6 ký tự!",
+                  validator: (_, value) => {
+                    const { strength } = checkPasswordStrength(value);
+                    return strength === 5
+                      ? Promise.resolve()
+                      : Promise.resolve(); // Vẫn cho phép submit nhưng hiển thị trạng thái yêu cầu
+                  },
                 },
               ]}
             >
               <Input.Password placeholder="Nhập mật khẩu mới" />
+            </Form.Item>
+
+            <Form.Item shouldUpdate noStyle>
+              {({ getFieldValue }) => (
+                <PasswordRequirementsList
+                  password={getFieldValue("newPassword")}
+                />
+              )}
             </Form.Item>
 
             <Form.Item

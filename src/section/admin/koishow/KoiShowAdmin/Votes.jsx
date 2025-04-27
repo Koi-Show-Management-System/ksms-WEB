@@ -18,6 +18,7 @@ import {
   Row,
   Col,
   Typography,
+  Empty,
 } from "antd";
 import {
   EyeOutlined,
@@ -719,6 +720,11 @@ function Votes({ showId }) {
 
   // Render voting control buttons based on state
   const renderVotingControls = () => {
+    // Nếu không có dữ liệu, không hiển thị nút bình chọn
+    if (!votes || votes.length === 0) {
+      return null;
+    }
+
     if (votingActive) {
       return (
         <div className="flex items-center">
@@ -796,20 +802,27 @@ function Votes({ showId }) {
         <Space>{renderVotingControls()}</Space>
       </div>
 
-      <div className="mb-4">
-        <FlipMove {...flipMoveOptions}>
-          {sortedVotes.map((item) => (
-            <VoteItem
-              key={item.registrationId}
-              item={item}
-              previousVotes={previousVotes}
-              onDetails={showDetailDrawer}
-              highlighted={item.registrationId === lastUpdatedId}
-              isTopVote={isTopVote(item.voteCount)}
-            />
-          ))}
-        </FlipMove>
-      </div>
+      {/* Hiển thị thông báo khi không có dữ liệu */}
+      {!votes || votes.length === 0 ? (
+        <div className="text-center py-8">
+          <Empty description="Không có dữ liệu bình chọn" />
+        </div>
+      ) : (
+        <div className="mb-4">
+          <FlipMove {...flipMoveOptions}>
+            {sortedVotes.map((item) => (
+              <VoteItem
+                key={item.registrationId}
+                item={item}
+                previousVotes={previousVotes}
+                onDetails={showDetailDrawer}
+                highlighted={item.registrationId === lastUpdatedId}
+                isTopVote={isTopVote(item.voteCount)}
+              />
+            ))}
+          </FlipMove>
+        </div>
+      )}
 
       {/* Detail Drawer */}
       <Drawer

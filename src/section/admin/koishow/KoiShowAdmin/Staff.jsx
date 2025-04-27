@@ -15,6 +15,7 @@ import {
   notification,
   Tag,
   Popconfirm,
+  Empty,
 } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import useShowStaff from "../../../../hooks/useShowStaff";
@@ -235,6 +236,15 @@ const Staff = forwardRef(({ showId, hideAddButton = false }, ref) => {
           showTotal: (total, range) => `${range[0]}-${range[1]} trong ${total}`,
         }}
         onChange={handleTableChange}
+        locale={{
+          emptyText: (
+            <Empty
+              description="Không có dữ liệu"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ margin: "24px 0" }}
+            />
+          ),
+        }}
       />
 
       <Modal

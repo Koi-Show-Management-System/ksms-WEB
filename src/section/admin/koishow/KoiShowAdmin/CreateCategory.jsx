@@ -491,16 +491,67 @@ function CreateCategory({ showId, onCategoryCreated }) {
   };
 
   const handleRefereeChange = (selectedReferees) => {
-    setCategory((prev) => ({
-      ...prev,
-      createRefereeAssignmentRequests: selectedReferees.map((refereeId) => ({
+    setCategory((prev) => {
+      // Get current referee assignments
+      const currentAssignments = prev.createRefereeAssignmentRequests || [];
+
+      // Keep existing assignments for referees who are still selected
+      const existingAssignments = currentAssignments.filter((assignment) =>
+        selectedReferees.includes(assignment.refereeAccountId)
+      );
+
+      // Find new referees that weren't previously selected
+      const existingRefereeIds = existingAssignments.map(
+        (a) => a.refereeAccountId
+      );
+      const newRefereeIds = selectedReferees.filter(
+        (id) => !existingRefereeIds.includes(id)
+      );
+
+      // Create assignments for new referees with empty roundTypes
+      const newAssignments = newRefereeIds.map((refereeId) => ({
         refereeAccountId: refereeId,
         roundTypes: [],
-      })),
-    }));
+      }));
+
+      // Return both existing assignments (with their roundTypes preserved) and new assignments
+      return {
+        ...prev,
+        createRefereeAssignmentRequests: [
+          ...existingAssignments,
+          ...newAssignments,
+        ],
+      };
+    });
   };
 
   const handleRefereeRoundChange = (refereeId, selectedRounds) => {
+    // Check if the selected rounds includes "Preliminary"
+    if (selectedRounds.includes("Preliminary")) {
+      // Check if any other referee is already assigned to Preliminary
+      const otherRefereeHasPreliminary =
+        category.createRefereeAssignmentRequests.some(
+          (referee) =>
+            referee.refereeAccountId !== refereeId &&
+            referee.roundTypes?.includes("Preliminary")
+        );
+
+      // If another referee already has Preliminary round, remove it from selectedRounds
+      if (otherRefereeHasPreliminary) {
+        notification.warning({
+          message: "Chỉ 1 trọng tài được chấm vòng sơ khảo",
+          description:
+            "Đã có trọng tài khác được chọn chấm vòng sơ khảo. Mỗi hạng mục chỉ được 1 trọng tài chấm vòng sơ khảo.",
+          placement: "topRight",
+          duration: 5,
+        });
+        // Remove Preliminary from selected rounds
+        selectedRounds = selectedRounds.filter(
+          (round) => round !== "Preliminary"
+        );
+      }
+    }
+
     setCategory((prev) => ({
       ...prev,
       createRefereeAssignmentRequests: prev.createRefereeAssignmentRequests.map(
