@@ -868,7 +868,16 @@ const EvaluationScoreSheet = ({
               onClick={() => {
                 Modal.confirm({
                   title: "Xác nhận lưu kết quả đánh giá",
-                  content: "Bạn có chắc chắn muốn lưu kết quả đánh giá này?",
+                  content: (
+                    <div>
+                      <p>Bạn có chắc chắn muốn lưu kết quả đánh giá này?</p>
+                      <p className="mt-2 text-red-500 font-semibold">
+                        <InfoCircleOutlined className="mr-1" /> Lưu ý: Sau khi
+                        xác nhận, bạn sẽ không thể chỉnh sửa điểm đánh giá này
+                        nữa.
+                      </p>
+                    </div>
+                  ),
                   okText: "Xác nhận",
                   cancelText: "Hủy",
                   onOk: handleSubmit,

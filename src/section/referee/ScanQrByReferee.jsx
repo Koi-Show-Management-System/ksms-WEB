@@ -34,6 +34,7 @@ import {
   QrcodeOutlined,
   TrophyOutlined,
   AimOutlined,
+  InfoCircleOutlined,
 } from "@ant-design/icons";
 import EvaluationScoreSheet from "./EvaluationScoreSheet";
 import { Loading } from "../../components";
@@ -1092,7 +1093,18 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                           <div className="flex justify-center gap-5">
                             <Popconfirm
                               title="Xác nhận chấm điểm"
-                              description="Bạn có chắc chắn muốn chấm ĐẠT cho cá này?"
+                              description={
+                                <div>
+                                  <p>
+                                    Bạn có chắc chắn muốn chấm ĐẠT cho cá này?
+                                  </p>
+                                  <p className="mt-2 text-red-500 font-semibold">
+                                    <InfoCircleOutlined className="mr-1" /> Lưu
+                                    ý: Sau khi xác nhận, bạn sẽ không thể chỉnh
+                                    sửa kết quả đánh giá này nữa.
+                                  </p>
+                                </div>
+                              }
                               onConfirm={() => handleScore(true)}
                               okText="Đồng ý"
                               cancelText="Hủy"
@@ -1119,7 +1131,19 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                             </Popconfirm>
                             <Popconfirm
                               title="Xác nhận chấm điểm"
-                              description="Bạn có chắc chắn muốn chấm KHÔNG ĐẠT cho cá này?"
+                              description={
+                                <div>
+                                  <p>
+                                    Bạn có chắc chắn muốn chấm KHÔNG ĐẠT cho cá
+                                    này?
+                                  </p>
+                                  <p className="mt-2 text-red-500 font-semibold">
+                                    <InfoCircleOutlined className="mr-1" /> Lưu
+                                    ý: Sau khi xác nhận, bạn sẽ không thể chỉnh
+                                    sửa kết quả đánh giá này nữa.
+                                  </p>
+                                </div>
+                              }
                               onConfirm={() => handleScore(false)}
                               okText="Đồng ý"
                               cancelText="Hủy"
