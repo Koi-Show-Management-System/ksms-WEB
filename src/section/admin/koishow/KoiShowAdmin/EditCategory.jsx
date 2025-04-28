@@ -334,22 +334,9 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     );
   };
 
-  const hasAllRequiredAwardTypes = (awards) => {
-    if (!awards || awards.length === 0) return false;
-
-    // Check if we have at least one award of each required type
-    const requiredTypes = ["first", "second", "third", "honorable"];
-    const awardTypes = awards.map((award) => award.awardType);
-
-    // First check: ensure all required types exist
-    return requiredTypes.every((type) => awardTypes.includes(type));
-  };
-
   const validateAwards = (awards) => {
     if (!awards || awards.length === 0) {
-      message.error(
-        "Vui lòng thêm ít nhất các giải thưởng bắt buộc: Giải Nhất, Giải Nhì, Giải Ba và Giải Khuyến Khích"
-      );
+      message.error("Vui lòng thêm ít nhất một giải thưởng");
       return false;
     }
 
@@ -357,17 +344,10 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     const awardsMissingType = awards.filter((award) => !award.awardType);
     if (awardsMissingType.length > 0) {
       message.error(
-        `Vui lòng chọn loại giải thưởng cho tất cả giải thưởng đã thêm`
+        "Vui lòng chọn loại giải thưởng cho tất cả giải thưởng đã thêm"
       );
       return false;
     }
-
-    const requiredTypes = {
-      first: "Giải Nhất",
-      second: "Giải Nhì",
-      third: "Giải Ba",
-      honorable: "Giải Khuyến Khích",
-    };
 
     const awardTypes = awards.map((award) => award.awardType);
 
@@ -397,18 +377,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     if (duplicateTypes.length > 0) {
       message.error(
         `Không thể có nhiều giải thưởng cùng loại: ${duplicateTypes.join(", ")}`
-      );
-      return false;
-    }
-
-    // Check for missing required award types
-    const missingTypes = Object.entries(requiredTypes)
-      .filter(([type]) => !awardTypes.includes(type))
-      .map(([_, label]) => label);
-
-    if (missingTypes.length > 0) {
-      message.error(
-        `Vui lòng thêm các giải thưởng còn thiếu: ${missingTypes.join(", ")}`
       );
       return false;
     }
@@ -501,34 +469,6 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
     if (otherAwards.some((award) => award.awardType === type)) {
       message.error(`Không thể có hai giải thưởng cùng loại: ${awardName}`);
-      return;
-    }
-
-    // Maintain the proper order of award types
-    const hasFirst =
-      otherAwards.some((a) => a.awardType === "first") || type === "first";
-    const hasSecond =
-      otherAwards.some((a) => a.awardType === "second") || type === "second";
-    const hasThird =
-      otherAwards.some((a) => a.awardType === "third") || type === "third";
-
-    // Validate the award type selection order
-    if (type === "second" && !hasFirst) {
-      message.error("Không thể chọn Giải Nhì khi chưa có Giải Nhất");
-      return;
-    }
-
-    if (type === "third" && (!hasFirst || !hasSecond)) {
-      message.error(
-        "Không thể chọn Giải Ba khi chưa có Giải Nhất hoặc Giải Nhì"
-      );
-      return;
-    }
-
-    if (type === "honorable" && (!hasFirst || !hasSecond || !hasThird)) {
-      message.error(
-        "Không thể chọn Giải Khuyến Khích khi chưa có đủ Giải Nhất, Nhì, và Ba"
-      );
       return;
     }
 

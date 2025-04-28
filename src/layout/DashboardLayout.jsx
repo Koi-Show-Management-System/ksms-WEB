@@ -682,7 +682,7 @@ const DashboardLayout = React.memo(({ children }) => {
               )}
             </button>
           </div>
-          <div className="flex items-center">
+          <div className="flex items-center pr-1 md:pr-2">
             <Dropdown
               menu={{
                 items: [
@@ -713,9 +713,9 @@ const DashboardLayout = React.memo(({ children }) => {
               placement="bottomRight"
               arrow
             >
-              <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-full transition-all">
+              <div className="flex items-center gap-1 sm:gap-2 cursor-pointer hover:bg-gray-100 px-2 sm:px-3 py-1 rounded-full transition-all">
                 <Avatar
-                  size={isMobile ? "default" : "large"}
+                  size={isMobile ? "default" : isTablet ? "default" : "large"}
                   src={
                     userInfo?.avatar ||
                     "https://anhcute.net/wp-content/uploads/2024/08/Tranh-chibi-Capybara-sieu-de-thuong.jpg"
@@ -723,7 +723,7 @@ const DashboardLayout = React.memo(({ children }) => {
                   icon={!userInfo?.avatar && <UserOutlined />}
                 />
                 <div
-                  className={`flex flex-col ${isMobile ? "hidden" : "block"}`}
+                  className={`flex flex-col ${isMobile || isTablet ? "hidden" : "block"}`}
                 >
                   <strong className="text-sm md:text-base">
                     {userInfo?.fullName || "Người dùng"}
