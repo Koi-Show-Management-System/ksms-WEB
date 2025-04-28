@@ -71,6 +71,10 @@ const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
 function CompetitionRound({ showId }) {
   // Tracking mount state to prevent updates after unmount
   const isMounted = useRef(true);
+  // Add this ref at the top of your component with other refs
+  const previousRegistrationRoundRef = useRef(null);
+  // Ref to store previous selected sub round
+  const prevSelectedSubRoundRef = useRef(null);
 
   // Category state
   const { categories, fetchCategories } = useCategory();
@@ -83,6 +87,13 @@ function CompetitionRound({ showId }) {
 
   // Current step state for the Steps component
   const [currentStep, setCurrentStep] = useState(0);
+
+  // Add state to track if publish was requested
+  const [publishRequested, setPublishRequested] = useState(false);
+
+  // State to track if fish have been moved to next round
+  const [fishMoved, setFishMoved] = useState(false);
+  const [isNoNextRound, setIsNoNextRound] = useState(false);
 
   // Registration and tank states
   const {
@@ -255,6 +266,9 @@ function CompetitionRound({ showId }) {
       setSelectedSubRound(null);
       setSelectedCategory(value);
 
+      // Reset publishRequested state when changing category
+      setPublishRequested(false);
+
       if (value) {
         fetchTanks(value, 1, 100, true);
         // Log ra giá trị hasTank để kiểm tra
@@ -270,6 +284,9 @@ function CompetitionRound({ showId }) {
       // Reset sub-round
       setSelectedSubRound(null);
       setSelectedRoundType(value);
+
+      // Reset publishRequested state when changing round type
+      setPublishRequested(false);
 
       // Clear previous criteria when changing round type
       resetCriteriaCompetitionRound();
@@ -294,6 +311,9 @@ function CompetitionRound({ showId }) {
       if (value !== selectedSubRound) {
         // Reset fishMoved state when changing rounds
         setFishMoved(false);
+
+        // Reset publishRequested state when changing rounds
+        setPublishRequested(false);
 
         // First set the selected sub round
         setSelectedSubRound(value);
@@ -373,11 +393,10 @@ function CompetitionRound({ showId }) {
       areResultsPublished, // Include this in dependencies to properly compare current value
       isMounted,
       round,
+      setPublishRequested, // Add setPublishRequested to dependencies
+      setFishMoved,
     ]
   );
-
-  // Add this ref at the top of your component with other refs
-  const previousRegistrationRoundRef = useRef(null);
 
   // Fix the problematic useEffect that was also updating areResultsPublished
   // Use a ref to track changes instead of depending on the state variable
@@ -659,8 +678,23 @@ function CompetitionRound({ showId }) {
       return;
     }
 
+    // Set publish requested flag to true immediately
+    setPublishRequested(true);
+
     try {
       setIsPublishing(true);
+
+      // Apply optimistic update to hide button immediately
+      // Create a temporary copy with all items set to "public"
+      if (Array.isArray(registrationRound) && registrationRound.length > 0) {
+        const optimisticData = registrationRound.map((item) => ({
+          ...item,
+          status: "public",
+        }));
+        // Force re-render to hide button immediately
+        previousRegistrationRoundRef.current = [...optimisticData];
+      }
+
       const result = await updatePublishRound(selectedSubRound);
 
       if (result?.success) {
@@ -676,6 +710,12 @@ function CompetitionRound({ showId }) {
       }
     } catch (error) {
       console.error("[PublishRound] Error:", error);
+      // Revert optimistic update if there was an error and reset publish requested state
+      previousRegistrationRoundRef.current = null;
+      setPublishRequested(false);
+      if (isMounted.current) {
+        fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
+      }
     } finally {
       if (isMounted.current) {
         setIsPublishing(false);
@@ -690,6 +730,7 @@ function CompetitionRound({ showId }) {
     fetchRegistrationRound,
     currentPage,
     pageSize,
+    registrationRound,
   ]);
 
   // Cập nhật xử lý lỗi trong hàm handleCreateFinalScore
@@ -1301,11 +1342,6 @@ function CompetitionRound({ showId }) {
   // getColumnsForRoundType là mảng columns từ useMemo, không phải hàm
   const columns = getColumnsForRoundType;
 
-  // Thêm state để theo dõi xem fish đã được chuyển sang vòng tiếp theo chưa
-  const [fishMoved, setFishMoved] = useState(false);
-  const [isNoNextRound, setIsNoNextRound] = useState(false);
-  const prevSelectedSubRoundRef = useRef(null); // Thêm ref để lưu giá trị trước đó
-
   // Xử lý khi NextRound cập nhật trạng thái chuyển cá
   const handleFishMoveStatus = useCallback((moved, noNextRound) => {
     setFishMoved(moved);
@@ -1512,25 +1548,27 @@ function CompetitionRound({ showId }) {
             {selectedSubRound && (
               <div className="w-full md:w-auto">
                 {/* Thêm nút Công khai vòng thi khi cần */}
-                {selectedSubRound && !isRoundPublished() && (
-                  <Button
-                    type="primary"
-                    size="middle"
-                    className="w-full mt-2"
-                    onClick={handlePublishRound}
-                    loading={isPublishing}
-                    icon={<CheckCircleOutlined />}
-                    disabled={
-                      isPublishing ||
-                      (currentCategoryHasTank && !allTanksAssigned)
-                    }
-                  >
-                    Công Khai Vòng Thi
-                    {currentCategoryHasTank &&
-                      !allTanksAssigned &&
-                      " (Cần gán bể)"}
-                  </Button>
-                )}
+                {selectedSubRound &&
+                  !isRoundPublished() &&
+                  !publishRequested && (
+                    <Button
+                      type="primary"
+                      size="middle"
+                      className="w-full mt-2"
+                      onClick={handlePublishRound}
+                      loading={isPublishing}
+                      icon={<CheckCircleOutlined />}
+                      disabled={
+                        isPublishing ||
+                        (currentCategoryHasTank && !allTanksAssigned)
+                      }
+                    >
+                      Công Khai Vòng Thi
+                      {currentCategoryHasTank &&
+                        !allTanksAssigned &&
+                        " (Cần gán bể)"}
+                    </Button>
+                  )}
 
                 {/* Show Create Final Score button when needed */}
                 {selectedRoundType &&
