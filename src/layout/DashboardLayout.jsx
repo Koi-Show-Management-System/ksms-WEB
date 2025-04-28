@@ -68,6 +68,9 @@ const getItem = (label, key, icon, children, path) => {
 const DashboardLayout = React.memo(({ children }) => {
   const [collapsed, setCollapsed] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [isTablet, setIsTablet] = useState(
+    window.innerWidth >= 768 && window.innerWidth < 1024
+  );
   const { infoUser, fetchUserInfo, logout, checkAccountStatus } = useAuth();
   const { updateAccountPassword, updateAccountTeam } = useAccountTeam();
   const [isProfileModalVisible, setIsProfileModalVisible] = useState(false);
@@ -94,19 +97,51 @@ const DashboardLayout = React.memo(({ children }) => {
   // Theo dõi kích thước màn hình để đáp ứng thiết bị
   useEffect(() => {
     const handleResize = () => {
-      setIsMobile(window.innerWidth < 768);
-      if (window.innerWidth < 768) {
+      const width = window.innerWidth;
+      setIsMobile(width < 768);
+      setIsTablet(width >= 768 && width < 1024);
+
+      // Auto collapse sidebar on mobile only
+      if (width < 768) {
         setCollapsed(true);
+      }
+      // On tablet and desktop, keep user preference
+      // Only auto-collapse on first load or refresh
+      else if (
+        width >= 768 &&
+        width < 1024 &&
+        !localStorage.getItem("sidebarState")
+      ) {
+        setCollapsed(true);
+        localStorage.setItem("sidebarState", "collapsed");
+      } else if (width >= 1024 && !localStorage.getItem("sidebarState")) {
+        setCollapsed(false);
+        localStorage.setItem("sidebarState", "expanded");
       }
     };
 
     window.addEventListener("resize", handleResize);
     handleResize(); // Kiểm tra kích thước ban đầu
 
+    // On first load, try to get user preference
+    const savedState = localStorage.getItem("sidebarState");
+    if (savedState === "collapsed") {
+      setCollapsed(true);
+    } else if (savedState === "expanded") {
+      setCollapsed(false);
+    }
+
     return () => {
       window.removeEventListener("resize", handleResize);
     };
   }, []);
+
+  // Thêm hàm toggle sidebar riêng
+  const toggleSidebar = useCallback(() => {
+    const newState = !collapsed;
+    setCollapsed(newState);
+    localStorage.setItem("sidebarState", newState ? "collapsed" : "expanded");
+  }, [collapsed]);
 
   // Thiết lập kiểm tra trạng thái tài khoản định kỳ
   useEffect(() => {
@@ -377,7 +412,7 @@ const DashboardLayout = React.memo(({ children }) => {
     ).length;
 
     return (
-      <div className=" mb-2">
+      <div className="mb-2">
         {/* Thanh tiến trình */}
         <div className="">
           <Progress
@@ -403,7 +438,7 @@ const DashboardLayout = React.memo(({ children }) => {
         )}
 
         {/* Chỉ hiển thị các yêu cầu chưa đáp ứng */}
-        <div className="text-xs grid grid-cols-2 gap-x-2 gap-y-0.5 mt-0.5">
+        <div className="text-xs grid grid-cols-1 sm:grid-cols-2 gap-x-2 gap-y-0.5 mt-0.5">
           {!requirements.length && (
             <div className="text-red-500 flex items-center">
               <CloseCircleFilled className="mr-1 text-[10px]" /> Ít nhất 6 ký tự
@@ -601,9 +636,15 @@ const DashboardLayout = React.memo(({ children }) => {
         collapsedWidth={isMobile ? "0" : "70"}
         collapsible
         collapsed={collapsed}
-        onCollapse={(value) => setCollapsed(value)}
+        onCollapse={(value) => {
+          setCollapsed(value);
+          localStorage.setItem(
+            "sidebarState",
+            value ? "collapsed" : "expanded"
+          );
+        }}
         theme="light"
-        className="fixed h-full z-10 shadow-md"
+        className="fixed h-full z-10 shadow-md transition-all duration-300 ease-in-out"
         trigger={null}
       >
         <div className="flex justify-center py-4">
@@ -623,19 +664,25 @@ const DashboardLayout = React.memo(({ children }) => {
       </Sider>
 
       <Layout
-        className={`transition-all duration-300 ${collapsed ? "ml-[70px]" : "ml-[230px]"} ${isMobile && collapsed ? "ml-0" : ""}`}
+        className={`transition-all duration-300 ${
+          collapsed ? (isMobile ? "ml-0" : "ml-[70px]") : "ml-[230px]"
+        }`}
       >
-        <header className="header pr-4 flex justify-between items-center fixed z-50 h-16 backdrop-blur-[5px] bg-[#f9fafba8] transition duration-200 ease-in-out w-full shadow-sm">
-          <div className="pl-4">
-            {React.createElement(
-              collapsed ? MenuUnfoldOutlined : MenuFoldOutlined,
-              {
-                className: "text-xl cursor-pointer",
-                onClick: () => setCollapsed(!collapsed),
-              }
-            )}
+        <header className="header px-4 flex justify-between items-center fixed z-50 h-16 backdrop-blur-[5px] bg-[#f9fafba8] transition duration-200 ease-in-out w-full shadow-sm">
+          <div className="flex items-center">
+            <button
+              onClick={toggleSidebar}
+              className="flex items-center justify-center h-10 w-10 rounded-md hover:bg-gray-100 transition-colors"
+              aria-label={collapsed ? "Mở rộng menu" : "Thu gọn menu"}
+            >
+              {collapsed ? (
+                <MenuUnfoldOutlined className="text-xl" />
+              ) : (
+                <MenuFoldOutlined className="text-xl" />
+              )}
+            </button>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center">
             <Dropdown
               menu={{
                 items: [
@@ -668,14 +715,16 @@ const DashboardLayout = React.memo(({ children }) => {
             >
               <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-100 px-3 py-1 rounded-full transition-all">
                 <Avatar
-                  size="large"
+                  size={isMobile ? "default" : "large"}
                   src={
                     userInfo?.avatar ||
                     "https://anhcute.net/wp-content/uploads/2024/08/Tranh-chibi-Capybara-sieu-de-thuong.jpg"
                   }
                   icon={!userInfo?.avatar && <UserOutlined />}
                 />
-                <div className="flex flex-col">
+                <div
+                  className={`flex flex-col ${isMobile ? "hidden" : "block"}`}
+                >
                   <strong className="text-sm md:text-base">
                     {userInfo?.fullName || "Người dùng"}
                   </strong>
@@ -689,7 +738,9 @@ const DashboardLayout = React.memo(({ children }) => {
           </div>
         </header>
 
-        <Content className="mt-[70px] py-5">{children}</Content>
+        <Content className="mt-[70px] p-4 md:p-5 transition-all duration-300">
+          {children}
+        </Content>
 
         {/* Modal Đổi mật khẩu */}
         <Modal
@@ -697,11 +748,14 @@ const DashboardLayout = React.memo(({ children }) => {
           open={isPasswordModalVisible}
           onCancel={handlePasswordCancel}
           footer={null}
+          width={isMobile ? "90%" : 520}
+          centered
         >
           <Form
             form={passwordForm}
             layout="vertical"
             onFinish={handlePasswordChange}
+            className="max-w-full"
           >
             <Form.Item
               name="oldPassword"
@@ -772,7 +826,7 @@ const DashboardLayout = React.memo(({ children }) => {
             </Form.Item>
 
             <Form.Item className="mb-0">
-              <div className="flex justify-end gap-2">
+              <div className="flex flex-wrap justify-end gap-2">
                 <Button onClick={handlePasswordCancel}>Hủy</Button>
                 <Button type="primary" htmlType="submit" loading={isSubmitting}>
                   Đổi mật khẩu
@@ -804,7 +858,8 @@ const DashboardLayout = React.memo(({ children }) => {
                   </Button>,
                 ]
           }
-          width={500}
+          width={isMobile ? "95%" : isTablet ? "80%" : 500}
+          centered
         >
           {isEditMode ? (
             // Chế độ chỉnh sửa
@@ -821,9 +876,10 @@ const DashboardLayout = React.memo(({ children }) => {
                     }
                   : {}
               }
+              className="max-w-full"
             >
               <Form.Item label="Ảnh đại diện">
-                <div className="flex items-center">
+                <div className="flex flex-col sm:flex-row sm:items-center gap-4">
                   <div>
                     <Upload
                       accept=".jpg,.jpeg,.png"
@@ -898,7 +954,7 @@ const DashboardLayout = React.memo(({ children }) => {
               </Form.Item>
 
               <Form.Item className="mb-0">
-                <div className="flex justify-end gap-2">
+                <div className="flex flex-wrap justify-end gap-2">
                   <Button onClick={handleProfileCancel}>Hủy</Button>
                   <Button
                     type="primary"
@@ -912,17 +968,19 @@ const DashboardLayout = React.memo(({ children }) => {
             </Form>
           ) : (
             // Chế độ xem
-            <Card bordered={false}>
+            <Card bordered={false} className="overflow-hidden">
               <div className="text-center mb-6">
                 <Avatar
-                  size={120}
+                  size={isMobile ? 100 : 120}
                   src={
                     userInfo?.avatar ||
                     "https://anhcute.net/wp-content/uploads/2024/08/Tranh-chibi-Capybara-sieu-de-thuong.jpg"
                   }
                   icon={!userInfo?.avatar && <UserOutlined />}
                 />
-                <h2 className="mt-3 text-xl font-bold">{userInfo?.fullName}</h2>
+                <h2 className="mt-3 text-lg md:text-xl font-bold break-words">
+                  {userInfo?.fullName}
+                </h2>
                 <Text type="secondary">{userRole || "Khách"}</Text>
               </div>
 
@@ -930,33 +988,39 @@ const DashboardLayout = React.memo(({ children }) => {
 
               <Row className="mb-3">
                 <Col span={24}>
-                  <Space>
-                    <UserOutlined />
-                    <Text strong>Tên đăng nhập: </Text>
+                  <Space className="flex-wrap" align="start">
+                    <UserOutlined className="mt-1" />
+                    <div>
+                      <Text strong>Tên đăng nhập: </Text>
+                      <Text className="break-all">
+                        {userInfo?.username ?? "Chưa có"}
+                      </Text>
+                    </div>
                   </Space>
-                  <Text className="mx-1">
-                    {userInfo?.username ?? "Chưa có"}
-                  </Text>
                 </Col>
               </Row>
 
               <Row className="mb-3">
                 <Col span={24}>
-                  <Space>
-                    <PhoneOutlined />
-                    <Text strong>Số điện thoại: </Text>
+                  <Space className="flex-wrap" align="start">
+                    <PhoneOutlined className="mt-1" />
+                    <div>
+                      <Text strong>Số điện thoại: </Text>
+                      <Text>{userInfo?.phone ?? "N/A"}</Text>
+                    </div>
                   </Space>
-                  <Text className="mx-1">{userInfo?.phone ?? "N/A"}</Text>
                 </Col>
               </Row>
 
               <Row className="mb-3">
                 <Col span={24}>
-                  <Space>
-                    <MailOutlined />
-                    <Text strong>Email: </Text>
+                  <Space className="flex-wrap" align="start">
+                    <MailOutlined className="mt-1" />
+                    <div>
+                      <Text strong>Email: </Text>
+                      <Text className="break-all">{userInfo?.email}</Text>
+                    </div>
                   </Space>
-                  <Text className="mx-1">{userInfo?.email}</Text>
                 </Col>
               </Row>
             </Card>
