@@ -387,8 +387,8 @@ function KoiShow() {
   ];
 
   return (
-    <div className="">
-      <div className="mb-6 rounded-lg shadow-sm p-4">
+    <div >
+      <div className="mb-6 rounded-lg shadow-sm py-3">
         <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
           <div className="flex-1">
             <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>

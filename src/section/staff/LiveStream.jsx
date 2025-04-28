@@ -74,13 +74,11 @@ function LiveStream({ showId }) {
     const userId = Cookies.get("__id");
     if (userId) {
       fetchUserInfo(userId);
-      console.log("Đã gọi fetchUserInfo với userId:", userId);
     }
   }, []);
 
   // Thêm useEffect để log khi infoUser thay đổi
   useEffect(() => {
-    console.log("infoUser hiện tại:", infoUser);
   }, [infoUser]);
 
   const handleCreateLiveStream = async () => {
@@ -1209,11 +1207,13 @@ function LiveStream({ showId }) {
                     }
                     bordered={false}
                     className="w-full shadow-md rounded-xl overflow-hidden bg-gray-900 camera-card"
-                    bodyStyle={{
-                      height: "450px",
-                      padding: "0",
-                      position: "relative",
-                      overflow: "hidden",
+                    styles={{
+                      body: {
+                        height: "450px",
+                        padding: "0",
+                        position: "relative",
+                        overflow: "hidden",
+                      },
                     }}
                     headStyle={{
                       borderBottom: "1px solid rgba(255,255,255,0.1)",
@@ -1250,11 +1250,13 @@ function LiveStream({ showId }) {
                     }
                     bordered={false}
                     className="w-full shadow-md rounded-xl overflow-hidden bg-white chat-card"
-                    bodyStyle={{
-                      height: "450px",
-                      padding: 0,
-                      position: "relative",
-                      overflow: "hidden",
+                    styles={{
+                      body: {
+                        height: "450px",
+                        padding: 0,
+                        position: "relative",
+                        overflow: "hidden",
+                      },
                     }}
                     headStyle={{
                       borderBottom: "1px solid #f0f0f0",
@@ -1312,7 +1314,9 @@ function LiveStream({ showId }) {
 
           <Card
             className="w-full max-w-[700px] rounded-xl border border-gray-200 mb-8"
-            bodyStyle={{ padding: "24px" }}
+            styles={{
+              body: { padding: "24px" },
+            }}
           >
             <Title level={5} className="mb-4">
               Sử dụng máy ghi hình ngoài:

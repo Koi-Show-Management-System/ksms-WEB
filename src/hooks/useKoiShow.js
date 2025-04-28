@@ -58,7 +58,6 @@ const useKoiShow = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-      console.log("Updating with data:", updatedFields);
 
       const res = await updateShow(id, updatedFields);
 

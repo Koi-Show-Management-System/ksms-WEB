@@ -38,7 +38,6 @@ function PersistentLiveStream({ showId, visible }) {
   // Chỉ khởi tạo LiveStream một lần duy nhất
   useEffect(() => {
     if (!streamInstanceRef.current) {
-      console.log("TẠO MỚI LIVESTREAM COMPONENT", new Date().toISOString());
       streamInstanceRef.current = <LiveStream showId={showId} />;
       setInitialized(true);
     }

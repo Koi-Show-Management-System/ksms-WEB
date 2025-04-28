@@ -3,16 +3,13 @@ import {
   Button,
   Table,
   Tag,
-  Spin,
-  message,
+  notification,
   Pagination,
   Input,
   DatePicker,
   Space,
-  Row,
-  Col,
 } from "antd";
-import { EditOutlined } from "@ant-design/icons";
+import { SearchOutlined, CalendarOutlined } from "@ant-design/icons";
 import NoKoiShow from "../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
 import dayjs from "dayjs";
@@ -100,7 +97,7 @@ function KoiShow() {
           {text}
         </span>
       ),
-      ellipsis: true,
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
     {
       title: "Ngày Bắt Đầu",
@@ -109,28 +106,27 @@ function KoiShow() {
       sorter: (a, b) =>
         new Date(a.startExhibitionDate) - new Date(b.startExhibitionDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-      responsive: ["md"],
+      responsive: ["sm", "md", "lg", "xl"],
     },
     {
       title: "SL tối thiểu",
       dataIndex: "minParticipants",
       key: "minParticipants",
       render: (value) => value || "0",
-      responsive: ["lg"],
+      responsive: ["md", "lg", "xl"],
     },
     {
       title: "SL tối đa",
       dataIndex: "maxParticipants",
       key: "maxParticipants",
       render: (value) => value || "0",
-      responsive: ["lg"],
+      responsive: ["md", "lg", "xl"],
     },
     {
       title: "Địa Điểm",
       dataIndex: "location",
       key: "location",
-      ellipsis: true,
-      responsive: ["md"],
+      responsive: ["md", "lg", "xl"],
     },
     {
       title: "Trạng Thái",
@@ -155,48 +151,48 @@ function KoiShow() {
 
         return <Tag color={statusInfo.color}>{statusInfo.label}</Tag>;
       },
+      responsive: ["xs", "sm", "md", "lg", "xl"],
     },
   ];
 
   return (
-    <div className="px-2 md:px-4">
-      <div className="mb-6">
-        <Row gutter={[16, 16]}>
-          <Col xs={24} md={12}>
+    <div>
+      <div className="mb-6 rounded-lg shadow-sm py-3">
+        <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
+          <div className="flex-1">
             <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>
             <Input
               placeholder="Tìm kiếm..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
-              size="large"
+              prefix={<SearchOutlined className="text-gray-400" />}
               className="w-full"
             />
-          </Col>
-          <Col xs={24} md={12}>
+          </div>
+          <div className="flex-1 sm:flex-initial">
             <div className="mb-2 text-sm">Ngày:</div>
-            <Space className="w-full">
+            <Space.Compact className="w-full">
               <DatePicker
                 placeholder="Chọn ngày"
                 format="DD/MM/YYYY"
                 value={selectedDate}
                 onChange={(date) => setSelectedDate(date)}
-                size="large"
-                className="w-full"
-                style={{ flex: 1 }}
+                className="w-full sm:w-36 md:w-48"
+                suffixIcon={<CalendarOutlined />}
               />
               <Button
                 type="primary"
                 className="bg-blue-500"
                 onClick={handleSearch}
-                size="large"
               >
                 Tìm kiếm
               </Button>
-            </Space>
-          </Col>
-        </Row>
+            </Space.Compact>
+          </div>
+        </div>
       </div>
-      <div className="overflow-x-auto">
+
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
         <Table
           columns={columns}
           dataSource={filteredData.map((item) => ({
@@ -211,33 +207,36 @@ function KoiShow() {
             status: item.status,
           }))}
           pagination={false}
-          className="bg-white rounded-lg shadow-sm"
+          scroll={{ x: true }}
           locale={{
             emptyText: (
-              <div className="flex flex-col items-center justify-center py-8">
-                <h3 className="text-xl font-bold">Không có triển lãm nào</h3>
+              <div className="flex flex-col items-center justify-center py-8 sm:py-12">
+                <h3 className="text-lg sm:text-xl font-bold">
+                  Không có triển lãm nào
+                </h3>
                 <img
                   src={NoKoiShow}
                   alt="No shows"
-                  className="w-48 h-48 md:w-64 md:h-64 object-contain"
+                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 object-contain"
                 />
               </div>
             ),
           }}
-          scroll={{ x: "max-content" }}
+          className="min-w-full"
+          size="middle"
         />
       </div>
 
-      <div className="flex flex-col sm:flex-row justify-between items-center mt-4 gap-2">
-        <span className="text-sm">{`1-${koiShows.length} của ${totalItems}`}</span>
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 p-3 rounded-lg justify-center sm:justify-between">
+        <span className="text-sm text-gray-500 text-center sm:text-left">{`1-${filteredData.length} của ${totalItems}`}</span>
         <Pagination
           current={currentPage}
           total={totalItems}
           pageSize={pageSize}
           showSizeChanger
           onChange={handlePageChange}
-          size="small"
-          className="text-center"
+          size="default"
+          className="self-center sm:self-auto"
         />
       </div>
     </div>

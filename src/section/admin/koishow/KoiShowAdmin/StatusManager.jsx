@@ -293,6 +293,17 @@ const StatusManager = ({
           return;
         }
 
+        // Kiểm tra với showEndDate nếu có
+        if (showEndDate && dayjs(showEndDate).isValid()) {
+          const exhibitionEndDay = dayjs(showEndDate);
+          if (value.isAfter(exhibitionEndDay)) {
+            message.error(
+              "Thời gian kết thúc sự kiện không được sau ngày kết thúc triển lãm"
+            );
+            return;
+          }
+        }
+
         // Tự động tính endDate = startDate + 30 phút
         const newEndDate = value.clone().add(30, "minutes");
 
@@ -311,6 +322,28 @@ const StatusManager = ({
     } else {
       // Kiểm tra cho các trạng thái khác (giữ lại logic hiện tại)
       if (field === "startDate" && value) {
+        // Kiểm tra với showStartDate nếu có
+        if (showStartDate && dayjs(showStartDate).isValid()) {
+          const exhibitionStartDay = dayjs(showStartDate);
+          if (value.isBefore(exhibitionStartDay)) {
+            message.error(
+              `Thời gian bắt đầu của ${translateStatus(statusName)} không được trước ngày bắt đầu triển lãm`
+            );
+            return;
+          }
+        }
+
+        // Kiểm tra với showEndDate nếu có
+        if (showEndDate && dayjs(showEndDate).isValid()) {
+          const exhibitionEndDay = dayjs(showEndDate);
+          if (value.isAfter(exhibitionEndDay)) {
+            message.error(
+              `Thời gian bắt đầu của ${translateStatus(statusName)} không được sau ngày kết thúc triển lãm`
+            );
+            return;
+          }
+        }
+
         // Các kiểm tra như đã có
         const prevStatusName = Object.keys(statusOrder).find(
           (key) => statusOrder[key] === statusOrder[statusName] - 1
@@ -330,6 +363,28 @@ const StatusManager = ({
       }
 
       if (field === "endDate" && value) {
+        // Kiểm tra với showStartDate nếu có
+        if (showStartDate && dayjs(showStartDate).isValid()) {
+          const exhibitionStartDay = dayjs(showStartDate);
+          if (value.isBefore(exhibitionStartDay)) {
+            message.error(
+              `Thời gian kết thúc của ${translateStatus(statusName)} không được trước ngày bắt đầu triển lãm`
+            );
+            return;
+          }
+        }
+
+        // Kiểm tra với showEndDate nếu có
+        if (showEndDate && dayjs(showEndDate).isValid()) {
+          const exhibitionEndDay = dayjs(showEndDate);
+          if (value.isAfter(exhibitionEndDay)) {
+            message.error(
+              `Thời gian kết thúc của ${translateStatus(statusName)} không được sau ngày kết thúc triển lãm`
+            );
+            return;
+          }
+        }
+
         // Kiểm tra endDate phải sau startDate
         if (
           editingStatuses[statusName]?.startDate &&
@@ -394,6 +449,43 @@ const StatusManager = ({
 
     // Tìm thời gian bắt đầu và kết thúc sự kiện từ trạng thái
     const eventStartTime = editingStatuses["RegistrationOpen"]?.startDate;
+
+    // Kiểm tra các trạng thái từ KoiCheckIn đến Finished nằm trong khoảng thời gian triển lãm
+    if (
+      showStartDate &&
+      showEndDate &&
+      dayjs(showStartDate).isValid() &&
+      dayjs(showEndDate).isValid()
+    ) {
+      const exhibitionStartDay = dayjs(showStartDate);
+      const exhibitionEndDay = dayjs(showEndDate);
+
+      Object.entries(editingStatuses).forEach(([statusName, status]) => {
+        // Bỏ qua RegistrationOpen vì nó được phép nằm trước showStartDate
+        if (statusName !== "RegistrationOpen") {
+          // Kiểm tra startDate không được trước ngày bắt đầu triển lãm
+          if (
+            status.startDate &&
+            status.startDate.isBefore(exhibitionStartDay)
+          ) {
+            errors.push(
+              `Thời gian bắt đầu của ${translateStatus(
+                statusName
+              )} không được trước ngày bắt đầu triển lãm`
+            );
+          }
+
+          // Kiểm tra endDate không được sau ngày kết thúc triển lãm
+          if (status.endDate && status.endDate.isAfter(exhibitionEndDay)) {
+            errors.push(
+              `Thời gian kết thúc của ${translateStatus(
+                statusName
+              )} không được sau ngày kết thúc triển lãm`
+            );
+          }
+        }
+      });
+    }
 
     // Kiểm tra logic thời gian
     Object.values(statusOrder).forEach((orderValue, index, arr) => {
@@ -844,6 +936,25 @@ const StatusManager = ({
                                           .second(0);
                                       }
 
+                                      // Kiểm tra với showEndDate
+                                      if (
+                                        showEndDate &&
+                                        dayjs(showEndDate).isValid()
+                                      ) {
+                                        const exhibitionEndDay =
+                                          dayjs(showEndDate);
+                                        if (
+                                          newStartValue.isAfter(
+                                            exhibitionEndDay
+                                          )
+                                        ) {
+                                          message.error(
+                                            "Thời gian kết thúc sự kiện không được sau ngày kết thúc triển lãm"
+                                          );
+                                          return;
+                                        }
+                                      }
+
                                       // Tự động tính endDate = startDate + 30 phút
                                       const newEndValue = newStartValue
                                         .clone()
@@ -880,13 +991,31 @@ const StatusManager = ({
 
                                       // Nếu có trạng thái Award, chỉ cho phép chọn từ ngày của Award trở đi
                                       if (awardStatus && awardStatus.endDate) {
-                                        return (
+                                        if (
                                           current &&
                                           current.isBefore(
                                             awardStatus.endDate,
                                             "day"
                                           )
-                                        );
+                                        ) {
+                                          return true;
+                                        }
+                                      }
+
+                                      // Kiểm tra với showEndDate
+                                      if (
+                                        showEndDate &&
+                                        dayjs(showEndDate).isValid()
+                                      ) {
+                                        if (
+                                          current &&
+                                          current.isAfter(
+                                            dayjs(showEndDate),
+                                            "day"
+                                          )
+                                        ) {
+                                          return true;
+                                        }
                                       }
 
                                       return false;
@@ -1069,6 +1198,42 @@ const StatusManager = ({
                                           ?.startDate
                                       }
                                       onChange={(value) => {
+                                        // Kiểm tra với showStartDate
+                                        if (
+                                          showStartDate &&
+                                          dayjs(showStartDate).isValid()
+                                        ) {
+                                          const exhibitionStartDay =
+                                            dayjs(showStartDate);
+                                          if (
+                                            value &&
+                                            value.isBefore(exhibitionStartDay)
+                                          ) {
+                                            message.error(
+                                              `Thời gian bắt đầu của ${translateStatus(status.statusName)} không được trước ngày bắt đầu triển lãm`
+                                            );
+                                            return;
+                                          }
+                                        }
+
+                                        // Kiểm tra với showEndDate
+                                        if (
+                                          showEndDate &&
+                                          dayjs(showEndDate).isValid()
+                                        ) {
+                                          const exhibitionEndDay =
+                                            dayjs(showEndDate);
+                                          if (
+                                            value &&
+                                            value.isAfter(exhibitionEndDay)
+                                          ) {
+                                            message.error(
+                                              `Thời gian bắt đầu của ${translateStatus(status.statusName)} không được sau ngày kết thúc triển lãm`
+                                            );
+                                            return;
+                                          }
+                                        }
+
                                         handleStatusDateChange(
                                           status.statusName,
                                           "startDate",
@@ -1099,6 +1264,45 @@ const StatusManager = ({
                                       }}
                                       format="YYYY-MM-DD"
                                       placeholder="Chọn ngày"
+                                      disabledDate={(current) => {
+                                        // Vô hiệu hóa ngày trước ngày bắt đầu triển lãm
+                                        if (
+                                          showStartDate &&
+                                          dayjs(showStartDate).isValid()
+                                        ) {
+                                          const exhibitionStartDay =
+                                            dayjs(showStartDate).startOf("day");
+                                          if (
+                                            current &&
+                                            current.isBefore(
+                                              exhibitionStartDay,
+                                              "day"
+                                            )
+                                          ) {
+                                            return true;
+                                          }
+                                        }
+
+                                        // Vô hiệu hóa ngày sau ngày kết thúc triển lãm
+                                        if (
+                                          showEndDate &&
+                                          dayjs(showEndDate).isValid()
+                                        ) {
+                                          const exhibitionEndDay =
+                                            dayjs(showEndDate).endOf("day");
+                                          if (
+                                            current &&
+                                            current.isAfter(
+                                              exhibitionEndDay,
+                                              "day"
+                                            )
+                                          ) {
+                                            return true;
+                                          }
+                                        }
+
+                                        return false;
+                                      }}
                                     />
                                   </div>
                                   <div className="grid grid-cols-2 gap-2">

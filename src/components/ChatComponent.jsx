@@ -43,7 +43,6 @@ const ChatComponent = ({ channel, chatClient }) => {
     const userId = Cookies.get("__id");
     if (userId) {
       fetchUserInfo(userId);
-      console.log("Đã gọi fetchUserInfo với userId:", userId);
     }
 
     // Load existing messages
@@ -77,7 +76,6 @@ const ChatComponent = ({ channel, chatClient }) => {
 
   // Thêm useEffect để log khi infoUser thay đổi
   useEffect(() => {
-    console.log("infoUser hiện tại:", infoUser);
   }, [infoUser]);
 
   // Scroll to bottom when messages change
