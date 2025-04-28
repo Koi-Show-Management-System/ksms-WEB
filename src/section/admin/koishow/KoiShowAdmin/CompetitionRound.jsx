@@ -1467,7 +1467,7 @@ function CompetitionRound({ showId }) {
 
       <Card className="overflow-hidden mb-6">
         <div className="mb-4">
-          <div className="flex flex-wrap md:flex-nowrap items-end gap-3">
+          <div className="flex flex-wrap md:flex-nowrap items-end gap-4">
             <div className="w-full md:w-1/4">
               <div className="text-lg font-medium mb-2">Hạng Mục:</div>
               <Select
@@ -1546,7 +1546,7 @@ function CompetitionRound({ showId }) {
 
             {/* Only render the button container if there's at least one button to show */}
             {selectedSubRound && (
-              <div className="w-full md:w-auto">
+              <div className="w-full md:w-1/4 flex flex-col gap-2">
                 {/* Thêm nút Công khai vòng thi khi cần */}
                 {selectedSubRound &&
                   !isRoundPublished() &&
@@ -1554,7 +1554,7 @@ function CompetitionRound({ showId }) {
                     <Button
                       type="primary"
                       size="middle"
-                      className="w-full mt-2"
+                      className="w-full"
                       onClick={handlePublishRound}
                       loading={isPublishing}
                       icon={<CheckCircleOutlined />}
@@ -1579,7 +1579,7 @@ function CompetitionRound({ showId }) {
                     <Button
                       type="primary"
                       size="middle"
-                      className="w-full mt-2"
+                      className="w-full"
                       onClick={handleCreateFinalScore}
                       loading={roundResultLoading}
                       icon={<TrophyOutlined />}
@@ -1596,7 +1596,7 @@ function CompetitionRound({ showId }) {
                     <Button
                       type="primary"
                       size="middle"
-                      className="w-full mt-2"
+                      className="w-full"
                       onClick={handlePublishRoundResults}
                       loading={isPublishingScores}
                       icon={<CheckCircleOutlined />}
@@ -1605,37 +1605,35 @@ function CompetitionRound({ showId }) {
                       Công Khai Điểm
                     </Button>
                   )}
-              </div>
-            )}
 
-            {/* Adjust NextRound component to show when round is published */}
-            {selectedSubRound && areResultsPublished && !fishMoved && (
-              <div className="w-full md:w-1/4">
-                <NextRound
-                  registrationRound={registrationRound}
-                  selectedSubRound={selectedSubRound}
-                  selectedCategory={selectedCategory}
-                  selectedRoundType={selectedRoundType}
-                  roundTypes={roundTypes}
-                  fetchRegistrationRound={fetchRegistrationRound}
-                  currentPage={currentPage}
-                  pageSize={pageSize}
-                  onFishMoveStatusChange={handleFishMoveStatus}
-                  roundStatus={(() => {
-                    if (!selectedSubRound) {
-                      console.log(
-                        "No selectedSubRound, not passing roundStatus"
+                {/* NextRound component */}
+                {areResultsPublished && !fishMoved && (
+                  <NextRound
+                    registrationRound={registrationRound}
+                    selectedSubRound={selectedSubRound}
+                    selectedCategory={selectedCategory}
+                    selectedRoundType={selectedRoundType}
+                    roundTypes={roundTypes}
+                    fetchRegistrationRound={fetchRegistrationRound}
+                    currentPage={currentPage}
+                    pageSize={pageSize}
+                    onFishMoveStatusChange={handleFishMoveStatus}
+                    roundStatus={(() => {
+                      if (!selectedSubRound) {
+                        console.log(
+                          "No selectedSubRound, not passing roundStatus"
+                        );
+                        return null;
+                      }
+
+                      const currentRound = round?.find(
+                        (r) => r.id === selectedSubRound
                       );
-                      return null;
-                    }
 
-                    const currentRound = round?.find(
-                      (r) => r.id === selectedSubRound
-                    );
-
-                    return currentRound?.status || null;
-                  })()}
-                />
+                      return currentRound?.status || null;
+                    })()}
+                  />
+                )}
               </div>
             )}
           </div>
