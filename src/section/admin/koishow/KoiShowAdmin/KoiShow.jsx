@@ -12,11 +12,14 @@ import {
   Form,
   Input as AntInput,
   Space,
+  Row,
+  Col,
 } from "antd";
 import {
   EditOutlined,
   SearchOutlined,
   CalendarOutlined,
+  PlusOutlined,
 } from "@ant-design/icons";
 import NoKoiShow from "../../../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
@@ -303,6 +306,8 @@ function KoiShow() {
         </span>
       ),
       responsive: ["xs", "sm", "md", "lg", "xl"],
+      ellipsis: true,
+      width: "25%",
     },
     {
       title: "Ngày Bắt Đầu",
@@ -310,27 +315,35 @@ function KoiShow() {
       key: "startDate",
       sorter: (a, b) => new Date(a.startDate) - new Date(b.startDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
-      responsive: ["sm", "md", "lg", "xl"],
+      responsive: ["xs", "sm", "md", "lg", "xl"],
+      width: "15%",
+      align: "center",
     },
     {
-      title: "Số lượng tối thiểu",
+      title: "SL tối thiểu",
       dataIndex: "minParticipants",
       key: "minParticipants",
       render: (value) => value || "0",
-      responsive: ["md", "lg", "xl"],
+      responsive: ["xs", "sm", "md", "lg", "xl"],
+      width: "12%",
+      align: "center",
     },
     {
-      title: "Số lượng tối đa",
+      title: "SL tối đa",
       dataIndex: "maxParticipants",
       key: "maxParticipants",
       render: (value) => value || "0",
-      responsive: ["md", "lg", "xl"],
+      responsive: ["xs", "sm", "md", "lg", "xl"],
+      width: "12%",
+      align: "center",
     },
     {
       title: "Địa Điểm",
       dataIndex: "location",
       key: "location",
-      responsive: ["md", "lg", "xl"],
+      responsive: ["xs", "sm", "md", "lg", "xl"],
+      ellipsis: true,
+      width: "20%",
     },
     {
       title: "Trạng Thái",
@@ -359,7 +372,7 @@ function KoiShow() {
             </style>
             <Select
               value={statusLabel}
-              style={{ width: "100%", minWidth: 120 }}
+              style={{ width: "100%" }}
               className={`status-select-${record.id}`}
               onChange={(value, option) => {
                 // Get status code from key since we're showing labels
@@ -370,6 +383,7 @@ function KoiShow() {
               disabled={
                 !["pending", "internalpublished", "published"].includes(status)
               }
+              size="middle"
             >
               {availableOptions.map((opt) => (
                 <Select.Option key={opt.value} value={opt.label}>
@@ -383,73 +397,78 @@ function KoiShow() {
         );
       },
       responsive: ["xs", "sm", "md", "lg", "xl"],
+      width: "16%",
     },
   ];
 
   return (
-    <div >
-      <div className="mb-6 rounded-lg shadow-sm py-3">
-        <div className="flex flex-col sm:flex-row sm:items-end gap-4 mb-4">
-          <div className="flex-1">
-            <div className="mb-2 text-sm">Tìm kiếm triển lãm:</div>
+    <div className=" rounded-lg shadow-sm space-y-5">
+      <div className=" pb-2 border-b">
+        <Row gutter={[24, 16]} align="bottom">
+          <Col xs={24} md={16}>
+            <div className="mb-2 font-medium">Tìm kiếm triển lãm:</div>
             <Input
               placeholder="Tìm kiếm..."
               value={searchText}
               onChange={(e) => setSearchText(e.target.value)}
               prefix={<SearchOutlined className="text-gray-400" />}
               className="w-full"
+              size="large"
             />
-          </div>
-          <div className="flex-1 sm:flex-initial">
-            <div className="mb-2 text-sm">Ngày:</div>
-            <Space.Compact className="w-full">
+          </Col>
+          <Col xs={24} md={8}>
+            <div className="mb-2 font-medium">Ngày:</div>
+            <div className="flex space-x-2">
               <DatePicker
                 placeholder="Chọn ngày"
                 format="DD/MM/YYYY"
                 value={selectedDate}
                 onChange={(date) => setSelectedDate(date)}
-                className="w-full sm:w-36 md:w-48"
+                className="flex-1"
                 suffixIcon={<CalendarOutlined />}
+                size="large"
               />
               <Button
                 type="primary"
                 className="bg-blue-500"
                 onClick={handleSearch}
+                size="large"
               >
                 Tìm kiếm
               </Button>
-            </Space.Compact>
-          </div>
-        </div>
+            </div>
+          </Col>
+        </Row>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+      <div className="overflow-x-auto">
         <Table
           columns={columns}
           dataSource={filteredData}
           pagination={false}
-          scroll={{ x: true }}
+          scroll={{ x: 1000 }}
           locale={{
             emptyText: (
-              <div className="flex flex-col items-center justify-center py-8 sm:py-12">
-                <h3 className="text-lg sm:text-xl font-bold">
+              <div className="flex flex-col items-center justify-center py-10">
+                <h3 className="text-lg font-bold mb-4">
                   Không có triển lãm nào
                 </h3>
                 <img
                   src={NoKoiShow}
                   alt="No shows"
-                  className="w-24 h-24 sm:w-32 sm:h-32 md:w-48 md:h-48 object-contain"
+                  className="w-32 h-32 object-contain"
                 />
               </div>
             ),
           }}
-          className="min-w-full"
+          className="w-full"
           size="middle"
+          rowClassName="hover:bg-gray-50"
         />
       </div>
 
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mt-4 p-3 rounded-lg justify-center sm:justify-between">
-        <span className="text-sm text-gray-500 text-center sm:text-left">{`1-${filteredData.length} của ${totalItems}`}</span>
+      <div className="flex justify-between items-center p-4 border-t">
+        <span className="text-sm text-gray-500">{`${filteredData.length > 0 ? 1 : 0}-${filteredData.length} của ${totalItems}`}</span>
         <Pagination
           current={currentPage}
           total={totalItems}
@@ -457,7 +476,8 @@ function KoiShow() {
           showSizeChanger
           onChange={handlePageChange}
           size="default"
-          className="self-center sm:self-auto"
+          className="text-right"
+          showTotal={(total, range) => `${range[0]}-${range[1]} của ${total}`}
         />
       </div>
 
@@ -470,6 +490,7 @@ function KoiShow() {
         cancelText="Hủy bỏ"
         width={520}
         centered
+        maskClosable={false}
       >
         <Form form={form} layout="vertical">
           <Form.Item
@@ -496,6 +517,7 @@ function KoiShow() {
         cancelText="Hủy bỏ"
         width={520}
         centered
+        maskClosable={false}
       >
         <p>
           Bạn có chắc chắn muốn thay đổi trạng thái từ "
