@@ -91,7 +91,9 @@ const Manager = forwardRef(({ showId, hideAddButton = false }, ref) => {
       const currentManagerIds = managers.map((manager) => manager.accountId);
 
       const availableManagers = accountManage.managers.filter(
-        (manager) => !currentManagerIds.some((id) => id === manager.id)
+        (manager) =>
+          !currentManagerIds.some((id) => id === manager.id) &&
+          manager.status === "active"
       );
 
       setAccountOptions(availableManagers);

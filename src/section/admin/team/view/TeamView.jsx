@@ -3,6 +3,7 @@ import { Button } from "antd";
 import Team from "../Team";
 import AccountForm from "../AccoutForm";
 import Cookies from "js-cookie";
+import { PlusOutlined } from "@ant-design/icons";
 
 function TeamView() {
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -15,7 +16,7 @@ function TeamView() {
         <div className="flex justify-end">
           {userRole !== "Manager" && (
             <Button type="primary" onClick={() => setIsModalVisible(true)}>
-              Thêm mới
+              <PlusOutlined /> Thêm mới
             </Button>
           )}
         </div>

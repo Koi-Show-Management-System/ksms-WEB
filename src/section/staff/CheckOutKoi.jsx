@@ -245,6 +245,10 @@ function CheckOutKoi() {
         color = "red";
         text = "Đã từ chối";
         break;
+      case "prizewinner":
+        color = "purple";
+        text = "Đã nhận giải";
+        break;
       case "eliminated":
         color = "purple";
         text = "Đã loại";

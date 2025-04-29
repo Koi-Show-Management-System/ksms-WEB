@@ -9,8 +9,14 @@ import {
   Form,
   Input,
   Upload,
+  Empty,
 } from "antd";
-import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
+import {
+  EditOutlined,
+  DeleteOutlined,
+  PlusOutlined,
+  SearchOutlined,
+} from "@ant-design/icons";
 import useAccountTeam from "../../../hooks/useAccountTeam";
 import { updateStatus } from "../../../api/accountManage";
 
@@ -34,10 +40,18 @@ const User = () => {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
   const [previewImage, setPreviewImage] = useState("");
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    fetchAccountTeam(currentPage, pageSize, "Member");
-  }, [currentPage, pageSize]);
+    fetchAccountTeam(
+      currentPage,
+      pageSize,
+      "Member",
+      statusFilter,
+      searchQuery
+    );
+  }, [currentPage, pageSize, statusFilter, searchQuery]);
 
   // Update local data when accountManage changes
   useEffect(() => {
@@ -55,7 +69,13 @@ const User = () => {
   }, [accountManage]);
 
   const handleTableChange = (pagination) => {
-    fetchAccountTeam(pagination.current, pagination.pageSize, "Member");
+    fetchAccountTeam(
+      pagination.current,
+      pagination.pageSize,
+      "Member",
+      statusFilter,
+      searchQuery
+    );
   };
 
   const enableEditing = () => {
@@ -142,9 +162,13 @@ const User = () => {
     const res = await updateAccountTeam(currentAccount.key, formData);
 
     if (res.success) {
-   
-
-      fetchAccountTeam(currentPage, pageSize, "Member");
+      fetchAccountTeam(
+        currentPage,
+        pageSize,
+        "Member",
+        statusFilter,
+        searchQuery
+      );
       setIsModalVisible(false);
       setIsEditing(false);
     } else {
@@ -182,10 +206,22 @@ const User = () => {
         });
 
         // Fetch fresh data from the server to ensure everything is in sync
-        fetchAccountTeam(currentPage, pageSize, "Member");
+        fetchAccountTeam(
+          currentPage,
+          pageSize,
+          "Member",
+          statusFilter,
+          searchQuery
+        );
       } else {
         // Revert the optimistic update if the server request fails
-        fetchAccountTeam(currentPage, pageSize, "Member");
+        fetchAccountTeam(
+          currentPage,
+          pageSize,
+          "Member",
+          statusFilter,
+          searchQuery
+        );
         throw new Error("Failed to update status");
       }
     } catch (error) {
@@ -196,8 +232,22 @@ const User = () => {
         placement: "topRight",
       });
       // Revert the optimistic update on error
-      fetchAccountTeam(currentPage, pageSize, "Member");
+      fetchAccountTeam(
+        currentPage,
+        pageSize,
+        "Member",
+        statusFilter,
+        searchQuery
+      );
     }
+  };
+
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value === "--" ? null : value);
+  };
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
   };
 
   const columns = [
@@ -265,6 +315,30 @@ const User = () => {
 
   return (
     <>
+      <div className="flex justify-between mb-4">
+        <Space>
+          <Input
+            placeholder="Tìm kiếm thành viên..."
+            prefix={<SearchOutlined />}
+            value={searchQuery}
+            onChange={handleSearch}
+            style={{ width: 250 }}
+          />
+          <Select
+            placeholder="Trạng thái"
+            style={{ width: 150 }}
+            onChange={handleStatusFilterChange}
+            value={statusFilter || "--"}
+            options={[
+              { value: "--", label: "Tất cả" },
+              { value: "Active", label: "Hoạt động" },
+              { value: "Blocked", label: "Đã khóa" },
+              { value: "Deleted", label: "Đã xóa" },
+            ]}
+          />
+        </Space>
+      </div>
+
       <Table
         columns={columns}
         dataSource={localData}
@@ -279,6 +353,15 @@ const User = () => {
         }}
         onChange={handleTableChange}
         className="w-full"
+        locale={{
+          emptyText: (
+            <Empty
+              description="Không có dữ liệu"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ margin: "24px 0" }}
+            />
+          ),
+        }}
       />
 
       <Modal

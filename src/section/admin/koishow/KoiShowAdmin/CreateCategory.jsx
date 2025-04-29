@@ -86,7 +86,9 @@ function CreateCategory({ showId, onCategoryCreated }) {
     isLoading: isLoadingCriteria,
   } = useCriteria();
 
-  const referee = accountManage.referees || [];
+  const referee = (accountManage.referees || []).filter(
+    (r) => r.status === "active"
+  );
 
   const mainRounds = [
     { value: "Preliminary", label: "Vòng Sơ Khảo" },

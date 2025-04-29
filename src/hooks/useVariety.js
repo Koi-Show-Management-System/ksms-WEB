@@ -1,5 +1,6 @@
 import { create } from "zustand";
-import { createVariety, getVarieties } from "../api/varietyApi";
+import { createVariety, getVarieties, updateVariety } from "../api/varietyApi";
+import { notification } from "antd";
 
 const useVariety = create((set, get) => ({
   variety: [],
@@ -17,7 +18,6 @@ const useVariety = create((set, get) => ({
       const res = await getVarieties(page, size);
 
       if (res && res.status === 200) {
-
         let varieties = [];
         let total = 0;
         let totalPages = 1;
@@ -69,6 +69,26 @@ const useVariety = create((set, get) => ({
       }
     } catch (error) {
       console.error("API Error:", error);
+      set({ error: error, isLoading: false });
+    }
+  },
+  updateVariety: async (id, variety) => {
+    try {
+      const res = await updateVariety(id, variety);
+      if (res && res.status === 200) {
+        notification.success({
+          message: "Thành công",
+          description: res.data.message,
+        });
+        get().fetchVariety();
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      notification.error({
+        message: "Lỗi",
+        description:
+          error.response?.data?.message || "Đã xảy ra lỗi khi cập nhật",
+      });
       set({ error: error, isLoading: false });
     }
   },

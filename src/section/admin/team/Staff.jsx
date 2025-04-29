@@ -11,12 +11,14 @@ import {
   Upload,
   message,
   Empty,
+  Space,
 } from "antd";
 import {
   EditOutlined,
   UploadOutlined,
   LoadingOutlined,
   PlusOutlined,
+  SearchOutlined,
 } from "@ant-design/icons";
 import useAccountTeam from "../../../hooks/useAccountTeam";
 import { updateStatus } from "../../../api/accountManage";
@@ -32,6 +34,12 @@ function Staff({ accounts = [], isLoading, role }) {
   const [form] = Form.useForm();
   const [fileList, setFileList] = useState([]);
   const [previewImage, setPreviewImage] = useState("");
+  const [statusFilter, setStatusFilter] = useState(null);
+  const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    fetchAccountTeam(1, 10, role, statusFilter, searchQuery);
+  }, [statusFilter, searchQuery]);
 
   const handleStatusChange = async (accountId, newStatus) => {
     try {
@@ -155,6 +163,14 @@ function Staff({ accounts = [], isLoading, role }) {
     setIsEditing(false);
   };
 
+  const handleStatusFilterChange = (value) => {
+    setStatusFilter(value === "--" ? null : value);
+  };
+
+  const handleSearch = (e) => {
+    setSearchQuery(e.target.value);
+  };
+
   const columns = [
     {
       title: "Tên",
@@ -235,6 +251,30 @@ function Staff({ accounts = [], isLoading, role }) {
 
   return (
     <div>
+      <div className="flex justify-between mb-4">
+        <Space>
+          <Input
+            placeholder="Tìm kiếm nhân viên..."
+            prefix={<SearchOutlined />}
+            value={searchQuery}
+            onChange={handleSearch}
+            style={{ width: 250 }}
+          />
+          <Select
+            placeholder="Trạng thái"
+            style={{ width: 150 }}
+            onChange={handleStatusFilterChange}
+            value={statusFilter || "--"}
+            options={[
+              { value: "--", label: "Tất cả" },
+              { value: "Active", label: "Hoạt động" },
+              { value: "Blocked", label: "Đã khóa" },
+              { value: "Deleted", label: "Đã xóa" },
+            ]}
+          />
+        </Space>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
           <Loading />

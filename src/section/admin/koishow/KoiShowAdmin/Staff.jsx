@@ -95,11 +95,13 @@ const Staff = forwardRef(({ showId, hideAddButton = false }, ref) => {
       // Fetch all staff from account team
       await fetchAccountTeam(1, 100, "Staff"); // Get up to 100 staff members
 
-      // Filter out staff already in the show
+      // Filter out staff already in the show and only include active staff
       const currentStaffIds = staff.map((staffMember) => staffMember.accountId);
 
       const availableStaff = accountManage.staff.filter(
-        (staffMember) => !currentStaffIds.some((id) => id === staffMember.id)
+        (staffMember) =>
+          !currentStaffIds.some((id) => id === staffMember.id) &&
+          staffMember.status === "active"
       );
 
       setAccountOptions(availableStaff);

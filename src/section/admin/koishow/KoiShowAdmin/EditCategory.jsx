@@ -65,7 +65,9 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     useState(null);
   const [awardErrors, setAwardErrors] = useState({});
 
-  const referee = accountManage.referees || [];
+  const referee = (accountManage.referees || []).filter(
+    (r) => r.status === "active"
+  );
 
   const mainRounds = [
     { value: "Preliminary", label: "Vòng Sơ Khảo" },

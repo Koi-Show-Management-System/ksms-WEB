@@ -13,5 +13,8 @@ const createVariety = (variety) => {
   return axiosClient.post("/variety/create", variety);
 };
 
+const updateVariety = (id, variety) => {
+  return axiosClient.put(`/variety/update/${id}`, variety);
+};
 
-export { getVarieties, createVariety };
+export { getVarieties, createVariety, updateVariety };

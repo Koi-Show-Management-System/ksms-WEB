@@ -23,12 +23,18 @@ const useAccountTeam = create((set, get) => ({
   totalItems: 0,
   totalPages: 1,
 
-  fetchAccountTeam: async (page = 1, size = 10, role = "") => {
+  fetchAccountTeam: async (
+    page = 1,
+    size = 10,
+    role = "",
+    status = null,
+    search = ""
+  ) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 
     try {
-      // Gọi API với role, page, size
-      const res = await accountTeam(page, size, role);
+      // Call API with role, page, size, status (but not search)
+      const res = await accountTeam(page, size, role, status);
 
       if (res && res.status === 200) {
         let accounts = [];
@@ -63,34 +69,52 @@ const useAccountTeam = create((set, get) => ({
           accounts = [];
         }
 
-        // Phân loại tài khoản theo vai trò
-        const filteredAccounts = role
-          ? accounts.filter(
+        // Filter accounts by search term (client-side filtering)
+        let filteredAccounts = accounts;
+        if (search && search.trim() !== "") {
+          const searchTerm = search.toLowerCase().trim();
+          filteredAccounts = accounts.filter(
+            (account) =>
+              (account.fullName &&
+                account.fullName.toLowerCase().includes(searchTerm)) ||
+              (account.email &&
+                account.email.toLowerCase().includes(searchTerm)) ||
+              (account.username &&
+                account.username.toLowerCase().includes(searchTerm)) ||
+              (account.phone && account.phone.includes(searchTerm))
+          );
+        }
+
+        // Filter accounts by role
+        const roleFilteredAccounts = role
+          ? filteredAccounts.filter(
               (account) => account.role.toLowerCase() === role.toLowerCase()
             )
-          : accounts;
+          : filteredAccounts;
 
         set({
           accountManage: {
-            member: filteredAccounts.filter(
+            member: roleFilteredAccounts.filter(
               (account) => account.role === "Member"
             ),
-            admin: filteredAccounts.filter(
+            admin: roleFilteredAccounts.filter(
               (account) => account.role === "Admin"
             ),
-            managers: filteredAccounts.filter(
+            managers: roleFilteredAccounts.filter(
               (account) => account.role === "Manager"
             ),
-            staff: filteredAccounts.filter(
+            staff: roleFilteredAccounts.filter(
               (account) => account.role === "Staff"
             ),
-            referees: filteredAccounts.filter(
+            referees: roleFilteredAccounts.filter(
               (account) => account.role === "Referee"
             ),
-            allAccounts: accounts,
+            allAccounts: filteredAccounts,
           },
-          totalItems: total,
-          totalPages,
+          totalItems: search ? filteredAccounts.length : total,
+          totalPages: search
+            ? Math.ceil(filteredAccounts.length / size)
+            : totalPages,
           isLoading: false,
         });
       } else {
@@ -263,7 +287,6 @@ const useAccountTeam = create((set, get) => ({
           console.log(pair[0], pair[1]);
         }
       } else {
-
         // Nếu dữ liệu không phải FormData, chuyển đổi thành FormData
         const formData = new FormData();
         if (accountData.FullName)
@@ -282,7 +305,6 @@ const useAccountTeam = create((set, get) => ({
           console.log(pair[0], pair[1]);
         }
       }
-
 
       const res = await updateAccount(accountId, accountData);
 

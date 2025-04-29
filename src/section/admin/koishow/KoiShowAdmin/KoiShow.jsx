@@ -84,7 +84,7 @@ function KoiShow() {
     const filtered = localData.filter((item) => {
       const matchName = item.name
         .toLowerCase()
-        .includes(searchText.toLowerCase());
+        .includes(searchText.toLowerCase().trim());
 
       const matchDate = selectedDate
         ? dayjs(item.startExhibitionDate).format("DD/MM/YYYY") ===

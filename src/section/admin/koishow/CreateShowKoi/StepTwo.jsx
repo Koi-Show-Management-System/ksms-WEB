@@ -78,7 +78,9 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   // Thêm state để quản lý lỗi cho tên hạng mục
   const [categoryNameErrors, setCategoryNameErrors] = useState({});
 
-  const referee = accountManage.referees || [];
+  const referee = (accountManage.referees || []).filter(
+    (r) => r.status === "active"
+  );
   // const adminId =
   //   accountManage.admin.length > 0 ? accountManage.admin[0].id : null;
 

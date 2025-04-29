@@ -7,8 +7,9 @@ import {
   Form,
   Pagination,
   notification,
+  Space,
 } from "antd";
-import { PlusOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined } from "@ant-design/icons";
 import useVariety from "../../../hooks/useVariety";
 
 const Variety = () => {
@@ -16,6 +17,7 @@ const Variety = () => {
     variety,
     fetchVariety,
     createVariety,
+    updateVariety,
     currentPage,
     totalItems,
     pageSize,
@@ -49,20 +51,29 @@ const Variety = () => {
 
   const handleSave = async (values) => {
     try {
-      await createVariety(values);
-      notification.success({
-        message: "Thành công",
-        description: "Thêm giống Koi mới thành công",
-      });
+      if (currentVariety) {
+        // Update existing variety
+        await updateVariety(currentVariety.id, values);
+      } else {
+        // Create new variety
+        await createVariety(values);
+        notification.success({
+          message: "Thành công",
+          description: "Thêm giống Koi mới thành công",
+        });
+      }
       setIsModalVisible(false);
       form.resetFields();
       fetchVariety(currentPage, pageSize);
     } catch (error) {
       notification.error({
         message: "Lỗi",
-        description: "Đã xảy ra lỗi khi thêm giống Koi",
+        description: `Đã xảy ra lỗi khi ${currentVariety ? "cập nhật" : "thêm"} giống Koi`,
       });
-      console.error("Lỗi khi thêm giống Koi:", error);
+      console.error(
+        `Lỗi khi ${currentVariety ? "cập nhật" : "thêm"} giống Koi:`,
+        error
+      );
     }
   };
 
@@ -77,6 +88,19 @@ const Variety = () => {
       title: "Mô Tả",
       dataIndex: "description",
       key: "description",
+    },
+    {
+      title: "Thao tác",
+      key: "action",
+      render: (_, record) => (
+        <Space size="middle">
+          <Button
+            type="text"
+            icon={<EditOutlined />}
+            onClick={() => showModal(record)}
+          ></Button>
+        </Space>
+      ),
     },
   ];
 
@@ -113,7 +137,7 @@ const Variety = () => {
         </div>
 
         <Modal
-          title="Thêm Giống Koi"
+          title={currentVariety ? "Cập nhật Giống Koi" : "Thêm Giống Koi"}
           visible={isModalVisible}
           onCancel={handleCancel}
           footer={null}
@@ -144,7 +168,7 @@ const Variety = () => {
                 Hủy
               </Button>
               <Button type="primary" htmlType="submit">
-                Thêm
+                {currentVariety ? "Cập nhật" : "Thêm"}
               </Button>
             </div>
           </Form>

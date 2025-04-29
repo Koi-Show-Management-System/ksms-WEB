@@ -42,8 +42,12 @@ function StepOne({ updateFormData, initialData, showErrors }) {
   });
   const [uploadedImages, setUploadedImages] = useState([]);
   const { accountManage, fetchAccountTeam } = useAccountTeam();
-  const staff = accountManage.staff || [];
-  const managers = accountManage.managers || [];
+  const staff = (accountManage.staff || []).filter(
+    (s) => s.status === "active"
+  );
+  const managers = (accountManage.managers || []).filter(
+    (m) => m.status === "active"
+  );
   const [timeErrors, setTimeErrors] = useState({
     startDate: "",
     endDate: "",
