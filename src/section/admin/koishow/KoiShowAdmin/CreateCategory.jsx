@@ -128,6 +128,24 @@ function CreateCategory({ showId, onCategoryCreated }) {
     fetchCriteria(1, 100);
   }, []);
 
+  // Clean up any criteria for Preliminary round
+  useEffect(() => {
+    if (category.createCriteriaCompetitionCategoryRequests?.length > 0) {
+      setCategory((prev) => {
+        // Remove any criteria for Preliminary round
+        const filteredCriteria =
+          prev.createCriteriaCompetitionCategoryRequests.filter(
+            (criteria) => criteria.roundType !== "Preliminary"
+          );
+
+        return {
+          ...prev,
+          createCriteriaCompetitionCategoryRequests: filteredCriteria,
+        };
+      });
+    }
+  }, []);
+
   useEffect(() => {
     if (createSuccess) {
       setIsModalVisible(false);
@@ -823,6 +841,9 @@ function CreateCategory({ showId, onCategoryCreated }) {
     });
 
     Object.entries(criteriaByRound).forEach(([roundType, criteriaList]) => {
+      // Skip validation for Preliminary round since it only uses pass/fail
+      if (roundType === "Preliminary") return;
+
       if (criteriaList.length < 1) {
         errorDetails.push(`${roundLabelMap[roundType]} cần ít nhất 1 tiêu chí`);
         hasError = true;
@@ -1447,194 +1468,214 @@ function CreateCategory({ showId, onCategoryCreated }) {
                     header={`${round.label}`}
                     extra={
                       <div className="flex items-center">
-                        <Tag color="blue">
-                          {criteriaInRound.length} tiêu chí
-                        </Tag>
-                        {criteriaInRound.length > 0 && (
-                          <Tag
-                            color={getTotalWeightColor(criteriaInRound)}
-                            className="ml-2"
-                          >
-                            Tổng: {calculateTotalWeight(criteriaInRound)}%
-                          </Tag>
+                        {round.value !== "Preliminary" ? (
+                          <>
+                            <Tag color="blue">
+                              {criteriaInRound.length} tiêu chí
+                            </Tag>
+                            {criteriaInRound.length > 0 && (
+                              <Tag
+                                color={getTotalWeightColor(criteriaInRound)}
+                                className="ml-2"
+                              >
+                                Tổng: {calculateTotalWeight(criteriaInRound)}%
+                              </Tag>
+                            )}
+                          </>
+                        ) : (
+                          <Tag color="orange">Chấm đạt/không đạt</Tag>
                         )}
                       </div>
                     }
                   >
                     <div className="space-y-4">
-                      <div className="flex items-center space-x-2 mb-4">
-                        <Select
-                          mode="multiple"
-                          placeholder="Chọn tiêu chí"
-                          className="w-full"
-                          value={criteriaInRound.map((c) => {
-                            const criteriaDetail = criteria.find(
-                              (cr) => cr.id === c.criteriaId
-                            );
-                            return criteriaDetail?.name || c.criteriaId;
-                          })}
-                          onChange={(values) => {
-                            // Kiểm tra trùng lặp trong vòng hiện tại
-                            const hasDuplicates = values.some(
-                              (value, index) => values.indexOf(value) !== index
-                            );
-
-                            if (hasDuplicates) {
-                              message.error(
-                                "Không được chọn trùng tiêu chí trong cùng một vòng"
-                              );
-                              return;
-                            }
-
-                            // Xóa các tiêu chí cũ của vòng này
-                            const otherCriteria =
-                              category.createCriteriaCompetitionCategoryRequests?.filter(
-                                (c) => c.roundType !== round.value
-                              ) || [];
-
-                            // Thêm các tiêu chí mới với weight mặc định là 0
-                            const newCriteria = values.map(
-                              (criteriaName, index) => {
-                                const criteriaDetail = criteria.find(
-                                  (cr) => cr.name === criteriaName
-                                );
-                                return {
-                                  criteriaId: criteriaDetail?.id,
-                                  roundType: round.value,
-                                  weight: 0,
-                                  order: index + 1,
-                                };
-                              }
-                            );
-
-                            setCategory((prev) => ({
-                              ...prev,
-                              createCriteriaCompetitionCategoryRequests: [
-                                ...otherCriteria,
-                                ...newCriteria,
-                              ],
-                            }));
-                          }}
-                        >
-                          {criteria
-                            .filter(
-                              (item) =>
-                                !criteriaInRound.some(
-                                  (c) => c.criteriaId === item.id
-                                )
-                            )
-                            .map((item) => (
-                              <Option key={item.id} value={item.name}>
-                                {item.name}
-                              </Option>
-                            ))}
-                        </Select>
-                      </div>
-
-                      {criteriaInRound.length > 0 && (
-                        <div className="space-y-2">
-                          {criteriaInRound.map((criteriaItem, idx) => {
-                            const criteriaDetail = criteria.find(
-                              (c) => c.id === criteriaItem.criteriaId
-                            );
-
-                            return (
-                              <div
-                                key={criteriaItem.criteriaId}
-                                className="flex items-center space-x-4 p-2 bg-gray-50 rounded"
-                              >
-                                <div className="flex-1">
-                                  <div className="font-medium">
-                                    {criteriaDetail?.name}
-                                  </div>
-                                </div>
-                                <div className="flex items-center space-x-2">
-                                  <Input
-                                    type="number"
-                                    min={0}
-                                    max={100}
-                                    suffix="%"
-                                    value={criteriaItem.weight * 100 || 0}
-                                    onChange={(e) => {
-                                      const newWeight =
-                                        parseFloat(e.target.value) / 100;
-                                      if (newWeight < 0 || newWeight > 1) {
-                                        message.error(
-                                          "Trọng số phải nằm trong khoảng 0-100%"
-                                        );
-                                        return;
-                                      }
-
-                                      // Kiểm tra trùng % với các tiêu chí khác
-                                      const hasDuplicateWeight =
-                                        criteriaInRound.some(
-                                          (c) =>
-                                            c.criteriaId !==
-                                              criteriaItem.criteriaId &&
-                                            c.weight === newWeight
-                                        );
-
-                                      if (hasDuplicateWeight) {
-                                        message.error(
-                                          "Không được đặt cùng một tỷ lệ % cho các tiêu chí khác nhau"
-                                        );
-                                        return;
-                                      }
-
-                                      setCategory((prev) => {
-                                        const updatedCategory = { ...prev };
-                                        const criteriaIndex =
-                                          updatedCategory.createCriteriaCompetitionCategoryRequests.findIndex(
-                                            (c) =>
-                                              c.criteriaId ===
-                                                criteriaItem.criteriaId &&
-                                              c.roundType === round.value
-                                          );
-
-                                        if (criteriaIndex !== -1) {
-                                          updatedCategory.createCriteriaCompetitionCategoryRequests[
-                                            criteriaIndex
-                                          ] = {
-                                            ...updatedCategory
-                                              .createCriteriaCompetitionCategoryRequests[
-                                              criteriaIndex
-                                            ],
-                                            weight: newWeight,
-                                          };
-                                        }
-
-                                        return updatedCategory;
-                                      });
-                                    }}
-                                    className="w-24"
-                                    placeholder="Nhập %"
-                                  />
-                                  <Button
-                                    type="text"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() => {
-                                      setCategory((prev) => {
-                                        const updatedCategory = { ...prev };
-                                        updatedCategory.createCriteriaCompetitionCategoryRequests =
-                                          updatedCategory.createCriteriaCompetitionCategoryRequests.filter(
-                                            (c) =>
-                                              !(
-                                                c.criteriaId ===
-                                                  criteriaItem.criteriaId &&
-                                                c.roundType === round.value
-                                              )
-                                          );
-
-                                        return updatedCategory;
-                                      });
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
+                      {round.value === "Preliminary" ? (
+                        <div className="p-4 bg-gray-50 rounded border border-orange-200">
+                          <p className="text-orange-600">
+                            Vòng Sơ Khảo chỉ áp dụng hình thức chấm đạt/không
+                            đạt (Pass/Fail). Trọng tài sẽ đánh giá các cá thể có
+                            đủ điều kiện tham gia vòng tiếp theo hay không mà
+                            không sử dụng tiêu chí đánh giá chi tiết.
+                          </p>
                         </div>
+                      ) : (
+                        <>
+                          <div className="flex items-center space-x-2 mb-4">
+                            <Select
+                              mode="multiple"
+                              placeholder="Chọn tiêu chí"
+                              className="w-full"
+                              value={criteriaInRound.map((c) => {
+                                const criteriaDetail = criteria.find(
+                                  (cr) => cr.id === c.criteriaId
+                                );
+                                return criteriaDetail?.name || c.criteriaId;
+                              })}
+                              onChange={(values) => {
+                                // Kiểm tra trùng lặp trong vòng hiện tại
+                                const hasDuplicates = values.some(
+                                  (value, index) =>
+                                    values.indexOf(value) !== index
+                                );
+
+                                if (hasDuplicates) {
+                                  message.error(
+                                    "Không được chọn trùng tiêu chí trong cùng một vòng"
+                                  );
+                                  return;
+                                }
+
+                                // Xóa các tiêu chí cũ của vòng này
+                                const otherCriteria =
+                                  category.createCriteriaCompetitionCategoryRequests?.filter(
+                                    (c) => c.roundType !== round.value
+                                  ) || [];
+
+                                // Thêm các tiêu chí mới với weight mặc định là 0
+                                const newCriteria = values.map(
+                                  (criteriaName, index) => {
+                                    const criteriaDetail = criteria.find(
+                                      (cr) => cr.name === criteriaName
+                                    );
+                                    return {
+                                      criteriaId: criteriaDetail?.id,
+                                      roundType: round.value,
+                                      weight: 0,
+                                      order: index + 1,
+                                    };
+                                  }
+                                );
+
+                                setCategory((prev) => ({
+                                  ...prev,
+                                  createCriteriaCompetitionCategoryRequests: [
+                                    ...otherCriteria,
+                                    ...newCriteria,
+                                  ],
+                                }));
+                              }}
+                            >
+                              {criteria
+                                .filter(
+                                  (item) =>
+                                    !criteriaInRound.some(
+                                      (c) => c.criteriaId === item.id
+                                    )
+                                )
+                                .map((item) => (
+                                  <Option key={item.id} value={item.name}>
+                                    {item.name}
+                                  </Option>
+                                ))}
+                            </Select>
+                          </div>
+
+                          {criteriaInRound.length > 0 && (
+                            <div className="space-y-2">
+                              {criteriaInRound.map((criteriaItem, idx) => {
+                                const criteriaDetail = criteria.find(
+                                  (c) => c.id === criteriaItem.criteriaId
+                                );
+
+                                return (
+                                  <div
+                                    key={criteriaItem.criteriaId}
+                                    className="flex items-center space-x-4 p-2 bg-gray-50 rounded"
+                                  >
+                                    <div className="flex-1">
+                                      <div className="font-medium">
+                                        {criteriaDetail?.name}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2">
+                                      <Input
+                                        type="number"
+                                        min={0}
+                                        max={100}
+                                        suffix="%"
+                                        value={criteriaItem.weight * 100 || 0}
+                                        onChange={(e) => {
+                                          const newWeight =
+                                            parseFloat(e.target.value) / 100;
+                                          if (newWeight < 0 || newWeight > 1) {
+                                            message.error(
+                                              "Trọng số phải nằm trong khoảng 0-100%"
+                                            );
+                                            return;
+                                          }
+
+                                          // Kiểm tra trùng % với các tiêu chí khác
+                                          const hasDuplicateWeight =
+                                            criteriaInRound.some(
+                                              (c) =>
+                                                c.criteriaId !==
+                                                  criteriaItem.criteriaId &&
+                                                c.weight === newWeight
+                                            );
+
+                                          if (hasDuplicateWeight) {
+                                            message.error(
+                                              "Không được đặt cùng một tỷ lệ % cho các tiêu chí khác nhau"
+                                            );
+                                            return;
+                                          }
+
+                                          setCategory((prev) => {
+                                            const updatedCategory = { ...prev };
+                                            const criteriaIndex =
+                                              updatedCategory.createCriteriaCompetitionCategoryRequests.findIndex(
+                                                (c) =>
+                                                  c.criteriaId ===
+                                                    criteriaItem.criteriaId &&
+                                                  c.roundType === round.value
+                                              );
+
+                                            if (criteriaIndex !== -1) {
+                                              updatedCategory.createCriteriaCompetitionCategoryRequests[
+                                                criteriaIndex
+                                              ] = {
+                                                ...updatedCategory
+                                                  .createCriteriaCompetitionCategoryRequests[
+                                                  criteriaIndex
+                                                ],
+                                                weight: newWeight,
+                                              };
+                                            }
+
+                                            return updatedCategory;
+                                          });
+                                        }}
+                                        className="w-24"
+                                        placeholder="Nhập %"
+                                      />
+                                      <Button
+                                        type="text"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        onClick={() => {
+                                          setCategory((prev) => {
+                                            const updatedCategory = { ...prev };
+                                            updatedCategory.createCriteriaCompetitionCategoryRequests =
+                                              updatedCategory.createCriteriaCompetitionCategoryRequests.filter(
+                                                (c) =>
+                                                  !(
+                                                    c.criteriaId ===
+                                                      criteriaItem.criteriaId &&
+                                                    c.roundType === round.value
+                                                  )
+                                              );
+
+                                            return updatedCategory;
+                                          });
+                                        }}
+                                      />
+                                    </div>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </>
                       )}
                     </div>
                   </Collapse.Panel>

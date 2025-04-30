@@ -36,7 +36,7 @@ function KoiShowDetail() {
     RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
     RegistrationClosed: { label: "Đóng Đăng Ký", color: "red" },
     CheckIn: { label: "Điểm danh", color: "cyan" },
-    Preliminary: { label: "Vòng Sơ Loại", color: "green" },
+    Preliminary: { label: "Vòng Sơ Khảo", color: "green" },
     Evaluation: { label: "Vòng Đánh Giá", color: "purple" },
     Final: { label: "Vòng Chung Kết", color: "orange" },
     GrandChampion: { label: "Grand Champion", color: "yellow" },

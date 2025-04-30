@@ -122,6 +122,29 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
     fetchAccountTeam(1, 100);
   }, []);
 
+  // Clean up any existing criteria for Preliminary round
+  useEffect(() => {
+    if (categories && categories.length > 0) {
+      setCategories((prevCategories) =>
+        prevCategories.map((category) => {
+          if (category.createCriteriaCompetitionCategoryRequests) {
+            // Remove any criteria for Preliminary round
+            const filteredCriteria =
+              category.createCriteriaCompetitionCategoryRequests.filter(
+                (criteria) => criteria.roundType !== "Preliminary"
+              );
+
+            return {
+              ...category,
+              createCriteriaCompetitionCategoryRequests: filteredCriteria,
+            };
+          }
+          return category;
+        })
+      );
+    }
+  }, []);
+
   // Hàm làm mới danh sách giống cá Koi
   const handleRefreshVariety = async () => {
     try {
@@ -1615,253 +1638,291 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                             header={`${round.label}`}
                             extra={
                               <div className="flex items-center">
-                                <Tag color="blue">
-                                  {criteriaInRound.length} tiêu chí
-                                </Tag>
-                                {criteriaInRound.length > 0 && (
-                                  <Tag
-                                    color={getTotalWeightColor(criteriaInRound)}
-                                    className="ml-2"
-                                  >
-                                    Tổng:{" "}
-                                    {calculateTotalWeight(criteriaInRound)}%
-                                  </Tag>
+                                {round.value !== "Preliminary" ? (
+                                  <>
+                                    <Tag color="blue">
+                                      {criteriaInRound.length} tiêu chí
+                                    </Tag>
+                                    {criteriaInRound.length > 0 && (
+                                      <Tag
+                                        color={getTotalWeightColor(
+                                          criteriaInRound
+                                        )}
+                                        className="ml-2"
+                                      >
+                                        Tổng:{" "}
+                                        {calculateTotalWeight(criteriaInRound)}%
+                                      </Tag>
+                                    )}
+                                  </>
+                                ) : (
+                                  <Tag color="orange">Chấm đạt/không đạt</Tag>
                                 )}
                               </div>
                             }
                           >
                             <div className="space-y-4">
-                              <div className="flex items-center space-x-2 mb-4">
-                                <div className="flex-1">
-                                  <label className="block text-sm font-medium text-gray-700">
-                                    Tiêu chí đánh giá - {round.label}
-                                  </label>
-                                  {criteriaLoading || criteriaRefreshLoading ? (
-                                    <Loading />
-                                  ) : (
-                                    <Select
-                                      ref={(el) =>
-                                        (criteriaSelectRefs.current[
-                                          `${index}_${round.value}`
-                                        ] = el)
-                                      }
-                                      mode="multiple"
-                                      placeholder="Chọn tiêu chí"
-                                      className="w-full"
-                                      value={criteriaInRound.map((c) => {
-                                        const criteriaDetail = criteria.find(
-                                          (cr) => cr.id === c.criteriaId
-                                        );
-                                        return (
-                                          criteriaDetail?.name || c.criteriaId
-                                        );
-                                      })}
-                                      onChange={(values) => {
-                                        // Kiểm tra trùng lặp trong vòng hiện tại
-                                        const hasDuplicates = values.some(
-                                          (value, index) =>
-                                            values.indexOf(value) !== index
-                                        );
-
-                                        if (hasDuplicates) {
-                                          message.error(
-                                            "Không được chọn trùng tiêu chí trong cùng một vòng"
-                                          );
-                                          return;
-                                        }
-
-                                        // Xóa các tiêu chí cũ của vòng này
-                                        const otherCriteria =
-                                          category.createCriteriaCompetitionCategoryRequests?.filter(
-                                            (c) => c.roundType !== round.value
-                                          ) || [];
-
-                                        // Thêm các tiêu chí mới với weight mặc định là 0
-                                        const newCriteria = values.map(
-                                          (criteriaName, index) => {
+                              {round.value === "Preliminary" ? (
+                                <div className="p-4 bg-gray-50 rounded border border-orange-200">
+                                  <p className="text-orange-600">
+                                    Vòng Sơ Khảo chỉ áp dụng hình thức chấm
+                                    đạt/không đạt (Pass/Fail). Trọng tài sẽ đánh
+                                    giá các cá thể có đủ điều kiện tham gia vòng
+                                    tiếp theo hay không mà không sử dụng tiêu
+                                    chí đánh giá chi tiết.
+                                  </p>
+                                </div>
+                              ) : (
+                                <>
+                                  <div className="flex items-center space-x-2 mb-4">
+                                    <div className="flex-1">
+                                      <label className="block text-sm font-medium text-gray-700">
+                                        Tiêu chí đánh giá - {round.label}
+                                      </label>
+                                      {criteriaLoading ||
+                                      criteriaRefreshLoading ? (
+                                        <Loading />
+                                      ) : (
+                                        <Select
+                                          ref={(el) =>
+                                            (criteriaSelectRefs.current[
+                                              `${index}_${round.value}`
+                                            ] = el)
+                                          }
+                                          mode="multiple"
+                                          placeholder="Chọn tiêu chí"
+                                          className="w-full"
+                                          value={criteriaInRound.map((c) => {
                                             const criteriaDetail =
                                               criteria.find(
-                                                (cr) => cr.name === criteriaName
+                                                (cr) => cr.id === c.criteriaId
                                               );
-                                            return {
-                                              criteriaId: criteriaDetail?.id,
-                                              roundType: round.value,
-                                              weight: 0,
-                                              order: index + 1,
-                                            };
-                                          }
-                                        );
+                                            return (
+                                              criteriaDetail?.name ||
+                                              c.criteriaId
+                                            );
+                                          })}
+                                          onChange={(values) => {
+                                            // Kiểm tra trùng lặp trong vòng hiện tại
+                                            const hasDuplicates = values.some(
+                                              (value, index) =>
+                                                values.indexOf(value) !== index
+                                            );
 
-                                        handleCategoryChange(
-                                          index,
-                                          "createCriteriaCompetitionCategoryRequests",
-                                          [...otherCriteria, ...newCriteria]
-                                        );
-                                      }}
-                                      dropdownRender={
-                                        renderDropdownWithRefreshCriteria
-                                      }
-                                    >
-                                      {criteria
-                                        .filter(
-                                          (item) =>
-                                            !criteriaInRound.some(
-                                              (c) => c.criteriaId === item.id
-                                            )
-                                        )
-                                        .map((item) => (
-                                          <Option
-                                            key={item.id}
-                                            value={item.name}
-                                          >
-                                            {item.name}
-                                          </Option>
-                                        ))}
-                                    </Select>
-                                  )}
-                                </div>
-                              </div>
-
-                              {criteriaInRound.length > 0 && (
-                                <div className="space-y-2">
-                                  {criteriaInRound.map((criteriaItem, idx) => {
-                                    const criteriaDetail = criteria.find(
-                                      (c) => c.id === criteriaItem.criteriaId
-                                    );
-
-                                    return (
-                                      <div
-                                        key={criteriaItem.criteriaId}
-                                        className="flex items-center space-x-4 p-2 bg-gray-50 rounded"
-                                      >
-                                        <div className="flex-1">
-                                          <div className="font-medium">
-                                            {criteriaDetail?.name}
-                                          </div>
-                                        </div>
-                                        <div className="flex items-center space-x-2">
-                                          <Input
-                                            type="number"
-                                            min={0}
-                                            max={100}
-                                            suffix="%"
-                                            value={
-                                              criteriaItem.weight * 100 || 0
+                                            if (hasDuplicates) {
+                                              message.error(
+                                                "Không được chọn trùng tiêu chí trong cùng một vòng"
+                                              );
+                                              return;
                                             }
-                                            onChange={(e) => {
-                                              const newWeight =
-                                                parseFloat(e.target.value) /
-                                                100;
-                                              if (
-                                                newWeight < 0 ||
-                                                newWeight > 1
-                                              ) {
-                                                return;
-                                              }
 
-                                              // Kiểm tra trùng % với các tiêu chí khác
-                                              const hasDuplicateWeight =
-                                                criteriaInRound.some(
+                                            // Xóa các tiêu chí cũ của vòng này
+                                            const otherCriteria =
+                                              category.createCriteriaCompetitionCategoryRequests?.filter(
+                                                (c) =>
+                                                  c.roundType !== round.value
+                                              ) || [];
+
+                                            // Thêm các tiêu chí mới với weight mặc định là 0
+                                            const newCriteria = values.map(
+                                              (criteriaName, index) => {
+                                                const criteriaDetail =
+                                                  criteria.find(
+                                                    (cr) =>
+                                                      cr.name === criteriaName
+                                                  );
+                                                return {
+                                                  criteriaId:
+                                                    criteriaDetail?.id,
+                                                  roundType: round.value,
+                                                  weight: 0,
+                                                  order: index + 1,
+                                                };
+                                              }
+                                            );
+
+                                            handleCategoryChange(
+                                              index,
+                                              "createCriteriaCompetitionCategoryRequests",
+                                              [...otherCriteria, ...newCriteria]
+                                            );
+                                          }}
+                                          dropdownRender={
+                                            renderDropdownWithRefreshCriteria
+                                          }
+                                        >
+                                          {criteria
+                                            .filter(
+                                              (item) =>
+                                                !criteriaInRound.some(
                                                   (c) =>
-                                                    c.criteriaId !==
-                                                      criteriaItem.criteriaId &&
-                                                    c.weight === newWeight
-                                                );
+                                                    c.criteriaId === item.id
+                                                )
+                                            )
+                                            .map((item) => (
+                                              <Option
+                                                key={item.id}
+                                                value={item.name}
+                                              >
+                                                {item.name}
+                                              </Option>
+                                            ))}
+                                        </Select>
+                                      )}
+                                    </div>
+                                  </div>
 
-                                              if (hasDuplicateWeight) {
-                                                message.error(
-                                                  "Không được đặt cùng một tỷ lệ % cho các tiêu chí khác nhau"
-                                                );
-                                                return;
-                                              }
+                                  {criteriaInRound.length > 0 && (
+                                    <div className="space-y-2">
+                                      {criteriaInRound.map(
+                                        (criteriaItem, idx) => {
+                                          const criteriaDetail = criteria.find(
+                                            (c) =>
+                                              c.id === criteriaItem.criteriaId
+                                          );
 
-                                              setCategories(
-                                                (prevCategories) => {
-                                                  const updatedCategories = [
-                                                    ...prevCategories,
-                                                  ];
-                                                  const category =
-                                                    updatedCategories[index];
-
-                                                  if (!category)
-                                                    return updatedCategories;
-
-                                                  if (
-                                                    !category.createCriteriaCompetitionCategoryRequests
-                                                  ) {
-                                                    category.createCriteriaCompetitionCategoryRequests =
-                                                      [];
+                                          return (
+                                            <div
+                                              key={criteriaItem.criteriaId}
+                                              className="flex items-center space-x-4 p-2 bg-gray-50 rounded"
+                                            >
+                                              <div className="flex-1">
+                                                <div className="font-medium">
+                                                  {criteriaDetail?.name}
+                                                </div>
+                                              </div>
+                                              <div className="flex items-center space-x-2">
+                                                <Input
+                                                  type="number"
+                                                  min={0}
+                                                  max={100}
+                                                  suffix="%"
+                                                  value={
+                                                    criteriaItem.weight * 100 ||
+                                                    0
                                                   }
+                                                  onChange={(e) => {
+                                                    const newWeight =
+                                                      parseFloat(
+                                                        e.target.value
+                                                      ) / 100;
+                                                    if (
+                                                      newWeight < 0 ||
+                                                      newWeight > 1
+                                                    ) {
+                                                      return;
+                                                    }
 
-                                                  const criteriaIndex =
-                                                    category.createCriteriaCompetitionCategoryRequests.findIndex(
-                                                      (c) =>
-                                                        c.criteriaId ===
-                                                          criteriaItem.criteriaId &&
-                                                        c.roundType ===
-                                                          round.value
-                                                    );
-
-                                                  if (criteriaIndex !== -1) {
-                                                    category.createCriteriaCompetitionCategoryRequests[
-                                                      criteriaIndex
-                                                    ] = {
-                                                      ...category
-                                                        .createCriteriaCompetitionCategoryRequests[
-                                                        criteriaIndex
-                                                      ],
-                                                      weight: newWeight,
-                                                    };
-                                                  }
-
-                                                  return updatedCategories;
-                                                }
-                                              );
-                                            }}
-                                            className="w-24"
-                                            placeholder="Nhập %"
-                                          />
-                                          <Button
-                                            type="text"
-                                            danger
-                                            icon={<DeleteOutlined />}
-                                            onClick={() => {
-                                              setCategories(
-                                                (prevCategories) => {
-                                                  const updatedCategories = [
-                                                    ...prevCategories,
-                                                  ];
-                                                  const category =
-                                                    updatedCategories[index];
-
-                                                  if (
-                                                    !category ||
-                                                    !category.createCriteriaCompetitionCategoryRequests
-                                                  ) {
-                                                    return updatedCategories;
-                                                  }
-
-                                                  category.createCriteriaCompetitionCategoryRequests =
-                                                    category.createCriteriaCompetitionCategoryRequests.filter(
-                                                      (c) =>
-                                                        !(
-                                                          c.criteriaId ===
+                                                    // Kiểm tra trùng % với các tiêu chí khác
+                                                    const hasDuplicateWeight =
+                                                      criteriaInRound.some(
+                                                        (c) =>
+                                                          c.criteriaId !==
                                                             criteriaItem.criteriaId &&
-                                                          c.roundType ===
-                                                            round.value
-                                                        )
-                                                    );
+                                                          c.weight === newWeight
+                                                      );
 
-                                                  return updatedCategories;
-                                                }
-                                              );
-                                            }}
-                                          />
-                                        </div>
-                                      </div>
-                                    );
-                                  })}
-                                </div>
+                                                    if (hasDuplicateWeight) {
+                                                      message.error(
+                                                        "Không được đặt cùng một tỷ lệ % cho các tiêu chí khác nhau"
+                                                      );
+                                                      return;
+                                                    }
+
+                                                    setCategories(
+                                                      (prevCategories) => {
+                                                        const updatedCategories =
+                                                          [...prevCategories];
+                                                        const category =
+                                                          updatedCategories[
+                                                            index
+                                                          ];
+
+                                                        if (!category)
+                                                          return updatedCategories;
+
+                                                        if (
+                                                          !category.createCriteriaCompetitionCategoryRequests
+                                                        ) {
+                                                          category.createCriteriaCompetitionCategoryRequests =
+                                                            [];
+                                                        }
+
+                                                        const criteriaIndex =
+                                                          category.createCriteriaCompetitionCategoryRequests.findIndex(
+                                                            (c) =>
+                                                              c.criteriaId ===
+                                                                criteriaItem.criteriaId &&
+                                                              c.roundType ===
+                                                                round.value
+                                                          );
+
+                                                        if (
+                                                          criteriaIndex !== -1
+                                                        ) {
+                                                          category.createCriteriaCompetitionCategoryRequests[
+                                                            criteriaIndex
+                                                          ] = {
+                                                            ...category
+                                                              .createCriteriaCompetitionCategoryRequests[
+                                                              criteriaIndex
+                                                            ],
+                                                            weight: newWeight,
+                                                          };
+                                                        }
+
+                                                        return updatedCategories;
+                                                      }
+                                                    );
+                                                  }}
+                                                  className="w-24"
+                                                  placeholder="Nhập %"
+                                                />
+                                                <Button
+                                                  type="text"
+                                                  danger
+                                                  icon={<DeleteOutlined />}
+                                                  onClick={() => {
+                                                    setCategories(
+                                                      (prevCategories) => {
+                                                        const updatedCategories =
+                                                          [...prevCategories];
+                                                        const category =
+                                                          updatedCategories[
+                                                            index
+                                                          ];
+
+                                                        if (
+                                                          !category ||
+                                                          !category.createCriteriaCompetitionCategoryRequests
+                                                        ) {
+                                                          return updatedCategories;
+                                                        }
+
+                                                        category.createCriteriaCompetitionCategoryRequests =
+                                                          category.createCriteriaCompetitionCategoryRequests.filter(
+                                                            (c) =>
+                                                              !(
+                                                                c.criteriaId ===
+                                                                  criteriaItem.criteriaId &&
+                                                                c.roundType ===
+                                                                  round.value
+                                                              )
+                                                          );
+
+                                                        return updatedCategories;
+                                                      }
+                                                    );
+                                                  }}
+                                                />
+                                              </div>
+                                            </div>
+                                          );
+                                        }
+                                      )}
+                                    </div>
+                                  )}
+                                </>
                               )}
                             </div>
                           </Collapse.Panel>

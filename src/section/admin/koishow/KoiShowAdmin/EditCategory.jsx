@@ -120,6 +120,22 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     }
   }, [currentCategory, form]);
 
+  // Clean up any criteria for Preliminary round
+  useEffect(() => {
+    if (currentCategory?.criteriaCompetitionCategories?.length > 0) {
+      // Remove any criteria for Preliminary round
+      const filteredCriteria =
+        currentCategory.criteriaCompetitionCategories.filter(
+          (criteria) => criteria.roundType !== "Preliminary"
+        );
+
+      // Update form with filtered criteria
+      form.setFieldsValue({
+        criteriaCompetitionCategories: filteredCriteria,
+      });
+    }
+  }, [currentCategory, form]);
+
   useEffect(() => {
     if (currentCategory && currentCategory.rounds) {
       const evaluationRound1 = currentCategory.rounds.find(
@@ -199,6 +215,9 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       let criteriaErrorMessage = "";
 
       Object.entries(criteriaByRound).forEach(([roundType, criteriaList]) => {
+        // Skip validation for Preliminary round
+        if (roundType === "Preliminary") return;
+
         // Check if each round has at least one criterion
         if (criteriaList.length < 1) {
           hasCriteriaError = true;
@@ -821,6 +840,12 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   };
 
   const handleShowAddCriteriaModal = (roundType) => {
+    // Don't allow adding criteria for Preliminary round
+    if (roundType === "Preliminary") {
+      message.info("Vòng Sơ Khảo chỉ sử dụng chấm đạt/không đạt (Pass/Fail)");
+      return;
+    }
+
     setSelectedRoundForCriteria(roundType);
     setTempSelectedCriteria([]);
   };
@@ -1623,82 +1648,96 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
                   return (
                     <Tabs.TabPane tab={round.label} key={round.value}>
-                      {criteriaInRound.length > 0 ? (
-                        <List
-                          dataSource={criteriaInRound}
-                          renderItem={(item) => (
-                            <List.Item
-                              key={
-                                item.id ||
-                                `${item.criteriaId}-${item.roundType}`
-                              }
-                              actions={[
-                                <InputNumber
-                                  min={0}
-                                  max={100}
-                                  formatter={(value) => `${value}%`}
-                                  parser={(value) => value.replace("%", "")}
-                                  value={
-                                    criteriaWeights[
-                                      `${item.criteriaId || item.criteria?.id}-${item.roundType}`
-                                    ] !== undefined
-                                      ? criteriaWeights[
-                                          `${item.criteriaId || item.criteria?.id}-${item.roundType}`
-                                        ]
-                                      : (item.weight * 100).toFixed(0)
-                                  }
-                                  onChange={(value) =>
-                                    handleWeightChange(
-                                      item.criteriaId || item.criteria?.id,
-                                      item.roundType,
-                                      value
-                                    )
-                                  }
-                                  className="w-24"
-                                />,
-                                <Tooltip title="Xóa tiêu chí">
-                                  <Button
-                                    type="text"
-                                    danger
-                                    icon={<DeleteOutlined />}
-                                    onClick={() =>
-                                      handleRemoveCriteria(
-                                        item.criteriaId || item.criteria?.id,
-                                        item.roundType
-                                      )
-                                    }
-                                    size="small"
-                                  />
-                                </Tooltip>,
-                              ]}
-                            >
-                              <List.Item.Meta
-                                title={`${item.order}. ${
-                                  item.criteria?.name ||
-                                  "Tiêu chí không xác định"
-                                }`}
-                              />
-                            </List.Item>
-                          )}
-                        />
-                      ) : (
-                        <div className="text-center text-gray-500 rounded-md">
-                          Chưa có tiêu chí nào cho {round.label}
+                      {round.value === "Preliminary" ? (
+                        <div className="p-4 bg-gray-50 rounded border border-orange-200">
+                          <p className="text-orange-600">
+                            Vòng Sơ Khảo chỉ áp dụng hình thức chấm đạt/không
+                            đạt (Pass/Fail). Trọng tài sẽ đánh giá các cá thể có
+                            đủ điều kiện tham gia vòng tiếp theo hay không mà
+                            không sử dụng tiêu chí đánh giá chi tiết.
+                          </p>
                         </div>
-                      )}
+                      ) : (
+                        <>
+                          {criteriaInRound.length > 0 ? (
+                            <List
+                              dataSource={criteriaInRound}
+                              renderItem={(item) => (
+                                <List.Item
+                                  key={
+                                    item.id ||
+                                    `${item.criteriaId}-${item.roundType}`
+                                  }
+                                  actions={[
+                                    <InputNumber
+                                      min={0}
+                                      max={100}
+                                      formatter={(value) => `${value}%`}
+                                      parser={(value) => value.replace("%", "")}
+                                      value={
+                                        criteriaWeights[
+                                          `${item.criteriaId || item.criteria?.id}-${item.roundType}`
+                                        ] !== undefined
+                                          ? criteriaWeights[
+                                              `${item.criteriaId || item.criteria?.id}-${item.roundType}`
+                                            ]
+                                          : (item.weight * 100).toFixed(0)
+                                      }
+                                      onChange={(value) =>
+                                        handleWeightChange(
+                                          item.criteriaId || item.criteria?.id,
+                                          item.roundType,
+                                          value
+                                        )
+                                      }
+                                      className="w-24"
+                                    />,
+                                    <Tooltip title="Xóa tiêu chí">
+                                      <Button
+                                        type="text"
+                                        danger
+                                        icon={<DeleteOutlined />}
+                                        onClick={() =>
+                                          handleRemoveCriteria(
+                                            item.criteriaId ||
+                                              item.criteria?.id,
+                                            item.roundType
+                                          )
+                                        }
+                                        size="small"
+                                      />
+                                    </Tooltip>,
+                                  ]}
+                                >
+                                  <List.Item.Meta
+                                    title={`${item.order}. ${
+                                      item.criteria?.name ||
+                                      "Tiêu chí không xác định"
+                                    }`}
+                                  />
+                                </List.Item>
+                              )}
+                            />
+                          ) : (
+                            <div className="text-center text-gray-500 rounded-md">
+                              Chưa có tiêu chí nào cho {round.label}
+                            </div>
+                          )}
 
-                      {/* Luôn hiển thị nút thêm tiêu chí, không cần điều kiện editingCriteria */}
-                      <div className="flex justify-center mt-3">
-                        <Button
-                          type="dashed"
-                          icon={<PlusOutlined />}
-                          onClick={() =>
-                            handleShowAddCriteriaModal(round.value)
-                          }
-                        >
-                          Thêm tiêu chí cho {round.label}
-                        </Button>
-                      </div>
+                          {/* Luôn hiển thị nút thêm tiêu chí, không cần điều kiện editingCriteria */}
+                          <div className="flex justify-center mt-3">
+                            <Button
+                              type="dashed"
+                              icon={<PlusOutlined />}
+                              onClick={() =>
+                                handleShowAddCriteriaModal(round.value)
+                              }
+                            >
+                              Thêm tiêu chí cho {round.label}
+                            </Button>
+                          </div>
+                        </>
+                      )}
                     </Tabs.TabPane>
                   );
                 })}

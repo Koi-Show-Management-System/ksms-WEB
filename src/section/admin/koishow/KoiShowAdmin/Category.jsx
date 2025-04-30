@@ -50,7 +50,9 @@ function Category({ showId, statusShow }) {
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
   const isEditDisabled =
-    statusShow === "published" || statusShow === "inprogress" || statusShow === "upcoming";
+    statusShow === "published" ||
+    statusShow === "inprogress" ||
+    statusShow === "upcoming";
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [categoryToCancel, setCategoryToCancel] = useState(null);
@@ -451,31 +453,49 @@ function Category({ showId, statusShow }) {
                 tabPosition={window.innerWidth < 576 ? "top" : "left"}
                 size={window.innerWidth < 768 ? "small" : "default"}
               >
-                <TabPane tab="Vòng sơ loại" key="preliminary">
-                  <List
-                    dataSource={
-                      selectedCategory.criteriaCompetitionCategories
-                        ?.filter((c) => c.roundType === "Preliminary")
-                        .sort((a, b) => a.order - b.order) || []
-                    }
-                    renderItem={(item) => (
-                      <List.Item>
-                        <div className="w-full">
-                          <div className="flex justify-between items-center mb-2">
-                            <div className="font-medium">
-                              {item.order}. {item.criteria?.name}
+                <TabPane tab="Vòng sơ khảo" key="preliminary">
+                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+                    <p className="text-blue-800">
+                      <strong>Lưu ý:</strong> Vòng Sơ Khảo chỉ áp dụng hình thức
+                      chấm đạt/không đạt (Pass/Fail). Trọng tài sẽ đánh giá các
+                      cá thể có đủ điều kiện tham gia vòng tiếp theo hay không
+                      mà không sử dụng tiêu chí đánh giá chi tiết.
+                    </p>
+                  </div>
+                  {selectedCategory.criteriaCompetitionCategories?.filter(
+                    (c) => c.roundType === "Preliminary"
+                  ).length > 0 ? (
+                    <List
+                      dataSource={
+                        selectedCategory.criteriaCompetitionCategories
+                          ?.filter((c) => c.roundType === "Preliminary")
+                          .sort((a, b) => a.order - b.order) || []
+                      }
+                      renderItem={(item) => (
+                        <List.Item>
+                          <div className="w-full">
+                            <div className="flex justify-between items-center mb-2">
+                              <div className="font-medium">
+                                {item.order}. {item.criteria?.name}
+                              </div>
+                              <Tag color="blue">
+                                Trọng số: {(item.weight * 100).toFixed(0)}%
+                              </Tag>
                             </div>
-                            <Tag color="blue">
-                              Trọng số: {(item.weight * 100).toFixed(0)}%
-                            </Tag>
+                            <p className="text-gray-600">
+                              {item.criteria?.description}
+                            </p>
                           </div>
-                          <p className="text-gray-600">
-                            {item.criteria?.description}
-                          </p>
-                        </div>
-                      </List.Item>
-                    )}
-                  />
+                        </List.Item>
+                      )}
+                    />
+                  ) : (
+                    <div className="mt-4 text-center">
+                      <p className="text-gray-500">
+                        Không yêu cầu tiêu chí đánh giá cho vòng này
+                      </p>
+                    </div>
+                  )}
                 </TabPane>
                 <TabPane tab="Vòng đánh giá" key="evaluation">
                   <List
@@ -559,7 +579,7 @@ function Category({ showId, statusShow }) {
                 const translateRoundType = (type) => {
                   switch (type) {
                     case "Preliminary":
-                      return "Vòng Sơ loại";
+                      return "Vòng Sơ khảo";
                     case "Evaluation":
                       return "Vòng Đánh giá";
                     case "Final":

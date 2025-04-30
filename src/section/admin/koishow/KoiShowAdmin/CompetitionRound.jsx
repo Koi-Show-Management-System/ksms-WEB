@@ -1146,7 +1146,7 @@ function CompetitionRound({ showId }) {
       {
         title: "Top",
         dataIndex: ["rank"],
-        width: 40,
+        width: 60,
         render: (rank) => (
           <span style={{ color: "blue", fontWeight: "bold" }}>
             {rank ? `#${rank}` : "_"}

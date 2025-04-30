@@ -422,6 +422,11 @@ function CreateShow() {
                   (c) => c.roundType === roundType
                 ) || [];
 
+              // Skip validation for Preliminary round since it only uses pass/fail
+              if (roundType === "Preliminary") {
+                return;
+              }
+
               if (criteriaForRound.length < 3) {
                 errorDetails.push(`ít nhất 3 tiêu chí cho ${roundType}`);
                 categoryHasError = true;
@@ -676,7 +681,7 @@ function CreateShow() {
           </Button> */}
           <Button
             type="primary"
-            onClick={handleQuickNext}
+            onClick={handleNext}
             className="bg-blue-500 hover:bg-blue-600"
             loading={isLoading}
           >
@@ -697,12 +702,12 @@ function CreateShow() {
         <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
       </Modal>
       {/* Debug Panel */}
-      <div className="mt-6 p-4 bg-gray-100 rounded-md">
+      {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
         <pre className="overflow-auto max-h-96">
           {JSON.stringify(formData, null, 2)}
         </pre>
-      </div>
+      </div> */}
     </div>
   );
 }
