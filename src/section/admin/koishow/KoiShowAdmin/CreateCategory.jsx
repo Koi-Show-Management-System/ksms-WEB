@@ -156,7 +156,45 @@ function CreateCategory({ showId, onCategoryCreated }) {
       hasTank: undefined,
       createAwardCateShowRequests: [],
       createCompetionCategoryVarieties: [],
-      createRoundRequests: [],
+      createRoundRequests: [
+        // Initialize with fixed rounds
+        {
+          name: "Vòng 1",
+          roundOrder: 1,
+          roundType: "Preliminary",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+        {
+          name: "Vòng 1",
+          roundOrder: 1,
+          roundType: "Evaluation",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+        {
+          name: "Vòng 2",
+          roundOrder: 2,
+          roundType: "Evaluation",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+        {
+          name: "Vòng 1",
+          roundOrder: 1,
+          roundType: "Final",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+      ],
       createRefereeAssignmentRequests: [],
       createCriteriaCompetitionCategoryRequests: [],
     });
@@ -939,6 +977,77 @@ function CreateCategory({ showId, onCategoryCreated }) {
     return Math.round(totalWeight * 100);
   };
 
+  // Helper function to get a specific round
+  const getRound = (roundType, roundOrder) => {
+    if (!category.createRoundRequests) return null;
+    return category.createRoundRequests.find(
+      (r) => r.roundType === roundType && r.roundOrder === roundOrder
+    );
+  };
+
+  // Helper function to update a round's property
+  const updateRound = (roundType, roundOrder, field, value) => {
+    setCategory((prev) => {
+      const updatedCategory = { ...prev };
+
+      if (!updatedCategory.createRoundRequests) {
+        // Initialize rounds if they don't exist
+        updatedCategory.createRoundRequests = [
+          {
+            name: "Vòng 1",
+            roundOrder: 1,
+            roundType: "Preliminary",
+            startTime: dayjs().format(),
+            endTime: dayjs().add(1, "day").format(),
+            numberOfRegistrationToAdvance: null,
+            status: "pending",
+          },
+          {
+            name: "Vòng 1",
+            roundOrder: 1,
+            roundType: "Evaluation",
+            startTime: dayjs().format(),
+            endTime: dayjs().add(1, "day").format(),
+            numberOfRegistrationToAdvance: null,
+            status: "pending",
+          },
+          {
+            name: "Vòng 2",
+            roundOrder: 2,
+            roundType: "Evaluation",
+            startTime: dayjs().format(),
+            endTime: dayjs().add(1, "day").format(),
+            numberOfRegistrationToAdvance: null,
+            status: "pending",
+          },
+          {
+            name: "Vòng 1",
+            roundOrder: 1,
+            roundType: "Final",
+            startTime: dayjs().format(),
+            endTime: dayjs().add(1, "day").format(),
+            numberOfRegistrationToAdvance: null,
+            status: "pending",
+          },
+        ];
+      }
+
+      const roundIndex = updatedCategory.createRoundRequests.findIndex(
+        (r) => r.roundType === roundType && r.roundOrder === roundOrder
+      );
+
+      if (roundIndex === -1) return updatedCategory;
+
+      // Update the specific field in the round
+      updatedCategory.createRoundRequests[roundIndex] = {
+        ...updatedCategory.createRoundRequests[roundIndex],
+        [field]: value,
+      };
+
+      return updatedCategory;
+    });
+  };
+
   return (
     <>
       <Button
@@ -1206,126 +1315,118 @@ function CreateCategory({ showId, onCategoryCreated }) {
             <label className="block text-sm font-medium text-gray-700 mb-2">
               Các loại vòng thi
             </label>
-            {mainRounds.map((round) => (
-              <div key={round.value} className="mb-4">
-                <div className="flex justify-between items-center p-2 border rounded-md">
-                  <span className="font-semibold">{round.label}</span>
-                  <span
-                    className="cursor-pointer text-blue-500 hover:text-blue-700 flex items-center"
-                    onClick={() => handleAddSubRound(round.value)}
-                  >
-                    <PlusOutlined className="mr-1" />
-                  </span>
+            <div className="space-y-4">
+              {/* Vòng Sơ Khảo */}
+              <div className="mb-4">
+                <div className="p-2 border rounded-md">
+                  <span className="font-semibold">Vòng Sơ Khảo</span>
                 </div>
-
-                {/* Display sub-rounds */}
-                {category.createRoundRequests.some(
-                  (r) => r.roundType === round.value
-                ) && (
-                  <Collapse className="mt-2">
-                    {category.createRoundRequests
-                      .filter((r) => r.roundType === round.value)
-                      .sort((a, b) => a.roundOrder - b.roundOrder)
-                      .map((subRound, subIndex) => (
-                        <Panel
-                          header={subRound.name}
-                          key={subIndex}
-                          extra={
-                            <span
-                              className="text-red-500 cursor-pointer hover:text-red-700"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleRemoveSubRound(subRound);
-                              }}
-                            >
-                              <DeleteOutlined />
-                            </span>
-                          }
-                        >
-                          <div>
-                            {!(
-                              // Vòng sơ khảo luôn ẩn
-                              (
-                                round.value === "Preliminary" ||
-                                // Vòng chung kết chỉ hiện khi có 2 vòng trở lên và là vòng 1
-                                (round.value === "Final" &&
-                                  (category.createRoundRequests.filter(
-                                    (r) => r.roundType === "Final"
-                                  ).length < 2 ||
-                                    subRound.roundOrder !== 1))
-                              )
-                            ) && (
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700">
-                                  Số cá qua vòng
-                                </label>
-                                <Input
-                                  type="number"
-                                  min={1}
-                                  placeholder="Tối thiểu 1 cá"
-                                  value={subRound.numberOfRegistrationToAdvance}
-                                  onChange={(e) => {
-                                    const value = parseInt(e.target.value, 10);
-                                    // Đảm bảo giá trị là số nguyên và >= 1
-                                    if (isNaN(value) || value < 1) {
-                                      message.error(
-                                        "Số cá qua vòng phải từ 1 trở lên"
-                                      );
-                                      return;
-                                    }
-                                    console.log(
-                                      `Cập nhật số cá qua vòng cho ${subRound.name} thành ${value}`
-                                    );
-
-                                    setCategory((prev) => {
-                                      const updatedCategory = { ...prev };
-                                      if (
-                                        !updatedCategory.createRoundRequests
-                                      ) {
-                                        updatedCategory.createRoundRequests =
-                                          [];
-                                      }
-
-                                      // Tìm vị trí của vòng nhỏ trong mảng tổng
-                                      const actualIndex =
-                                        updatedCategory.createRoundRequests.findIndex(
-                                          (r) =>
-                                            r.name === subRound.name &&
-                                            r.roundType === subRound.roundType
-                                        );
-
-                                      if (actualIndex !== -1) {
-                                        updatedCategory.createRoundRequests[
-                                          actualIndex
-                                        ].numberOfRegistrationToAdvance = value;
-                                      }
-
-                                      return updatedCategory;
-                                    });
-                                  }}
-                                />
-                                {showErrors &&
-                                  (!subRound.numberOfRegistrationToAdvance ||
-                                    subRound.numberOfRegistrationToAdvance <
-                                      1) && (
-                                    <p className="text-red-500 text-xs mt-1">
-                                      Số cá qua vòng phải từ 1 trở lên.
-                                    </p>
-                                  )}
-                              </div>
-                            )}
-                          </div>
-                        </Panel>
-                      ))}
-                  </Collapse>
-                )}
+                <Collapse className="mt-2">
+                  <Panel header="Vòng 1" key="preliminary_1"></Panel>
+                </Collapse>
               </div>
-            ))}
-            {showErrors && category.createRoundRequests.length === 0 && (
-              <p className="text-red-500 text-xs mt-1">
-                Cần chọn ít nhất một vòng thi.
-              </p>
-            )}
+
+              {/* Vòng Đánh Giá Chính */}
+              <div className="mb-4">
+                <div className="p-2 border rounded-md">
+                  <span className="font-semibold">Vòng Đánh Giá Chính</span>
+                </div>
+                <Collapse className="mt-2">
+                  <Panel header="Vòng 1" key="evaluation_1">
+                    <Space direction="vertical" style={{ width: "100%" }}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Số cá qua vòng
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Tối thiểu 1 cá"
+                          value={
+                            getRound("Evaluation", 1)
+                              ?.numberOfRegistrationToAdvance || ""
+                          }
+                          onChange={(e) => {
+                            const value =
+                              e.target.value === ""
+                                ? null
+                                : parseInt(e.target.value, 10);
+                            if (e.target.value === "" || value >= 1) {
+                              updateRound(
+                                "Evaluation",
+                                1,
+                                "numberOfRegistrationToAdvance",
+                                value
+                              );
+                            }
+                          }}
+                        />
+                        {showErrors &&
+                          (!getRound("Evaluation", 1)
+                            ?.numberOfRegistrationToAdvance ||
+                            getRound("Evaluation", 1)
+                              ?.numberOfRegistrationToAdvance < 1) && (
+                            <p className="text-red-500 text-xs mt-1">
+                              Số cá qua vòng phải từ 1 trở lên.
+                            </p>
+                          )}
+                      </div>
+                    </Space>
+                  </Panel>
+                  <Panel header="Vòng 2" key="evaluation_2">
+                    <Space direction="vertical" style={{ width: "100%" }}>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700">
+                          Số cá qua vòng
+                        </label>
+                        <Input
+                          type="number"
+                          min={1}
+                          placeholder="Tối thiểu 1 cá"
+                          value={
+                            getRound("Evaluation", 2)
+                              ?.numberOfRegistrationToAdvance || ""
+                          }
+                          onChange={(e) => {
+                            const value =
+                              e.target.value === ""
+                                ? null
+                                : parseInt(e.target.value, 10);
+                            if (e.target.value === "" || value >= 1) {
+                              updateRound(
+                                "Evaluation",
+                                2,
+                                "numberOfRegistrationToAdvance",
+                                value
+                              );
+                            }
+                          }}
+                        />
+                        {showErrors &&
+                          (!getRound("Evaluation", 2)
+                            ?.numberOfRegistrationToAdvance ||
+                            getRound("Evaluation", 2)
+                              ?.numberOfRegistrationToAdvance < 1) && (
+                            <p className="text-red-500 text-xs mt-1">
+                              Số cá qua vòng phải từ 1 trở lên.
+                            </p>
+                          )}
+                      </div>
+                    </Space>
+                  </Panel>
+                </Collapse>
+              </div>
+
+              {/* Vòng Chung Kết */}
+              <div className="mb-4">
+                <div className="p-2 border rounded-md">
+                  <span className="font-semibold">Vòng Chung Kết</span>
+                </div>
+                <Collapse className="mt-2">
+                  <Panel header="Vòng 1" key="final_1"></Panel>
+                </Collapse>
+              </div>
+            </div>
           </div>
 
           {/* Criteria Selection */}

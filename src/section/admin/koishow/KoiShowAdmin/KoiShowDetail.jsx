@@ -16,6 +16,8 @@ import {
   Upload,
   Popconfirm,
   Menu,
+  Space,
+  Select,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -44,6 +46,7 @@ import CompetitionRound from "./CompetitionRound";
 import Registration from "./Registration";
 import Tank from "./Tank";
 import Ticket from "./Ticket";
+import TicketForm from "./TicketForm";
 import RoundResult from "./RoundResult";
 import StatusManager from "./StatusManager";
 import Cookies from "js-cookie";
@@ -395,7 +398,7 @@ function KoiShowDetail() {
       price: ticket.price,
       availableQuantity: ticket.availableQuantity,
     });
-    setShowTicketForm(false); // Hide the create form when editing
+    setShowTicketForm(true); // Show the edit form
   };
 
   // Function to handle deleting a ticket
@@ -428,10 +431,8 @@ function KoiShowDetail() {
     }
   };
 
-  const handleTicketSubmit = async () => {
+  const handleTicketSubmit = async (values) => {
     try {
-      const values = await ticketForm.validateFields();
-
       if (editingTicket) {
         // Update existing ticket
         const result = await updateTicketType(editingTicket.id, values);
@@ -987,112 +988,16 @@ function KoiShowDetail() {
             {(showTicketForm || editingTicket) &&
               !isEditDisabled &&
               !isStaff && (
-                <div className="mb-8 bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-6 shadow-lg border border-blue-100">
-                  <h3 className="text-xl font-semibold mb-6 text-blue-800">
-                    {editingTicket ? "Chỉnh sửa vé" : "Tạo loại vé mới"}
-                  </h3>
-
-                  <Form
-                    form={ticketForm}
-                    layout="vertical"
-                    onFinish={handleTicketSubmit}
-                    requiredMark="optional"
-                    size="large"
-                  >
-                    <Form.Item
-                      name="name"
-                      label={
-                        <span className="text-gray-700 font-medium">
-                          Tên vé
-                        </span>
-                      }
-                      rules={[
-                        { required: true, message: "Vui lòng nhập tên vé!" },
-                      ]}
-                    >
-                      <Input
-                        placeholder="VD: Vé người lớn, Vé trẻ em..."
-                        className="rounded-lg"
-                        prefix={<TagOutlined className="text-blue-400 mr-2" />}
-                      />
-                    </Form.Item>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <Form.Item
-                        name="price"
-                        label={
-                          <span className="text-gray-700 font-medium">
-                            Giá vé
-                          </span>
-                        }
-                        rules={[
-                          { required: true, message: "Vui lòng nhập giá vé!" },
-                        ]}
-                      >
-                        <InputNumber
-                          min={0}
-                          style={{ width: "100%" }}
-                          formatter={(value) =>
-                            `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ",")
-                          }
-                          parser={(value) => value.replace(/\$\s?|(,*)/g, "")}
-                          placeholder="Nhập giá vé"
-                          addonAfter="VND"
-                          className="rounded-lg"
-                          prefix={
-                            <DollarOutlined className="text-green-500 mr-2" />
-                          }
-                        />
-                      </Form.Item>
-
-                      <Form.Item
-                        name="availableQuantity"
-                        label={
-                          <span className="text-gray-700 font-medium">
-                            Số lượng vé
-                          </span>
-                        }
-                        rules={[
-                          {
-                            required: true,
-                            message: "Vui lòng nhập số lượng vé!",
-                          },
-                        ]}
-                      >
-                        <InputNumber
-                          min={1}
-                          style={{ width: "100%" }}
-                          placeholder="Nhập số lượng vé"
-                          className="rounded-lg"
-                          prefix={
-                            <NumberOutlined className="text-orange-400 mr-2" />
-                          }
-                        />
-                      </Form.Item>
-                    </div>
-
-                    <div className="flex justify-end mt-6 space-x-3">
-                      <Button
-                        size="large"
-                        className="rounded-lg px-6"
-                        onClick={() => {
-                          setShowTicketForm(false);
-                          setEditingTicket(null);
-                        }}
-                      >
-                        Hủy
-                      </Button>
-                      <Button
-                        type="primary"
-                        htmlType="submit"
-                        size="large"
-                        className="rounded-lg px-6 bg-blue-600"
-                      >
-                        {editingTicket ? "Lưu thay đổi" : "Tạo vé"}
-                      </Button>
-                    </div>
-                  </Form>
-                </div>
+                <TicketForm
+                  form={ticketForm}
+                  onFinish={handleTicketSubmit}
+                  editingTicket={editingTicket}
+                  onCancel={() => {
+                    setShowTicketForm(false);
+                    setEditingTicket(null);
+                  }}
+                  existingTickets={koiShowDetail.data.ticketTypes}
+                />
               )}
 
             {/* Ticket List */}
@@ -1104,7 +1009,7 @@ function KoiShowDetail() {
               {koiShowDetail.data.ticketTypes.length === 0 ? (
                 <div className="text-center py-16 rounded-xl bg-gray-50 border border-dashed border-gray-300">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-blue-50 text-blue-500 mb-4">
-                    <TagsOutlined style={{ fontSize: "28px" }} />
+                    <TagOutlined style={{ fontSize: "28px" }} />
                   </div>
                   <p className="text-lg text-gray-500 mb-2">
                     Chưa có loại vé nào được tạo
@@ -1130,76 +1035,78 @@ function KoiShowDetail() {
                   )}
                 </div>
               ) : (
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                   {koiShowDetail.data.ticketTypes.map((ticket) => (
                     <div
                       key={ticket.id}
-                      className="p-5 rounded-xl bg-white shadow-sm border border-gray-200 hover:shadow-md transition-all duration-200"
+                      className="bg-white rounded-lg overflow-hidden shadow-md border border-gray-100 hover:shadow-lg transition-all duration-200"
                     >
-                      {editingTicket?.id === ticket.id ? null : ( // Inline edit form (sẽ không hiển thị vì đã có form ở trên)
-                        <div className="flex flex-col md:flex-row md:items-center">
-                          <div className="flex-grow">
-                            <div className="flex items-center">
-                              <div className="flex-shrink-0 w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center mr-3">
-                                <TagOutlined className="text-white text-lg" />
-                              </div>
-                              <div>
-                                <h4 className="font-semibold text-lg text-gray-800">
-                                  {ticket.name}
-                                </h4>
-                                <div className="text-gray-500 text-sm flex items-center">
-                                  <NumberOutlined className="mr-1" />
-                                  <span className="mr-1">Số lượng:</span>
-                                  <span className="font-medium text-gray-700">
-                                    {ticket.availableQuantity} vé
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
+                      <div className="p-4 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-lg bg-blue-600 flex items-center justify-center mr-3">
+                            <TagOutlined className="text-white text-lg" />
                           </div>
-
-                          <div className="mt-4 md:mt-0 flex items-center">
-                            <div className="text-lg font-bold text-blue-700 bg-blue-50 px-4 py-2 rounded-lg mr-4">
+                          <h3 className="text-lg font-semibold text-gray-800">
+                            {ticket.name}
+                          </h3>
+                        </div>
+                        {!isEditDisabled && !isStaff && (
+                          <div className="flex space-x-1">
+                            <Button
+                              icon={<EditOutlined />}
+                              type="text"
+                              className="text-blue-600 hover:bg-blue-50"
+                              onClick={() => handleEditTicket(ticket)}
+                              size="middle"
+                            />
+                            <Popconfirm
+                              title="Xóa vé"
+                              description="Bạn có chắc chắn muốn xóa vé này?"
+                              onConfirm={() => handleDeleteTicket(ticket.id)}
+                              okText="Có"
+                              cancelText="Không"
+                              placement="left"
+                              okButtonProps={{ danger: true }}
+                            >
+                              <Button
+                                type="text"
+                                className="text-red-600 hover:bg-red-50"
+                                icon={<DeleteOutlined />}
+                                size="middle"
+                              />
+                            </Popconfirm>
+                          </div>
+                        )}
+                      </div>
+                      <div className="p-4">
+                        <div className="space-y-3">
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <DollarOutlined className="text-green-500 mr-2 text-lg" />
+                              <span className="text-gray-600">Giá vé:</span>
+                            </div>
+                            <span className="text-lg font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-lg">
                               {new Intl.NumberFormat("vi-VN", {
                                 style: "currency",
                                 currency: "VND",
                               }).format(ticket.price)}
-                            </div>
+                            </span>
+                          </div>
 
-                            {!isEditDisabled && !isStaff && (
-                              <div className="flex space-x-2">
-                                <Button
-                                  icon={<EditOutlined />}
-                                  type="text"
-                                  className=" text-blue-600"
-                                  onClick={() => handleEditTicket(ticket)}
-                                  size="middle"
-                                  shape="round"
-                                />
-                                <Popconfirm
-                                  title="Xóa vé"
-                                  description="Bạn có chắc chắn muốn xóa vé này?"
-                                  onConfirm={() =>
-                                    handleDeleteTicket(ticket.id)
-                                  }
-                                  okText="Có"
-                                  cancelText="Không"
-                                  placement="left"
-                                  okButtonProps={{ danger: true }}
-                                >
-                                  <Button
-                                    type="text"
-                                    className="text-red-600"
-                                    icon={<DeleteOutlined />}
-                                    size="middle"
-                                    shape="round"
-                                  />
-                                </Popconfirm>
-                              </div>
-                            )}
+                          <div className="flex justify-between items-center">
+                            <div className="flex items-center">
+                              <NumberOutlined className="text-orange-400 mr-2 text-lg" />
+                              <span className="text-gray-600">
+                                Số lượng vé:
+                              </span>
+                            </div>
+                            <span className="font-semibold bg-gray-50 px-3 py-1 rounded-lg">
+                              {ticket.availableQuantity.toLocaleString("vi-VN")}{" "}
+                              vé
+                            </span>
                           </div>
                         </div>
-                      )}
+                      </div>
                     </div>
                   ))}
                 </div>

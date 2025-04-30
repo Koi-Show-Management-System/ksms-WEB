@@ -736,7 +736,45 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
       minEntries: 0,
       createAwardCateShowRequests: [],
       createCompetionCategoryVarieties: [],
-      createRoundRequests: [],
+      createRoundRequests: [
+        // Initialize with fixed rounds
+        {
+          name: "Vòng 1",
+          roundOrder: 1,
+          roundType: "Preliminary",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+        {
+          name: "Vòng 1",
+          roundOrder: 1,
+          roundType: "Evaluation",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+        {
+          name: "Vòng 2",
+          roundOrder: 2,
+          roundType: "Evaluation",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+        {
+          name: "Vòng 1",
+          roundOrder: 1,
+          roundType: "Final",
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        },
+      ],
       createRefereeAssignmentRequests: [],
       createCriteriaCompetitionCategoryRequests: [],
     };
@@ -985,6 +1023,81 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
         </div>
       </div>
     );
+  };
+
+  // Helper function to get a specific round
+  const getRound = (category, roundType, roundOrder) => {
+    if (!category.createRoundRequests) return null;
+    return category.createRoundRequests.find(
+      (r) => r.roundType === roundType && r.roundOrder === roundOrder
+    );
+  };
+
+  // Helper function to update a round's property
+  const updateRound = (categoryIndex, roundType, roundOrder, field, value) => {
+    setCategories((prev) => {
+      const updatedCategories = [...prev];
+      const category = updatedCategories[categoryIndex];
+
+      if (!category || !category.createRoundRequests) {
+        // Initialize rounds if they don't exist
+        if (!category.createRoundRequests) {
+          category.createRoundRequests = [
+            {
+              name: "Vòng 1",
+              roundOrder: 1,
+              roundType: "Preliminary",
+              startTime: dayjs().format(),
+              endTime: dayjs().add(1, "day").format(),
+              numberOfRegistrationToAdvance: null,
+              status: "pending",
+            },
+            {
+              name: "Vòng 1",
+              roundOrder: 1,
+              roundType: "Evaluation",
+              startTime: dayjs().format(),
+              endTime: dayjs().add(1, "day").format(),
+              numberOfRegistrationToAdvance: null,
+              status: "pending",
+            },
+            {
+              name: "Vòng 2",
+              roundOrder: 2,
+              roundType: "Evaluation",
+              startTime: dayjs().format(),
+              endTime: dayjs().add(1, "day").format(),
+              numberOfRegistrationToAdvance: null,
+              status: "pending",
+            },
+            {
+              name: "Vòng 1",
+              roundOrder: 1,
+              roundType: "Final",
+              startTime: dayjs().format(),
+              endTime: dayjs().add(1, "day").format(),
+              numberOfRegistrationToAdvance: null,
+              status: "pending",
+            },
+          ];
+        }
+        return updatedCategories;
+      }
+
+      const roundIndex = category.createRoundRequests.findIndex(
+        (r) => r.roundType === roundType && r.roundOrder === roundOrder
+      );
+
+      if (roundIndex === -1) return updatedCategories;
+
+      // Update the specific field in the round
+      category.createRoundRequests[roundIndex] = {
+        ...category.createRoundRequests[roundIndex],
+        [field]: value,
+      };
+
+      return updatedCategories;
+    });
   };
 
   return (
@@ -1358,199 +1471,128 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Các loại vòng thi
                     </label>
-                    {mainRounds.map((round) => (
-                      <div key={round.value} className="mb-4">
-                        <div className="flex justify-between items-center p-2 border rounded-md">
-                          <span className="font-semibold">{round.label}</span>
-                          <span
-                            className="cursor-pointer text-blue-500 hover:text-blue-700 flex items-center"
-                            onClick={() =>
-                              handleAddSubRound(index, round.value)
-                            }
-                          >
-                            <PlusOutlined className="mr-1" />
+                    <div className="space-y-4">
+                      {/* Vòng Sơ Khảo */}
+                      <div className="mb-4">
+                        <div className="p-2 border rounded-md">
+                          <span className="font-semibold">Vòng Sơ Khảo</span>
+                        </div>
+                        <Collapse className="mt-2">
+                          <Panel header="Vòng 1" key="preliminary_1"></Panel>
+                        </Collapse>
+                      </div>
+
+                      {/* Vòng Đánh Giá Chính */}
+                      <div className="mb-4">
+                        <div className="p-2 border rounded-md">
+                          <span className="font-semibold">
+                            Vòng Đánh Giá Chính
                           </span>
                         </div>
-                        {/* Chỉ hiển thị vòng nhỏ của hạng mục đang chọn */}
-                        {category.createRoundRequests &&
-                          category.createRoundRequests.some(
-                            (r) => r.roundType === round.value
-                          ) && (
-                            <Collapse className="mt-2">
-                              {category.createRoundRequests
-                                .filter((r) => r.roundType === round.value)
-                                .map((subRound, subIndex) => (
-                                  <Panel
-                                    header={subRound.name}
-                                    key={subIndex}
-                                    extra={
-                                      <span
-                                        className="text-red-500 cursor-pointer hover:text-red-700"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleRemoveSubRound(index, subRound);
-                                        }}
-                                      >
-                                        <DeleteOutlined />
-                                      </span>
+                        <Collapse className="mt-2">
+                          <Panel header="Vòng 1" key="evaluation_1">
+                            <Space
+                              direction="vertical"
+                              style={{ width: "100%" }}
+                            >
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                  Số cá qua vòng
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  placeholder="Tối thiểu 1 cá"
+                                  value={
+                                    getRound(category, "Evaluation", 1)
+                                      ?.numberOfRegistrationToAdvance || ""
+                                  }
+                                  onChange={(e) => {
+                                    const value =
+                                      e.target.value === ""
+                                        ? null
+                                        : parseInt(e.target.value, 10);
+                                    if (e.target.value === "" || value >= 1) {
+                                      updateRound(
+                                        index,
+                                        "Evaluation",
+                                        1,
+                                        "numberOfRegistrationToAdvance",
+                                        value
+                                      );
                                     }
-                                  >
-                                    <Space
-                                      direction="vertical"
-                                      style={{ width: "100%" }}
-                                    >
-                                      {!(
-                                        // Vòng sơ khảo luôn ẩn
-                                        (
-                                          round.value === "Preliminary" ||
-                                          // Vòng chung kết chỉ hiện khi có 2 vòng trở lên và là vòng 1
-                                          (round.value === "Final" &&
-                                            (category.createRoundRequests.filter(
-                                              (r) => r.roundType === "Final"
-                                            ).length < 2 ||
-                                              subRound.roundOrder !== 1))
-                                        )
-                                      ) && (
-                                        <div>
-                                          <label className="block text-sm font-medium text-gray-700">
-                                            Số cá qua vòng
-                                          </label>
-                                          <Input
-                                            type="number"
-                                            min={1}
-                                            placeholder="Tối thiểu 1 cá"
-                                            value={
-                                              subRound.numberOfRegistrationToAdvance
-                                            }
-                                            onChange={(e) => {
-                                              // Cho phép giá trị rỗng tạm thời để người dùng có thể xóa và nhập lại
-                                              if (e.target.value === "") {
-                                                setCategories((prev) => {
-                                                  const updatedCategories = [
-                                                    ...prev,
-                                                  ];
-                                                  if (
-                                                    !updatedCategories[index]
-                                                      .createRoundRequests
-                                                  ) {
-                                                    updatedCategories[
-                                                      index
-                                                    ].createRoundRequests = [];
-                                                  }
-
-                                                  const actualIndex =
-                                                    updatedCategories[
-                                                      index
-                                                    ].createRoundRequests.findIndex(
-                                                      (r) =>
-                                                        r.name ===
-                                                          subRound.name &&
-                                                        r.roundType ===
-                                                          subRound.roundType
-                                                    );
-
-                                                  if (actualIndex !== -1) {
-                                                    updatedCategories[
-                                                      index
-                                                    ].createRoundRequests[
-                                                      actualIndex
-                                                    ].numberOfRegistrationToAdvance =
-                                                      null;
-                                                  }
-
-                                                  return updatedCategories;
-                                                });
-                                                return;
-                                              }
-
-                                              const value = parseInt(
-                                                e.target.value,
-                                                10
-                                              );
-                                              // Chỉ kiểm tra giá trị khi không phải là rỗng
-
-                                              setCategories((prev) => {
-                                                const updatedCategories = [
-                                                  ...prev,
-                                                ];
-                                                if (
-                                                  !updatedCategories[index]
-                                                    .createRoundRequests
-                                                ) {
-                                                  updatedCategories[
-                                                    index
-                                                  ].createRoundRequests = [];
-                                                }
-
-                                                const subRounds =
-                                                  updatedCategories[
-                                                    index
-                                                  ].createRoundRequests.filter(
-                                                    (r) =>
-                                                      r.roundType ===
-                                                      subRound.roundType
-                                                  );
-
-                                                // Tìm vị trí của vòng nhỏ trong mảng
-                                                const subRoundIndex =
-                                                  subRounds.findIndex(
-                                                    (r) =>
-                                                      r.name === subRound.name
-                                                  );
-
-                                                // Tìm vị trí của vòng nhỏ trong mảng tổng
-                                                const actualIndex =
-                                                  updatedCategories[
-                                                    index
-                                                  ].createRoundRequests.findIndex(
-                                                    (r) =>
-                                                      r.name ===
-                                                        subRound.name &&
-                                                      r.roundType ===
-                                                        subRound.roundType
-                                                  );
-
-                                                if (actualIndex !== -1) {
-                                                  updatedCategories[
-                                                    index
-                                                  ].createRoundRequests[
-                                                    actualIndex
-                                                  ].numberOfRegistrationToAdvance =
-                                                    value;
-                                                }
-
-                                                return updatedCategories;
-                                              });
-                                            }}
-                                          />
-                                          {showErrors &&
-                                            (!subRound.numberOfRegistrationToAdvance ||
-                                              subRound.numberOfRegistrationToAdvance <
-                                                1) && (
-                                              <p className="text-red-500 text-xs mt-1">
-                                                Số cá qua vòng phải từ 1 trở
-                                                lên.
-                                              </p>
-                                            )}
-                                        </div>
-                                      )}
-                                    </Space>
-                                  </Panel>
-                                ))}
-                            </Collapse>
-                          )}
-                        {/* Hiển thị lỗi nếu vòng chính không có vòng nhỏ nào */}
-                        {showErrors &&
-                          (!category.createRoundRequests ||
-                            !category.createRoundRequests.some(
-                              (r) => r.roundType === round.value
-                            )) && (
-                            <p className="text-red-500 text-xs mt-1">
-                              Vòng {round.label} cần có ít nhất một vòng nhỏ.
-                            </p>
-                          )}
+                                  }}
+                                />
+                                {showErrors &&
+                                  (!getRound(category, "Evaluation", 1)
+                                    ?.numberOfRegistrationToAdvance ||
+                                    getRound(category, "Evaluation", 1)
+                                      ?.numberOfRegistrationToAdvance < 1) && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      Số cá qua vòng phải từ 1 trở lên.
+                                    </p>
+                                  )}
+                              </div>
+                            </Space>
+                          </Panel>
+                          <Panel header="Vòng 2" key="evaluation_2">
+                            <Space
+                              direction="vertical"
+                              style={{ width: "100%" }}
+                            >
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700">
+                                  Số cá qua vòng
+                                </label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  placeholder="Tối thiểu 1 cá"
+                                  value={
+                                    getRound(category, "Evaluation", 2)
+                                      ?.numberOfRegistrationToAdvance || ""
+                                  }
+                                  onChange={(e) => {
+                                    const value =
+                                      e.target.value === ""
+                                        ? null
+                                        : parseInt(e.target.value, 10);
+                                    if (e.target.value === "" || value >= 1) {
+                                      updateRound(
+                                        index,
+                                        "Evaluation",
+                                        2,
+                                        "numberOfRegistrationToAdvance",
+                                        value
+                                      );
+                                    }
+                                  }}
+                                />
+                                {showErrors &&
+                                  (!getRound(category, "Evaluation", 2)
+                                    ?.numberOfRegistrationToAdvance ||
+                                    getRound(category, "Evaluation", 2)
+                                      ?.numberOfRegistrationToAdvance < 1) && (
+                                    <p className="text-red-500 text-xs mt-1">
+                                      Số cá qua vòng phải từ 1 trở lên.
+                                    </p>
+                                  )}
+                              </div>
+                            </Space>
+                          </Panel>
+                        </Collapse>
                       </div>
-                    ))}
+
+                      {/* Vòng Chung Kết */}
+                      <div className="mb-4">
+                        <div className="p-2 border rounded-md">
+                          <span className="font-semibold">Vòng Chung Kết</span>
+                        </div>
+                        <Collapse className="mt-2">
+                          <Panel header="Vòng 1" key="final_1"></Panel>
+                        </Collapse>
+                      </div>
+                    </div>
                   </div>
 
                   {/* Chọn tiêu chí */}
