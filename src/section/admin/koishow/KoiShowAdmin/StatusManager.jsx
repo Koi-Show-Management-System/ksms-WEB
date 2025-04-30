@@ -99,7 +99,7 @@ const StatusManager = ({
       color: "green",
     },
     Evaluation: {
-      label: "Vòng Đánh Giá",
+      label: "Vòng Đánh Giá Chính",
       description: "Vòng đánh giá chính",
       color: "purple",
     },

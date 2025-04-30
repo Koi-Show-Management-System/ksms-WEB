@@ -1651,10 +1651,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       {round.value === "Preliminary" ? (
                         <div className="p-4 bg-gray-50 rounded border border-orange-200">
                           <p className="text-orange-600">
-                            Vòng Sơ Khảo chỉ áp dụng hình thức chấm đạt/không
-                            đạt (Pass/Fail). Trọng tài sẽ đánh giá các cá thể có
-                            đủ điều kiện tham gia vòng tiếp theo hay không mà
-                            không sử dụng tiêu chí đánh giá chi tiết.
+                            <strong>Vòng Sơ Khảo</strong> chỉ áp dụng hình thức
+                            chấm đạt/không đạt (Pass/Fail). Trọng tài sẽ đánh
+                            giá các cá thể có đủ điều kiện tham gia vòng tiếp đủ
+                            điều kiện tham gia vòng tiếp theo hay không mà không
+                            sử dụng tiêu chí đánh giá chi tiết.
                           </p>
                         </div>
                       ) : (

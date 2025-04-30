@@ -456,10 +456,10 @@ function Category({ showId, statusShow }) {
                 <TabPane tab="Vòng sơ khảo" key="preliminary">
                   <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
                     <p className="text-blue-800">
-                      <strong>Lưu ý:</strong> Vòng Sơ Khảo chỉ áp dụng hình thức
-                      chấm đạt/không đạt (Pass/Fail). Trọng tài sẽ đánh giá các
-                      cá thể có đủ điều kiện tham gia vòng tiếp theo hay không
-                      mà không sử dụng tiêu chí đánh giá chi tiết.
+                      <strong>Vòng Sơ Khảo</strong> chỉ áp dụng hình thức chấm
+                      đạt/không đạt (Pass/Fail). Trọng tài sẽ đánh giá các cá
+                      thể có đủ điều kiện tham gia vòng tiếp theo hay không mà
+                      không sử dụng tiêu chí đánh giá chi tiết.
                     </p>
                   </div>
                   {selectedCategory.criteriaCompetitionCategories?.filter(
@@ -497,7 +497,7 @@ function Category({ showId, statusShow }) {
                     </div>
                   )}
                 </TabPane>
-                <TabPane tab="Vòng đánh giá" key="evaluation">
+                <TabPane tab="Vòng đánh giá chính" key="evaluation">
                   <List
                     dataSource={
                       selectedCategory.criteriaCompetitionCategories
@@ -581,7 +581,7 @@ function Category({ showId, statusShow }) {
                     case "Preliminary":
                       return "Vòng Sơ khảo";
                     case "Evaluation":
-                      return "Vòng Đánh giá";
+                      return "Vòng Đánh giá chính";
                     case "Final":
                       return "Vòng Chung kết";
                     default:
@@ -659,7 +659,7 @@ function Category({ showId, statusShow }) {
                     case "Preliminary":
                       return "Vòng Sơ Khảo";
                     case "Evaluation":
-                      return "Vòng Đánh Giá";
+                      return "Vòng Đánh Giá Chính";
                     case "Final":
                       return "Vòng Chung Kết";
                     default:

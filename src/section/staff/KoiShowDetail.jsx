@@ -196,7 +196,7 @@ function KoiShowDetail() {
     RegistrationClosed: { label: "Đóng Đăng Ký", color: "red" },
     CheckIn: { label: "Điểm danh", color: "cyan" },
     Preliminary: { label: "Vòng Sơ Khảo", color: "green" },
-    Evaluation: { label: "Vòng Đánh Giá", color: "purple" },
+    Evaluation: { label: "Vòng Đánh Giá Chính", color: "purple" },
     Final: { label: "Vòng Chung Kết", color: "orange" },
     GrandChampion: { label: "Grand Champion", color: "yellow" },
     Completed: { label: "Hoàn Thành ", color: "gray" },
