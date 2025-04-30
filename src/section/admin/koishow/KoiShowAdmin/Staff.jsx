@@ -172,10 +172,16 @@ const Staff = forwardRef(({ showId, hideAddButton = false }, ref) => {
       key: "status",
       render: (status) => (
         <span
-          className={status === "Active" ? "text-green-500" : "text-red-500"}
+          className={
+            status.toLowerCase() === "active"
+              ? "text-green-500"
+              : "text-red-500"
+          }
         >
-          <Tag color={status === "active" ? "green" : "red"}>
-            {status === "active" ? "Hoạt động" : "Không hoạt động"}
+          <Tag color={status.toLowerCase() === "active" ? "green" : "red"}>
+            {status.toLowerCase() === "active"
+              ? "Hoạt động"
+              : "Không hoạt động"}
           </Tag>{" "}
         </span>
       ),

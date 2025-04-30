@@ -41,6 +41,16 @@ function Staff({ accounts = [], isLoading, role }) {
     fetchAccountTeam(1, 10, role, statusFilter, searchQuery);
   }, [statusFilter, searchQuery]);
 
+  // Function to translate status to Vietnamese
+  const getStatusInVietnamese = (status) => {
+    const statusMap = {
+      active: "Hoạt động",
+      blocked: "Khóa tài khoản",
+      deleted: "Xóa tài khoản",
+    };
+    return statusMap[status.toLowerCase()] || status;
+  };
+
   const handleStatusChange = async (accountId, newStatus) => {
     try {
       console.log(`Changing status for account ${accountId} to ${newStatus}`);
@@ -50,7 +60,7 @@ function Staff({ accounts = [], isLoading, role }) {
       if (res && res.status === 200) {
         notification.success({
           message: "Thành công",
-          description: `Trạng thái tài khoản đã được cập nhật thành ${newStatus}`,
+          description: `Trạng thái tài khoản đã được cập nhật thành ${getStatusInVietnamese(newStatus)}`,
           placement: "topRight",
         });
 
@@ -199,11 +209,11 @@ function Staff({ accounts = [], isLoading, role }) {
           },
           {
             value: "blocked",
-            label: <span className="text-orange-500">Đã khóa</span>,
+            label: <span className="text-orange-500">Khóa tài khoản</span>,
           },
           {
             value: "deleted",
-            label: <span className="text-red-500">Đã xóa</span>,
+            label: <span className="text-red-500">Xóa tài khoản</span>,
           },
         ];
 
@@ -268,8 +278,8 @@ function Staff({ accounts = [], isLoading, role }) {
             options={[
               { value: "--", label: "Tất cả" },
               { value: "Active", label: "Hoạt động" },
-              { value: "Blocked", label: "Đã khóa" },
-              { value: "Deleted", label: "Đã xóa" },
+              { value: "Blocked", label: "Khóa tài khoản" },
+              { value: "Deleted", label: "Xóa tài khoản" },
             ]}
           />
         </Space>

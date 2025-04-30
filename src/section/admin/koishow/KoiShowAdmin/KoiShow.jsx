@@ -235,12 +235,12 @@ function KoiShow() {
 
   const statusOptions = [
     { value: "pending", label: "Chờ duyệt", color: "orange" },
-    { value: "internalpublished", label: "Đã công bố nội bộ", color: "blue" },
-    { value: "published", label: "Đã công bố", color: "green" },
+    { value: "internalpublished", label: "Công bố nội bộ", color: "blue" },
+    { value: "published", label: "Công bố", color: "green" },
     { value: "upcoming", label: "Sắp diễn ra", color: "cyan" },
     { value: "inprogress", label: "Đang diễn ra", color: "purple" },
-    { value: "finished", label: "Đã kết thúc", color: "gray" },
-    { value: "cancelled", label: "Đã hủy", color: "red" },
+    { value: "finished", label: "Kết thúc", color: "gray" },
+    { value: "cancelled", label: "Hủy", color: "red" },
   ];
 
   const getAvailableStatusOptions = (currentStatus) => {
