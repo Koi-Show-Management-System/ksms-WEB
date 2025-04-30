@@ -30,9 +30,7 @@ export const CriteriaPage = lazy(
 );
 export const VarietyPage = lazy(() => import("../pages/AdminPage/VarietyPage"));
 
-export const TeamManagerPage = lazy(
-  () => import("../pages/ManagerPage/TeamPage")
-);
+
 
 export const NewManagerPage = lazy(
   () => import("../pages/ManagerPage/NewPage")
