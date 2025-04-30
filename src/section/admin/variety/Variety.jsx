@@ -8,8 +8,9 @@ import {
   Pagination,
   notification,
   Space,
+  Popconfirm,
 } from "antd";
-import { PlusOutlined, EditOutlined } from "@ant-design/icons";
+import { PlusOutlined, EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import useVariety from "../../../hooks/useVariety";
 
 const Variety = () => {
@@ -18,6 +19,7 @@ const Variety = () => {
     fetchVariety,
     createVariety,
     updateVariety,
+    deleteVariety,
     currentPage,
     totalItems,
     pageSize,
@@ -99,6 +101,15 @@ const Variety = () => {
             icon={<EditOutlined />}
             onClick={() => showModal(record)}
           ></Button>
+          <Popconfirm
+            title="Xác nhận xóa"
+            description="Bạn có chắc chắn muốn xóa giống koi này?"
+            onConfirm={() => deleteVariety(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button type="text" danger icon={<DeleteOutlined />}></Button>
+          </Popconfirm>
         </Space>
       ),
     },

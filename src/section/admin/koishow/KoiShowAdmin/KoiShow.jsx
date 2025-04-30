@@ -101,10 +101,8 @@ function KoiShow() {
   };
 
   const handleStatusChange = (status, showId) => {
-    // Find the current show to check its status
     const currentShow = localData.find((item) => item.id === showId);
 
-    // Nếu trạng thái không nằm trong 3 trạng thái có thể cập nhật, không cho phép thay đổi
     if (
       currentShow &&
       !["pending", "internalpublished", "published"].includes(
@@ -119,7 +117,6 @@ function KoiShow() {
       return;
     }
 
-    // Các kiểm tra trạng thái hiện có
     if (currentShow && currentShow.status === "cancelled") {
       notification.error({
         message: "Không thể thay đổi",

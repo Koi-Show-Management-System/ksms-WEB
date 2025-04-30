@@ -49,7 +49,8 @@ function Category({ showId, statusShow }) {
   const [form] = Form.useForm();
   const [isEditModalVisible, setIsEditModalVisible] = useState(false);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
-  const isEditDisabled = statusShow === "published";
+  const isEditDisabled =
+    statusShow === "published" || statusShow === "inprogress" || statusShow === "upcoming";
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
   const [categoryToCancel, setCategoryToCancel] = useState(null);

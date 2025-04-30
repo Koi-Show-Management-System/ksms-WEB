@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { createVariety, getVarieties, updateVariety } from "../api/varietyApi";
+import { createVariety, deleteVariety, getVarieties, updateVariety } from "../api/varietyApi";
 import { notification } from "antd";
 
 const useVariety = create((set, get) => ({
@@ -72,6 +72,7 @@ const useVariety = create((set, get) => ({
       set({ error: error, isLoading: false });
     }
   },
+
   updateVariety: async (id, variety) => {
     try {
       const res = await updateVariety(id, variety);
@@ -92,5 +93,26 @@ const useVariety = create((set, get) => ({
       set({ error: error, isLoading: false });
     }
   },
+
+  deleteVariety: async (id) => {
+    try {
+      const res = await deleteVariety(id);
+      if (res && res.status === 200) {
+        notification.success({
+          message: "Thành công",
+          description: res.data.message,
+        });
+        get().fetchVariety();
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      notification.error({
+        message: "Lỗi",
+        description: error.response?.data?.Error || "Đã xảy ra lỗi khi xóa",
+      });
+      set({ error: error, isLoading: false });
+    }
+  },
+
 }));
 export default useVariety;

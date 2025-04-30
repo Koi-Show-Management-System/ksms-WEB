@@ -17,4 +17,8 @@ const updateVariety = (id, variety) => {
   return axiosClient.put(`/variety/update/${id}`, variety);
 };
 
-export { getVarieties, createVariety, updateVariety };
+const deleteVariety = (id) => {
+  return axiosClient.delete(`/variety/delete/${id}`);
+};
+
+export { getVarieties, createVariety, updateVariety, deleteVariety };

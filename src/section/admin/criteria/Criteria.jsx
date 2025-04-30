@@ -7,6 +7,7 @@ import {
   Form,
   Pagination,
   notification,
+  Popconfirm,
 } from "antd";
 import { EditOutlined, DeleteOutlined, PlusOutlined } from "@ant-design/icons";
 import useCriteria from "../../../hooks/useCriteria";
@@ -17,6 +18,7 @@ const Criteria = () => {
     fetchCriteria,
     createCriteria,
     updateCriteria,
+    deleteCriteria,
     currentPage,
     totalItems,
     pageSize,
@@ -120,12 +122,20 @@ const Criteria = () => {
             onClick={() => showModal(record)}
             className="text-gray-500 hover:text-blue-500"
           />
-          <Button
-            type="text"
-            icon={<DeleteOutlined />}
-            className="text-gray-500 hover:text-red-500"
-            danger
-          />
+          <Popconfirm
+            title="Xác nhận xóa"
+            description="Bạn có chắc chắn muốn xóa tiêu chí này?"
+            onConfirm={() => deleteCriteria(record.id)}
+            okText="Xóa"
+            cancelText="Hủy"
+          >
+            <Button
+              type="text"
+              icon={<DeleteOutlined />}
+              className="text-gray-500 hover:text-red-500"
+              danger
+            />
+          </Popconfirm>
         </div>
       ),
     },

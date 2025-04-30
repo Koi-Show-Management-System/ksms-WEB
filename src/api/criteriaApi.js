@@ -19,9 +19,13 @@ const getCriteriaCompetitionRound = (competitionCategoryId, roundId) => {
     `/criteria/get-list-criteria-competition-category/${competitionCategoryId}/${roundId}`
   );
 };
+const deleteCriteriaApi = (id) => {
+  return axiosClient.delete(`/criteria/${id}`);
+};
 export {
   getCriterias,
   postCriteria,
   updateCriteria,
   getCriteriaCompetitionRound,
+  deleteCriteriaApi,
 };

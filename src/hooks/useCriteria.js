@@ -1,9 +1,11 @@
 import { create } from "zustand";
+import { notification } from "antd";
 import {
   getCriterias,
   postCriteria,
   updateCriteria as updateCriteriaApi,
   getCriteriaCompetitionRound,
+  deleteCriteriaApi,
 } from "../api/criteriaApi";
 
 const useCriteria = create((set, get) => ({
@@ -29,7 +31,6 @@ const useCriteria = create((set, get) => ({
       const res = await getCriterias(page, size);
 
       if (res && res.status === 200) {
-
         let criteria = [];
         let total = 0;
         let totalPages = 1;
@@ -118,13 +119,11 @@ const useCriteria = create((set, get) => ({
 
     try {
       set({ isLoading: true, error: null });
- 
 
       const res = await getCriteriaCompetitionRound(
         competitionCategoryId,
         roundId
       );
-
 
       if (res?.status === 200) {
         // Handle different response formats
@@ -153,6 +152,25 @@ const useCriteria = create((set, get) => ({
       console.error("API Error in fetchCriteriaCompetitionRound:", error);
       set({ error: error, isLoading: false, criteriaCompetitionRound: [] });
       return [];
+    }
+  },
+  deleteCriteria: async (id) => {
+    try {
+      const res = await deleteCriteriaApi(id);
+      if (res && res.status === 200) {
+        notification.success({
+          message: "Thành công",
+          description: res.data.message,
+        });
+        get().fetchCriteria();
+      }
+    } catch (error) {
+      console.error("API Error:", error);
+      notification.error({
+        message: "Lỗi",
+        description: error.response?.data?.Error || "Đã xảy ra lỗi khi xóa",
+      });
+      set({ error: error, isLoading: false });
     }
   },
 }));
