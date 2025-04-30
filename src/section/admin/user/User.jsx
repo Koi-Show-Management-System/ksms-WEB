@@ -274,11 +274,11 @@ const User = () => {
           },
           {
             value: "blocked",
-            label: <span className="text-orange-500">Đã khóa</span>,
+            label: <span className="text-orange-500">Khóa tài khoản</span>,
           },
           {
             value: "deleted",
-            label: <span className="text-red-500">Đã xóa</span>,
+            label: <span className="text-red-500">Xóa tài khoản</span>,
           },
         ];
 
@@ -332,8 +332,8 @@ const User = () => {
             options={[
               { value: "--", label: "Tất cả" },
               { value: "Active", label: "Hoạt động" },
-              { value: "Blocked", label: "Đã khóa" },
-              { value: "Deleted", label: "Đã xóa" },
+              { value: "Blocked", label: "Khóa tài khoản" },
+              { value: "Deleted", label: "Xóa tài khoản" },
             ]}
           />
         </Space>

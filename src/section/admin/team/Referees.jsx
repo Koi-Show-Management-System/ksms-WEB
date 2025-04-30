@@ -277,8 +277,8 @@ function Referees({ accounts = [], isLoading, role }) {
             options={[
               { value: "--", label: "Tất cả" },
               { value: "Active", label: "Hoạt động" },
-              { value: "Blocked", label: "Đã khóa" },
-              { value: "Deleted", label: "Đã xóa" },
+              { value: "Blocked", label: "Khóa tài khoản" },
+              { value: "Deleted", label: "Xóa tài khoản" },
             ]}
           />
         </Space>
