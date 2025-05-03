@@ -678,9 +678,6 @@ function CompetitionRound({ showId }) {
       return;
     }
 
-    // Set publish requested flag to true immediately
-    setPublishRequested(true);
-
     try {
       setIsPublishing(true);
 
@@ -698,6 +695,9 @@ function CompetitionRound({ showId }) {
       const result = await updatePublishRound(selectedSubRound);
 
       if (result?.success) {
+        // Chỉ set publishRequested thành true khi đã thành công
+        setPublishRequested(true);
+
         notification.success({
           message: "Thành công",
           description: "Đã công khai vòng thi thành công",
@@ -1465,11 +1465,13 @@ function CompetitionRound({ showId }) {
         <Step title="Quản lý cá thi đấu" icon={<PercentageOutlined />} />
       </Steps>
 
-      <Card className="overflow-hidden mb-6">
-        <div className="mb-4">
-          <div className="flex flex-wrap md:flex-nowrap items-end gap-4">
-            <div className="w-full md:w-1/4">
-              <div className="text-lg font-medium mb-2">Hạng Mục:</div>
+      <Card className="shadow-sm mb-6 px-0">
+        <div className="p-4">
+          <div className="flex flex-wrap items-end -mx-2">
+            <div className="w-full sm:w-1/3 px-2 mb-4 sm:mb-0">
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Hạng Mục:
+              </Text>
               <Select
                 placeholder="Chọn hạng mục"
                 onChange={handleCategoryChange}
@@ -1478,6 +1480,8 @@ function CompetitionRound({ showId }) {
                 loading={!categories}
                 disabled={!categories || categories.length === 0}
                 className="w-full"
+                size="large"
+                suffixIcon={<AimOutlined />}
               >
                 {categories?.map((category) => (
                   <Option key={category.id} value={category.id}>
@@ -1487,155 +1491,67 @@ function CompetitionRound({ showId }) {
               </Select>
             </div>
 
-            {selectedCategory && (
-              <div className="w-full md:w-1/4">
-                <div className="text-lg font-medium mb-2">Loại Vòng:</div>
-                <Select
-                  value={selectedRoundType}
-                  onChange={handleRoundTypeChange}
-                  className="w-full"
-                  placeholder="Chọn vòng"
-                >
-                  {roundTypes.map((type) => (
-                    <Option key={type} value={type}>
-                      {roundTypeLabels[type] || type}
+            <div className="w-full sm:w-1/3 px-2 mb-4 sm:mb-0">
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Loại Vòng:
+              </Text>
+              <Select
+                value={selectedRoundType}
+                onChange={handleRoundTypeChange}
+                className="w-full"
+                placeholder="Chọn vòng thi"
+                loading={roundLoading}
+                disabled={!selectedCategory}
+                size="large"
+                suffixIcon={<TrophyOutlined />}
+              >
+                {roundTypes.map((type) => (
+                  <Option key={type} value={type}>
+                    {roundTypeLabels[type] || type}
+                  </Option>
+                ))}
+              </Select>
+            </div>
+
+            <div className="w-full sm:w-1/3 px-2 mb-4 sm:mb-0">
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Vòng:
+              </Text>
+              <Select
+                value={selectedSubRound}
+                onChange={handleSubRoundChange}
+                className="w-full"
+                placeholder={roundLoading ? "Đang tải..." : "Chọn vòng"}
+                loading={roundLoading}
+                disabled={!selectedRoundType}
+                notFoundContent={roundLoading ? <Loading /> : "Không có vòng"}
+                size="large"
+                suffixIcon={<TrophyOutlined />}
+              >
+                {round
+                  ?.sort((a, b) => {
+                    // Sort by roundOrder if available
+                    if (
+                      a.roundOrder !== undefined &&
+                      b.roundOrder !== undefined
+                    ) {
+                      return a.roundOrder - b.roundOrder;
+                    }
+                    // Fall back to name sorting if no roundOrder
+                    return (a.name || a.roundName || "").localeCompare(
+                      b.name || b.roundName || ""
+                    );
+                  })
+                  ?.map((item) => (
+                    <Option
+                      key={item.id || item.roundId}
+                      value={item.id || item.roundId}
+                    >
+                      {item.name || item.roundName || `Vòng ${item.id}`}
                     </Option>
                   ))}
-                </Select>
-              </div>
-            )}
-
-            {selectedRoundType && (
-              <div className="w-full md:w-1/4">
-                <div className="text-lg font-medium mb-2">Vòng:</div>
-                <Select
-                  value={selectedSubRound}
-                  onChange={handleSubRoundChange}
-                  className="w-full"
-                  placeholder={roundLoading ? "Đang tải..." : "Chọn vòng "}
-                  loading={roundLoading}
-                  notFoundContent={
-                    roundLoading ? <Loading /> : "Không có vòng "
-                  }
-                >
-                  {round
-                    ?.sort((a, b) => {
-                      // Sort by roundOrder if available
-                      if (
-                        a.roundOrder !== undefined &&
-                        b.roundOrder !== undefined
-                      ) {
-                        return a.roundOrder - b.roundOrder;
-                      }
-                      // Fall back to name sorting if no roundOrder
-                      return (a.name || a.roundName || "").localeCompare(
-                        b.name || b.roundName || ""
-                      );
-                    })
-                    ?.map((item) => (
-                      <Option
-                        key={item.id || item.roundId}
-                        value={item.id || item.roundId}
-                      >
-                        {item.name || item.roundName || `Vòng ${item.id}`}
-                      </Option>
-                    ))}
-                </Select>
-              </div>
-            )}
-
-            {/* Only render the button container if there's at least one button to show */}
-            {selectedSubRound && (
-              <div className="w-full md:w-1/4 flex flex-col gap-2">
-                {/* Thêm nút Công khai vòng thi khi cần */}
-                {selectedSubRound &&
-                  !isRoundPublished() &&
-                  !publishRequested && (
-                    <Button
-                      type="primary"
-                      size="middle"
-                      className="w-full"
-                      onClick={handlePublishRound}
-                      loading={isPublishing}
-                      icon={<CheckCircleOutlined />}
-                      disabled={
-                        isPublishing ||
-                        (currentCategoryHasTank && !allTanksAssigned)
-                      }
-                    >
-                      Công Khai Vòng Thi
-                      {currentCategoryHasTank &&
-                        !allTanksAssigned &&
-                        " (Cần gán bể)"}
-                    </Button>
-                  )}
-
-                {/* Show Create Final Score button when needed */}
-                {selectedRoundType &&
-                  (selectedRoundType === "Evaluation" ||
-                    selectedRoundType === "Final") &&
-                  isRoundPublished() &&
-                  !allEntriesHaveScores && (
-                    <Button
-                      type="primary"
-                      size="middle"
-                      className="w-full"
-                      onClick={handleCreateFinalScore}
-                      loading={roundResultLoading}
-                      icon={<TrophyOutlined />}
-                    >
-                      Tạo Điểm Cuối Cùng
-                    </Button>
-                  )}
-
-                {/* Button for publishing round results */}
-                {selectedRoundType &&
-                  isRoundPublished() &&
-                  allEntriesHaveScores &&
-                  !areResultsPublished && (
-                    <Button
-                      type="primary"
-                      size="middle"
-                      className="w-full"
-                      onClick={handlePublishRoundResults}
-                      loading={isPublishingScores}
-                      icon={<CheckCircleOutlined />}
-                      disabled={isPublishingScores}
-                    >
-                      Công Khai Điểm
-                    </Button>
-                  )}
-
-                {/* NextRound component */}
-                {areResultsPublished && !fishMoved && (
-                  <NextRound
-                    registrationRound={registrationRound}
-                    selectedSubRound={selectedSubRound}
-                    selectedCategory={selectedCategory}
-                    selectedRoundType={selectedRoundType}
-                    roundTypes={roundTypes}
-                    fetchRegistrationRound={fetchRegistrationRound}
-                    currentPage={currentPage}
-                    pageSize={pageSize}
-                    onFishMoveStatusChange={handleFishMoveStatus}
-                    roundStatus={(() => {
-                      if (!selectedSubRound) {
-                        console.log(
-                          "No selectedSubRound, not passing roundStatus"
-                        );
-                        return null;
-                      }
-
-                      const currentRound = round?.find(
-                        (r) => r.id === selectedSubRound
-                      );
-
-                      return currentRound?.status || null;
-                    })()}
-                  />
-                )}
-              </div>
-            )}
+              </Select>
+            </div>
           </div>
         </div>
       </Card>
@@ -1661,6 +1577,7 @@ function CompetitionRound({ showId }) {
             selectedSubRound && displayData.length === 0 && !registrationLoading
               ? "auto"
               : "300px",
+          position: "relative", // Thêm position relative
         }}
       >
         <div className="flex justify-between items-center mb-3">
@@ -1677,19 +1594,173 @@ function CompetitionRound({ showId }) {
               </>
             )}
           </Typography.Text>
-          <Button
-            type="default"
-            size="small"
-            icon={<ReloadOutlined />}
-            onClick={() => {
-              if (selectedSubRound) {
-                fetchRegistrationRound(selectedSubRound, currentPage, pageSize);
-              }
-            }}
-            disabled={!selectedSubRound || registrationLoading}
-          >
-            Làm mới
-          </Button>
+
+          <div className="flex">
+            <Button
+              type="default"
+              icon={<ReloadOutlined />}
+              onClick={() => {
+                if (selectedSubRound) {
+                  fetchRegistrationRound(
+                    selectedSubRound,
+                    currentPage,
+                    pageSize
+                  );
+                }
+              }}
+              disabled={!selectedSubRound || registrationLoading}
+              style={{
+                height: "36px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                borderRadius: "4px",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "14px",
+                  fontWeight: "500",
+                }}
+              >
+                Làm mới
+              </span>
+            </Button>
+
+            {selectedSubRound && !isRoundPublished() && !publishRequested && (
+              <Button
+                type="primary"
+                onClick={handlePublishRound}
+                loading={isPublishing}
+                icon={<CheckCircleOutlined />}
+                className="ml-2"
+                disabled={
+                  isPublishing || (currentCategoryHasTank && !allTanksAssigned)
+                }
+                style={{
+                  height: "36px",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  boxShadow: "0 2px 4px rgba(24, 144, 255, 0.2)",
+                  background: "#1677ff",
+                  border: "none",
+                  borderRadius: "4px",
+                }}
+              >
+                <span
+                  style={{
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  Công Khai Vòng Thi{" "}
+                  {currentCategoryHasTank &&
+                    !allTanksAssigned &&
+                    "(Cần gán bể)"}
+                </span>
+              </Button>
+            )}
+
+            {selectedSubRound &&
+              selectedRoundType &&
+              (selectedRoundType === "Evaluation" ||
+                selectedRoundType === "Final") &&
+              isRoundPublished() &&
+              !allEntriesHaveScores && (
+                <Button
+                  type="primary"
+                  onClick={handleCreateFinalScore}
+                  loading={roundResultLoading}
+                  icon={<TrophyOutlined />}
+                  className="ml-2"
+                  style={{
+                    height: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 2px 4px rgba(24, 144, 255, 0.2)",
+                    background: "#1677ff",
+                    border: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "white",
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Tạo Điểm Cuối Cùng
+                  </span>
+                </Button>
+              )}
+
+            {selectedSubRound &&
+              selectedRoundType &&
+              isRoundPublished() &&
+              allEntriesHaveScores &&
+              !areResultsPublished && (
+                <Button
+                  type="primary"
+                  onClick={handlePublishRoundResults}
+                  loading={isPublishingScores}
+                  icon={<CheckCircleOutlined />}
+                  disabled={isPublishingScores}
+                  className="ml-2"
+                  style={{
+                    height: "36px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    boxShadow: "0 2px 4px rgba(24, 144, 255, 0.2)",
+                    background: "#1677ff",
+                    border: "none",
+                  }}
+                >
+                  <span
+                    style={{
+                      color: "white",
+                      fontSize: "14px",
+                      fontWeight: "bold",
+                    }}
+                  >
+                    Công Khai Điểm
+                  </span>
+                </Button>
+              )}
+
+            {selectedSubRound && areResultsPublished && !fishMoved && (
+              <div className="ml-2">
+                <NextRound
+                  registrationRound={registrationRound}
+                  selectedSubRound={selectedSubRound}
+                  selectedCategory={selectedCategory}
+                  selectedRoundType={selectedRoundType}
+                  roundTypes={roundTypes}
+                  fetchRegistrationRound={fetchRegistrationRound}
+                  currentPage={currentPage}
+                  pageSize={pageSize}
+                  onFishMoveStatusChange={handleFishMoveStatus}
+                  roundStatus={(() => {
+                    if (!selectedSubRound) {
+                      console.log(
+                        "No selectedSubRound, not passing roundStatus"
+                      );
+                      return null;
+                    }
+
+                    const currentRound = round?.find(
+                      (r) => r.id === selectedSubRound
+                    );
+
+                    return currentRound?.status || null;
+                  })()}
+                />
+              </div>
+            )}
+          </div>
         </div>
         <Table
           columns={columns}
@@ -1765,6 +1836,12 @@ function CompetitionRound({ showId }) {
                 </Descriptions.Item>
                 <Descriptions.Item label="Chủ sở hữu">
                   {currentRegistration.registration?.registerName || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {currentRegistration.registration?.account?.email || "—"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Số điện thoại">
+                  {currentRegistration.registration?.account?.phone || "—"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Tên Cá Koi">
                   {currentRegistration.registration?.koiProfile?.name || "—"}
@@ -2099,6 +2176,10 @@ function CompetitionRound({ showId }) {
                                   ? "green"
                                   : "red"
                               }
+                              style={{
+                                fontSize: "14px",
+                                fontWeight: "bold",
+                              }}
                             >
                               {currentRegistration.roundResults[0]?.status ===
                               "Pass"

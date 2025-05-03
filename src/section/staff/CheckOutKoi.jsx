@@ -404,8 +404,14 @@ function CheckOutKoi() {
                 <Descriptions.Item label="Tuổi">
                   {koiData.koiAge} năm
                 </Descriptions.Item>
-                <Descriptions.Item label="Người đăng ký">
+                <Descriptions.Item label="Chủ sở hữu">
                   {koiData.registerName}
+                </Descriptions.Item>
+                <Descriptions.Item label="Email">
+                  {koiData.account?.email || "-"}
+                </Descriptions.Item>
+                <Descriptions.Item label="Số điện thoại">
+                  {koiData.account?.phone || "-"}
                 </Descriptions.Item>
                 <Descriptions.Item label="Trạng thái">
                   {renderStatusTag(koiData.status)}

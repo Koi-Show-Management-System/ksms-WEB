@@ -371,15 +371,47 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   };
 
   const handleRemoveAward = (categoryIndex, awardIndex) => {
+    const currentAwards =
+      categories[categoryIndex]?.createAwardCateShowRequests || [];
+    const awardToRemove = currentAwards[awardIndex];
+
+    // Không có giải thưởng để xóa hoặc không tìm thấy giải
+    if (!awardToRemove) {
+      return;
+    }
+
+    // Dựa vào loại giải cần xóa, xác định những giải nào cần xóa theo
+    let updatedAwards = [...currentAwards];
+
+    if (awardToRemove.awardType === "first") {
+      // Nếu xóa giải Nhất, xóa tất cả các giải
+      message.info("Xóa giải Nhất sẽ xóa tất cả các giải thưởng");
+      updatedAwards = [];
+    } else if (awardToRemove.awardType === "second") {
+      // Nếu xóa giải Nhì, xóa cả giải Ba và Khuyến khích
+      message.info("Xóa giải Nhì sẽ xóa cả giải Ba và Khuyến Khích (nếu có)");
+      // Giữ lại giải Nhất, xóa tất cả giải Nhì, Ba, và Khuyến khích
+      updatedAwards = updatedAwards.filter(
+        (award) => award.awardType === "first"
+      );
+    } else if (awardToRemove.awardType === "third") {
+      // Nếu xóa giải Ba, xóa cả giải Khuyến khích
+      message.info("Xóa giải Ba sẽ xóa cả giải Khuyến Khích (nếu có)");
+      // Giữ lại giải Nhất và Nhì, xóa tất cả giải Ba và Khuyến khích
+      updatedAwards = updatedAwards.filter(
+        (award) => award.awardType === "first" || award.awardType === "second"
+      );
+    } else {
+      // Nếu xóa giải Khuyến khích, chỉ xóa nó
+      updatedAwards = updatedAwards.filter((_, i) => i !== awardIndex);
+    }
+
     setCategories((prevCategories) =>
       prevCategories.map((category, i) =>
         i === categoryIndex
           ? {
               ...category,
-              createAwardCateShowRequests:
-                category.createAwardCateShowRequests.filter(
-                  (_, j) => j !== awardIndex
-                ),
+              createAwardCateShowRequests: updatedAwards,
             }
           : category
       )

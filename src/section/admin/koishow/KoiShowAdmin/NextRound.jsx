@@ -851,13 +851,24 @@ function NextRound({
             backgroundColor: "#d9d9d9",
             color: "white",
             borderColor: "#d9d9d9",
-            height: "32px",
-            fontSize: "14px",
-            padding: "0 15px",
-            borderRadius: "6px",
+            height: "36px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+            border: "none",
+            borderRadius: "4px",
           }}
         >
-          Không có vòng tiếp theo
+          <span
+            style={{
+              color: "white",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            Không có vòng tiếp theo
+          </span>
         </Button>
       );
     } else if (shouldShowButton) {
@@ -870,14 +881,26 @@ function NextRound({
             backgroundColor: "#52c41a",
             color: "white",
             borderColor: "#52c41a",
-            height: "32px",
-            fontSize: "14px",
-            padding: "0 15px",
-            borderRadius: "6px",
+            height: "36px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "0 2px 4px rgba(82, 196, 26, 0.2)",
+            background: "#52c41a",
+            border: "none",
+            borderRadius: "4px",
           }}
         >
-          Chuyển {isLoadingAllFish ? "..." : allPassingFish.length} cá sang vòng
-          tiếp theo
+          <span
+            style={{
+              color: "white",
+              fontSize: "14px",
+              fontWeight: "bold",
+            }}
+          >
+            Chuyển {isLoadingAllFish ? "..." : allPassingFish.length} cá sang
+            vòng tiếp theo
+          </span>
         </Button>
       );
     }

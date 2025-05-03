@@ -50,6 +50,7 @@ import TicketForm from "./TicketForm";
 import RoundResult from "./RoundResult";
 import StatusManager from "./StatusManager";
 import Cookies from "js-cookie";
+import useCategory from "../../../../hooks/useCategory";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
@@ -67,9 +68,27 @@ function KoiShowDetail() {
     useKoiShow();
   const [form] = Form.useForm();
 
+  // Constants for validation limits (matching StepOne)
+  const MAX_NAME_LENGTH = 100;
+  const MAX_PARTICIPANTS = 10000;
+  const MAX_TICKET_PRICE = 10000000; // 10 million VND
+  const MAX_TICKET_QUANTITY = 1000000; // 1 million tickets
+  const MAX_INVESTMENT = 100000000000; // 100 billion VND
+
   // Lấy role từ cookies
   const userRole = Cookies.get("__role");
   const isStaff = userRole === "Staff";
+
+  // Error states for validation
+  const [nameError, setNameError] = useState("");
+  const [participantErrors, setParticipantErrors] = useState({
+    minParticipants: "",
+    maxParticipants: "",
+  });
+  const [timeErrors, setTimeErrors] = useState({
+    startDate: "",
+    endDate: "",
+  });
 
   const [showAll, setShowAll] = useState(false);
   const [showTicketForm, setShowTicketForm] = useState(false);
@@ -87,6 +106,8 @@ function KoiShowDetail() {
   const extraCount = sponsors.length - 2;
   const showRule = koiShowDetail?.data?.showRules;
   const [activeTabKey, setActiveTabKey] = useState("category");
+  const [cancelledCategoryIds, setCancelledCategoryIds] = useState([]);
+  const { categories, fetchCategories } = useCategory();
 
   const statusMapping = {
     RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
@@ -104,6 +125,11 @@ function KoiShowDetail() {
   const formatDate = (date) => dayjs(date).format("DD/MM/YYYY");
   const formatTime = (date) => dayjs(date).format("hh:mm A");
 
+  // Thêm hàm xử lý sự kiện hủy hạng mục lên trước
+  const handleCategoryCancel = (categoryId) => {
+    setCancelledCategoryIds((prev) => [...prev, categoryId]);
+  };
+
   // Sử dụng useCallback để đảm bảo hàm không bị tạo lại mỗi lần render
   const fetchDetailCallback = useCallback(() => {
     if (id) {
@@ -115,8 +141,41 @@ function KoiShowDetail() {
     fetchDetailCallback();
   }, [fetchDetailCallback]);
 
+  // Thêm useEffect để lấy danh sách hạng mục bị hủy
+  useEffect(() => {
+    const getCancelledCategories = async () => {
+      try {
+        await fetchCategories(id);
+
+        // Lọc ra các hạng mục bị hủy
+        const cancelledIds = categories
+          .filter((category) => category.status === "cancelled")
+          .map((category) => category.id);
+
+        setCancelledCategoryIds(cancelledIds);
+      } catch (error) {
+        console.error("Error fetching cancelled categories:", error);
+      }
+    };
+
+    if (id) {
+      getCancelledCategories();
+    }
+  }, [id]);
+
   // Function to open edit modal
   const openEditModal = () => {
+    // Reset error states
+    setNameError("");
+    setParticipantErrors({
+      minParticipants: "",
+      maxParticipants: "",
+    });
+    setTimeErrors({
+      startDate: "",
+      endDate: "",
+    });
+
     // Set initial form values
     form.setFieldsValue({
       name: koiShowDetail.data.name,
@@ -145,6 +204,79 @@ function KoiShowDetail() {
     }
 
     setEditModalVisible(true);
+  };
+
+  // Handle name validation
+  const handleNameChange = (e) => {
+    const value = e.target.value;
+    if (value.length > MAX_NAME_LENGTH) {
+      setNameError(
+        `Tên chương trình không được vượt quá ${MAX_NAME_LENGTH} ký tự`
+      );
+    } else {
+      setNameError("");
+    }
+    form.setFieldsValue({ name: value });
+  };
+
+  // Handle participant validation
+  const handleParticipantChange = (field, value) => {
+    // Validate participant numbers
+    const newParticipantErrors = { ...participantErrors };
+
+    if (value > MAX_PARTICIPANTS) {
+      newParticipantErrors[field] =
+        `Giá trị không được vượt quá ${MAX_PARTICIPANTS.toLocaleString("vi-VN")}`;
+      setParticipantErrors(newParticipantErrors);
+      return;
+    }
+
+    if (field === "minParticipants") {
+      const maxValue = form.getFieldValue("maxParticipants");
+      if (maxValue && value >= maxValue) {
+        newParticipantErrors.minParticipants =
+          "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa";
+      } else {
+        newParticipantErrors.minParticipants = "";
+      }
+    } else if (field === "maxParticipants") {
+      const minValue = form.getFieldValue("minParticipants");
+      if (minValue && value <= minValue) {
+        newParticipantErrors.maxParticipants =
+          "Số lượng tối đa phải lớn hơn số lượng tối thiểu";
+      } else {
+        newParticipantErrors.maxParticipants = "";
+      }
+    }
+
+    setParticipantErrors(newParticipantErrors);
+    form.setFieldsValue({ [field]: value });
+  };
+
+  // Handle date validation
+  const handleDateChange = (field, value) => {
+    const newTimeErrors = { ...timeErrors };
+
+    if (!value) {
+      newTimeErrors[field] = "Vui lòng chọn ngày.";
+    } else {
+      newTimeErrors[field] = "";
+
+      if (field === "startDate") {
+        const endDate = form.getFieldValue("endDate");
+        if (endDate && value.isAfter(endDate)) {
+          form.setFieldsValue({ endDate: value });
+        }
+      } else if (field === "endDate") {
+        const startDate = form.getFieldValue("startDate");
+        if (startDate && value.isBefore(startDate)) {
+          newTimeErrors[field] = "Ngày kết thúc không thể trước ngày bắt đầu.";
+        }
+      }
+    }
+
+    setTimeErrors(newTimeErrors);
+    form.setFieldsValue({ [field]: value });
   };
 
   // Handle image upload
@@ -206,7 +338,42 @@ function KoiShowDetail() {
 
   const handleUpdate = async () => {
     try {
+      // Validate form fields
       const values = await form.validateFields();
+
+      // Check for validation errors
+      if (
+        nameError ||
+        participantErrors.minParticipants ||
+        participantErrors.maxParticipants ||
+        timeErrors.startDate ||
+        timeErrors.endDate
+      ) {
+        // Show validation error message
+        notification.error({
+          key: "validationError",
+          message: "Lỗi nhập liệu",
+          description: "Vui lòng kiểm tra và sửa các lỗi trước khi cập nhật.",
+          placement: "topRight",
+        });
+        return;
+      }
+
+      // Check if min participants is less than max participants
+      if (values.minParticipants >= values.maxParticipants) {
+        setParticipantErrors({
+          ...participantErrors,
+          minParticipants: "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa",
+        });
+        notification.error({
+          key: "participantError",
+          message: "Lỗi nhập liệu",
+          description:
+            "Số lượng tham gia tối thiểu phải nhỏ hơn số lượng tối đa.",
+          placement: "topRight",
+        });
+        return;
+      }
 
       const formattedValues = {
         ...values,
@@ -304,10 +471,20 @@ function KoiShowDetail() {
 
     switch (key) {
       case "category":
-        return <Category showId={id} statusShow={showStatus} />;
+        return (
+          <Category
+            showId={id}
+            statusShow={showStatus}
+            onCategoryCancel={handleCategoryCancel}
+          />
+        );
       case "koiList":
         return (
-          <Registration showId={id} statusShow={koiShowDetail.data.status} />
+          <Registration
+            showId={id}
+            statusShow={koiShowDetail.data.status}
+            cancelledCategoryIds={cancelledCategoryIds}
+          />
         );
       case "ticket":
         return <Ticket showId={id} statusShow={koiShowDetail.data.status} />;
@@ -431,8 +608,31 @@ function KoiShowDetail() {
     }
   };
 
+  // Function to handle ticket validation on submit
   const handleTicketSubmit = async (values) => {
     try {
+      // Validate ticket fields
+      if (values.price < 0 || values.price > MAX_TICKET_PRICE) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: `Giá vé phải lớn hơn 0 và không được vượt quá ${MAX_TICKET_PRICE.toLocaleString("vi-VN")} VND (10 triệu)`,
+          placement: "topRight",
+        });
+        return;
+      }
+
+      if (
+        values.availableQuantity < 0 ||
+        values.availableQuantity > MAX_TICKET_QUANTITY
+      ) {
+        notification.error({
+          message: "Lỗi nhập liệu",
+          description: `Số lượng vé phải lớn hơn 0 và không được vượt quá ${MAX_TICKET_QUANTITY.toLocaleString("vi-VN")} vé (1 triệu)`,
+          placement: "topRight",
+        });
+        return;
+      }
+
       if (editingTicket) {
         // Update existing ticket
         const result = await updateTicketType(editingTicket.id, values);
@@ -490,6 +690,7 @@ function KoiShowDetail() {
       });
     }
   };
+
   return (
     <div className="max-w-8xl mx-auto p-2 md:p-4">
       <Collapse
@@ -818,8 +1019,13 @@ function KoiShowDetail() {
       >
         <Form form={form} layout="vertical">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <Form.Item name="name" label="Tên">
-              <Input />
+            <Form.Item
+              name="name"
+              label="Tên"
+              validateStatus={nameError ? "error" : ""}
+              help={nameError}
+            >
+              <Input onChange={handleNameChange} maxLength={MAX_NAME_LENGTH} />
             </Form.Item>
 
             <Form.Item name="location" label="Địa Điểm">
@@ -829,27 +1035,69 @@ function KoiShowDetail() {
             <Form.Item
               name="minParticipants"
               label="Số Người Tham Gia Tối Thiểu"
+              validateStatus={participantErrors.minParticipants ? "error" : ""}
+              help={participantErrors.minParticipants}
             >
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-
-            <Form.Item name="maxParticipants" label="Số Người Tham Gia Tối Đa">
-              <InputNumber min={0} style={{ width: "100%" }} />
-            </Form.Item>
-
-            <Form.Item name="startDate" label="Ngày Bắt Đầu Triễn Lãm">
-              <DatePicker
-                showTime
-                format="YYYY-MM-DD HH:mm:ss"
+              <InputNumber
+                min={0}
+                max={MAX_PARTICIPANTS}
                 style={{ width: "100%" }}
+                onChange={(value) =>
+                  handleParticipantChange("minParticipants", value)
+                }
               />
             </Form.Item>
 
-            <Form.Item name="endDate" label="Ngày Kết Thúc Triễn Lãm">
+            <Form.Item
+              name="maxParticipants"
+              label="Số Người Tham Gia Tối Đa"
+              validateStatus={participantErrors.maxParticipants ? "error" : ""}
+              help={participantErrors.maxParticipants}
+            >
+              <InputNumber
+                min={0}
+                max={MAX_PARTICIPANTS}
+                style={{ width: "100%" }}
+                onChange={(value) =>
+                  handleParticipantChange("maxParticipants", value)
+                }
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="startDate"
+              label="Ngày Bắt Đầu Triễn Lãm"
+              validateStatus={timeErrors.startDate ? "error" : ""}
+              help={timeErrors.startDate}
+            >
               <DatePicker
                 showTime
                 format="YYYY-MM-DD HH:mm:ss"
                 style={{ width: "100%" }}
+                onChange={(value) => handleDateChange("startDate", value)}
+                disabledDate={(current) => {
+                  return current && current.isBefore(dayjs(), "day");
+                }}
+              />
+            </Form.Item>
+
+            <Form.Item
+              name="endDate"
+              label="Ngày Kết Thúc Triễn Lãm"
+              validateStatus={timeErrors.endDate ? "error" : ""}
+              help={timeErrors.endDate}
+            >
+              <DatePicker
+                showTime
+                format="YYYY-MM-DD HH:mm:ss"
+                style={{ width: "100%" }}
+                onChange={(value) => handleDateChange("endDate", value)}
+                disabledDate={(current) => {
+                  const startDate = form.getFieldValue("startDate");
+                  return (
+                    startDate && current && current.isBefore(startDate, "day")
+                  );
+                }}
               />
             </Form.Item>
 
