@@ -306,6 +306,7 @@ function Tank({ showId }) {
             style={{ width: "100%", maxWidth: "250px" }}
             allowClear
             onChange={(value) => setSelectedCategoryId(value)}
+            value={selectedCategoryId}
           >
             {categories
               .filter((category) => category.hasTank)
@@ -320,38 +321,47 @@ function Tank({ showId }) {
             type="primary"
             icon={<PlusOutlined />}
             onClick={showCreateModal}
+            disabled={!selectedCategoryId}
           >
             Thêm Bể Cá
           </Button>
         </div>
 
-        <div className="overflow-x-auto">
-          <Table
-            columns={columns}
-            dataSource={filteredTanks || tanks}
-            rowKey="id"
-            loading={isLoading}
-            pagination={{
-              current: currentPage,
-              pageSize: pageSize,
-              total: totalItems,
-              showSizeChanger: true,
-              showTotal: (total, range) =>
-                `${range[0]}-${range[1]} trong ${total} mục`,
-            }}
-            onChange={handleTableChange}
-            scroll={{ x: "max-content" }}
-            locale={{
-              emptyText: (
-                <Empty
-                  description="Không có dữ liệu"
-                  image={Empty.PRESENTED_IMAGE_SIMPLE}
-                  style={{ margin: "24px 0" }}
-                />
-              ),
-            }}
+        {selectedCategoryId ? (
+          <div className="overflow-x-auto">
+            <Table
+              columns={columns}
+              dataSource={filteredTanks || tanks}
+              rowKey="id"
+              loading={isLoading}
+              pagination={{
+                current: currentPage,
+                pageSize: pageSize,
+                total: totalItems,
+                showSizeChanger: true,
+                showTotal: (total, range) =>
+                  `${range[0]}-${range[1]} trong ${total} mục`,
+              }}
+              onChange={handleTableChange}
+              scroll={{ x: "max-content" }}
+              locale={{
+                emptyText: (
+                  <Empty
+                    description="Không có dữ liệu"
+                    image={Empty.PRESENTED_IMAGE_SIMPLE}
+                    style={{ margin: "24px 0" }}
+                  />
+                ),
+              }}
+            />
+          </div>
+        ) : (
+          <Empty
+            description="Vui lòng chọn hạng mục để xem danh sách bể cá"
+            image={Empty.PRESENTED_IMAGE_SIMPLE}
+            style={{ margin: "48px 0" }}
           />
-        </div>
+        )}
       </Card>
 
       {/* Sử dụng key để buộc Modal và Form render lại khi selectedTank thay đổi */}
@@ -392,6 +402,7 @@ function Tank({ showId }) {
               name="competitionCategoryId"
               label="Hạng mục"
               rules={[{ required: true, message: "Vui lòng chọn hạng mục!" }]}
+              initialValue={selectedCategoryId}
             >
               <Select
                 placeholder="Chọn hạng mục"

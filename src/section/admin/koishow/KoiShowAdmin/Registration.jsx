@@ -35,7 +35,7 @@ import RoundSelector from "./RoundSelector";
 // Placeholder image for missing images
 const PLACEHOLDER_IMAGE = "https://placehold.co/70x50/eee/ccc?text=No+Image";
 
-function Registration({ showId, statusShow }) {
+function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
   const {
     registration,
     isLoading,
@@ -79,7 +79,8 @@ function Registration({ showId, statusShow }) {
   // Thêm lại định nghĩa REFUND_TYPE_OPTIONS
   const REFUND_TYPE_OPTIONS = [
     { value: "NotQualified", label: "Không đủ điều kiện" },
-    { value: "ShowCancelled", label: "Show bị hủy" },
+    { value: "ShowCancelled", label: "Triển lãm bị hủy" },
+    { value: "CategoryCancelled", label: "Hạng mục bị hủy" },
   ];
 
   const STATUS_CONFIG = {
@@ -122,6 +123,57 @@ function Registration({ showId, statusShow }) {
   const [isAllSelected, setIsAllSelected] = useState(false);
   const [activeFilters, setActiveFilters] = useState([]);
 
+  // Add new state variables for batch refund functionality
+  const [isBatchRefundModalVisible, setIsBatchRefundModalVisible] =
+    useState(false);
+  const [batchRefundType, setBatchRefundType] = useState(null);
+  const [batchRefundInProgress, setBatchRefundInProgress] = useState(false);
+  const [registrationsToRefund, setRegistrationsToRefund] = useState([]);
+
+  // Kiểm tra xem hạng mục hiện tại có bị hủy không
+  const isCategorySelected = selectedCategory !== null;
+  const isCategoryCancelled =
+    isCategorySelected && cancelledCategoryIds.includes(selectedCategory);
+
+  // Cập nhật lại useEffect khi chọn hạng mục
+  useEffect(() => {
+    if (selectedCategory) {
+      // Kiểm tra nếu hạng mục đã bị hủy
+      if (cancelledCategoryIds.includes(selectedCategory)) {
+        // Chỉ hiển thị thông báo nếu đáp ứng điều kiện hiển thị nút "Đã hoàn tiền"
+
+        // Logic 1: Show đã bị hủy
+        const showCancelled = statusShow?.toLowerCase() === "cancelled";
+
+        // Logic 2: Show public và hạng mục bị hủy
+        const showPublicAndCategoryCancelled =
+          statusShow?.toLowerCase() === "public" &&
+          cancelledCategoryIds.includes(selectedCategory);
+
+        // Logic 3: Show inprogress/finished và hạng mục bị hủy
+        const showInProgressAndCategoryCancelled =
+          ["inprogress", "finished"].includes(statusShow?.toLowerCase()) &&
+          cancelledCategoryIds.includes(selectedCategory);
+
+        // Hiển thị thông báo nếu nằm trong một trong các trường hợp trên
+        if (
+          showCancelled ||
+          showPublicAndCategoryCancelled ||
+          showInProgressAndCategoryCancelled
+        ) {
+          // Hiển thị thông báo
+          notification.info({
+            message: "Hạng mục đã bị hủy",
+            description:
+              "Hạng mục này đã bị hủy. Bạn có thể hoàn tiền cho các đơn đăng ký.",
+            placement: "topRight",
+            duration: 5,
+          });
+        }
+      }
+    }
+  }, [selectedCategory, cancelledCategoryIds, statusShow]);
+
   useEffect(() => {
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
@@ -145,7 +197,14 @@ function Registration({ showId, statusShow }) {
     setSelectedStatus(null);
     setActiveFilters([]);
 
-    fetchRegistration(1, 10, showId, value ? [value] : undefined, null);
+    fetchRegistration(1, 10, showId, value ? [value] : undefined, null).then(
+      () => {
+        // After fetching registrations, check if category is canceled and handle refund
+        if (value && statusShow === "cancelled") {
+          checkCategoryCanceledAndRefund(value);
+        }
+      }
+    );
   };
 
   const handleRoundSelect = (roundId, roundName) => {
@@ -711,6 +770,126 @@ function Registration({ showId, statusShow }) {
     setMediaModalVisible(true);
   };
 
+  // Add function to check if category has been canceled and handle batch refund
+  const checkCategoryCanceledAndRefund = (categoryId) => {
+    if (!categoryId || statusShow !== "cancelled") return;
+
+    // Previous show statuses that qualify for auto refund when canceled
+    const qualifyingPreviousStatuses = [
+      "inprogress",
+      "public",
+      "internalpublic",
+      "pending",
+    ];
+
+    // Tìm tất cả đăng ký có trạng thái pending, confirmed, rejected thuộc hạng mục đã chọn
+    const eligibleRegistrations = registration.filter(
+      (reg) =>
+        reg.competitionCategory?.id === categoryId &&
+        ["pending", "confirmed", "rejected"].includes(reg.status?.toLowerCase())
+    );
+
+    if (eligibleRegistrations.length > 0) {
+      // Get IDs of eligible registrations
+      const eligibleIds = eligibleRegistrations.map((reg) => reg.id);
+      setRegistrationsToRefund(eligibleIds);
+
+      // Hiển thị modal chọn lý do hoàn tiền
+      setIsBatchRefundModalVisible(true);
+      setBatchRefundType(null);
+
+      notification.info({
+        message: "Cần hoàn tiền",
+        description: `Tìm thấy ${eligibleIds.length} đăng ký cần hoàn tiền. Vui lòng chọn lý do hoàn tiền.`,
+        placement: "topRight",
+        duration: 3,
+      });
+    } else {
+      notification.info({
+        message: "Không có đăng ký cần hoàn tiền",
+        description:
+          "Tất cả các đăng ký trong hạng mục này đã được xử lý hoặc không cần hoàn tiền",
+        placement: "topRight",
+      });
+    }
+  };
+
+  // Add a function to handle batch refund for canceled category
+  const handleBatchRefund = async () => {
+    if (!batchRefundType) {
+      notification.warning({
+        message: "Thiếu thông tin",
+        description: "Vui lòng chọn lý do hoàn tiền",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    try {
+      setBatchRefundInProgress(true);
+
+      // Show loading notification
+      notification.info({
+        message: "Đang xử lý",
+        description: `Đang hoàn tiền cho ${registrationsToRefund.length} đăng ký...`,
+        placement: "topRight",
+        duration: 3,
+      });
+
+      let successCount = 0;
+      let failCount = 0;
+
+      // Process each registration one by one
+      for (const regId of registrationsToRefund) {
+        try {
+          const result = await updateStatus(
+            regId,
+            "Refunded",
+            null,
+            batchRefundType
+          );
+          if (result.success) {
+            successCount++;
+          } else {
+            failCount++;
+          }
+        } catch (error) {
+          console.error("Error refunding registration:", error);
+          failCount++;
+        }
+      }
+
+      setBatchRefundInProgress(false);
+      setIsBatchRefundModalVisible(false);
+      setBatchRefundType(null);
+
+      // Refresh the registration list
+      fetchRegistration(
+        currentPage,
+        pageSize,
+        showId,
+        selectedCategory ? [selectedCategory] : undefined,
+        selectedStatus
+      );
+
+      // Show completion notification
+      notification.success({
+        message: "Hoàn thành",
+        description: `Đã hoàn tiền thành công cho ${successCount} đăng ký${failCount > 0 ? `, ${failCount} đăng ký thất bại` : ""}`,
+        placement: "topRight",
+      });
+    } catch (error) {
+      console.error("Batch refund error:", error);
+      setBatchRefundInProgress(false);
+
+      notification.error({
+        message: "Lỗi",
+        description: "Đã xảy ra lỗi khi thực hiện hoàn tiền hàng loạt",
+        placement: "topRight",
+      });
+    }
+  };
+
   return (
     <ConfigProvider
       locale={{
@@ -852,7 +1031,7 @@ function Registration({ showId, statusShow }) {
           onChange={handleTableChange}
           rowKey="id"
           size="middle"
-          bordered={false}
+          variant="borderless"
           scroll={{ x: "100%" }}
           locale={{
             emptyText: (
@@ -885,22 +1064,85 @@ function Registration({ showId, statusShow }) {
               <Button key="cancel" onClick={handleCancel}>
                 Đóng
               </Button>
-              {(statusShow === "cancelled" ||
-                currentKoi?.status === "rejected") &&
-                currentKoi?.status !== "Refunded" && (
-                  <Button
-                    key="refund"
-                    type="primary"
-                    danger
-                    onClick={() => {
-                      setSelectedRegistrationId(currentKoi.id);
-                      setIsRefundModalVisible(true);
-                      setIsModalVisible(false);
-                    }}
-                  >
-                    Đã Hoàn Tiền
-                  </Button>
-                )}
+              {currentKoi && (
+                <>
+                  {console.log("Debug Refund Button:", {
+                    koiStatus: currentKoi.status?.toLowerCase(),
+                    showStatus: statusShow?.toLowerCase(),
+                    isCategoryCancelled,
+                    categoryMatch:
+                      currentKoi.competitionCategory?.id === selectedCategory,
+                  })}
+
+                  {/* Hiển thị nút Đã hoàn tiền khi cần */}
+                  {currentKoi.status?.toLowerCase() !== "refunded" && (
+                    <>
+                      {/* Logic 1: Show bị hủy - hiện nút cho đơn pending/confirmed */}
+                      {statusShow?.toLowerCase() === "cancelled" &&
+                        ["pending", "confirmed", "rejected"].includes(
+                          currentKoi.status?.toLowerCase()
+                        ) && (
+                          <Button
+                            key="refund"
+                            type="primary"
+                            danger
+                            onClick={() => {
+                              setSelectedRegistrationId(currentKoi.id);
+                              setIsRefundModalVisible(true);
+                              setIsModalVisible(false);
+                            }}
+                          >
+                            Đã Hoàn Tiền
+                          </Button>
+                        )}
+
+                      {/* Logic 2: Hạng mục bị hủy + status public - hiện nút cho đơn pending/confirmed */}
+                      {statusShow?.toLowerCase() === "public" &&
+                        isCategoryCancelled &&
+                        currentKoi.competitionCategory?.id ===
+                          selectedCategory &&
+                        ["pending", "confirmed", "rejected"].includes(
+                          currentKoi.status?.toLowerCase()
+                        ) && (
+                          <Button
+                            key="refund"
+                            type="primary"
+                            danger
+                            onClick={() => {
+                              setSelectedRegistrationId(currentKoi.id);
+                              setIsRefundModalVisible(true);
+                              setIsModalVisible(false);
+                            }}
+                          >
+                            Đã Hoàn Tiền
+                          </Button>
+                        )}
+
+                      {/* Logic 3: Hạng mục bị hủy + status inprogress/finished - chỉ hiện nút cho đơn checkin */}
+                      {["inprogress", "finished"].includes(
+                        statusShow?.toLowerCase()
+                      ) &&
+                        isCategoryCancelled &&
+                        currentKoi.competitionCategory?.id ===
+                          selectedCategory &&
+                        currentKoi.status?.toLowerCase() === "checkin" && (
+                          <Button
+                            key="refund"
+                            type="primary"
+                            danger
+                            onClick={() => {
+                              setSelectedRegistrationId(currentKoi.id);
+                              setIsRefundModalVisible(true);
+                              setIsModalVisible(false);
+                            }}
+                          >
+                            Đã Hoàn Tiền
+                          </Button>
+                        )}
+                    </>
+                  )}
+                </>
+              )}
             </>
           }
           width={"90%"}
@@ -909,7 +1151,24 @@ function Registration({ showId, statusShow }) {
           {currentKoi && (
             <div className="p-4">
               <Card
-                bordered={false}
+                title={
+                  <Flex align="center" justify="space-between">
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <div
+                        style={{
+                          width: "14px",
+                          height: "14px",
+                          borderRadius: "50%",
+                          background: "#096dd9",
+                          marginRight: "8px",
+                        }}
+                      ></div>
+                      <span>Thông tin cá Koi</span>
+                    </div>
+                    <div>{renderStatus(currentKoi.status)}</div>
+                  </Flex>
+                }
+                variant="borderless"
                 style={{
                   marginBottom: 16,
                   boxShadow: "0 1px 2px rgba(0,0,0,0.05)",
@@ -926,9 +1185,9 @@ function Registration({ showId, statusShow }) {
                         marginBottom: "8px",
                       }}
                     >
-                      <strong style={{ color: "#096dd9" }}>Chủ sở hữu:</strong>
-                      <span style={{ marginLeft: "8px" }}>
-                        {currentKoi.registerName}
+                      <strong style={{ color: "#096dd9" }}>Tên Cá Koi:</strong>
+                      <span style={{ marginLeft: "8px", fontWeight: 500 }}>
+                        {currentKoi.koiProfile?.name}
                       </span>
                     </div>
                     <div
@@ -938,9 +1197,9 @@ function Registration({ showId, statusShow }) {
                         marginBottom: "8px",
                       }}
                     >
-                      <strong style={{ color: "#096dd9" }}>Tên Cá Koi:</strong>
-                      <span style={{ marginLeft: "8px", fontWeight: 500 }}>
-                        {currentKoi.koiProfile.name}
+                      <strong style={{ color: "#096dd9" }}>Giống:</strong>
+                      <span style={{ marginLeft: "8px" }}>
+                        {currentKoi?.koiProfile?.variety?.name}
                       </span>
                     </div>
                     <div
@@ -964,18 +1223,6 @@ function Registration({ showId, statusShow }) {
                         marginBottom: "8px",
                       }}
                     >
-                      <strong style={{ color: "#096dd9" }}>Giống:</strong>
-                      <span style={{ marginLeft: "8px" }}>
-                        {currentKoi?.koiProfile?.variety?.name}
-                      </span>
-                    </div>
-                    <div
-                      style={{
-                        padding: "8px 0",
-                        borderBottom: "1px dashed #f0f0f0",
-                        marginBottom: "8px",
-                      }}
-                    >
                       <strong style={{ color: "#096dd9" }}>Tuổi Cá:</strong>
                       <span style={{ marginLeft: "8px" }}>
                         {currentKoi.koiAge}
@@ -990,7 +1237,7 @@ function Registration({ showId, statusShow }) {
                     >
                       <strong style={{ color: "#096dd9" }}>Ghi chú:</strong>
                       <span style={{ marginLeft: "8px" }}>
-                        {currentKoi.notes}
+                        {currentKoi.notes || "Không có ghi chú"}
                       </span>
                     </div>
                   </Col>
@@ -1007,22 +1254,44 @@ function Registration({ showId, statusShow }) {
                         {currentKoi.competitionCategory?.name}
                       </span>
                     </div>
-                    {currentKoi.koiShow && (
-                      <div
-                        style={{
-                          padding: "8px 0",
-                          borderBottom: "1px dashed #f0f0f0",
-                          marginBottom: "8px",
-                        }}
-                      >
-                        <strong style={{ color: "#096dd9" }}>
-                          Tên Cuộc Thi:
-                        </strong>
-                        <span style={{ marginLeft: "8px" }}>
-                          {currentKoi.koiShow.name}
-                        </span>
-                      </div>
-                    )}
+                    <div
+                      style={{
+                        padding: "8px 0",
+                        borderBottom: "1px dashed #f0f0f0",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <strong style={{ color: "#096dd9" }}>Chủ sở hữu:</strong>
+                      <span style={{ marginLeft: "8px" }}>
+                        {currentKoi.registerName}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        padding: "8px 0",
+                        borderBottom: "1px dashed #f0f0f0",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <strong style={{ color: "#096dd9" }}>Email:</strong>
+                      <span style={{ marginLeft: "8px" }}>
+                        {currentKoi.account?.email || "-"}
+                      </span>
+                    </div>
+                    <div
+                      style={{
+                        padding: "8px 0",
+                        borderBottom: "1px dashed #f0f0f0",
+                        marginBottom: "8px",
+                      }}
+                    >
+                      <strong style={{ color: "#096dd9" }}>
+                        Số điện thoại:
+                      </strong>
+                      <span style={{ marginLeft: "8px" }}>
+                        {currentKoi.account?.phone || "-"}
+                      </span>
+                    </div>
                     <div
                       style={{
                         padding: "8px 0",
@@ -1081,18 +1350,7 @@ function Registration({ showId, statusShow }) {
                         </span>
                       </div>
                     )}
-                    <div
-                      style={{
-                        padding: "8px 0",
-                        borderBottom: "1px dashed #f0f0f0",
-                        marginBottom: "8px",
-                      }}
-                    >
-                      <strong style={{ color: "#096dd9" }}>Trạng Thái:</strong>
-                      <span style={{ marginLeft: "8px" }}>
-                        {renderStatus(currentKoi.status)}
-                      </span>
-                    </div>
+
                     {currentKoi.status === "rejected" &&
                       currentKoi.rejectedReason && (
                         <div
@@ -1133,7 +1391,7 @@ function Registration({ showId, statusShow }) {
                         <span>Hình Ảnh</span>
                       </div>
                     }
-                    bordered={true}
+                    variant="borderless"
                     style={{
                       boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                       borderRadius: "8px",
@@ -1261,7 +1519,7 @@ function Registration({ showId, statusShow }) {
                         <span>Video</span>
                       </div>
                     }
-                    bordered={true}
+                    variant="borderless"
                     style={{
                       boxShadow: "0 4px 12px rgba(0,0,0,0.08)",
                       borderRadius: "8px",
@@ -1443,7 +1701,7 @@ function Registration({ showId, statusShow }) {
                     .map((media, index) => (
                       <Col xs={24} sm={12} key={`image-${media.id}`}>
                         <Card
-                          bordered={true}
+                          variant="borderless"
                           hoverable
                           style={{
                             borderRadius: "8px",
@@ -1510,7 +1768,7 @@ function Registration({ showId, statusShow }) {
                     .map((media, index) => (
                       <Col xs={24} sm={12} key={`video-${media.id}`}>
                         <Card
-                          bordered={true}
+                          variant="borderless"
                           hoverable
                           style={{
                             borderRadius: "8px",
@@ -1738,12 +1996,43 @@ function Registration({ showId, statusShow }) {
                     pagination={false}
                     rowKey="id"
                     size="small"
-                    bordered={false}
+                    variant="borderless"
                     scroll={{ y: 400 }}
                   />
                 </div>
               </>
             )}
+        </Modal>
+        <Modal
+          title="Hoàn Tiền Hàng Loạt"
+          open={isBatchRefundModalVisible}
+          onCancel={() => {
+            setIsBatchRefundModalVisible(false);
+            setBatchRefundType(null);
+          }}
+          onOk={handleBatchRefund}
+          okText="Xác nhận"
+          cancelText="Hủy"
+          confirmLoading={batchRefundInProgress}
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text>Chọn lý do hoàn tiền:</Typography.Text>
+            <Select
+              style={{ width: "100%", marginTop: 8 }}
+              placeholder="Chọn lý do hoàn tiền"
+              value={batchRefundType}
+              onChange={(value) => setBatchRefundType(value)}
+              options={REFUND_TYPE_OPTIONS}
+            />
+            {registrationsToRefund.length > 0 && (
+              <Alert
+                message={`Sẽ hoàn tiền cho ${registrationsToRefund.length} đăng ký`}
+                type="info"
+                showIcon
+                style={{ marginTop: 16 }}
+              />
+            )}
+          </div>
         </Modal>
       </Card>
     </ConfigProvider>

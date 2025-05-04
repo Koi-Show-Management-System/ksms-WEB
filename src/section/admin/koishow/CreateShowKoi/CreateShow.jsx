@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useRef } from "react";
 import { Button, Form, message, Modal, notification } from "antd";
 import StepOne from "./StepOne";
 import StepTwo from "./StepTwo";
@@ -13,6 +13,7 @@ function CreateShow() {
   const [showErrors, setShowErrors] = useState(false);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const { fetchCreateKoi, isLoading } = useCreateKoi();
+  const stepThreeRef = useRef(null);
   const [formData, setFormData] = useState({
     name: "",
     description: "",
@@ -346,6 +347,79 @@ function CreateShow() {
                 );
                 categoryHasError = true;
               }
+
+              // Kiểm tra số cá qua vòng 2 phải nhỏ hơn số cá qua vòng 1
+              const preliminaryRound = category.createRoundRequests.find(
+                (round) => round.roundType === "Preliminary"
+              );
+              const evaluationRound = category.createRoundRequests.find(
+                (round) =>
+                  round.roundType === "Evaluation" && round.roundOrder === 1
+              );
+
+              if (
+                preliminaryRound &&
+                evaluationRound &&
+                preliminaryRound.numberOfRegistrationToAdvance &&
+                evaluationRound.numberOfRegistrationToAdvance &&
+                evaluationRound.numberOfRegistrationToAdvance >=
+                  preliminaryRound.numberOfRegistrationToAdvance
+              ) {
+                errorDetails.push(
+                  `số cá qua vòng ở vòng 2 (${evaluationRound.numberOfRegistrationToAdvance}) phải nhỏ hơn số cá qua vòng ở vòng 1 (${preliminaryRound.numberOfRegistrationToAdvance})`
+                );
+                categoryHasError = true;
+              }
+
+              // Kiểm tra lại cho mọi cặp vòng liên tiếp (vòng sau phải ít cá hơn vòng trước)
+              const sortedRounds = [...category.createRoundRequests]
+                .filter(
+                  (round) => round.numberOfRegistrationToAdvance !== undefined
+                )
+                .sort((a, b) => {
+                  // Sắp xếp theo thứ tự vòng (Preliminary -> Evaluation -> Final)
+                  const typeOrder = { Preliminary: 1, Evaluation: 2, Final: 3 };
+                  if (typeOrder[a.roundType] !== typeOrder[b.roundType]) {
+                    return typeOrder[a.roundType] - typeOrder[b.roundType];
+                  }
+                  // Nếu cùng loại vòng thì sắp xếp theo roundOrder
+                  return a.roundOrder - b.roundOrder;
+                });
+
+              for (let i = 0; i < sortedRounds.length - 1; i++) {
+                const currentRound = sortedRounds[i];
+                const nextRound = sortedRounds[i + 1];
+
+                if (
+                  currentRound.numberOfRegistrationToAdvance &&
+                  nextRound.numberOfRegistrationToAdvance &&
+                  nextRound.numberOfRegistrationToAdvance >=
+                    currentRound.numberOfRegistrationToAdvance
+                ) {
+                  const currentRoundName = `${
+                    currentRound.roundType === "Preliminary"
+                      ? "Sơ loại"
+                      : currentRound.roundType === "Evaluation"
+                        ? "Đánh giá"
+                        : "Chung kết"
+                  } ${
+                    currentRound.roundOrder > 1 ? currentRound.roundOrder : ""
+                  }`;
+                  const nextRoundName = `${
+                    nextRound.roundType === "Preliminary"
+                      ? "Sơ loại"
+                      : nextRound.roundType === "Evaluation"
+                        ? "Đánh giá"
+                        : "Chung kết"
+                  } ${nextRound.roundOrder > 1 ? nextRound.roundOrder : ""}`;
+
+                  errorDetails.push(
+                    `số cá qua vòng ở vòng ${nextRoundName} (${nextRound.numberOfRegistrationToAdvance}) phải nhỏ hơn số cá qua vòng ở vòng ${currentRoundName} (${currentRound.numberOfRegistrationToAdvance})`
+                  );
+                  categoryHasError = true;
+                  break; // Chỉ hiện một lỗi để tránh quá nhiều thông báo
+                }
+              }
             }
 
             // Kiểm tra trọng tài
@@ -487,15 +561,15 @@ function CreateShow() {
       const { availableStatuses } = formData;
 
       // Kiểm tra số lượng trạng thái
-      if (formData.createShowStatusRequests.length < 10) {
-        notification.error({
-          message: "Thiếu trạng thái",
-          description: "Cần có ít nhất 10 trạng thái cho chương trình",
-          placement: "topRight",
-          duration: 6,
-        });
-        hasError = true;
-      }
+      // if (formData.createShowStatusRequests.length < 10) {
+      //   notification.error({
+      //     message: "Thiếu trạng thái",
+      //     description: "Cần có ít nhất 10 trạng thái cho chương trình",
+      //     placement: "topRight",
+      //     duration: 6,
+      //   });
+      //   hasError = true;
+      // }
 
       // Kiểm tra xem có trạng thái nào chưa được chọn không
       const unselectedStatuses = availableStatuses?.filter(
@@ -541,6 +615,46 @@ function CreateShow() {
           hasError = true;
         }
       }
+
+      // Kiểm tra thời gian các trạng thái có nằm trong khoảng thời gian triển lãm
+      if (formData.startDate && formData.endDate) {
+        const exhibitionStartDate = new Date(formData.startDate);
+        const exhibitionEndDate = new Date(formData.endDate);
+
+        const statusesOutsideExhibition = availableStatuses?.filter(
+          (status) => {
+            // Bỏ qua RegistrationOpen vì có thể diễn ra trước triển lãm
+            if (status.statusName === "RegistrationOpen") return false;
+
+            // Bỏ qua các trạng thái không được chọn hoặc không có ngày
+            if (!status.selected || !status.startDate) return false;
+
+            const startDate = new Date(status.startDate);
+            const endDate = status.endDate ? new Date(status.endDate) : null;
+
+            // Kiểm tra thời gian bắt đầu có nằm trong khoảng thời gian triển lãm
+            const startOutside =
+              startDate < exhibitionStartDate || startDate > exhibitionEndDate;
+
+            // Kiểm tra thời gian kết thúc có nằm trong khoảng thời gian triển lãm (nếu có)
+            const endOutside =
+              endDate &&
+              (endDate < exhibitionStartDate || endDate > exhibitionEndDate);
+
+            return startOutside || endOutside;
+          }
+        );
+
+        if (statusesOutsideExhibition && statusesOutsideExhibition.length > 0) {
+          notification.error({
+            message: "Thời gian trạng thái không hợp lệ",
+            description: `${statusesOutsideExhibition.length} trạng thái có thời gian nằm ngoài khoảng thời gian triển lãm. Thời gian phải nằm trong khoảng thời gian của triển lãm.`,
+            placement: "topRight",
+            duration: 10,
+          });
+          hasError = true;
+        }
+      }
     }
 
     return !hasError;
@@ -569,15 +683,24 @@ function CreateShow() {
       }
     }
 
+    // Lưu rõ trạng thái của dữ liệu hiện tại
+    console.log("Đang lưu dữ liệu trước khi chuyển bước", formData);
+
+    // Cần lưu lại dữ liệu hiện tại trước khi chuyển bước
     if (currentStep === 3) {
+      // Lưu trữ dữ liệu từ StepThree
       setIsConfirmModalOpen(true);
     } else {
+      // Lưu trữ dữ liệu và chuyển đến bước tiếp theo
       setCurrentStep((prev) => prev + 1);
       setShowErrors(false);
     }
   };
 
   const handleQuickNext = () => {
+    // Lưu dữ liệu trước khi chuyển bước tiếp theo
+    console.log("QuickNext: Đang lưu dữ liệu", formData);
+
     if (currentStep === 3) {
       setIsConfirmModalOpen(true);
     } else {
@@ -586,6 +709,9 @@ function CreateShow() {
   };
 
   const handlePrevious = () => {
+    // Lưu trạng thái hiện tại trước khi quay lại
+    console.log("Đang lưu dữ liệu trước khi quay lại bước trước", formData);
+
     setCurrentStep((prev) => Math.max(prev - 1, 1));
     setShowErrors(false);
   };
@@ -605,6 +731,11 @@ function CreateShow() {
 
       if (response?.statusCode === 201) {
         console.log("Success! Status code 201 received");
+
+        // Xóa dữ liệu khỏi localStorage khi đã hoàn tất form
+        if (stepThreeRef.current) {
+          stepThreeRef.current.clearLocalStorage();
+        }
 
         setTimeout(() => {
           navigate("/admin/showList");
@@ -656,6 +787,7 @@ function CreateShow() {
         )}
         {currentStep === 3 && (
           <StepThree
+            ref={stepThreeRef}
             updateFormData={updateFormData}
             initialData={formData}
             showErrors={showErrors}

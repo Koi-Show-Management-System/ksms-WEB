@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   Input,
   Button,
@@ -17,6 +17,7 @@ import {
   Row,
   Col,
   Tooltip,
+  Empty,
 } from "antd";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -49,7 +50,10 @@ dayjs.tz.setDefault("Asia/Ho_Chi_Minh");
 
 const { Title, Text } = Typography;
 
-function StepThree({ updateFormData, initialData, showErrors }) {
+function StepThree({ updateFormData, initialData, showErrors }, ref) {
+  // Ref to track if initial data has been loaded
+  const isInitialDataLoaded = useRef(false);
+
   // Lấy danh sách quy tắc từ initialData
   const [rules, setRules] = useState(initialData.createShowRuleRequests || []);
   const [filteredRules, setFilteredRules] = useState(rules);
@@ -125,74 +129,176 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   };
 
   // Tạo mảng tất cả trạng thái có sẵn
-  const [availableStatuses, setAvailableStatuses] = useState(
-    Object.entries(statusMapping).map(([label, { key, description }]) => ({
-      label,
-      statusName: key,
-      description,
-      startDate: null,
-      endDate: null,
-      selected: true, // Mặc định chọn tất cả trạng thái
-    }))
-  );
+  const [availableStatuses, setAvailableStatuses] = useState(() => {
+    // Trước tiên kiểm tra localStorage xem có dữ liệu đã lưu không
+    const savedStatuses = localStorage.getItem("koishow_statuses");
+    if (savedStatuses) {
+      try {
+        console.log("Khôi phục dữ liệu từ localStorage");
+        const parsedStatuses = JSON.parse(savedStatuses);
+        // Chuyển đổi các chuỗi ngày tháng thành đối tượng dayjs
+        return parsedStatuses.map((status) => ({
+          ...status,
+          startDate: status.startDate ? dayjs(status.startDate) : null,
+          endDate: status.endDate ? dayjs(status.endDate) : null,
+        }));
+      } catch (e) {
+        console.error("Lỗi khôi phục dữ liệu từ localStorage:", e);
+      }
+    }
 
-  // Khởi tạo từ dữ liệu ban đầu nếu có
-  useEffect(() => {
+    // Nếu có dữ liệu sẵn từ initialData.availableStatuses, sử dụng
+    if (initialData.availableStatuses?.length > 0) {
+      console.log("Khởi tạo từ availableStatuses có sẵn");
+      return initialData.availableStatuses.map((status) => ({
+        ...status,
+        startDate: status.startDate ? dayjs(status.startDate) : null,
+        endDate: status.endDate ? dayjs(status.endDate) : null,
+      }));
+    }
+
+    // Nếu có dữ liệu từ createShowStatusRequests, sử dụng để khởi tạo
     if (initialData.createShowStatusRequests?.length > 0) {
-      const updatedStatuses = [...availableStatuses];
+      console.log("Khởi tạo từ createShowStatusRequests có sẵn");
+      // Tạo danh sách cơ bản trước
+      const baseStatuses = Object.entries(statusMapping).map(
+        ([label, { key, description }]) => ({
+          label,
+          statusName: key,
+          description,
+          startDate: null,
+          endDate: null,
+          selected: true,
+        })
+      );
 
+      // Cập nhật từ dữ liệu đã có
       initialData.createShowStatusRequests.forEach((savedStatus) => {
-        const index = updatedStatuses.findIndex(
+        const index = baseStatuses.findIndex(
           (status) => status.statusName === savedStatus.statusName
         );
 
         if (index !== -1) {
-          updatedStatuses[index] = {
-            ...updatedStatuses[index],
+          baseStatuses[index] = {
+            ...baseStatuses[index],
             startDate: savedStatus.startDate
               ? dayjs(savedStatus.startDate)
               : null,
             endDate: savedStatus.endDate ? dayjs(savedStatus.endDate) : null,
-            selected: true,
           };
 
-          // Đảm bảo endDate = startDate + 30 phút cho Finished nếu có startDate
+          // Xử lý riêng cho Finished
           if (
             savedStatus.statusName === "Finished" &&
-            updatedStatuses[index].startDate
+            baseStatuses[index].startDate
           ) {
-            updatedStatuses[index].endDate = updatedStatuses[index].startDate
+            baseStatuses[index].endDate = baseStatuses[index].startDate
               .clone()
               .add(30, "minutes");
           }
         }
       });
 
-      setAvailableStatuses(updatedStatuses);
+      return baseStatuses;
     }
+
+    // Nếu không có dữ liệu sẵn, khởi tạo mặc định
+    console.log("Khởi tạo mặc định các trạng thái");
+    return Object.entries(statusMapping).map(
+      ([label, { key, description }]) => ({
+        label,
+        statusName: key,
+        description,
+        startDate: null,
+        endDate: null,
+        selected: true,
+      })
+    );
+  });
+
+  // Thêm state để theo dõi trạng thái đang được điền
+  const [currentActiveStatusIndex, setCurrentActiveStatusIndex] = useState(0);
+
+  // Lưu vào localStorage mỗi khi availableStatuses thay đổi
+  useEffect(() => {
+    // Chuyển đổi các đối tượng dayjs thành chuỗi để có thể lưu trong localStorage
+    const statusesToSave = availableStatuses.map((status) => ({
+      ...status,
+      startDate: status.startDate ? status.startDate.format() : null,
+      endDate: status.endDate ? status.endDate.format() : null,
+    }));
+
+    localStorage.setItem("koishow_statuses", JSON.stringify(statusesToSave));
+    console.log("Đã lưu trạng thái vào localStorage");
+  }, [availableStatuses]);
+
+  // Xóa dữ liệu khỏi localStorage khi component unmount
+  useEffect(() => {
+    return () => {
+      // Không xóa dữ liệu để có thể truy cập lại sau này
+      // localStorage.removeItem('koishow_statuses');
+    };
   }, []);
 
-  // Reset tất cả trạng thái khi thời gian triển lãm thay đổi
+  // Lưu các giá trị trước đó của thời gian triển lãm để so sánh
+  const prevExhibitionStartDate = useRef(null);
+  const prevExhibitionEndDate = useRef(null);
+
+  // Reset tất cả trạng thái KHI VÀ CHỈ KHI thời gian triển lãm thực sự thay đổi
   useEffect(() => {
-    // Bỏ qua lần chạy đầu tiên khi component mount
+    // Chỉ reset khi thời gian triển lãm thay đổi và có giá trị
     if (!exhibitionStartDate || !exhibitionEndDate) {
       return;
     }
 
-    // Reset tất cả các trạng thái về null
-    const resetStatuses = availableStatuses.map((status) => ({
-      ...status,
-      startDate: null,
-      endDate: null,
-    }));
+    // Chuyển đổi sang chuỗi để so sánh
+    const currentStartStr = exhibitionStartDate.format();
+    const currentEndStr = exhibitionEndDate.format();
 
-    // Hiển thị thông báo cho người dùng
-    message.info(
-      "Thời gian triển lãm đã thay đổi. Vui lòng cài đặt lại thời gian cho các trạng thái."
-    );
+    // So sánh với giá trị trước đó
+    if (
+      prevExhibitionStartDate.current === currentStartStr &&
+      prevExhibitionEndDate.current === currentEndStr
+    ) {
+      // Không có thay đổi thực sự, bỏ qua
+      return;
+    }
 
-    setAvailableStatuses(resetStatuses);
-  }, [exhibitionStartDate?.format(), exhibitionEndDate?.format()]);
+    // Chỉ khi lần đầu khởi tạo, đừng hiển thị thông báo và không reset
+    if (
+      prevExhibitionStartDate.current === null &&
+      prevExhibitionEndDate.current === null
+    ) {
+      // Lưu giá trị hiện tại để so sánh lần sau
+      prevExhibitionStartDate.current = currentStartStr;
+      prevExhibitionEndDate.current = currentEndStr;
+      return;
+    }
+
+    // Có thay đổi thực sự, lưu giá trị mới
+    prevExhibitionStartDate.current = currentStartStr;
+    prevExhibitionEndDate.current = currentEndStr;
+
+    // Hiển thị thông báo xác nhận trước khi reset
+    Modal.confirm({
+      title: "Thời gian triển lãm đã thay đổi",
+      content:
+        "Bạn có muốn cài đặt lại tất cả thời gian cho các trạng thái không?",
+      okText: "Đồng ý",
+      cancelText: "Không",
+      onOk: () => {
+        // Reset tất cả các trạng thái về null
+        const resetStatuses = availableStatuses.map((status) => ({
+          ...status,
+          startDate: null,
+          endDate: null,
+        }));
+
+        setAvailableStatuses(resetStatuses);
+        message.success("Đã reset tất cả thời gian cho các trạng thái.");
+      },
+    });
+  }, [exhibitionStartDate, exhibitionEndDate]);
 
   // Cập nhật form data mỗi khi có thay đổi
   useEffect(() => {
@@ -240,6 +346,13 @@ function StepThree({ updateFormData, initialData, showErrors }) {
         : null,
     }));
 
+    console.log("Đang cập nhật dữ liệu form từ StepThree", {
+      rulesCount: rules.length,
+      selectedStatusesCount: selectedStatuses.length,
+      availableStatusesCount: formattedAvailableStatuses.length,
+    });
+
+    // Luôn cập nhật để đảm bảo dữ liệu được lưu đúng cách
     updateFormData({
       createShowRuleRequests: rules,
       createShowStatusRequests: selectedStatuses,
@@ -247,7 +360,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
     });
 
     setFilteredRules(rules);
-  }, [rules, availableStatuses]);
+  }, [rules, availableStatuses]); // Depend directly on availableStatuses để lưu mỗi khi có thay đổi
 
   // Lọc danh sách theo search
   useEffect(() => {
@@ -315,11 +428,108 @@ function StepThree({ updateFormData, initialData, showErrors }) {
     return;
   };
 
-  // Cập nhật ngày cho trạng thái
+  // Kiểm tra xem trạng thái có được điền hay không
+  const isStatusEnabled = (index) => {
+    // Luôn cho phép điền trạng thái đầu tiên (RegistrationOpen)
+    if (index === 0) return true;
+
+    // Định nghĩa thứ tự các trạng thái
+    const statusOrder = {
+      RegistrationOpen: 1,
+      KoiCheckIn: 2,
+      TicketCheckIn: 3,
+      Preliminary: 4,
+      Evaluation: 5,
+      Final: 6,
+      Exhibition: 7,
+      PublicResult: 8,
+      Award: 9,
+      Finished: 10,
+    };
+
+    // Lấy trạng thái trước đó dựa trên thứ tự
+    const prevStatus = availableStatuses.find(
+      (status) =>
+        statusOrder[status.statusName] ===
+        statusOrder[availableStatuses[index].statusName] - 1
+    );
+
+    // Nếu không tìm thấy trạng thái trước, cho phép điền
+    if (!prevStatus) return true;
+
+    // Kiểm tra xem trạng thái trước đã có đầy đủ thông tin chưa
+    const isPrevComplete =
+      prevStatus.startDate &&
+      (prevStatus.statusName === "Finished" || prevStatus.endDate);
+
+    return isPrevComplete;
+  };
+
+  // Khi một trạng thái được điền xong, tự động chuyển sang trạng thái tiếp theo
+  useEffect(() => {
+    const findNextIncompleteStatusIndex = () => {
+      // Định nghĩa thứ tự các trạng thái
+      const statusOrder = {
+        RegistrationOpen: 1,
+        KoiCheckIn: 2,
+        TicketCheckIn: 3,
+        Preliminary: 4,
+        Evaluation: 5,
+        Final: 6,
+        Exhibition: 7,
+        PublicResult: 8,
+        Award: 9,
+        Finished: 10,
+      };
+
+      // Sắp xếp lại availableStatuses theo thứ tự
+      const sortedStatuses = [...availableStatuses].sort(
+        (a, b) => statusOrder[a.statusName] - statusOrder[b.statusName]
+      );
+
+      // Tìm trạng thái tiếp theo cần điền
+      for (let i = 0; i < sortedStatuses.length; i++) {
+        const status = sortedStatuses[i];
+        const isComplete =
+          status.startDate &&
+          (status.statusName === "Finished" || status.endDate);
+
+        if (!isComplete) {
+          return availableStatuses.findIndex(
+            (s) => s.statusName === status.statusName
+          );
+        }
+      }
+
+      // Nếu tất cả đã hoàn thành, trả về trạng thái đầu tiên
+      return 0;
+    };
+
+    // Tìm index của status không hoàn chỉnh tiếp theo
+    const nextIndex = findNextIncompleteStatusIndex();
+
+    // Chỉ cập nhật nếu cần thiết để tránh vòng lặp vô hạn
+    if (nextIndex !== currentActiveStatusIndex) {
+      setCurrentActiveStatusIndex(nextIndex);
+    }
+  }, [availableStatuses]);
+
+  // Cập nhật hàm handleDateChange để kiểm tra nếu trạng thái được phép điền
   const handleDateChange = (index, dateType, value) => {
+    // Kiểm tra xem trạng thái có được phép điền không
+    if (!isStatusEnabled(index)) {
+      message.warning("Bạn phải điền xong trạng thái trước đó trước");
+      return;
+    }
+
     const updatedStatuses = [...availableStatuses];
     const currentStatus = updatedStatuses[index];
     const statusName = currentStatus.statusName;
+
+    console.log(
+      `Đang cập nhật ${dateType} cho ${statusName}:`,
+      value ? value.format() : "null"
+    );
 
     // Nếu đang set giá trị null hoặc undefined, cập nhật và return luôn
     if (!value) {
@@ -530,6 +740,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
 
     // Cập nhật giá trị cho trạng thái hiện tại
     updatedStatuses[index][dateType] = value;
+    console.log(`Đã cập nhật ${dateType} cho ${statusName}`);
 
     setAvailableStatuses(updatedStatuses);
   };
@@ -692,6 +903,21 @@ function StepThree({ updateFormData, initialData, showErrors }) {
     setNewRule({ ...newRule, title: value });
   };
 
+  // Xóa dữ liệu khỏi localStorage khi form đã hoàn tất
+  const clearLocalStorage = () => {
+    localStorage.removeItem("koishow_statuses");
+    console.log("Đã xóa dữ liệu trạng thái khỏi localStorage");
+  };
+
+  // Xuất hàm clearLocalStorage để component cha có thể gọi khi cần
+  React.useImperativeHandle(
+    ref,
+    () => ({
+      clearLocalStorage,
+    }),
+    []
+  );
+
   return (
     <div>
       <style>{timezoneCss}</style>
@@ -724,6 +950,15 @@ function StepThree({ updateFormData, initialData, showErrors }) {
       )}
       <List
         dataSource={filteredRules}
+        locale={{
+          emptyText: (
+            <Empty
+              description="Không có dữ liệu"
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              style={{ margin: "24px 0" }}
+            />
+          ),
+        }}
         renderItem={(rule, index) => (
           <List.Item className="bg-white shadow-sm rounded-lg p-3 mb-3 border border-gray-200 flex justify-between items-center hover:shadow-md transition-all">
             <div className="w-full mx-4">
@@ -875,6 +1110,11 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                   backgroundColor: getStatusColor(status.statusName),
                   borderRadius: "8px",
                   boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+                  opacity: isStatusEnabled(index) ? 1 : 0.7,
+                  border:
+                    currentActiveStatusIndex === index
+                      ? "2px solid #1890ff"
+                      : "",
                 }}
               >
                 {status.statusName === "Finished" ? (
@@ -885,7 +1125,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       </label>
                       <DatePicker
                         className="w-full"
-                        disabled={!status.selected}
+                        disabled={!status.selected || !isStatusEnabled(index)}
                         value={status.startDate}
                         onChange={(value) =>
                           handleDateChange(index, "startDate", value)
@@ -927,7 +1167,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       </label>
                       <TimePicker
                         className="w-full"
-                        disabled={!status.startDate}
+                        disabled={!status.selected || !isStatusEnabled(index)}
                         value={status.startDate}
                         onChange={(value) => {
                           if (value && status.startDate) {
@@ -1002,11 +1242,6 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         format="HH:mm"
                         placeholder="Chọn giờ"
                         popupClassName="timezone-popup"
-                        renderExtraFooter={() => (
-                          <div className="text-xs text-gray-500 text-right">
-                            Thời gian sẽ tự động kết thúc sau 30 phút
-                          </div>
-                        )}
                         allowClear={true}
                         disabledTime={(selectedHour) => {
                           const disabledHours = [];
@@ -1048,7 +1283,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       <DatePicker
                         showTime={{ defaultValue: null }}
                         className="w-full"
-                        disabled={!status.selected}
+                        disabled={!status.selected || !isStatusEnabled(index)}
                         value={status.startDate}
                         onChange={(value) =>
                           handleDateChange(index, "startDate", value)
@@ -1079,7 +1314,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       <DatePicker
                         showTime={{ defaultValue: null }}
                         className="w-full"
-                        disabled={!status.selected}
+                        disabled={!status.selected || !isStatusEnabled(index)}
                         value={status.endDate}
                         onChange={(value) =>
                           handleDateChange(index, "endDate", value)
@@ -1119,7 +1354,7 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                       </label>
                       <DatePicker
                         className="w-full"
-                        disabled={!status.selected}
+                        disabled={!status.selected || !isStatusEnabled(index)}
                         value={status.startDate}
                         onChange={(value) => {
                           // Chỉ cập nhật ngày, KHÔNG tự động thêm giờ 00:00
@@ -1197,7 +1432,9 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         </label>
                         <TimePicker
                           className="w-full"
-                          disabled={!status.startDate}
+                          disabled={
+                            !status.startDate || !isStatusEnabled(index)
+                          }
                           value={status.startDate}
                           onChange={(value) => {
                             if (value && status.startDate) {
@@ -1295,7 +1532,9 @@ function StepThree({ updateFormData, initialData, showErrors }) {
                         </label>
                         <TimePicker
                           className="w-full"
-                          disabled={!status.startDate}
+                          disabled={
+                            !status.startDate || !isStatusEnabled(index)
+                          }
                           value={status.endDate}
                           onChange={(value) => {
                             if (value && status.startDate) {
@@ -1399,4 +1638,4 @@ function StepThree({ updateFormData, initialData, showErrors }) {
   );
 }
 
-export default StepThree;
+export default React.forwardRef(StepThree);

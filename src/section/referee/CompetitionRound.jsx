@@ -15,7 +15,7 @@ import {
   Typography,
   Descriptions,
   List,
-  Card,
+  Card as AntCard,
   Empty,
   Collapse,
   Steps,
@@ -368,18 +368,22 @@ function CompetitionRound({ showId }) {
         <Step title="Xem kết quả" icon={<PercentageOutlined />} />
       </Steps>
 
-      <Card className="overflow-hidden mb-6">
-        <div className="mb-4">
-          <div className="flex flex-wrap md:flex-nowrap items-end gap-2">
-            <div className="w-full md:w-1/3">
-              <div className="text-lg font-medium mb-2">Hạng Mục:</div>
+      <AntCard className="shadow-sm mb-6">
+        <Row gutter={[16, 16]} className="mb-2">
+          <Col xs={24} sm={8}>
+            <div>
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Hạng Mục:
+              </Text>
               <Select
                 placeholder="Chọn hạng mục"
                 onChange={handleCategoryChange}
                 allowClear
                 value={categoryId}
                 loading={categoryLoading}
-                className="w-full"
+                className="w-full rounded-md"
+                size="large"
+                suffixIcon={<AimOutlined />}
               >
                 {categories &&
                   categories.map((category) => (
@@ -389,69 +393,77 @@ function CompetitionRound({ showId }) {
                   ))}
               </Select>
             </div>
+          </Col>
 
-            {categoryId && (
-              <div className="w-full md:w-1/3">
-                <div className="text-lg font-medium mb-2">Loại Vòng:</div>
-                <Select
-                  value={selectedRoundType}
-                  onChange={handleRoundTypeChange}
-                  className="w-full"
-                  placeholder={roundLoading ? "Đang tải..." : "Chọn vòng thi"}
-                  loading={roundLoading}
-                  disabled={!categoryId}
-                >
-                  {refereeRoundTypes &&
-                    // Sắp xếp các loại vòng theo thứ tự ưu tiên: Preliminary -> Evaluation -> Final
-                    [...refereeRoundTypes]
-                      .sort((a, b) => {
-                        const order = {
-                          Preliminary: 1,
-                          Evaluation: 2,
-                          Final: 3,
-                        };
-                        return (order[a] || 99) - (order[b] || 99);
-                      })
-                      .map((roundType) => (
-                        <Option key={roundType} value={roundType}>
-                          {roundTypeLabels[roundType] || roundType}
-                        </Option>
-                      ))}
-                </Select>
-              </div>
-            )}
-
-            {selectedRoundType && (
-              <div className="w-full md:w-1/3">
-                <div className="text-lg font-medium mb-2">Vòng:</div>
-                <Select
-                  value={selectedSubRound}
-                  onChange={handleSubRoundChange}
-                  className="w-full"
-                  placeholder="Chọn vòng"
-                  disabled={!selectedRoundType}
-                >
-                  {subRounds
+          <Col xs={24} sm={8}>
+            <div>
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Loại Vòng:
+              </Text>
+              <Select
+                value={selectedRoundType}
+                onChange={handleRoundTypeChange}
+                className="w-full rounded-md"
+                placeholder={roundLoading ? "Đang tải..." : "Chọn vòng thi"}
+                loading={roundLoading}
+                disabled={!categoryId}
+                size="large"
+                suffixIcon={<TrophyOutlined />}
+              >
+                {refereeRoundTypes &&
+                  // Sắp xếp các loại vòng theo thứ tự ưu tiên: Preliminary -> Evaluation -> Final
+                  [...refereeRoundTypes]
                     .sort((a, b) => {
-                      if (
-                        a.roundOrder !== undefined &&
-                        b.roundOrder !== undefined
-                      ) {
-                        return a.roundOrder - b.roundOrder;
-                      }
-                      return (a.name || "").localeCompare(b.name || "");
+                      const order = {
+                        Preliminary: 1,
+                        Evaluation: 2,
+                        Final: 3,
+                      };
+                      return (order[a] || 99) - (order[b] || 99);
                     })
-                    .map((subRound) => (
-                      <Option key={subRound.id} value={subRound.id}>
-                        {subRound.name}
+                    .map((roundType) => (
+                      <Option key={roundType} value={roundType}>
+                        {roundTypeLabels[roundType] || roundType}
                       </Option>
                     ))}
-                </Select>
-              </div>
-            )}
-          </div>
-        </div>
-      </Card>
+              </Select>
+            </div>
+          </Col>
+
+          <Col xs={24} sm={8}>
+            <div>
+              <Text strong className="block text-base mb-2 text-gray-700">
+                Vòng:
+              </Text>
+              <Select
+                value={selectedSubRound}
+                onChange={handleSubRoundChange}
+                className="w-full rounded-md"
+                placeholder="Chọn vòng"
+                disabled={!selectedRoundType}
+                size="large"
+                suffixIcon={<TrophyOutlined />}
+              >
+                {subRounds
+                  .sort((a, b) => {
+                    if (
+                      a.roundOrder !== undefined &&
+                      b.roundOrder !== undefined
+                    ) {
+                      return a.roundOrder - b.roundOrder;
+                    }
+                    return (a.name || "").localeCompare(b.name || "");
+                  })
+                  .map((subRound) => (
+                    <Option key={subRound.id} value={subRound.id}>
+                      {subRound.name}
+                    </Option>
+                  ))}
+              </Select>
+            </div>
+          </Col>
+        </Row>
+      </AntCard>
 
       <div className="overflow-x-auto">
         <Table
@@ -508,7 +520,7 @@ function CompetitionRound({ showId }) {
                   dataSource={scoreDetails.data}
                   renderItem={(scoreItem) => (
                     <List.Item>
-                      <Card
+                      <AntCard
                         title={
                           <div className="flex justify-between items-center">
                             <span>Điểm số của trọng tài</span>
@@ -703,7 +715,7 @@ function CompetitionRound({ showId }) {
                         ) : (
                           <Empty description="Không có chi tiết đánh giá" />
                         )}
-                      </Card>
+                      </AntCard>
                     </List.Item>
                   )}
                 />
@@ -715,7 +727,7 @@ function CompetitionRound({ showId }) {
         )}
       </Drawer>
 
-      <style jsx="true" global>{`
+      <style>{`
         .custom-steps .ant-steps-item-icon {
           background: #f0f7ff;
           border-color: #1890ff;

@@ -44,6 +44,13 @@ const { Panel } = Collapse;
 dayjs.extend(utc);
 dayjs.extend(timezone);
 
+// Thêm constants cho validation
+const MAX_NAME_LENGTH = 100;
+const MAX_SIZE = 100;
+const MAX_REGISTRATION_FEE = 10000000; // 10 million VND
+const MAX_ENTRIES = 1000;
+const MAX_PRIZE_VALUE = 100000000000; // 100 billion VND
+
 function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const { currentCategory, getCategoryDetail, updateCategory, isLoading } =
     useCategory();
@@ -72,6 +79,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   const [awardErrors, setAwardErrors] = useState({});
   const [evaluationOneNumber, setEvaluationOneNumber] = useState(1);
   const [evaluationTwoNumber, setEvaluationTwoNumber] = useState(1);
+  const [roundsErrors, setRoundsErrors] = useState({});
 
   const referee = (accountManage.referees || []).filter(
     (r) => r.status === "active"
@@ -160,39 +168,74 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       const values = await form.validateFields();
       const formData = form.getFieldsValue(true);
 
-      // Validate field limits
-      if (values.name && values.name.length > 100) {
-        message.error("Tên hạng mục không được vượt quá 100 ký tự!");
+      // Validate tên hạng mục
+      if (values.name && values.name.length > MAX_NAME_LENGTH) {
+        message.error(
+          `Tên hạng mục không được vượt quá ${MAX_NAME_LENGTH} ký tự!`
+        );
         setActiveTab("1");
         return;
       }
 
-      if (values.sizeMin > 100) {
-        message.error("Kích thước tối thiểu không được vượt quá 100cm!");
+      // Validate kích thước
+      if (
+        values.sizeMin &&
+        values.sizeMax &&
+        parseFloat(values.sizeMin) >= parseFloat(values.sizeMax)
+      ) {
+        message.error("Kích thước tối thiểu phải nhỏ hơn kích thước tối đa!");
         setActiveTab("1");
         return;
       }
 
-      if (values.sizeMax > 100) {
-        message.error("Kích thước tối đa không được vượt quá 100cm!");
+      if (values.sizeMin > MAX_SIZE) {
+        message.error(
+          `Kích thước tối thiểu không được vượt quá ${MAX_SIZE}cm!`
+        );
         setActiveTab("1");
         return;
       }
 
-      if (values.registrationFee > 10000000) {
-        message.error("Phí đăng ký không được vượt quá 10 triệu VND!");
+      if (values.sizeMax > MAX_SIZE) {
+        message.error(`Kích thước tối đa không được vượt quá ${MAX_SIZE}cm!`);
         setActiveTab("1");
         return;
       }
 
-      if (values.minEntries > 1000) {
-        message.error("Số lượng tham gia tối thiểu không được vượt quá 1000!");
+      // Validate phí đăng ký
+      if (values.registrationFee > MAX_REGISTRATION_FEE) {
+        message.error(
+          `Phí đăng ký không được vượt quá ${MAX_REGISTRATION_FEE.toLocaleString("vi-VN")} VND (10 triệu)!`
+        );
         setActiveTab("1");
         return;
       }
 
-      if (values.maxEntries > 1000) {
-        message.error("Số lượng tham gia tối đa không được vượt quá 1000!");
+      // Validate số lượng tham gia
+      if (
+        values.minEntries &&
+        values.maxEntries &&
+        parseInt(values.minEntries) > parseInt(values.maxEntries)
+      ) {
+        message.error(
+          "Số lượng tham gia tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa!"
+        );
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.minEntries > MAX_ENTRIES) {
+        message.error(
+          `Số lượng tham gia tối thiểu không được vượt quá ${MAX_ENTRIES}!`
+        );
+        setActiveTab("1");
+        return;
+      }
+
+      if (values.maxEntries > MAX_ENTRIES) {
+        message.error(
+          `Số lượng tham gia tối đa không được vượt quá ${MAX_ENTRIES}!`
+        );
         setActiveTab("1");
         return;
       }
@@ -285,6 +328,25 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           return round;
         });
         formData.rounds = updatedRounds;
+      }
+
+      // Validate số cá qua vòng
+      if (evaluationOneNumber < 1) {
+        message.error("Số cá qua vòng Đánh Giá 1 phải từ 1 trở lên");
+        setActiveTab("2");
+        return;
+      }
+
+      if (evaluationTwoNumber < 1) {
+        message.error("Số cá qua vòng Đánh Giá 2 phải từ 1 trở lên");
+        setActiveTab("2");
+        return;
+      }
+
+      if (evaluationTwoNumber >= evaluationOneNumber) {
+        message.error("Số cá qua vòng Đánh Giá 2 phải nhỏ hơn vòng Đánh Giá 1");
+        setActiveTab("2");
+        return;
       }
 
       const updatePayload = {
@@ -475,10 +537,52 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   // Handle adding a new award
   const handleAddAward = () => {
     const currentAwards = form.getFieldValue("awards") || [];
+
+    // Kiểm tra số lượng giải thưởng đã có
+    const hasFirst = currentAwards.some((award) => award.awardType === "first");
+    const hasSecond = currentAwards.some(
+      (award) => award.awardType === "second"
+    );
+    const hasThird = currentAwards.some((award) => award.awardType === "third");
+    const hasHonorable = currentAwards.some(
+      (award) => award.awardType === "honorable"
+    );
+
+    // Nếu đã có đủ 4 loại giải thưởng thì không cho thêm nữa
+    if (hasFirst && hasSecond && hasThird && hasHonorable) {
+      message.warning(
+        "Đã có đủ 4 loại giải thưởng (Nhất, Nhì, Ba, Khuyến Khích). Không thể thêm giải thưởng mới."
+      );
+      return;
+    }
+
+    // Xác định loại giải thưởng tiếp theo được phép thêm
+    let nextAwardType = "";
+    let nextAwardName = "";
+
+    if (!hasFirst) {
+      nextAwardType = "first";
+      nextAwardName = "Giải Nhất";
+    } else if (!hasSecond) {
+      nextAwardType = "second";
+      nextAwardName = "Giải Nhì";
+    } else if (!hasThird) {
+      nextAwardType = "third";
+      nextAwardName = "Giải Ba";
+    } else if (!hasHonorable) {
+      nextAwardType = "honorable";
+      nextAwardName = "Giải Khuyến Khích";
+    }
+
     form.setFieldsValue({
       awards: [
         ...currentAwards,
-        { name: "", awardType: "", prizeValue: "", description: "" },
+        {
+          name: nextAwardName,
+          awardType: nextAwardType,
+          prizeValue: "",
+          description: "",
+        },
       ],
     });
     setEditingAwardIndex(currentAwards.length);
@@ -487,9 +591,58 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
   // Handle removing an award by award field name
   const handleRemoveAward = (fieldName) => {
     const currentAwards = form.getFieldValue("awards") || [];
+    const awardToRemove = currentAwards[fieldName];
+
+    // Không có giải thưởng để xóa hoặc không tìm thấy giải
+    if (!awardToRemove) {
+      return;
+    }
+
+    let updatedAwards = [...currentAwards];
+    let indicesToDelete = [fieldName]; // Mặc định xóa giải được chọn
+
+    // Xác định chỉ số của các giải theo loại
+    const firstIndex = updatedAwards.findIndex((a) => a.awardType === "first");
+    const secondIndex = updatedAwards.findIndex(
+      (a) => a.awardType === "second"
+    );
+    const thirdIndex = updatedAwards.findIndex((a) => a.awardType === "third");
+    const honorableIndex = updatedAwards.findIndex(
+      (a) => a.awardType === "honorable"
+    );
+
+    if (awardToRemove.awardType === "first") {
+      // Xóa tất cả các giải thưởng
+      message.info("Xóa giải Nhất sẽ xóa tất cả các giải thưởng");
+      updatedAwards = [];
+    } else if (awardToRemove.awardType === "second") {
+      // Xóa giải Nhì và tất cả giải thấp hơn
+      message.info("Xóa giải Nhì sẽ xóa cả giải Ba và Khuyến Khích (nếu có)");
+      if (thirdIndex !== -1) indicesToDelete.push(thirdIndex);
+      if (honorableIndex !== -1) indicesToDelete.push(honorableIndex);
+
+      // Lọc giữ lại những giải không nằm trong danh sách cần xóa
+      updatedAwards = updatedAwards.filter(
+        (_, index) => !indicesToDelete.includes(index)
+      );
+    } else if (awardToRemove.awardType === "third") {
+      // Xóa giải Ba và Khuyến Khích
+      message.info("Xóa giải Ba sẽ xóa cả giải Khuyến Khích (nếu có)");
+      if (honorableIndex !== -1) indicesToDelete.push(honorableIndex);
+
+      // Lọc giữ lại những giải không nằm trong danh sách cần xóa
+      updatedAwards = updatedAwards.filter(
+        (_, index) => !indicesToDelete.includes(index)
+      );
+    } else {
+      // Xóa chỉ giải Khuyến Khích
+      updatedAwards = updatedAwards.filter((_, index) => index !== fieldName);
+    }
+
     form.setFieldsValue({
-      awards: currentAwards.filter((_, i) => i !== fieldName),
+      awards: updatedAwards,
     });
+
     setEditingAwardIndex(null);
   };
 
@@ -880,8 +1033,10 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       return;
     }
 
-    if (value > 100000000000) {
-      message.error("Giá trị giải thưởng không được vượt quá 100 tỷ VND!");
+    if (value > MAX_PRIZE_VALUE) {
+      message.error(
+        `Giá trị giải thưởng không được vượt quá ${MAX_PRIZE_VALUE.toLocaleString("vi-VN")} VND (100 tỷ)!`
+      );
       return;
     }
 
@@ -1082,6 +1237,39 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     form.setFieldsValue({ rounds });
   };
 
+  // Thêm hàm xử lý khi thay đổi số cá qua vòng 1
+  const handleEvaluationOneNumberChange = (value) => {
+    setEvaluationOneNumber(value);
+
+    // Kiểm tra tính hợp lệ của vòng 2 khi cập nhật vòng 1
+    if (evaluationTwoNumber >= value) {
+      const newRoundsErrors = { ...roundsErrors };
+      newRoundsErrors.evaluationTwo = `Số cá qua vòng ở vòng 2 (${evaluationTwoNumber}) phải nhỏ hơn số cá qua vòng ở vòng 1 (${value})`;
+      setRoundsErrors(newRoundsErrors);
+    } else {
+      // Xóa lỗi nếu hợp lệ
+      const newRoundsErrors = { ...roundsErrors };
+      delete newRoundsErrors.evaluationTwo;
+      setRoundsErrors(newRoundsErrors);
+    }
+  };
+
+  // Thay đổi hàm setEvaluationTwoNumber để kiểm tra giá trị nhập vào
+  const handleEvaluationTwoNumberChange = (value) => {
+    // Kiểm tra giá trị so với vòng 1
+    if (value >= evaluationOneNumber) {
+      const newRoundsErrors = { ...roundsErrors };
+      newRoundsErrors.evaluationTwo = `Số cá qua vòng ở vòng 2 (${value}) phải nhỏ hơn số cá qua vòng ở vòng 1 (${evaluationOneNumber})`;
+      setRoundsErrors(newRoundsErrors);
+    } else {
+      // Xóa lỗi nếu hợp lệ
+      const newRoundsErrors = { ...roundsErrors };
+      delete newRoundsErrors.evaluationTwo;
+      setRoundsErrors(newRoundsErrors);
+    }
+    setEvaluationTwoNumber(value);
+  };
+
   return (
     <Modal
       open={true}
@@ -1121,14 +1309,14 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                         message: "Vui lòng nhập tên hạng mục",
                       },
                       {
-                        max: 100,
-                        message: "Tên hạng mục không được vượt quá 100 ký tự!",
+                        max: MAX_NAME_LENGTH,
+                        message: `Tên hạng mục không được vượt quá ${MAX_NAME_LENGTH} ký tự!`,
                       },
                     ]}
                   >
                     <Input
                       placeholder="Nhập tên hạng mục"
-                      maxLength={100}
+                      maxLength={MAX_NAME_LENGTH}
                       showCount
                     />
                   </Form.Item>
@@ -1161,6 +1349,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                   <Form.Item
                     name="sizeMin"
                     label="Kích thước tối thiểu (cm)"
+                    dependencies={["sizeMax"]}
                     rules={[
                       {
                         required: true,
@@ -1168,15 +1357,29 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       },
                       {
                         type: "number",
-                        max: 100,
-                        message:
-                          "Kích thước tối thiểu không được vượt quá 100cm!",
+                        max: MAX_SIZE,
+                        message: `Kích thước tối thiểu không được vượt quá ${MAX_SIZE}cm!`,
+                      },
+                      {
+                        validator: (_, value) => {
+                          const sizeMax = form.getFieldValue("sizeMax");
+                          if (
+                            value &&
+                            sizeMax &&
+                            parseFloat(value) >= parseFloat(sizeMax)
+                          ) {
+                            return Promise.reject(
+                              "Kích thước tối thiểu phải nhỏ hơn kích thước tối đa"
+                            );
+                          }
+                          return Promise.resolve();
+                        },
                       },
                     ]}
                   >
                     <InputNumber
                       min={0}
-                      max={100}
+                      max={MAX_SIZE}
                       className="w-full"
                       placeholder="Nhập kích thước tối thiểu"
                     />
@@ -1186,6 +1389,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                   <Form.Item
                     name="sizeMax"
                     label="Kích thước tối đa (cm)"
+                    dependencies={["sizeMin"]}
                     rules={[
                       {
                         required: true,
@@ -1193,14 +1397,29 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       },
                       {
                         type: "number",
-                        max: 100,
-                        message: "Kích thước tối đa không được vượt quá 100cm!",
+                        max: MAX_SIZE,
+                        message: `Kích thước tối đa không được vượt quá ${MAX_SIZE}cm!`,
+                      },
+                      {
+                        validator: (_, value) => {
+                          const sizeMin = form.getFieldValue("sizeMin");
+                          if (
+                            value &&
+                            sizeMin &&
+                            parseFloat(value) <= parseFloat(sizeMin)
+                          ) {
+                            return Promise.reject(
+                              "Kích thước tối đa phải lớn hơn kích thước tối thiểu"
+                            );
+                          }
+                          return Promise.resolve();
+                        },
                       },
                     ]}
                   >
                     <InputNumber
                       min={0}
-                      max={100}
+                      max={MAX_SIZE}
                       className="w-full"
                       placeholder="Nhập kích thước tối đa"
                     />
@@ -1210,18 +1429,33 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                   <Form.Item
                     name="minEntries"
                     label="Số lượng tham gia tối thiểu"
+                    dependencies={["maxEntries"]}
                     rules={[
                       {
                         type: "number",
-                        max: 1000,
-                        message:
-                          "Số lượng tham gia tối thiểu không được vượt quá 1000!",
+                        max: MAX_ENTRIES,
+                        message: `Số lượng tham gia tối thiểu không được vượt quá ${MAX_ENTRIES}!`,
+                      },
+                      {
+                        validator: (_, value) => {
+                          const maxEntries = form.getFieldValue("maxEntries");
+                          if (
+                            value &&
+                            maxEntries &&
+                            parseInt(value) > parseInt(maxEntries)
+                          ) {
+                            return Promise.reject(
+                              "Số lượng tối thiểu phải nhỏ hơn hoặc bằng số lượng tối đa"
+                            );
+                          }
+                          return Promise.resolve();
+                        },
                       },
                     ]}
                   >
                     <InputNumber
                       min={1}
-                      max={1000}
+                      max={MAX_ENTRIES}
                       className="w-full"
                       placeholder="Nhập số lượng tối thiểu"
                     />
@@ -1231,18 +1465,33 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                   <Form.Item
                     name="maxEntries"
                     label="Số lượng tham gia tối đa"
+                    dependencies={["minEntries"]}
                     rules={[
                       {
                         type: "number",
-                        max: 1000,
-                        message:
-                          "Số lượng tham gia tối đa không được vượt quá 1000!",
+                        max: MAX_ENTRIES,
+                        message: `Số lượng tham gia tối đa không được vượt quá ${MAX_ENTRIES}!`,
+                      },
+                      {
+                        validator: (_, value) => {
+                          const minEntries = form.getFieldValue("minEntries");
+                          if (
+                            value &&
+                            minEntries &&
+                            parseInt(value) < parseInt(minEntries)
+                          ) {
+                            return Promise.reject(
+                              "Số lượng tối đa phải lớn hơn hoặc bằng số lượng tối thiểu"
+                            );
+                          }
+                          return Promise.resolve();
+                        },
                       },
                     ]}
                   >
                     <InputNumber
                       min={1}
-                      max={1000}
+                      max={MAX_ENTRIES}
                       className="w-full"
                       placeholder="Nhập số lượng tối đa"
                     />
@@ -1255,15 +1504,24 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                     rules={[
                       {
                         type: "number",
-                        max: 10000000,
-                        message:
-                          "Phí đăng ký không được vượt quá 10 triệu VND!",
+                        max: MAX_REGISTRATION_FEE,
+                        message: `Phí đăng ký không được vượt quá ${MAX_REGISTRATION_FEE.toLocaleString("vi-VN")} VND (10 triệu)!`,
+                      },
+                      {
+                        validator: (_, value) => {
+                          if (value && value < 0) {
+                            return Promise.reject(
+                              "Phí đăng ký không được nhỏ hơn 0"
+                            );
+                          }
+                          return Promise.resolve();
+                        },
                       },
                     ]}
                   >
                     <InputNumber
                       min={0}
-                      max={10000000}
+                      max={MAX_REGISTRATION_FEE}
                       placeholder="Nhập phí tham gia"
                       className="w-full"
                       formatter={(value) =>
@@ -1333,7 +1591,7 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                               placeholder="Tối thiểu 1 cá"
                               value={evaluationOneNumber}
                               onChange={(value) =>
-                                setEvaluationOneNumber(value)
+                                handleEvaluationOneNumberChange(value)
                               }
                               style={{ width: "100%" }}
                             />
@@ -1358,13 +1616,19 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                               placeholder="Tối thiểu 1 cá"
                               value={evaluationTwoNumber}
                               onChange={(value) =>
-                                setEvaluationTwoNumber(value)
+                                handleEvaluationTwoNumberChange(value)
                               }
                               style={{ width: "100%" }}
                             />
+                            {roundsErrors.evaluationTwo && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {roundsErrors.evaluationTwo}
+                              </p>
+                            )}
                             {showErrors &&
                               (!evaluationTwoNumber ||
-                                evaluationTwoNumber < 1) && (
+                                evaluationTwoNumber < 1) &&
+                              !roundsErrors.evaluationTwo && (
                                 <p className="text-red-500 text-xs mt-1">
                                   Số cá qua vòng phải từ 1 trở lên.
                                 </p>
@@ -1525,16 +1789,15 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                                     },
                                     {
                                       type: "number",
-                                      max: 100000000000,
-                                      message:
-                                        "Giá trị giải thưởng không được vượt quá 100 tỷ VND!",
+                                      max: MAX_PRIZE_VALUE,
+                                      message: `Giá trị giải thưởng không được vượt quá ${MAX_PRIZE_VALUE.toLocaleString("vi-VN")} VND (100 tỷ)!`,
                                     },
                                   ]}
                                 >
                                   <InputNumber
                                     placeholder="Nhập giá trị (VND)"
                                     min={0}
-                                    max={100000000000}
+                                    max={MAX_PRIZE_VALUE}
                                     formatter={(value) =>
                                       `${value}`.replace(
                                         /\B(?=(\d{3})+(?!\d))/g,

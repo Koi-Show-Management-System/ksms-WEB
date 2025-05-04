@@ -98,6 +98,11 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       }
 
       setParticipantErrors(newParticipantErrors);
+
+      // Initialize uploadedImages from imgUrl if it exists
+      if (initialData.imgUrl) {
+        setUploadedImages([initialData.imgUrl]);
+      }
     }
   }, [initialData]); // Chỉ phụ thuộc vào initialData
 
@@ -133,6 +138,15 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     fetchAccountTeam(1, 100);
   }, []);
 
+  // Initialize uploadedImages on mount if imgUrl exists
+  useEffect(() => {
+    console.log("Component mounted, initialData imgUrl:", initialData.imgUrl);
+    if (initialData.imgUrl) {
+      console.log("Setting uploadedImages with:", initialData.imgUrl);
+      setUploadedImages([initialData.imgUrl]);
+    }
+  }, []);
+
   useEffect(() => {
     // Kiểm tra và cập nhật lại thông báo lỗi khi data thay đổi
     if (data.minParticipants && data.maxParticipants) {
@@ -151,11 +165,15 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
   const handleImageUpload = async ({ fileList }) => {
     try {
-      const uploadedImages = await Promise.all(
-        fileList.map(async (file) => {
-          if (file.url) {
-            return file.url;
-          }
+      const newUploadedImages = [...uploadedImages]; // Start with existing images
+
+      // Process only new files (ones without a url)
+      const newFiles = fileList.filter(
+        (file) => !file.url && file.originFileObj
+      );
+
+      if (newFiles.length > 0) {
+        for (const file of newFiles) {
           if (file.originFileObj) {
             const formData = new FormData();
             formData.append("file", file.originFileObj);
@@ -176,26 +194,30 @@ function StepOne({ updateFormData, initialData, showErrors }) {
               throw new Error(data.error.message || "Image upload failed");
             }
 
-            return data.secure_url;
+            newUploadedImages.push(data.secure_url);
           }
-          return null;
-        })
-      );
+        }
 
-      const filteredImages = uploadedImages.filter((url) => url !== null);
+        // Set the images for display
+        setUploadedImages(newUploadedImages);
 
-      // Store the images for display
-      setUploadedImages(filteredImages);
+        // Set the first image as the imgUrl
+        if (newUploadedImages.length > 0) {
+          setData((prevData) => ({
+            ...prevData,
+            imgUrl: newUploadedImages[0],
+          }));
+        }
 
-      // Set the first image as the imgUrl (since it should be a string)
-      if (filteredImages.length > 0) {
+        message.success("Ảnh đã được tải lên thành công!");
+      } else if (fileList.length === 0) {
+        // User removed all images
+        setUploadedImages([]);
         setData((prevData) => ({
           ...prevData,
-          imgUrl: filteredImages[0], // Use the first image as the imgUrl
+          imgUrl: "",
         }));
       }
-
-      message.success("Ảnh đã được tải lên thành công!");
     } catch (error) {
       console.error("Error uploading images:", error);
       message.error("Lỗi khi tải ảnh lên!");
@@ -703,12 +725,16 @@ function StepOne({ updateFormData, initialData, showErrors }) {
         <Upload
           accept=".jpg,.jpeg,.png"
           listType="picture-card"
-          fileList={uploadedImages.map((url, index) => ({
-            uid: index.toString(),
-            name: `image-${index}`,
-            status: "done",
-            url,
-          }))}
+          fileList={
+            uploadedImages.length > 0
+              ? uploadedImages.map((url, index) => ({
+                  uid: `-${index}`,
+                  name: `image-${index}.jpg`,
+                  status: "done",
+                  url: url,
+                }))
+              : []
+          }
           onChange={handleImageUpload}
           multiple
         >
@@ -722,13 +748,6 @@ function StepOne({ updateFormData, initialData, showErrors }) {
             Hình ảnh chương trình là bắt buộc.{" "}
           </p>
         )}
-        {/* {data.imgUrl && (
-          <div className="mt-2">
-            <p className="text-sm text-gray-500">
-              Selected image URL: {data.imgUrl}
-            </p>
-          </div>
-        )} */}
       </div>
 
       {/* Phần Sponsor Requests */}

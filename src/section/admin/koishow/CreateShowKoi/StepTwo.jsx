@@ -77,6 +77,8 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   const [awardErrors, setAwardErrors] = useState({});
   // Thêm state để quản lý lỗi cho tên hạng mục
   const [categoryNameErrors, setCategoryNameErrors] = useState({});
+  // Thêm state để quản lý lỗi cho số cá qua vòng
+  const [roundsErrors, setRoundsErrors] = useState({});
 
   const referee = (accountManage.referees || []).filter(
     (r) => r.status === "active"
@@ -369,15 +371,47 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
   };
 
   const handleRemoveAward = (categoryIndex, awardIndex) => {
+    const currentAwards =
+      categories[categoryIndex]?.createAwardCateShowRequests || [];
+    const awardToRemove = currentAwards[awardIndex];
+
+    // Không có giải thưởng để xóa hoặc không tìm thấy giải
+    if (!awardToRemove) {
+      return;
+    }
+
+    // Dựa vào loại giải cần xóa, xác định những giải nào cần xóa theo
+    let updatedAwards = [...currentAwards];
+
+    if (awardToRemove.awardType === "first") {
+      // Nếu xóa giải Nhất, xóa tất cả các giải
+      message.info("Xóa giải Nhất sẽ xóa tất cả các giải thưởng");
+      updatedAwards = [];
+    } else if (awardToRemove.awardType === "second") {
+      // Nếu xóa giải Nhì, xóa cả giải Ba và Khuyến khích
+      message.info("Xóa giải Nhì sẽ xóa cả giải Ba và Khuyến Khích (nếu có)");
+      // Giữ lại giải Nhất, xóa tất cả giải Nhì, Ba, và Khuyến khích
+      updatedAwards = updatedAwards.filter(
+        (award) => award.awardType === "first"
+      );
+    } else if (awardToRemove.awardType === "third") {
+      // Nếu xóa giải Ba, xóa cả giải Khuyến khích
+      message.info("Xóa giải Ba sẽ xóa cả giải Khuyến Khích (nếu có)");
+      // Giữ lại giải Nhất và Nhì, xóa tất cả giải Ba và Khuyến khích
+      updatedAwards = updatedAwards.filter(
+        (award) => award.awardType === "first" || award.awardType === "second"
+      );
+    } else {
+      // Nếu xóa giải Khuyến khích, chỉ xóa nó
+      updatedAwards = updatedAwards.filter((_, i) => i !== awardIndex);
+    }
+
     setCategories((prevCategories) =>
       prevCategories.map((category, i) =>
         i === categoryIndex
           ? {
               ...category,
-              createAwardCateShowRequests:
-                category.createAwardCateShowRequests.filter(
-                  (_, j) => j !== awardIndex
-                ),
+              createAwardCateShowRequests: updatedAwards,
             }
           : category
       )
@@ -640,14 +674,29 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
       prevCategories.map((category, i) => {
         if (i !== categoryIndex) return category; // Chỉ cập nhật đúng hạng mục đang chọn
 
+        // Lấy danh sách trọng tài hiện tại
+        const currentReferees = category.createRefereeAssignmentRequests || [];
+
+        // Tìm các trọng tài cần giữ lại (đã có trong danh sách mới)
+        const keepReferees = currentReferees.filter((referee) =>
+          selectedReferees.includes(referee.refereeAccountId)
+        );
+
+        // Tìm các trọng tài mới cần thêm (có trong danh sách mới nhưng chưa có trong danh sách cũ)
+        const newRefereeIds = selectedReferees.filter(
+          (refereeId) =>
+            !currentReferees.some((ref) => ref.refereeAccountId === refereeId)
+        );
+
+        // Tạo các đối tượng trọng tài mới
+        const newReferees = newRefereeIds.map((refereeId) => ({
+          refereeAccountId: refereeId,
+          roundTypes: [], // Mỗi trọng tài mới có danh sách vòng rỗng
+        }));
+
         return {
           ...category,
-          createRefereeAssignmentRequests: selectedReferees.map(
-            (refereeId) => ({
-              refereeAccountId: refereeId,
-              roundTypes: [], // Mỗi trọng tài có danh sách vòng riêng
-            })
-          ),
+          createRefereeAssignmentRequests: [...keepReferees, ...newReferees],
         };
       })
     );
@@ -1581,6 +1630,36 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                         ? null
                                         : parseInt(e.target.value, 10);
                                     if (e.target.value === "" || value >= 1) {
+                                      // Kiểm tra số cá vòng 2 phải nhỏ hơn vòng 1
+                                      const round1Value = getRound(
+                                        category,
+                                        "Evaluation",
+                                        1
+                                      )?.numberOfRegistrationToAdvance;
+
+                                      // Cập nhật state lỗi
+                                      const newRoundsErrors = {
+                                        ...roundsErrors,
+                                      };
+                                      if (!newRoundsErrors[index]) {
+                                        newRoundsErrors[index] = {};
+                                      }
+
+                                      if (
+                                        value &&
+                                        round1Value &&
+                                        value >= round1Value
+                                      ) {
+                                        newRoundsErrors[index].round2 =
+                                          `Số cá qua vòng ở vòng 2 (${value}) phải nhỏ hơn số cá qua vòng ở vòng 1 (${round1Value})`;
+                                      } else {
+                                        // Xóa lỗi nếu hợp lệ
+                                        if (newRoundsErrors[index]) {
+                                          newRoundsErrors[index].round2 = "";
+                                        }
+                                      }
+                                      setRoundsErrors(newRoundsErrors);
+
                                       updateRound(
                                         index,
                                         "Evaluation",
@@ -1591,6 +1670,11 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                     }
                                   }}
                                 />
+                                {roundsErrors[index]?.round2 && (
+                                  <p className="text-red-500 text-xs mt-1">
+                                    {roundsErrors[index].round2}
+                                  </p>
+                                )}
                                 {showErrors &&
                                   (!getRound(category, "Evaluation", 2)
                                     ?.numberOfRegistrationToAdvance ||
