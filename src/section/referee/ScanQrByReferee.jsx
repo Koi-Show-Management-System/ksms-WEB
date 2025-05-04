@@ -541,7 +541,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                         <>
                           Số lượng cá vượt qua vòng sơ khảo phải{" "}
                           <span className="font-semibold text-red-700">
-                            nhiều hơn ít nhất 10 con
+                            nhiều hơn {numberRegisToAdvance} cá
                           </span>{" "}
                           so với số lượng cá được chọn ở vòng đánh giá chính là{" "}
                           <strong>{numberRegisToAdvance} cá</strong>, nhằm đảm

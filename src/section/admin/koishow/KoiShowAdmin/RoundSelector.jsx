@@ -26,12 +26,26 @@ const RoundSelector = forwardRef(
     useImperativeHandle(ref, () => ({
       reset: () => {
         setSelectedRound(null);
+        // Không reset selectedCategory nếu categoryId được truyền từ props
         if (!categoryId) {
           setSelectedCategory(null);
         }
         // Thông báo cho component cha rằng không có vòng nào được chọn
         if (onRoundSelect) {
           onRoundSelect(null, "");
+        }
+      },
+      // Thêm method để cập nhật category
+      updateCategory: (newCategoryId) => {
+        if (newCategoryId) {
+          setSelectedCategory(newCategoryId);
+          setSelectedRound(null);
+          // Fetch rounds for the new category
+          fetchRound(newCategoryId, "Preliminary", 1, 100);
+          // Thông báo cho component cha rằng không có vòng nào được chọn
+          if (onRoundSelect) {
+            onRoundSelect(null, "");
+          }
         }
       },
     }));

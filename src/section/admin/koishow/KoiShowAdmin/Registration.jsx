@@ -259,6 +259,11 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         setIsAssignModalVisible(true);
         clearSelectedRegistrations();
 
+        // Đảm bảo RoundSelector đang sử dụng đúng category
+        if (roundSelectorRef.current) {
+          roundSelectorRef.current.updateCategory(selectedCategory);
+        }
+
         notification.success({
           message: "Đã lấy dữ liệu",
           description: `Đã tìm thấy ${checkedInFish.length} đăng ký đã check-in`,
@@ -327,9 +332,9 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       }
     });
 
-    // Reset lại roundSelector nếu đang có
+    // Cập nhật category trong RoundSelector thay vì chỉ reset
     if (roundSelectorRef.current) {
-      roundSelectorRef.current.reset();
+      roundSelectorRef.current.updateCategory(categoryId);
     }
   };
 
@@ -382,6 +387,25 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       notification.warning({
         message: "Chưa chọn đăng ký",
         description: "Vui lòng chọn ít nhất một đăng ký để gán vòng",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    // Kiểm tra xem các registration có cùng hạng mục với round hiện tại không
+    const selectedRegs = checkinRegistrations.filter((reg) =>
+      selectedRegistrations.includes(reg.id)
+    );
+
+    // Nếu có registration thuộc hạng mục khác với hạng mục đang chọn, hiển thị cảnh báo
+    const invalidRegs = selectedRegs.filter(
+      (reg) => reg.competitionCategory?.id !== selectedCategory
+    );
+
+    if (invalidRegs.length > 0) {
+      notification.error({
+        message: "Lỗi hạng mục không khớp",
+        description: `Có ${invalidRegs.length} đăng ký thuộc hạng mục khác với hạng mục đang chọn. Vui lòng kiểm tra lại.`,
         placement: "topRight",
       });
       return;

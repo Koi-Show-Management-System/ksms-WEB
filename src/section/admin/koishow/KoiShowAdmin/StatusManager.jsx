@@ -353,7 +353,7 @@ const StatusManager = ({
           const prevStatus = editingStatuses[prevStatusName];
           if (value.isBefore(prevStatus.endDate)) {
             message.error(
-              `Thời gian bắt đầu phải sau thời gian kết thúc của ${
+              `Thời gian bắt đầu phải sau hoặc bằng thời gian kết thúc của ${
                 statusMapping[prevStatusName]?.label || prevStatusName
               }`
             );
@@ -403,7 +403,7 @@ const StatusManager = ({
           const nextStatus = editingStatuses[nextStatusName];
           if (value.isAfter(nextStatus.startDate)) {
             message.error(
-              `Thời gian kết thúc phải trước thời gian bắt đầu của ${
+              `Thời gian kết thúc phải trước hoặc bằng thời gian bắt đầu của ${
                 statusMapping[nextStatusName]?.label || nextStatusName
               }`
             );
@@ -513,7 +513,7 @@ const StatusManager = ({
             errors.push(
               `Ngày bắt đầu của ${translateStatus(
                 nextStatusName
-              )} phải sau ngày kết thúc của ${translateStatus(
+              )} phải sau hoặc bằng ngày kết thúc của ${translateStatus(
                 currentStatusName
               )}`
             );
@@ -1386,10 +1386,11 @@ const StatusManager = ({
                                                 selectedHour ===
                                                   prevStatus.endDate.hour()
                                               ) {
-                                                // Vô hiệu hóa tất cả các phút TRƯỚC VÀ BẰNG phút kết thúc của trạng thái trước
+                                                // Vô hiệu hóa tất cả các phút TRƯỚC phút kết thúc của trạng thái trước
+                                                // Cho phép chọn cùng phút kết thúc
                                                 for (
                                                   let i = 0;
-                                                  i <=
+                                                  i <
                                                   prevStatus.endDate.minute();
                                                   i++
                                                 ) {
@@ -1561,7 +1562,7 @@ const StatusManager = ({
                                                 )
                                               ) {
                                                 message.error(
-                                                  `Thời gian kết thúc phải trước thời gian bắt đầu của ${
+                                                  `Thời gian kết thúc phải trước hoặc bằng thời gian bắt đầu của ${
                                                     statusMapping[
                                                       nextStatusName
                                                     ]?.label || nextStatusName
@@ -1651,10 +1652,11 @@ const StatusManager = ({
                                                 selectedHour ===
                                                   nextStatus.startDate.hour()
                                               ) {
-                                                // Vô hiệu hóa tất cả các phút SAU VÀ BẰNG phút bắt đầu của trạng thái tiếp theo
+                                                // Vô hiệu hóa tất cả các phút SAU phút bắt đầu của trạng thái tiếp theo
                                                 for (
                                                   let i =
-                                                    nextStatus.startDate.minute();
+                                                    nextStatus.startDate.minute() +
+                                                    1;
                                                   i < 60;
                                                   i++
                                                 ) {

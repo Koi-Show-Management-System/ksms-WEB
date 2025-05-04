@@ -44,8 +44,8 @@ export const getFinalColumns = (props) => {
       ),
       sorter: (a, b) => {
         // Handle null/undefined values for sorting
-        const rankA = a.registration?.rank || Number.MAX_VALUE;
-        const rankB = b.registration?.rank || Number.MAX_VALUE;
+        const rankA = a.rank || Number.MAX_VALUE;
+        const rankB = b.rank || Number.MAX_VALUE;
         return rankA - rankB;
       },
     },

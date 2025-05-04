@@ -558,15 +558,6 @@ function CompetitionRound({ showId }) {
         index: index + 1 + (currentPage - 1) * pageSize,
       }));
 
-      // Kiểm tra xem có điểm đã công khai chưa
-      const hasPublishedScores = dataWithIndex.some(
-        (item) =>
-          item.roundResults &&
-          item.roundResults.length > 0 &&
-          item.roundResults[0]?.totalScore !== undefined &&
-          item.roundResults[0]?.isPublic === true
-      );
-
       // Sort by total score first (descending order - higher scores first)
       const sortedData = dataWithIndex.sort((a, b) => {
         // First sort by total score if available (for Evaluation and Final rounds)
@@ -581,46 +572,19 @@ function CompetitionRound({ showId }) {
 
         // If both have scores, sort by score (descending)
         if (scoreA >= 0 && scoreB >= 0) {
-          if (scoreA !== scoreB) return scoreB - scoreA;
+          return scoreB - scoreA; // Higher scores first
         }
 
-        // If scores are equal or not available, sort by rank
-        const rankA = a.registration?.rank || Number.MAX_VALUE;
-        const rankB = b.registration?.rank || Number.MAX_VALUE;
-        if (rankA !== rankB) return rankA - rankB;
+        // If one has a score and the other doesn't, prioritize the one with a score
+        if (scoreA >= 0 && scoreB < 0) return -1;
+        if (scoreA < 0 && scoreB >= 0) return 1;
 
-        // If ranks are equal or not available, sort by registration number
+        // If neither has scores, fall back to registration number for consistent sorting
         const regNumA = a.registration?.registrationNumber || "";
         const regNumB = b.registration?.registrationNumber || "";
         return regNumA.localeCompare(regNumB);
       });
 
-      // Nếu đã có điểm công khai, tính toán thứ hạng dựa trên điểm số
-      if (hasPublishedScores) {
-        // Tạo một bản sao để sắp xếp theo điểm
-        const rankedData = [...sortedData];
-
-        // Gán thứ hạng dựa trên vị trí sau khi sắp xếp
-        let currentRank = 1;
-        let previousScore = null;
-
-        rankedData.forEach((item, index) => {
-          const score = item.roundResults && item.roundResults[0]?.totalScore;
-
-          // Nếu điểm khác với điểm trước đó, tăng thứ hạng
-          if (score !== previousScore) {
-            currentRank = index + 1;
-          }
-
-          // Gán thứ hạng mới
-          item.calculatedRank = currentRank;
-          previousScore = score;
-        });
-
-        return rankedData;
-      }
-
-      // Nếu chưa có điểm công khai, trả về dữ liệu đã sắp xếp nhưng không tính thứ hạng
       return sortedData;
     }
     return [];
@@ -1154,8 +1118,8 @@ function CompetitionRound({ showId }) {
         ),
         sorter: (a, b) => {
           // Handle null/undefined values for sorting
-          const rankA = a.registration?.rank || Number.MAX_VALUE;
-          const rankB = b.registration?.rank || Number.MAX_VALUE;
+          const rankA = a.rank || Number.MAX_VALUE;
+          const rankB = b.rank || Number.MAX_VALUE;
           return rankA - rankB;
         },
       },
