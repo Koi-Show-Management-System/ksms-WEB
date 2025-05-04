@@ -30,7 +30,12 @@ jobs:
 
   deploy-client:
     name: Deploy Client
-    runs-on: self-hosted
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      matrix:
+        runner: ["nhatsang", "azure"]       
+      # Run deployments in parallel
+      fail-fast: false
     timeout-minutes: 15
     needs: build-client
     env:
