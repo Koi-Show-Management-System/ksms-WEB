@@ -447,15 +447,6 @@ function Votes({ showId }) {
 
       // Cập nhật state của votes trong store
       const updated = updateLocalVoteCount(registrationId, newVoteCount);
-      console.log("Local update successful:", updated);
-
-      // Hiển thị thông báo
-      notification.info({
-        message: "Có bình chọn mới",
-        description: `${votes[voteIndex].koiName || votes[voteIndex].registrationNumber} vừa nhận được một phiếu bầu mới!`,
-        placement: "bottomRight",
-        duration: 3,
-      });
 
       // Xóa highlight sau 5 giây
       setTimeout(() => {
