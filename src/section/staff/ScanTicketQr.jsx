@@ -91,8 +91,6 @@ function ScanTicketQr() {
           );
         }
       } catch (error) {
-    
-
         // Simplify error handling to match ScanQr.jsx pattern
         setErrorTicket(
           error?.response?.data?.Error ||
@@ -406,8 +404,33 @@ function ScanTicketQr() {
                   <div className="mt-3">
                     <Text type="secondary">Thời gian:</Text>
                     <div className="font-semibold">
-                      {new Date(ticketInfo.showStartDate).toLocaleDateString()}{" "}
-                      - {new Date(ticketInfo.showEndDate).toLocaleDateString()}
+                      {(() => {
+                        const startDate = new Date(ticketInfo.showStartDate);
+                        const endDate = new Date(ticketInfo.showEndDate);
+
+                        const formatDate = (date) => {
+                          const day = date
+                            .getDate()
+                            .toString()
+                            .padStart(2, "0");
+                          const month = (date.getMonth() + 1)
+                            .toString()
+                            .padStart(2, "0");
+                          const year = date.getFullYear();
+                          const hours = date
+                            .getHours()
+                            .toString()
+                            .padStart(2, "0");
+                          const minutes = date
+                            .getMinutes()
+                            .toString()
+                            .padStart(2, "0");
+
+                          return `${day}/${month}/${year} ${hours}:${minutes}`;
+                        };
+
+                        return `${formatDate(startDate)} - ${formatDate(endDate)}`;
+                      })()}
                     </div>
                   </div>
                 </Card>
@@ -420,23 +443,19 @@ function ScanTicketQr() {
                   Thông tin liên hệ
                 </Title>
                 <div className="mb-3">
+                  <Text type="secondary">Họ và tên:</Text>
+                  <div className="font-semibold">{ticketInfo.fullName}</div>
+                </div>
+                <div className="mb-3">
                   <Text type="secondary">Email:</Text>
                   <div className="font-semibold">{ticketInfo.email}</div>
                 </div>
-                {ticketInfo.phone && (
-                  <div className="mb-3">
-                    <Text type="secondary">Số điện thoại:</Text>
-                    <div className="font-semibold">{ticketInfo.phone}</div>
+                <div className="mb-3">
+                  <Text type="secondary">Số điện thoại:</Text>
+                  <div className="font-semibold">
+                    {ticketInfo.phone || "N/A"}
                   </div>
-                )}
-                {ticketInfo.checkInLocation && (
-                  <div className="mb-3">
-                    <Text type="secondary">Địa điểm check-in:</Text>
-                    <div className="font-semibold">
-                      {ticketInfo.checkInLocation}
-                    </div>
-                  </div>
-                )}
+                </div>
               </Card>
             </Col>
           </Row>
