@@ -108,6 +108,7 @@ function KoiShowDetail() {
   const [activeTabKey, setActiveTabKey] = useState("category");
   const [cancelledCategoryIds, setCancelledCategoryIds] = useState([]);
   const { categories, fetchCategories } = useCategory();
+  const [votesComponent, setVotesComponent] = useState(null);
 
   const statusMapping = {
     RegistrationOpen: { label: "Có Thể Đăng Ký", color: "blue" },
@@ -161,6 +162,11 @@ function KoiShowDetail() {
     if (id) {
       getCancelledCategories();
     }
+  }, [id]);
+
+  useEffect(() => {
+    // Pre-render Votes component to keep it mounted
+    setVotesComponent(<Votes showId={id} />);
   }, [id]);
 
   // Function to open edit modal
@@ -466,97 +472,114 @@ function KoiShowDetail() {
     );
   }
 
-  const renderTabContent = (key) => {
-    if (key !== activeTabKey) return null;
-
-    switch (key) {
-      case "category":
-        return (
+  const items = [
+    {
+      key: "category",
+      label: "Hạng Mục",
+      children: (
+        <div
+          style={{ display: activeTabKey === "category" ? "block" : "none" }}
+        >
           <Category
             showId={id}
             statusShow={showStatus}
             onCategoryCancel={handleCategoryCancel}
           />
-        );
-      case "koiList":
-        return (
+        </div>
+      ),
+    },
+    {
+      key: "koiList",
+      label: "Đơn Đăng Ký",
+      children: (
+        <div style={{ display: activeTabKey === "koiList" ? "block" : "none" }}>
           <Registration
             showId={id}
             statusShow={koiShowDetail.data.status}
             cancelledCategoryIds={cancelledCategoryIds}
           />
-        );
-      case "ticket":
-        return <Ticket showId={id} statusShow={koiShowDetail.data.status} />;
-      case "manageShow":
-        return <ManageShow showId={id} />;
-      case "tank":
-        return <Tank showId={id} />;
-      case "competitionRound":
-        return <CompetitionRound showId={id} />;
-      case "roundResult":
-        return <RoundResult showId={id} />;
-      case "votes":
-        return <Votes showId={id} />;
-      case "rules":
-        return <Rules showId={id} showRule={showRule} />;
-      case "sponsor":
-        return <Sponsor showId={id} />;
-      default:
-        return null;
-    }
-  };
-
-  const items = [
-    {
-      key: "category",
-      label: "Hạng Mục",
-      children: renderTabContent("category"),
-    },
-    {
-      key: "koiList",
-      label: "Đơn Đăng Ký",
-      children: renderTabContent("koiList"),
+        </div>
+      ),
     },
     {
       key: "ticket",
       label: "Quản lý vé",
-      children: renderTabContent("ticket"),
+      children: (
+        <div style={{ display: activeTabKey === "ticket" ? "block" : "none" }}>
+          <Ticket showId={id} statusShow={koiShowDetail.data.status} />
+        </div>
+      ),
     },
     {
       key: "manageShow",
       label: "Quản Lý Triển Lãm",
-      children: renderTabContent("manageShow"),
+      children: (
+        <div
+          style={{ display: activeTabKey === "manageShow" ? "block" : "none" }}
+        >
+          <ManageShow showId={id} />
+        </div>
+      ),
     },
     {
       key: "tank",
       label: "Quản Lý Bể",
-      children: renderTabContent("tank"),
+      children: (
+        <div style={{ display: activeTabKey === "tank" ? "block" : "none" }}>
+          <Tank showId={id} />
+        </div>
+      ),
     },
     {
       key: "competitionRound",
       label: "Vòng Thi",
-      children: renderTabContent("competitionRound"),
+      children: (
+        <div
+          style={{
+            display: activeTabKey === "competitionRound" ? "block" : "none",
+          }}
+        >
+          <CompetitionRound showId={id} />
+        </div>
+      ),
     },
     {
       key: "roundResult",
       label: "Kết Quả Cuối Cùng",
-      children: renderTabContent("roundResult"),
+      children: (
+        <div
+          style={{ display: activeTabKey === "roundResult" ? "block" : "none" }}
+        >
+          <RoundResult showId={id} />
+        </div>
+      ),
     },
     {
       key: "votes",
       label: "Bình Chọn",
-      children: renderTabContent("votes"),
+      children: (
+        <div style={{ display: activeTabKey === "votes" ? "block" : "none" }}>
+          {votesComponent}
+        </div>
+      ),
     },
     {
       key: "rules",
       label: "Quy Tắc",
-      children: renderTabContent("rules"),
+      children: (
+        <div style={{ display: activeTabKey === "rules" ? "block" : "none" }}>
+          <Rules showId={id} showRule={showRule} />
+        </div>
+      ),
     },
     {
       key: "sponsor",
       label: "Tài Trợ",
-      children: renderTabContent("sponsor"),
+      children: (
+        <div style={{ display: activeTabKey === "sponsor" ? "block" : "none" }}>
+          <Sponsor showId={id} />
+        </div>
+      ),
     },
   ];
 

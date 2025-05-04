@@ -175,7 +175,11 @@ function RoundResult({ showId }) {
       title: "Điểm",
       dataIndex: "finalScore",
       key: "finalScore",
-      render: (score) => score.toFixed(2),
+      render: (score) => (
+        <Tag color="blue" style={{ fontWeight: "bold" }}>
+          {score.toFixed(2)}
+        </Tag>
+      ),
       sorter: (a, b) => a.finalScore - b.finalScore,
     },
     {
@@ -313,7 +317,9 @@ function RoundResult({ showId }) {
                         </Typography.Paragraph>
                         <Typography.Paragraph>
                           <strong>Điểm số cuối cùng:</strong>{" "}
-                          {currentKoi.finalScore.toFixed(2)}
+                          <Tag color="blue" style={{ fontWeight: "bold" }}>
+                            {currentKoi.finalScore.toFixed(2)}
+                          </Tag>
                         </Typography.Paragraph>
                         <Typography.Paragraph>
                           <strong>Giải thưởng:</strong>{" "}

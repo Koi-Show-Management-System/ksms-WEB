@@ -19,6 +19,7 @@ import {
   Col,
   Typography,
   Empty,
+  Spin,
 } from "antd";
 import {
   EyeOutlined,
@@ -323,6 +324,8 @@ function Votes({ showId }) {
   const isDisablingRef = useRef(false);
   const [prevSortedOrder, setPrevSortedOrder] = useState([]);
   const [mediaModalVisible, setMediaModalVisible] = useState(false);
+  const [enableVoteLoading, setEnableVoteLoading] = useState(false);
+  const [disableVoteLoading, setDisableVoteLoading] = useState(false);
 
   const {
     votes,
@@ -563,6 +566,7 @@ function Votes({ showId }) {
     }
 
     try {
+      setEnableVoteLoading(true);
       // Tính thời gian kết thúc dựa trên số phút
       const finalEndTime = moment().add(customMinutes, "minutes");
 
@@ -596,6 +600,8 @@ function Votes({ showId }) {
         description: "Lỗi khi bật bình chọn",
         placement: "topRight",
       });
+    } finally {
+      setEnableVoteLoading(false);
     }
   };
 
@@ -603,6 +609,7 @@ function Votes({ showId }) {
     try {
       // Đánh dấu đang trong quá trình tắt
       isDisablingRef.current = true;
+      setDisableVoteLoading(true);
 
       await UpdateDisableVoting(showId);
 
@@ -625,8 +632,8 @@ function Votes({ showId }) {
         placement: "topRight",
       });
     } finally {
-      // Luôn reset flag khi hoàn thành
       isDisablingRef.current = false;
+      setDisableVoteLoading(false);
     }
   };
 
@@ -748,6 +755,7 @@ function Votes({ showId }) {
           type="primary"
           icon={<CheckCircleOutlined />}
           onClick={showEnableModal}
+          loading={enableVoteLoading}
         >
           Bật bình chọn
         </Button>
@@ -802,8 +810,13 @@ function Votes({ showId }) {
         <Space>{renderVotingControls()}</Space>
       </div>
 
-      {/* Hiển thị thông báo khi không có dữ liệu */}
-      {!votes || votes.length === 0 ? (
+      {/* Loading state for the entire component */}
+      {loading ? (
+        <div className="flex justify-center items-center py-20">
+          <Spin size="large" tip="Đang tải dữ liệu bình chọn..." />
+        </div>
+      ) : /* Hiển thị thông báo khi không có dữ liệu */
+      !votes || votes.length === 0 ? (
         <div className="text-center py-8">
           <Empty description="Không có dữ liệu bình chọn" />
         </div>
@@ -1185,6 +1198,7 @@ function Votes({ showId }) {
         cancelText="Hủy"
         maskClosable={true}
         keyboard={true}
+        confirmLoading={enableVoteLoading}
       >
         <Form layout="vertical">
           <Form.Item label="Số phút bình chọn">
