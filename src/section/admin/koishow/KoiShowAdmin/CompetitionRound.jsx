@@ -836,6 +836,11 @@ function CompetitionRound({ showId }) {
   const ScoreDetailsTab = () => {
     console.log("Rendering ScoreDetailsTab with data:", scoreDataDetail);
 
+    // Check if it's a preliminary round and return early with a message
+    if (selectedRoundType === "Preliminary") {
+      return <Empty description="Vòng sơ khảo không có chi tiết điểm số" />;
+    }
+
     if (scoreDetailLoading) {
       return <Skeleton active paragraph={{ rows: 6 }} />;
     }
@@ -2160,7 +2165,7 @@ function CompetitionRound({ showId }) {
                           </p>
                           {result.totalScore && (
                             <p>
-                              <strong>Điểm số:</strong>
+                              <strong>Điểm số: {""}</strong>
                               <Tag
                                 color="blue"
                                 style={{

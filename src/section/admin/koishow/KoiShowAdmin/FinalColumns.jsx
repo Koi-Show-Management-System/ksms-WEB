@@ -126,7 +126,7 @@ export const getFinalColumns = (props) => {
         return (
           <Tooltip title="Điểm tổng">
             <Tag color="blue" style={{ fontSize: "14px", fontWeight: "bold" }}>
-              {totalScore.toFixed(1)}
+              {totalScore.toFixed(2)}
             </Tag>
           </Tooltip>
         );
