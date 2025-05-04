@@ -838,7 +838,9 @@ function CompetitionRound({ showId }) {
 
     // Check if it's a preliminary round and return early with a message
     if (selectedRoundType === "Preliminary") {
-      return <Empty description="Vòng sơ khảo không có chi tiết điểm số" />;
+      return (
+        <Empty description="Vòng sơ khảo chỉ có kết quả đạt hoặc không đạt" />
+      );
     }
 
     if (scoreDetailLoading) {
@@ -2163,21 +2165,22 @@ function CompetitionRound({ showId }) {
                               ? new Date(result.createdAt).toLocaleString()
                               : "—"}
                           </p>
-                          {result.totalScore && (
-                            <p>
-                              <strong>Điểm số: {""}</strong>
-                              <Tag
-                                color="blue"
-                                style={{
-                                  fontSize: "14px",
-                                  fontWeight: "bold",
-                                  marginRight: "5px",
-                                }}
-                              >
-                                {result.totalScore}
-                              </Tag>
-                            </p>
-                          )}
+                          {result.totalScore &&
+                            selectedRoundType !== "Preliminary" && (
+                              <p>
+                                <strong>Điểm số: {""}</strong>
+                                <Tag
+                                  color="blue"
+                                  style={{
+                                    fontSize: "14px",
+                                    fontWeight: "bold",
+                                    marginRight: "5px",
+                                  }}
+                                >
+                                  {result.totalScore}
+                                </Tag>
+                              </p>
+                            )}
                           {result.notes && (
                             <p>
                               <strong>Ghi chú:</strong> {result.notes}
@@ -2189,18 +2192,20 @@ function CompetitionRound({ showId }) {
                   />
                 </TabPane>
               )}
-            {/* Add the Score Details Tab */}
-            <TabPane
-              tab={
-                <span>
-                  <PercentageOutlined className="mx-2" />
-                  Điểm chi tiết
-                </span>
-              }
-              key="score-details"
-            >
-              <ScoreDetailsTab />
-            </TabPane>
+            {/* Add the Score Details Tab - Only for non-preliminary rounds */}
+            {selectedRoundType !== "Preliminary" && (
+              <TabPane
+                tab={
+                  <span>
+                    <PercentageOutlined className="mx-2" />
+                    Điểm chi tiết
+                  </span>
+                }
+                key="score-details"
+              >
+                <ScoreDetailsTab />
+              </TabPane>
+            )}
           </Tabs>
         )}
       </Drawer>
