@@ -15,7 +15,6 @@ import {
   Popconfirm,
   Input as AntInput,
   Tag,
-  notification,
   Empty,
 } from "antd";
 import {
@@ -143,16 +142,8 @@ function Tank({ showId }) {
 
         const result = await createNewTank(values);
         if (result.success) {
-          notification.success({
-            message: "Thành công",
-            description: "Tạo bể cá thành công",
-          });
           setModalVisible(false);
         } else {
-          notification.error({
-            message: "Lỗi",
-            description: "Không thể tạo bể cá",
-          });
           return; // Exit early on error
         }
       } else {
@@ -163,16 +154,8 @@ function Tank({ showId }) {
         const result = await updateExistingTank(selectedTank.id, values);
 
         if (result.success) {
-          notification.success({
-            message: "Thành công",
-            description: "Cập nhật bể cá thành công",
-          });
           setModalVisible(false);
         } else {
-          notification.error({
-            message: "Lỗi",
-            description: "Không thể cập nhật bể cá",
-          });
           return; // Exit early on error
         }
       }
@@ -188,10 +171,6 @@ function Tank({ showId }) {
       }, 300);
     } catch (error) {
       console.error("Lỗi xác thực biểu mẫu:", error);
-      notification.error({
-        message: "Lỗi",
-        description: "Đã xảy ra lỗi khi xử lý yêu cầu của bạn",
-      });
     }
   };
   const handleTableChange = (pagination) => {

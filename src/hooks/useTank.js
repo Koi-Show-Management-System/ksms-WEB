@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { getTank, createTank, updateTank } from "../api/tankApi";
+import { notification } from "antd";
 
 const useTank = create((set, get) => ({
   tanks: [], // Cho Tank.jsx component
@@ -14,7 +15,12 @@ const useTank = create((set, get) => ({
   isModalVisible: false,
 
   // Sửa để hỗ trợ cả hai component
-  fetchTanks: async (categoryId, page = 1, size = 10, forCompetitionRound = false) => {
+  fetchTanks: async (
+    categoryId,
+    page = 1,
+    size = 10,
+    forCompetitionRound = false
+  ) => {
     if (forCompetitionRound) {
       // Chỉ cập nhật loading cho CompetitionRound
       set({ isLoading: true, error: null });
@@ -27,7 +33,6 @@ const useTank = create((set, get) => ({
       const res = await getTank(categoryId, page, size);
 
       if (res && res.status === 200) {
-
         let tanks = [];
         let total = 0;
         let totalPages = 1;
@@ -74,10 +79,21 @@ const useTank = create((set, get) => ({
         }
       } else {
         console.error("API Error:", res);
+        notification.error({
+          message: "Thông báo",
+          description: res?.data?.Error || "Lỗi khi tải danh sách bể cá",
+          duration: 3,
+        });
         set({ error: res, isLoading: false });
       }
     } catch (error) {
       console.error("API Error:", error);
+      notification.error({
+        message: "Thông báo",
+        description:
+          error.response?.data?.Error || "Lỗi khi tải danh sách bể cá",
+        duration: 3,
+      });
       set({ error: error, isLoading: false });
     }
   },
@@ -92,6 +108,11 @@ const useTank = create((set, get) => ({
       if (res?.data?.statusCode === 200) {
         // Refresh tank list after creation
         const showId = tankData.showId;
+        notification.success({
+          message: "Thành công",
+          description: res.data.message || "Tạo bể cá thành công",
+          duration: 3,
+        });
         get().fetchTanks(
           competitionCategoryId,
           get().currentPage,
@@ -101,11 +122,21 @@ const useTank = create((set, get) => ({
         return { success: true, data: res.data };
       } else {
         console.error("API Error:", res);
+        notification.error({
+          message: "Thông báo",
+          description: res?.data?.Error || "Không thể tạo bể cá",
+          duration: 3,
+        });
         set({ error: res, isLoading: false });
         return { success: false, error: res };
       }
     } catch (error) {
       console.error("API Error:", error);
+      notification.error({
+        message: "Thông báo",
+        description: error.response?.data?.Error || "Lỗi khi tạo bể cá",
+        duration: 3,
+      });
       set({ error, isLoading: false });
       return { success: false, error };
     }
@@ -120,16 +151,31 @@ const useTank = create((set, get) => ({
       if (res && res.status === 200) {
         // Refresh tank list after update
         const showId = tankData.showId;
+        notification.success({
+          message: "Thành công",
+          description: res.data.message || "Cập nhật bể cá thành công",
+          duration: 3,
+        });
         get().fetchTanks(showId, get().currentPage, get().pageSize);
         set({ isModalVisible: false, selectedTank: null });
         return { success: true, data: res.data };
       } else {
         console.error("API Error:", res);
+        notification.error({
+          message: "Thông báo",
+          description: res?.data?.Error || "Không thể cập nhật bể cá",
+          duration: 3,
+        });
         set({ error: res, isLoading: false });
         return { success: false, error: res };
       }
     } catch (error) {
       console.error("API Error:", error);
+      notification.error({
+        message: "Thông báo",
+        description: error.response.data.Error,
+        duration: 3,
+      });
       set({ error, isLoading: false });
       return { success: false, error };
     }
