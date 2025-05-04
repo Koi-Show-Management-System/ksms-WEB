@@ -431,6 +431,19 @@ function Category({ showId, statusShow, onCategoryCancel }) {
                             </Typography.Text>
                           ),
                         },
+                        {
+                          key: "registrationFee",
+                          label: "Phí đăng ký",
+                          span: 1,
+                          children: (
+                            <Typography.Text strong className="text-green-600">
+                              {selectedCategory.registrationFee
+                                ? selectedCategory.registrationFee.toLocaleString() +
+                                  " VND"
+                                : "0 VND"}
+                            </Typography.Text>
+                          ),
+                        },
                         ...(selectedCategory.status === "cancelled"
                           ? [
                               {
