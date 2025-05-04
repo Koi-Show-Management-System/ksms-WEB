@@ -70,6 +70,9 @@ function CreateCategory({ showId, onCategoryCreated }) {
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [awardErrors, setAwardErrors] = useState({});
+  const [evaluationOneNumber, setEvaluationOneNumber] = useState(null);
+  const [evaluationTwoNumber, setEvaluationTwoNumber] = useState(null);
+  const [roundsErrors, setRoundsErrors] = useState({});
 
   const {
     createCategory,
@@ -217,6 +220,9 @@ function CreateCategory({ showId, onCategoryCreated }) {
       createCriteriaCompetitionCategoryRequests: [],
     });
     setShowErrors(false);
+    setEvaluationOneNumber(null);
+    setEvaluationTwoNumber(null);
+    setRoundsErrors({});
   };
 
   const showModal = () => {
@@ -935,6 +941,28 @@ function CreateCategory({ showId, onCategoryCreated }) {
       hasError = true;
     }
 
+    // Validate số cá qua vòng
+    if (!evaluationOneNumber || evaluationOneNumber < 1) {
+      errorDetails.push("số cá qua vòng Đánh Giá 1 phải từ 1 trở lên");
+      hasError = true;
+    }
+
+    if (!evaluationTwoNumber || evaluationTwoNumber < 1) {
+      errorDetails.push("số cá qua vòng Đánh Giá 2 phải từ 1 trở lên");
+      hasError = true;
+    }
+
+    if (
+      evaluationOneNumber &&
+      evaluationTwoNumber &&
+      evaluationTwoNumber >= evaluationOneNumber
+    ) {
+      errorDetails.push(
+        "số cá qua vòng Đánh Giá 2 phải nhỏ hơn vòng Đánh Giá 1"
+      );
+      hasError = true;
+    }
+
     // Hiển thị thông báo lỗi nếu có
     if (hasError) {
       notification.error({
@@ -982,9 +1010,21 @@ function CreateCategory({ showId, onCategoryCreated }) {
         prizeValue: parseFloat(award.prizeValue) || 0,
       }));
 
-    // Ensure round numberOfRegistrationToAdvance values are processed correctly
+    // Cập nhật số cá qua vòng từ state vào rounds
     categoryData.createRoundRequests = categoryData.createRoundRequests.map(
       (round) => {
+        if (round.roundType === "Evaluation" && round.roundOrder === 1) {
+          return {
+            ...round,
+            numberOfRegistrationToAdvance: evaluationOneNumber,
+          };
+        } else if (round.roundType === "Evaluation" && round.roundOrder === 2) {
+          return {
+            ...round,
+            numberOfRegistrationToAdvance: evaluationTwoNumber,
+          };
+        }
+
         // Với vòng Preliminary hoặc vòng Final không đủ điều kiện, đặt giá trị là null
         if (
           round.roundType === "Preliminary" ||
@@ -1090,7 +1130,20 @@ function CreateCategory({ showId, onCategoryCreated }) {
         (r) => r.roundType === roundType && r.roundOrder === roundOrder
       );
 
-      if (roundIndex === -1) return updatedCategory;
+      if (roundIndex === -1) {
+        // If round not found, create it
+        const newRound = {
+          name: `Vòng ${roundOrder}`,
+          roundOrder: roundOrder,
+          roundType: roundType,
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        };
+        updatedCategory.createRoundRequests.push(newRound);
+        return updatedCategory;
+      }
 
       // Update the specific field in the round
       updatedCategory.createRoundRequests[roundIndex] = {
@@ -1100,6 +1153,45 @@ function CreateCategory({ showId, onCategoryCreated }) {
 
       return updatedCategory;
     });
+  };
+
+  // Thêm hàm xử lý khi thay đổi số cá qua vòng 1
+  const handleEvaluationOneNumberChange = (value) => {
+    setEvaluationOneNumber(value);
+
+    // Kiểm tra tính hợp lệ của vòng 2 khi cập nhật vòng 1
+    if (evaluationTwoNumber && value && evaluationTwoNumber >= value) {
+      const newRoundsErrors = { ...roundsErrors };
+      newRoundsErrors.evaluationTwo = `Số cá qua vòng ở vòng 2 (${evaluationTwoNumber}) phải nhỏ hơn số cá qua vòng ở vòng 1 (${value})`;
+      setRoundsErrors(newRoundsErrors);
+    } else {
+      // Xóa lỗi nếu hợp lệ
+      const newRoundsErrors = { ...roundsErrors };
+      delete newRoundsErrors.evaluationTwo;
+      setRoundsErrors(newRoundsErrors);
+    }
+
+    // Update round in category state
+    updateRound("Evaluation", 1, "numberOfRegistrationToAdvance", value);
+  };
+
+  // Thêm hàm xử lý khi thay đổi số cá qua vòng 2
+  const handleEvaluationTwoNumberChange = (value) => {
+    // Kiểm tra giá trị so với vòng 1
+    if (evaluationOneNumber && value && value >= evaluationOneNumber) {
+      const newRoundsErrors = { ...roundsErrors };
+      newRoundsErrors.evaluationTwo = `Số cá qua vòng ở vòng 2 (${value}) phải nhỏ hơn số cá qua vòng ở vòng 1 (${evaluationOneNumber})`;
+      setRoundsErrors(newRoundsErrors);
+    } else {
+      // Xóa lỗi nếu hợp lệ
+      const newRoundsErrors = { ...roundsErrors };
+      delete newRoundsErrors.evaluationTwo;
+      setRoundsErrors(newRoundsErrors);
+    }
+    setEvaluationTwoNumber(value);
+
+    // Update round in category state
+    updateRound("Evaluation", 2, "numberOfRegistrationToAdvance", value);
   };
 
   return (
@@ -1392,34 +1484,15 @@ function CreateCategory({ showId, onCategoryCreated }) {
                         <label className="block text-sm font-medium text-gray-700">
                           Số cá qua vòng
                         </label>
-                        <Input
-                          type="number"
+                        <InputNumber
                           min={1}
                           placeholder="Tối thiểu 1 cá"
-                          value={
-                            getRound("Evaluation", 1)
-                              ?.numberOfRegistrationToAdvance || ""
-                          }
-                          onChange={(e) => {
-                            const value =
-                              e.target.value === ""
-                                ? null
-                                : parseInt(e.target.value, 10);
-                            if (e.target.value === "" || value >= 1) {
-                              updateRound(
-                                "Evaluation",
-                                1,
-                                "numberOfRegistrationToAdvance",
-                                value
-                              );
-                            }
-                          }}
+                          value={evaluationOneNumber}
+                          onChange={handleEvaluationOneNumberChange}
+                          style={{ width: "100%" }}
                         />
                         {showErrors &&
-                          (!getRound("Evaluation", 1)
-                            ?.numberOfRegistrationToAdvance ||
-                            getRound("Evaluation", 1)
-                              ?.numberOfRegistrationToAdvance < 1) && (
+                          (!evaluationOneNumber || evaluationOneNumber < 1) && (
                             <p className="text-red-500 text-xs mt-1">
                               Số cá qua vòng phải từ 1 trở lên.
                             </p>
@@ -1433,34 +1506,21 @@ function CreateCategory({ showId, onCategoryCreated }) {
                         <label className="block text-sm font-medium text-gray-700">
                           Số cá qua vòng
                         </label>
-                        <Input
-                          type="number"
+                        <InputNumber
                           min={1}
                           placeholder="Tối thiểu 1 cá"
-                          value={
-                            getRound("Evaluation", 2)
-                              ?.numberOfRegistrationToAdvance || ""
-                          }
-                          onChange={(e) => {
-                            const value =
-                              e.target.value === ""
-                                ? null
-                                : parseInt(e.target.value, 10);
-                            if (e.target.value === "" || value >= 1) {
-                              updateRound(
-                                "Evaluation",
-                                2,
-                                "numberOfRegistrationToAdvance",
-                                value
-                              );
-                            }
-                          }}
+                          value={evaluationTwoNumber}
+                          onChange={handleEvaluationTwoNumberChange}
+                          style={{ width: "100%" }}
                         />
+                        {roundsErrors.evaluationTwo && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {roundsErrors.evaluationTwo}
+                          </p>
+                        )}
                         {showErrors &&
-                          (!getRound("Evaluation", 2)
-                            ?.numberOfRegistrationToAdvance ||
-                            getRound("Evaluation", 2)
-                              ?.numberOfRegistrationToAdvance < 1) && (
+                          (!evaluationTwoNumber || evaluationTwoNumber < 1) &&
+                          !roundsErrors.evaluationTwo && (
                             <p className="text-red-500 text-xs mt-1">
                               Số cá qua vòng phải từ 1 trở lên.
                             </p>
