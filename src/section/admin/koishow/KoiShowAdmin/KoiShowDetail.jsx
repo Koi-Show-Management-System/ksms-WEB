@@ -51,22 +51,22 @@ import RoundResult from "./RoundResult";
 import StatusManager from "./StatusManager";
 import Cookies from "js-cookie";
 import useCategory from "../../../../hooks/useCategory";
+import signalRService from "../../../../config/signalRService";
 
 function KoiShowDetail() {
   const { Panel } = Collapse;
   const { id } = useParams();
   const [searchParams] = useSearchParams();
-  const showStatus = searchParams.get("status");
-  const isEditDisabled = [
-    "published",
-    "upcoming",
-    "inprogress",
-    "finished",
-    "cancelled",
-  ].includes(showStatus);
   const { koiShowDetail, isLoading, fetchKoiShowDetail, updateKoiShow } =
     useKoiShow();
   const [form] = Form.useForm();
+
+  // Modified to use koiShowDetail.data.status directly
+  const isEditDisabled = koiShowDetail?.data
+    ? ["published", "upcoming", "inprogress", "finished", "cancelled"].includes(
+        koiShowDetail.data.status
+      )
+    : false;
 
   // Constants for validation limits (matching StepOne)
   const MAX_NAME_LENGTH = 100;
@@ -141,6 +141,55 @@ function KoiShowDetail() {
   useEffect(() => {
     fetchDetailCallback();
   }, [fetchDetailCallback]);
+
+  // Connect to SignalR for real-time updates
+  useEffect(() => {
+    let unsubscribe = null;
+    // Initialize SignalR connection for status updates
+    const setupSignalR = async () => {
+      try {
+        await signalRService.startShowConnection();
+        console.log("Show SignalR connection established in KoiShowDetail");
+
+        // Subscribe to show status updates
+        unsubscribe = signalRService.subscribeToShowStatusUpdates(
+          (updatedShowId, updatedStatus) => {
+            if (updatedShowId === id && koiShowDetail?.data) {
+              console.log(
+                "Received status update for this show:",
+                updatedStatus
+              );
+
+              // Only update if the status actually changed
+              if (koiShowDetail.data.status !== updatedStatus) {
+                // Update the koiShowDetail state without making an API call
+                // This uses the same pattern as in updateKoiShowStatus in useKoiShow.js
+                const updatedData = {
+                  ...koiShowDetail,
+                  data: {
+                    ...koiShowDetail.data,
+                    status: updatedStatus,
+                  },
+                };
+                // Directly set the state in the store
+                useKoiShow.setState({ koiShowDetail: updatedData });
+              }
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Error establishing SignalR connection:", error);
+      }
+    };
+
+    setupSignalR();
+
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [id]); // Only depend on id, not koiShowDetail
 
   // Thêm useEffect để lấy danh sách hạng mục bị hủy
   useEffect(() => {
@@ -482,7 +531,7 @@ function KoiShowDetail() {
         >
           <Category
             showId={id}
-            statusShow={showStatus}
+            statusShow={koiShowDetail.data.status}
             onCategoryCancel={handleCategoryCancel}
           />
         </div>
@@ -993,6 +1042,7 @@ function KoiShowDetail() {
                         showStartDate={koiShowDetail.data.startDate}
                         showEndDate={koiShowDetail.data.endDate}
                         disabled={isStaff || isEditDisabled}
+                        showStatus={koiShowDetail.data.status}
                       />
                     </div>
                   </div>

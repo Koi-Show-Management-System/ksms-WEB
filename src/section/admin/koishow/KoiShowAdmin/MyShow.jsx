@@ -94,7 +94,7 @@ function MyShow() {
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         {filteredData
-          .filter((show) => show.status === "in progress")
+          .filter((show) => show.status === "inprogress")
           .map((show) => (
             <div
               key={show.id}
@@ -122,7 +122,7 @@ function MyShow() {
                           ? "text-green-500 bg-green-50 border-green-200"
                           : show.status === "upcoming"
                             ? "text-blue-500 bg-blue-50 border-blue-200"
-                            : show.status === "in progress"
+                            : show.status === "inprogress"
                               ? "text-yellow-500 bg-yellow-50 border-yellow-200"
                               : "text-gray-500 bg-gray-50 border-gray-200"
                     }`}
@@ -133,7 +133,7 @@ function MyShow() {
                         ? "Đã duyệt"
                         : show.status === "upcoming"
                           ? "Sắp diễn ra"
-                          : show.status === "in progress"
+                          : show.status === "inprogress"
                             ? "Đang diễn ra"
                             : "Không xác định"}
                   </span>

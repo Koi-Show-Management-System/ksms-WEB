@@ -1171,6 +1171,18 @@ function CreateCategory({ showId, onCategoryCreated }) {
       setRoundsErrors(newRoundsErrors);
     }
 
+    // Kiểm tra số cá qua vòng không vượt quá số lượng tham gia tối đa
+    if (value && category.maxEntries && value > category.maxEntries) {
+      const newRoundsErrors = { ...roundsErrors };
+      newRoundsErrors.evaluationOne = `Số cá qua vòng (${value}) không được vượt quá số lượng tham gia tối đa (${category.maxEntries})`;
+      setRoundsErrors(newRoundsErrors);
+    } else {
+      // Xóa lỗi nếu hợp lệ
+      const newRoundsErrors = { ...roundsErrors };
+      delete newRoundsErrors.evaluationOne;
+      setRoundsErrors(newRoundsErrors);
+    }
+
     // Update round in category state
     updateRound("Evaluation", 1, "numberOfRegistrationToAdvance", value);
   };
@@ -1491,6 +1503,11 @@ function CreateCategory({ showId, onCategoryCreated }) {
                           onChange={handleEvaluationOneNumberChange}
                           style={{ width: "100%" }}
                         />
+                        {roundsErrors.evaluationOne && (
+                          <p className="text-red-500 text-xs mt-1">
+                            {roundsErrors.evaluationOne}
+                          </p>
+                        )}
                         {showErrors &&
                           (!evaluationOneNumber || evaluationOneNumber < 1) && (
                             <p className="text-red-500 text-xs mt-1">

@@ -1585,6 +1585,32 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                         ? null
                                         : parseInt(e.target.value, 10);
                                     if (e.target.value === "" || value >= 1) {
+                                      // Kiểm tra số cá qua vòng không vượt quá số lượng tham gia tối đa
+                                      const maxEntries = category.maxEntries;
+
+                                      // Cập nhật state lỗi
+                                      const newRoundsErrors = {
+                                        ...roundsErrors,
+                                      };
+                                      if (!newRoundsErrors[index]) {
+                                        newRoundsErrors[index] = {};
+                                      }
+
+                                      if (
+                                        value &&
+                                        maxEntries &&
+                                        value > maxEntries
+                                      ) {
+                                        newRoundsErrors[index].round1 =
+                                          `Số cá qua vòng (${value}) không được vượt quá số lượng tham gia tối đa (${maxEntries})`;
+                                      } else {
+                                        // Xóa lỗi nếu hợp lệ
+                                        if (newRoundsErrors[index]) {
+                                          newRoundsErrors[index].round1 = "";
+                                        }
+                                      }
+                                      setRoundsErrors(newRoundsErrors);
+
                                       updateRound(
                                         index,
                                         "Evaluation",
@@ -1595,6 +1621,11 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                                     }
                                   }}
                                 />
+                                {roundsErrors[index]?.round1 && (
+                                  <p className="text-red-500 text-xs mt-1">
+                                    {roundsErrors[index].round1}
+                                  </p>
+                                )}
                                 {showErrors &&
                                   (!getRound(category, "Evaluation", 1)
                                     ?.numberOfRegistrationToAdvance ||

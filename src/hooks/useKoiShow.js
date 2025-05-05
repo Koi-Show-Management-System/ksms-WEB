@@ -4,11 +4,11 @@ import {
   getKoiShowDetail,
   updateShow,
   updateKoiShowStatus,
-} from "../api/koiShowApi"; 
+} from "../api/koiShowApi";
 
 const useKoiShow = create((set, get) => ({
   koiShows: [],
-  koiShowDetail: null, 
+  koiShowDetail: null,
   currentPage: 1,
   pageSize: 10,
   totalItems: 0,
@@ -58,7 +58,6 @@ const useKoiShow = create((set, get) => ({
     set({ isLoading: true, error: null });
 
     try {
-
       const res = await updateShow(id, updatedFields);
 
       if (res && res.status === 200) {
@@ -99,39 +98,56 @@ const useKoiShow = create((set, get) => ({
     }
   },
   updateKoiShowStatus: async (id, status, cancellationReason = "") => {
-    set({ isLoading: true, error: null });
+    // Don't set loading state as this causes re-renders
+    // set({ isLoading: true, error: null });
 
     try {
       const res = await updateKoiShowStatus(id, status, cancellationReason);
 
       if (res && res.status === 200) {
+        // Update state without causing re-renders
         const koiShowDetail = get().koiShowDetail;
         if (
           koiShowDetail &&
           koiShowDetail.data &&
           koiShowDetail.data.id === id
         ) {
-          set((state) => ({
-            koiShowDetail: {
-              ...state.koiShowDetail,
-              data: {
-                ...state.koiShowDetail.data,
-                status: status,
-                cancellationReason:
-                  status === "Cancelled" ? cancellationReason : null,
+          // Only update if not already set to avoid unnecessary re-renders
+          if (koiShowDetail.data.status !== status) {
+            set((state) => ({
+              koiShowDetail: {
+                ...state.koiShowDetail,
+                data: {
+                  ...state.koiShowDetail.data,
+                  status: status,
+                  cancellationReason:
+                    status === "Cancelled" ? cancellationReason : null,
+                },
               },
-            },
-            isLoading: false,
-          }));
+              // Don't update loading state
+              // isLoading: false,
+            }));
+          }
         }
 
-        set((state) => ({
-          koiShows: state.koiShows.map((show) =>
-            show.id === id ? { ...show, status: status } : show
-          ),
-          isLoading: false,
-        }));
+        // Update only if necessary
+        set((state) => {
+          const needsUpdate = state.koiShows.some(
+            (show) => show.id === id && show.status !== status
+          );
 
+          if (!needsUpdate) return state;
+
+          return {
+            koiShows: state.koiShows.map((show) =>
+              show.id === id ? { ...show, status: status } : show
+            ),
+            // Don't update loading state
+            // isLoading: false,
+          };
+        });
+
+        // SignalR will handle the real-time notification to other clients
         return { success: true, message: "Status updated successfully" };
       } else {
         set({

@@ -17,6 +17,8 @@ import {
   Space,
   Modal,
   Select,
+  Tag,
+  Collapse,
 } from "antd";
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
@@ -27,9 +29,17 @@ import {
   CloseOutlined,
   EditOutlined,
   SaveOutlined,
+  FieldTimeOutlined,
+  RocketOutlined,
+  PlayCircleOutlined,
+  CheckCircleOutlined,
+  DownOutlined,
 } from "@ant-design/icons";
 import useStatus from "../../../../hooks/useStatus";
 import useKoiShow from "../../../../hooks/useKoiShow";
+import KoiShowStatusUpdater from "./KoiShowStatusUpdater";
+import signalRService from "../../../../config/signalRService";
+import Cookies from "js-cookie";
 
 // Cài đặt plugins cho dayjs
 dayjs.extend(utc);
@@ -43,10 +53,11 @@ const StatusManager = ({
   disabled = false,
   showStartDate,
   showEndDate,
+  showStatus,
 }) => {
   // Sử dụng hook useStatus để update trạng thái
   const { updateShowStatus, isLoading } = useStatus();
-  const { fetchKoiShowDetail } = useKoiShow();
+  const { fetchKoiShowDetail, updateKoiShowStatus } = useKoiShow();
 
   // State cho danh sách trạng thái
   const [availableStatuses, setAvailableStatuses] = useState([]);
@@ -60,7 +71,12 @@ const StatusManager = ({
   const [jsonModalVisible, setJsonModalVisible] = useState(false);
   const [statusJson, setStatusJson] = useState("");
   // State cho trạng thái loading
-  const [loading, setLoading] = useState(false);
+  const [localShowStatus, setLocalShowStatus] = useState(showStatus);
+  // State to track SignalR connection status
+  const [signalRConnected, setSignalRConnected] = useState(false);
+  // Check user role from cookies
+  const userRole = Cookies.get("__role");
+  const canUpdateStatus = !["Staff", "Referee"].includes(userRole);
 
   // Thứ tự các trạng thái
   const statusOrder = {
@@ -76,59 +92,98 @@ const StatusManager = ({
     Finished: 10,
   };
 
-  // Các trạng thái của triển lãm
-  const statusMapping = {
+  // Cấu hình UI cho các trạng thái (chỉ giữ phần UI styling)
+  const statusUIConfig = {
     RegistrationOpen: {
-      label: "Mở Đăng Ký",
-      description: "Giai đoạn đăng ký",
       color: "blue",
+      mainCategory: "upcoming",
     },
     KoiCheckIn: {
-      label: "Điểm Danh",
-      description: "Giai đoạn check-in cá koi",
-      color: "cyan",
+      mainCategory: "inprogress",
     },
     TicketCheckIn: {
-      label: "Vé vào",
-      description: "Giai đoạn check-in vé",
-      color: "red",
+      mainCategory: "inprogress",
     },
     Preliminary: {
-      label: "Vòng Sơ Khảo",
-      description: "Vòng sơ khảo",
-      color: "green",
+      mainCategory: "inprogress",
     },
     Evaluation: {
-      label: "Vòng Đánh Giá Chính",
-      description: "Vòng đánh giá chính",
-      color: "purple",
+      mainCategory: "inprogress",
     },
     Final: {
-      label: "Vòng Chung Kết",
-      description: "Vòng chung kết",
-      color: "orange",
+      mainCategory: "inprogress",
     },
     Exhibition: {
-      label: "Triển Lãm",
-      description: "Triển lãm cá koi",
-      color: "teal",
+      mainCategory: "inprogress",
     },
     PublicResult: {
-      label: "Công bố kết quả",
-      description: "Công bố kết quả",
-      color: "yellow",
+      mainCategory: "inprogress",
     },
-    Award: { label: "Trao giải", description: "Lễ trao giải", color: "black" },
+    Award: {
+      mainCategory: "inprogress",
+    },
     Finished: {
-      label: "Kết thúc sự kiện",
-      description: "Kết thúc sự kiện",
-      color: "brown",
+      mainCategory: "finished",
     },
   };
 
-  // Hàm dịch tên trạng thái
+  // Initialize SignalR connection and subscribe to updates
+  useEffect(() => {
+    let unsubscribe = null;
+
+    const startConnection = async () => {
+      try {
+        if (signalRService.getShowConnectionState() !== "Connected") {
+          await signalRService.startShowConnection();
+          console.log("Show SignalR connection established for StatusManager");
+          setSignalRConnected(true);
+        } else {
+          console.log("Show SignalR already connected");
+          setSignalRConnected(true);
+        }
+
+        // Subscribe to show status updates
+        unsubscribe = signalRService.subscribeToShowStatusUpdates(
+          (updatedShowId, updatedStatus) => {
+            if (updatedShowId === showId) {
+              console.log("Received real-time status update:", updatedStatus);
+              setLocalShowStatus(updatedStatus);
+
+              // No need to fetch the entire show details just for status update
+              // fetchKoiShowDetail(showId);
+            }
+          }
+        );
+      } catch (error) {
+        console.error("Error with SignalR connection:", error);
+        setSignalRConnected(false);
+
+        // Try to reconnect after a delay if connection fails
+        setTimeout(() => {
+          startConnection();
+        }, 5000);
+      }
+    };
+
+    startConnection();
+
+    // Clean up on unmount
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
+  }, [showId]);
+
+  // Update localShowStatus when prop changes
+  useEffect(() => {
+    setLocalShowStatus(showStatus);
+  }, [showStatus]);
+
+  // Hàm dịch tên trạng thái - sử dụng showStatuses
   const translateStatus = (statusName) => {
-    return statusMapping[statusName]?.label || statusName;
+    const status = showStatuses.find((s) => s.statusName === statusName);
+    return status ? status.description : statusName;
   };
 
   // Hàm format date
@@ -138,47 +193,46 @@ const StatusManager = ({
   // Khởi tạo trạng thái từ dữ liệu triển lãm
   useEffect(() => {
     if (showStatuses && showStatuses.length > 0) {
-      // Tạo đối tượng chứa tất cả các trạng thái có sẵn
-      const initialStatuses = Object.entries(statusMapping).map(
-        ([statusName, { label, description }]) => ({
-          statusName,
-          label,
-          description,
-          startDate: null,
-          endDate: null,
-          isActive: false,
-          selected: false,
-        })
-      );
-
-      // Cập nhật trạng thái từ dữ liệu hiện có
-      const updatedStatuses = initialStatuses.map((status) => {
+      // Tạo đối tượng chứa tất cả các trạng thái có sẵn từ statusUIConfig
+      const initialStatuses = Object.keys(statusUIConfig).map((statusName) => {
+        // Tìm thông tin từ showStatuses nếu có
         const existingStatus = showStatuses.find(
-          (s) => s.statusName === status.statusName
+          (s) => s.statusName === statusName
         );
-        if (existingStatus) {
-          return {
-            ...status,
-            startDate: existingStatus.startDate
-              ? dayjs(existingStatus.startDate)
-              : null,
-            endDate: existingStatus.endDate
-              ? dayjs(existingStatus.endDate)
-              : null,
-            isActive: existingStatus.isActive,
-            selected: true,
-          };
-        }
-        return status;
+
+        return {
+          statusName,
+          label: existingStatus?.description || statusName,
+          description: existingStatus?.description || statusName,
+          startDate: existingStatus?.startDate
+            ? dayjs(existingStatus.startDate)
+            : null,
+          endDate: existingStatus?.endDate
+            ? dayjs(existingStatus.endDate)
+            : null,
+          selected: !!existingStatus,
+        };
       });
 
-      setAvailableStatuses(updatedStatuses);
+      setAvailableStatuses(initialStatuses);
     }
   }, [showStatuses]);
 
-  // Bắt đầu chỉnh sửa
+  // Start edit with additional check for showStatus
   const startEdit = () => {
-    if (disabled) return;
+    // Don't allow editing for certain show statuses
+    if (
+      disabled ||
+      (localShowStatus &&
+        [
+          "published",
+          "upcoming",
+          "inprogress",
+          "finished",
+          "cancelled",
+        ].includes(localShowStatus))
+    )
+      return;
 
     // Khởi tạo state chỉnh sửa cho tất cả các trạng thái đã được chọn
     const initialEditingValues = {};
@@ -219,7 +273,7 @@ const StatusManager = ({
           if (value.isAfter(nextStatus.startDate)) {
             message.error(
               `Thời gian bắt đầu đăng ký phải trước thời gian bắt đầu của ${
-                statusMapping[nextStatusName]?.label || nextStatusName
+                statusUIConfig[nextStatusName]?.label || nextStatusName
               }`
             );
             return;
@@ -250,7 +304,7 @@ const StatusManager = ({
           if (value.isAfter(nextStatus.startDate)) {
             message.error(
               `Thời gian kết thúc đăng ký phải trước thời gian bắt đầu của ${
-                statusMapping[nextStatusName]?.label || nextStatusName
+                statusUIConfig[nextStatusName]?.label || nextStatusName
               }`
             );
             return;
@@ -354,7 +408,7 @@ const StatusManager = ({
           if (value.isBefore(prevStatus.endDate)) {
             message.error(
               `Thời gian bắt đầu phải sau hoặc bằng thời gian kết thúc của ${
-                statusMapping[prevStatusName]?.label || prevStatusName
+                statusUIConfig[prevStatusName]?.label || prevStatusName
               }`
             );
             return;
@@ -404,7 +458,7 @@ const StatusManager = ({
           if (value.isAfter(nextStatus.startDate)) {
             message.error(
               `Thời gian kết thúc phải trước hoặc bằng thời gian bắt đầu của ${
-                statusMapping[nextStatusName]?.label || nextStatusName
+                statusUIConfig[nextStatusName]?.label || nextStatusName
               }`
             );
             return;
@@ -581,16 +635,12 @@ const StatusManager = ({
       const statusesToUpdate = Object.keys(editingStatuses).map(
         (statusName) => {
           const editedStatus = editingStatuses[statusName];
-          // Tìm trạng thái hiện tại để lấy giá trị isActive
-          const currentStatus = availableStatuses.find(
-            (status) => status.statusName === statusName
-          );
           return {
             statusName,
-            description: statusMapping[statusName]?.description,
+            label: statusUIConfig[statusName]?.label,
+            description: statusUIConfig[statusName]?.label,
             startDate: editedStatus.startDate,
             endDate: editedStatus.endDate,
-            isActive: currentStatus ? currentStatus.isActive : false,
           };
         }
       );
@@ -598,7 +648,21 @@ const StatusManager = ({
       // Gọi API với một mảng các trạng thái thay vì gửi từng trạng thái riêng lẻ
       updateShowStatus(showId, statusesToUpdate)
         .then(() => {
-          fetchKoiShowDetail(showId);
+          // No need to fetch everything again - update local state instead
+          message.success("Lịch trình đã được cập nhật thành công");
+          // After successfully updating, update the local state with edited values
+          setAvailableStatuses((prevStatuses) =>
+            prevStatuses.map((status) => {
+              if (editingStatuses[status.statusName]) {
+                return {
+                  ...status,
+                  startDate: editingStatuses[status.statusName].startDate,
+                  endDate: editingStatuses[status.statusName].endDate,
+                };
+              }
+              return status;
+            })
+          );
         })
         .catch((error) => {
           console.error("Lỗi khi cập nhật trạng thái:", error);
@@ -628,7 +692,6 @@ const StatusManager = ({
         endDate: status.endDate
           ? status.endDate.format("YYYY-MM-DDTHH:mm:ss.SSS[Z]")
           : null,
-        isActive: status.isActive,
       }));
 
     setStatusJson(JSON.stringify(statusesToDisplay, null, 2));
@@ -671,122 +734,373 @@ const StatusManager = ({
     return [];
   };
 
+  // Handle status update from KoiShowStatusUpdater
+  const handleStatusUpdate = (newStatus) => {
+    // Only update if the status is actually changing
+    if (newStatus !== localShowStatus) {
+      setLocalShowStatus(newStatus);
+    }
+    // We don't need to fetch details here as SignalR will handle the updates
+  };
+
   return (
-    <div>
+    <div className="w-full h-full flex flex-col">
       <Card
-        className="mb-4 shadow-sm"
+        className="mb-4 shadow-sm w-full flex-grow"
+        bodyStyle={{ padding: "16px", height: "100%" }}
+        style={{ height: "100%" }}
         title={
           <div className="flex justify-between items-center">
-            <span className="font-bold text-base md:text-lg">
-              Trạng thái triển lãm
-            </span>
-            {!disabled && (
-              <div>
-                {isEditing ? (
-                  <Space>
-                    <Button
-                      type="text"
-                      onClick={saveAllChanges}
-                      loading={isLoading}
-                      icon={<SaveOutlined />}
-                    ></Button>
-                    <Button
-                      type="text"
-                      onClick={cancelEdit}
-                      icon={<CloseOutlined />}
-                    ></Button>
-                  </Space>
-                ) : (
-                  <Space>
-                    <Button
-                      type="text"
-                      onClick={startEdit}
-                      icon={<EditOutlined />}
-                      className="text-blue-500"
-                    ></Button>
-                    {/* <Button
-                      type="text"
-                      onClick={showJsonModal}
-                      className="text-gray-500"
-                    >
-                      JSON
-                    </Button> */}
-                  </Space>
-                )}
-              </div>
-            )}
+            <div className="flex justify-between items-center w-full">
+              <span className="font-bold text-base md:text-lg">
+                Lịch trình dự kiến
+              </span>
+              {!canUpdateStatus && localShowStatus && (
+                <Tag
+                  color={
+                    localShowStatus === "pending"
+                      ? "orange"
+                      : localShowStatus === "internalpublished"
+                        ? "blue"
+                        : localShowStatus === "published"
+                          ? "green"
+                          : localShowStatus === "upcoming"
+                            ? "cyan"
+                            : localShowStatus === "inprogress"
+                              ? "purple"
+                              : localShowStatus === "finished"
+                                ? "gray"
+                                : "default"
+                  }
+                >
+                  {localShowStatus === "pending"
+                    ? "Chờ duyệt"
+                    : localShowStatus === "internalpublished"
+                      ? "Công bố nội bộ"
+                      : localShowStatus === "published"
+                        ? "Công bố"
+                        : localShowStatus === "upcoming"
+                          ? "Sắp diễn ra"
+                          : localShowStatus === "inprogress"
+                            ? "Đang diễn ra"
+                            : localShowStatus === "finished"
+                              ? "Kết thúc"
+                              : localShowStatus}
+                </Tag>
+              )}
+            </div>
+            <div className="flex items-center">
+              {canUpdateStatus && (
+                <KoiShowStatusUpdater
+                  showId={showId}
+                  currentStatus={localShowStatus}
+                  onStatusUpdate={handleStatusUpdate}
+                  updateKoiShowStatus={updateKoiShowStatus}
+                />
+              )}
+              {!disabled && canUpdateStatus && (
+                <>
+                  {isEditing ? (
+                    <Space className="ml-2">
+                      <Button
+                        type="text"
+                        onClick={saveAllChanges}
+                        loading={isLoading}
+                        icon={<SaveOutlined />}
+                      ></Button>
+                      <Button
+                        type="text"
+                        onClick={cancelEdit}
+                        icon={<CloseOutlined />}
+                      ></Button>
+                    </Space>
+                  ) : (
+                    <Space className="ml-2">
+                      <Button
+                        type="text"
+                        onClick={startEdit}
+                        icon={<EditOutlined />}
+                        className="text-blue-500"
+                      ></Button>
+                    </Space>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         }
       >
-        <Timeline
-          className={isEditing ? "mb-4 pb-4" : ""}
-          items={availableStatuses
-            .filter((status) => status.selected)
-            .sort((a, b) => {
-              // Define the order of status display
-              const statusOrder = {
-                RegistrationOpen: 1,
-                KoiCheckIn: 2,
-                TicketCheckIn: 3,
-                Preliminary: 4,
-                Evaluation: 5,
-                Final: 6,
-                Exhibition: 7,
-                PublicResult: 8,
-                Award: 9,
-                Finished: 10,
-              };
-              return statusOrder[a.statusName] - statusOrder[b.statusName];
-            })
-            .map((status) => {
-              const { color } = statusMapping[status.statusName] || {
-                color: "gray",
-              };
+        {/* Remove old phase indicators and progress bars */}
 
-              // Check if dates are the same
-              const sameDay =
-                status.startDate &&
-                status.endDate &&
-                dayjs(status.startDate).format("YYYY-MM-DD") ===
-                  dayjs(status.endDate).format("YYYY-MM-DD");
+        {/* Vertical Timeline Style Layout */}
+        <div className="w-full">
+          <Collapse
+            defaultActiveKey={[]}
+            bordered={false}
+            className="site-collapse-custom-collapse"
+            expandIcon={({ isActive }) => (
+              <DownOutlined
+                rotate={isActive ? 180 : 0}
+                style={{ fontSize: "12px" }}
+              />
+            )}
+          >
+            {/* Waiting for Approval phase */}
+            <Collapse.Panel
+              key="approval"
+              header={
+                <div className="flex items-center">
+                  <div
+                    className={`${
+                      localShowStatus === "pending"
+                        ? " -ml-2 -my-2 py-2 pl-2 pr-3  flex items-center "
+                        : ""
+                    }`}
+                  >
+                    <CalendarOutlined
+                      className={`${localShowStatus === "pending" ? "text-orange-500 text-lg" : "text-orange-400"} mr-2`}
+                    />
+                    <span
+                      className={`font-medium text-sm md:text-base ${localShowStatus === "pending" ? "text-orange-500 font-bold" : "text-orange-400"}`}
+                    >
+                      Chờ duyệt
+                    </span>
+                    {localShowStatus === "pending" && (
+                      <div className="ml-2 h-4 w-4 bg-orange-500 rounded-full animate-pulse shadow-sm"></div>
+                    )}
+                  </div>
+                </div>
+              }
+              className={`site-collapse-custom-panel border-0 border-l-4 relative ${
+                localShowStatus === "pending"
+                  ? "border-orange-500 pl-1 mb-3 bg-orange-50 rounded-r-md shadow-md"
+                  : "border-orange-200 pl-1 mb-3 bg-gray-50 rounded-r-md"
+              }`}
+            >
+              {localShowStatus === "pending" && (
+                <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 bg-orange-500 rounded-full flex items-center justify-center shadow-md z-10">
+                  <div className="h-2 w-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              <div
+                className={`pl-7 relative p-3 ${localShowStatus === "pending" ? "border border-orange-200 bg-white rounded-md" : ""}`}
+              >
+                <div
+                  className={`absolute left-0 top-6 h-3 w-3 rounded-full ${
+                    localShowStatus === "pending"
+                      ? "bg-orange-500"
+                      : "bg-orange-200"
+                  }`}
+                ></div>
+                <div
+                  className={`font-medium ${localShowStatus === "pending" ? "text-gray-800" : "text-gray-500"}`}
+                >
+                  Hồ sơ đang chờ được xét duyệt
+                </div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Triển lãm đang được BTC xem xét
+                </div>
+              </div>
+            </Collapse.Panel>
 
-              return {
-                key: status.statusName,
-                color: color,
-                dot: status.isActive ? (
-                  <div className="absolute w-5 h-5 -top-1 -left-1 rounded-full bg-green-500 border-2 border-white"></div>
-                ) : undefined,
-                children: (
-                  <div className="pb-4">
-                    <div className={`text-${color}-500 font-medium`}>
+            {/* internalpublished Announcement phase */}
+            <Collapse.Panel
+              key="internalpublished"
+              header={
+                <div className="flex items-center">
+                  <div
+                    className={`${
+                      localShowStatus === "internalpublished"
+                        ? " -ml-2 -my-2 py-2 pl-2 pr-3  flex items-center "
+                        : ""
+                    }`}
+                  >
+                    <FieldTimeOutlined
+                      className={`${localShowStatus === "internalpublished" ? "text-blue-500 text-lg" : "text-blue-400"} mr-2`}
+                    />
+                    <span
+                      className={`font-medium text-sm md:text-base ${localShowStatus === "internalpublished" ? "text-blue-500 font-bold" : "text-blue-400"}`}
+                    >
+                      Công bố nội bộ
+                    </span>
+                    {localShowStatus === "internalpublished" && (
+                      <div className="ml-2 h-4 w-4 bg-blue-500 rounded-full animate-pulse shadow-sm"></div>
+                    )}
+                  </div>
+                </div>
+              }
+              className={`site-collapse-custom-panel border-0 border-l-4 relative ${
+                localShowStatus === "internalpublished"
+                  ? "border-blue-500 pl-1 mb-3 bg-blue-50 rounded-r-md shadow-md"
+                  : "border-blue-200 pl-1 mb-3 bg-gray-50 rounded-r-md"
+              }`}
+            >
+              {localShowStatus === "internalpublished" && (
+                <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 bg-blue-500 rounded-full flex items-center justify-center shadow-md z-10">
+                  <div className="h-2 w-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              <div
+                className={`pl-7 relative p-3 ${localShowStatus === "internalpublished" ? "border border-blue-200 bg-white rounded-md" : ""}`}
+              >
+                <div
+                  className={`absolute left-0 top-6 h-3 w-3 rounded-full ${
+                    localShowStatus === "internalpublished"
+                      ? "bg-blue-500"
+                      : "bg-blue-200"
+                  }`}
+                ></div>
+                <div
+                  className={`font-medium ${localShowStatus === "internalpublished" ? "text-gray-800" : "text-gray-500"}`}
+                >
+                  Thông tin chỉ hiển thị cho nội bộ
+                </div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Triển lãm được công bố trong hệ thống
+                </div>
+              </div>
+            </Collapse.Panel>
+
+            {/* Published phase */}
+            <Collapse.Panel
+              key="published"
+              header={
+                <div className="flex items-center">
+                  <div
+                    className={`${
+                      localShowStatus === "published"
+                        ? " -ml-2 -my-2 py-2 pl-2 pr-3  flex items-center "
+                        : ""
+                    }`}
+                  >
+                    <CheckOutlined
+                      className={`${localShowStatus === "published" ? "text-green-500 text-lg" : "text-green-400"} mr-2`}
+                    />
+                    <span
+                      className={`font-medium text-sm md:text-base ${localShowStatus === "published" ? "text-green-500 font-bold" : "text-green-400"}`}
+                    >
+                      Công bố
+                    </span>
+                    {localShowStatus === "published" && (
+                      <div className="ml-2 h-4 w-4 bg-green-500 rounded-full animate-pulse shadow-sm"></div>
+                    )}
+                  </div>
+                </div>
+              }
+              className={`site-collapse-custom-panel border-0 border-l-4 relative ${
+                localShowStatus === "published"
+                  ? "border-green-500 pl-1 mb-3 bg-green-50 rounded-r-md shadow-md"
+                  : "border-green-200 pl-1 mb-3 bg-gray-50 rounded-r-md"
+              }`}
+            >
+              {localShowStatus === "published" && (
+                <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 bg-green-500 rounded-full flex items-center justify-center shadow-md z-10">
+                  <div className="h-2 w-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              <div
+                className={`pl-7 relative p-3 ${localShowStatus === "published" ? "border border-green-200 bg-white rounded-md" : ""}`}
+              >
+                <div
+                  className={`absolute left-0 top-4 h-3 w-3 rounded-full ${
+                    localShowStatus === "published"
+                      ? "bg-green-500"
+                      : "bg-green-200"
+                  }`}
+                ></div>
+                <div
+                  className={`font-medium ${localShowStatus === "published" ? "text-gray-800" : "text-gray-500"}`}
+                >
+                  Triển lãm được công bố rộng rãi
+                </div>
+                <div className="text-xs text-gray-500 mb-2">
+                  Thông tin triển lãm được công bố rộng rãi cho công chúng
+                </div>
+              </div>
+            </Collapse.Panel>
+
+            {/* Upcoming phase */}
+            <Collapse.Panel
+              key="upcoming"
+              header={
+                <div className="flex items-center">
+                  <div
+                    className={`${
+                      localShowStatus === "upcoming"
+                        ? " -ml-2 -my-2 py-2 pl-2 pr-3  flex items-center "
+                        : ""
+                    }`}
+                  >
+                    <RocketOutlined
+                      className={`${localShowStatus === "upcoming" ? "text-cyan-500 text-lg" : "text-cyan-400"} mr-2`}
+                    />
+                    <span
+                      className={`font-medium text-sm md:text-base ${localShowStatus === "upcoming" ? "text-cyan-500 font-bold" : "text-cyan-400"}`}
+                    >
+                      Sắp diễn ra
+                    </span>
+                    {localShowStatus === "upcoming" && (
+                      <div className="ml-2 h-4 w-4 bg-cyan-500 rounded-full animate-pulse shadow-sm"></div>
+                    )}
+                  </div>
+                </div>
+              }
+              className={`site-collapse-custom-panel border-0 border-l-4 relative ${
+                localShowStatus === "upcoming"
+                  ? "border-cyan-500 pl-1 mb-3 bg-cyan-50 rounded-r-md shadow-md"
+                  : "border-cyan-200 pl-1 mb-3 bg-gray-50 rounded-r-md"
+              }`}
+            >
+              {localShowStatus === "upcoming" && (
+                <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 bg-cyan-500 rounded-full flex items-center justify-center shadow-md z-10">
+                  <div className="h-2 w-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              {availableStatuses
+                .filter(
+                  (status) =>
+                    status.selected &&
+                    statusUIConfig[status.statusName]?.mainCategory ===
+                      "upcoming"
+                )
+                .sort(
+                  (a, b) =>
+                    statusOrder[a.statusName] - statusOrder[b.statusName]
+                )
+                .map((status, index) => {
+                  // Check if dates are the same
+                  const sameDay =
+                    status.startDate &&
+                    status.endDate &&
+                    dayjs(status.startDate).format("YYYY-MM-DD") ===
+                      dayjs(status.endDate).format("YYYY-MM-DD");
+
+                  return (
+                    <div
+                      key={status.statusName}
+                      className={`pl-7 relative mb-4 p-3 ${localShowStatus === "upcoming" ? "border border-cyan-200 bg-white rounded-md" : ""}`}
+                    >
                       <div
-                        className={`text-xs md:text-sm ${
-                          status.isActive
-                            ? "text-blue-700 font-bold"
-                            : "text-gray-400"
-                        } mb-1`}
+                        className={`absolute left-0 top-4 h-3 w-3 rounded-full ${
+                          localShowStatus === "upcoming"
+                            ? "bg-cyan-500"
+                            : "bg-cyan-200"
+                        }`}
+                      ></div>
+                      <div
+                        className={`font-medium ${localShowStatus === "upcoming" ? "text-gray-800" : "text-gray-500"}`}
                       >
                         {status.description}
                       </div>
-
-                      {/* Hiển thị chế độ xem */}
                       {!isEditing && status.startDate && (
-                        <div className="text-[10px] md:text-xs text-gray-500">
-                          {status.statusName === "Finished" ? (
-                            // Nếu là trạng thái Finished, chỉ hiển thị thời gian kết thúc
-                            <>
-                              {formatDate(status.startDate)},{" "}
-                              {formatTime(status.startDate)}
-                            </>
-                          ) : sameDay ? (
-                            // If same date, show one date with start and end times
+                        <div className="text-xs text-gray-500">
+                          {sameDay ? (
                             <>
                               {formatDate(status.startDate)},{" "}
                               {formatTime(status.startDate)} -{" "}
                               {formatTime(status.endDate)}
                             </>
                           ) : (
-                            // If different dates, show full range
                             <>
                               {formatDate(status.startDate)}{" "}
                               {formatTime(status.startDate)} -{" "}
@@ -797,7 +1111,6 @@ const StatusManager = ({
                         </div>
                       )}
 
-                      {/* Hiển thị chế độ chỉnh sửa */}
                       {isEditing && (
                         <div className="mt-2 space-y-2">
                           {status.statusName === "RegistrationOpen" && (
@@ -830,8 +1143,7 @@ const StatusManager = ({
                                       <div className="text-xs text-gray-500 text-right"></div>
                                     )}
                                     disabledDate={(current) => {
-                                      // Không vô hiệu hóa ngày sau triển lãm, chỉ hiện thông báo lỗi
-                                      return false; // Cho phép chọn tất cả các ngày
+                                      return false;
                                     }}
                                   />
                                 </div>
@@ -864,7 +1176,6 @@ const StatusManager = ({
                                       <div className="text-xs text-gray-500 text-right"></div>
                                     )}
                                     disabledDate={(current) => {
-                                      // Chỉ vô hiệu hóa ngày trước ngày bắt đầu của giai đoạn đăng ký
                                       if (
                                         editingStatuses[status.statusName]
                                           ?.startDate &&
@@ -876,441 +1187,124 @@ const StatusManager = ({
                                       ) {
                                         return true;
                                       }
-                                      return false; // Cho phép chọn tất cả các ngày khác
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {status.statusName === "Finished" && (
-                            <div className="grid grid-cols-1 gap-2">
-                              <div>
-                                <div className="mb-1">
-                                  <label className="block text-xs mb-1">
-                                    Thời gian kết thúc sự kiện:
-                                  </label>
-                                  <DatePicker
-                                    className="w-full"
-                                    size="small"
-                                    value={
-                                      editingStatuses[status.statusName]
-                                        ?.startDate
-                                    }
-                                    onChange={(value) => {
-                                      // Tìm trạng thái Award
-                                      const awardStatus =
-                                        availableStatuses.find(
-                                          (s) =>
-                                            s.statusName === "Award" &&
-                                            s.selected &&
-                                            s.endDate
-                                        );
-
-                                      if (!awardStatus?.endDate) {
-                                        message.error(
-                                          "Vui lòng thiết lập thời gian kết thúc cho Lễ trao giải trước"
-                                        );
-                                        return;
-                                      }
-
-                                      // Nếu đã có giờ từ trước, giữ nguyên giờ đó
-                                      let newStartValue = value;
-                                      if (
-                                        value &&
-                                        editingStatuses[status.statusName]
-                                          ?.startDate
-                                      ) {
-                                        newStartValue = value
-                                          .hour(
-                                            editingStatuses[
-                                              status.statusName
-                                            ].startDate.hour()
-                                          )
-                                          .minute(
-                                            editingStatuses[
-                                              status.statusName
-                                            ].startDate.minute()
-                                          )
-                                          .second(0);
-                                      }
-
-                                      // Kiểm tra với showEndDate
-                                      if (
-                                        showEndDate &&
-                                        dayjs(showEndDate).isValid()
-                                      ) {
-                                        const exhibitionEndDay =
-                                          dayjs(showEndDate);
-                                        if (
-                                          newStartValue.isAfter(
-                                            exhibitionEndDay
-                                          )
-                                        ) {
-                                          message.error(
-                                            "Thời gian kết thúc sự kiện không được sau ngày kết thúc triển lãm"
-                                          );
-                                          return;
-                                        }
-                                      }
-
-                                      // Tự động tính endDate = startDate + 30 phút
-                                      const newEndValue = newStartValue
-                                        .clone()
-                                        .add(30, "minutes");
-
-                                      // Tự động cập nhật startDate bằng thời gian kết thúc của Award
-                                      setEditingStatuses((prev) => ({
-                                        ...prev,
-                                        [status.statusName]: {
-                                          startDate: newStartValue,
-                                          endDate: newEndValue,
-                                        },
-                                      }));
-                                    }}
-                                    format="YYYY-MM-DD"
-                                    placeholder="Chọn ngày kết thúc sự kiện"
-                                    disabledDate={(current) => {
-                                      // Mặc định vô hiệu hóa ngày trong quá khứ
-                                      if (
-                                        current &&
-                                        current.isBefore(dayjs(), "day")
-                                      ) {
-                                        return true;
-                                      }
-
-                                      // Tìm trạng thái Award
-                                      const awardStatus =
-                                        availableStatuses.find(
-                                          (s) =>
-                                            s.statusName === "Award" &&
-                                            s.selected &&
-                                            s.endDate
-                                        );
-
-                                      // Nếu có trạng thái Award, chỉ cho phép chọn từ ngày của Award trở đi
-                                      if (awardStatus && awardStatus.endDate) {
-                                        if (
-                                          current &&
-                                          current.isBefore(
-                                            awardStatus.endDate,
-                                            "day"
-                                          )
-                                        ) {
-                                          return true;
-                                        }
-                                      }
-
-                                      // Kiểm tra với showEndDate
-                                      if (
-                                        showEndDate &&
-                                        dayjs(showEndDate).isValid()
-                                      ) {
-                                        if (
-                                          current &&
-                                          current.isAfter(
-                                            dayjs(showEndDate),
-                                            "day"
-                                          )
-                                        ) {
-                                          return true;
-                                        }
-                                      }
-
                                       return false;
                                     }}
                                   />
                                 </div>
-                                <div>
-                                  <label className="block text-xs mb-1">
-                                    Giờ kết thúc:
-                                  </label>
-                                  <TimePicker
-                                    className="w-full"
-                                    size="small"
-                                    value={
-                                      editingStatuses[status.statusName]
-                                        ?.startDate
-                                    }
-                                    onChange={(value) => {
-                                      if (
-                                        value &&
-                                        editingStatuses[status.statusName]
-                                          ?.startDate
-                                      ) {
-                                        // Tìm trạng thái Award
-                                        const awardStatus =
-                                          availableStatuses.find(
-                                            (s) =>
-                                              s.statusName === "Award" &&
-                                              s.selected &&
-                                              s.endDate
-                                          );
-
-                                        if (!awardStatus?.endDate) {
-                                          message.error(
-                                            "Vui lòng thiết lập thời gian kết thúc cho Lễ trao giải trước"
-                                          );
-                                          return;
-                                        }
-
-                                        // Tạo ngày kết thúc với ngày hiện tại và giờ mới
-                                        const newStartDate = editingStatuses[
-                                          status.statusName
-                                        ].startDate
-                                          .hour(value.hour())
-                                          .minute(value.minute())
-                                          .second(0);
-
-                                        // Kiểm tra giờ kết thúc phải sau giờ kết thúc của Award
-                                        if (
-                                          newStartDate.isBefore(
-                                            awardStatus.endDate
-                                          ) ||
-                                          newStartDate.isSame(
-                                            awardStatus.endDate
-                                          )
-                                        ) {
-                                          message.error(
-                                            "Giờ kết thúc sự kiện phải sau giờ kết thúc của Lễ trao giải"
-                                          );
-                                          return;
-                                        }
-
-                                        // Tự động tính endDate = startDate + 30 phút
-                                        const newEndDate = newStartDate
-                                          .clone()
-                                          .add(30, "minutes");
-
-                                        // Cập nhật cả startDate và endDate
-                                        setEditingStatuses((prev) => ({
-                                          ...prev,
-                                          [status.statusName]: {
-                                            startDate: newStartDate,
-                                            endDate: newEndDate,
-                                          },
-                                        }));
-                                      }
-                                    }}
-                                    format="HH:mm"
-                                    placeholder="Giờ kết thúc sự kiện"
-                                    disabledTime={() => {
-                                      const disabledHours = [];
-                                      const disabledMinutes = (
-                                        selectedHour
-                                      ) => {
-                                        const minutesDisabled = [];
-
-                                        // Tìm trạng thái Award
-                                        const awardStatus =
-                                          availableStatuses.find(
-                                            (s) =>
-                                              s.statusName === "Award" &&
-                                              s.selected &&
-                                              s.endDate
-                                          );
-
-                                        if (awardStatus?.endDate) {
-                                          // Nếu cùng ngày và cùng giờ với Award
-                                          if (
-                                            editingStatuses[status.statusName]
-                                              ?.startDate &&
-                                            editingStatuses[
-                                              status.statusName
-                                            ].startDate.format("YYYY-MM-DD") ===
-                                              awardStatus.endDate.format(
-                                                "YYYY-MM-DD"
-                                              ) &&
-                                            selectedHour ===
-                                              awardStatus.endDate.hour()
-                                          ) {
-                                            // Vô hiệu hóa tất cả các phút trước hoặc bằng phút kết thúc của Award
-                                            for (
-                                              let i = 0;
-                                              i <= awardStatus.endDate.minute();
-                                              i++
-                                            ) {
-                                              minutesDisabled.push(i);
-                                            }
-                                          }
-                                        }
-
-                                        return minutesDisabled;
-                                      };
-
-                                      // Tìm trạng thái Award
-                                      const awardStatus =
-                                        availableStatuses.find(
-                                          (s) =>
-                                            s.statusName === "Award" &&
-                                            s.selected &&
-                                            s.endDate
-                                        );
-
-                                      if (awardStatus?.endDate) {
-                                        // Nếu cùng ngày với Award
-                                        if (
-                                          editingStatuses[status.statusName]
-                                            ?.startDate &&
-                                          editingStatuses[
-                                            status.statusName
-                                          ].startDate.format("YYYY-MM-DD") ===
-                                            awardStatus.endDate.format(
-                                              "YYYY-MM-DD"
-                                            )
-                                        ) {
-                                          // Vô hiệu hóa tất cả các giờ trước giờ kết thúc của Award
-                                          for (
-                                            let i = 0;
-                                            i < awardStatus.endDate.hour();
-                                            i++
-                                          ) {
-                                            disabledHours.push(i);
-                                          }
-                                        }
-                                      }
-
-                                      return {
-                                        disabledHours: () => disabledHours,
-                                        disabledMinutes,
-                                      };
-                                    }}
-                                  />
-                                </div>
                               </div>
                             </div>
                           )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+            </Collapse.Panel>
 
-                          {status.statusName !== "RegistrationOpen" &&
-                            status.statusName !== "Finished" && (
-                              <div className="grid grid-cols-1 gap-2">
-                                <div>
-                                  <div className="mb-1">
-                                    <label className="block text-xs mb-1">
-                                      Ngày diễn ra:
-                                    </label>
-                                    <DatePicker
-                                      className="w-full"
-                                      size="small"
-                                      value={
-                                        editingStatuses[status.statusName]
-                                          ?.startDate
-                                      }
-                                      onChange={(value) => {
-                                        // Kiểm tra với showStartDate
-                                        if (
-                                          showStartDate &&
-                                          dayjs(showStartDate).isValid()
-                                        ) {
-                                          const exhibitionStartDay =
-                                            dayjs(showStartDate);
-                                          if (
-                                            value &&
-                                            value.isBefore(exhibitionStartDay)
-                                          ) {
-                                            message.error(
-                                              `Thời gian bắt đầu của ${translateStatus(status.statusName)} không được trước ngày bắt đầu triển lãm`
-                                            );
-                                            return;
-                                          }
-                                        }
+            {/* In Progress phase */}
+            <Collapse.Panel
+              key="inprogress"
+              header={
+                <div className="flex items-center">
+                  <div
+                    className={`${
+                      localShowStatus === "inprogress"
+                        ? " -ml-2 -my-2 py-2 pl-2 pr-3  flex items-center "
+                        : ""
+                    }`}
+                  >
+                    <PlayCircleOutlined
+                      className={`${localShowStatus === "inprogress" ? "text-purple-500 text-lg" : "text-purple-400"} mr-2`}
+                    />
+                    <span
+                      className={`font-medium text-sm md:text-base ${localShowStatus === "inprogress" ? "text-purple-500 font-bold" : "text-purple-400"}`}
+                    >
+                      Đang diễn ra
+                    </span>
+                    {localShowStatus === "inprogress" && (
+                      <div className="ml-2 h-4 w-4 bg-purple-500 rounded-full animate-pulse shadow-sm"></div>
+                    )}
+                  </div>
+                </div>
+              }
+              className={`site-collapse-custom-panel border-0 border-l-4 relative ${
+                localShowStatus === "inprogress"
+                  ? "border-purple-500 pl-1 mb-3 bg-purple-50 rounded-r-md shadow-md"
+                  : "border-purple-200 pl-1 mb-3 bg-gray-50 rounded-r-md"
+              }`}
+            >
+              {localShowStatus === "inprogress" && (
+                <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 bg-purple-500 rounded-full flex items-center justify-center shadow-md z-10">
+                  <div className="h-2 w-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              {availableStatuses
+                .filter(
+                  (status) =>
+                    status.selected &&
+                    statusUIConfig[status.statusName]?.mainCategory ===
+                      "inprogress"
+                )
+                .sort(
+                  (a, b) =>
+                    statusOrder[a.statusName] - statusOrder[b.statusName]
+                )
+                .map((status, index, array) => {
+                  // Check if dates are the same
+                  const sameDay =
+                    status.startDate &&
+                    status.endDate &&
+                    dayjs(status.startDate).format("YYYY-MM-DD") ===
+                      dayjs(status.endDate).format("YYYY-MM-DD");
 
-                                        // Kiểm tra với showEndDate
-                                        if (
-                                          showEndDate &&
-                                          dayjs(showEndDate).isValid()
-                                        ) {
-                                          const exhibitionEndDay =
-                                            dayjs(showEndDate);
-                                          if (
-                                            value &&
-                                            value.isAfter(exhibitionEndDay)
-                                          ) {
-                                            message.error(
-                                              `Thời gian bắt đầu của ${translateStatus(status.statusName)} không được sau ngày kết thúc triển lãm`
-                                            );
-                                            return;
-                                          }
-                                        }
+                  return (
+                    <div key={status.statusName} className="relative">
+                      <div
+                        className={`pl-7 relative mb-4 p-3 ${localShowStatus === "inprogress" ? "border border-purple-200 bg-white rounded-md" : ""}`}
+                      >
+                        <div
+                          className={`absolute left-0 top-6 h-3 w-3 rounded-full ${
+                            localShowStatus === "inprogress"
+                              ? "bg-purple-500"
+                              : "bg-purple-200"
+                          }`}
+                        ></div>
+                        <div
+                          className={`font-medium ${localShowStatus === "inprogress" ? "text-gray-800" : "text-gray-500"}`}
+                        >
+                          {status.description}
+                        </div>
 
-                                        handleStatusDateChange(
-                                          status.statusName,
-                                          "startDate",
-                                          value
-                                        );
-                                        // Đồng bộ ngày cho endDate
-                                        if (
-                                          editingStatuses[status.statusName]
-                                            ?.endDate
-                                        ) {
-                                          const newEndDate = value
-                                            .hour(
-                                              editingStatuses[
-                                                status.statusName
-                                              ].endDate.hour()
-                                            )
-                                            .minute(
-                                              editingStatuses[
-                                                status.statusName
-                                              ].endDate.minute()
-                                            );
-                                          handleStatusDateChange(
-                                            status.statusName,
-                                            "endDate",
-                                            newEndDate
-                                          );
-                                        }
-                                      }}
-                                      format="YYYY-MM-DD"
-                                      placeholder="Chọn ngày"
-                                      disabledDate={(current) => {
-                                        // Vô hiệu hóa ngày trước ngày bắt đầu triển lãm
-                                        if (
-                                          showStartDate &&
-                                          dayjs(showStartDate).isValid()
-                                        ) {
-                                          const exhibitionStartDay =
-                                            dayjs(showStartDate).startOf("day");
-                                          if (
-                                            current &&
-                                            current.isBefore(
-                                              exhibitionStartDay,
-                                              "day"
-                                            )
-                                          ) {
-                                            return true;
-                                          }
-                                        }
+                        {!isEditing && status.startDate && (
+                          <div className="text-xs text-gray-500">
+                            {sameDay ? (
+                              <>
+                                {formatDate(status.startDate)},{" "}
+                                {formatTime(status.startDate)} -{" "}
+                                {formatTime(status.endDate)}
+                              </>
+                            ) : (
+                              <>
+                                {formatDate(status.startDate)}{" "}
+                                {formatTime(status.startDate)} -{" "}
+                                {formatDate(status.endDate)}{" "}
+                                {formatTime(status.endDate)}
+                              </>
+                            )}
+                          </div>
+                        )}
 
-                                        // Vô hiệu hóa ngày sau ngày kết thúc triển lãm
-                                        if (
-                                          showEndDate &&
-                                          dayjs(showEndDate).isValid()
-                                        ) {
-                                          const exhibitionEndDay =
-                                            dayjs(showEndDate).endOf("day");
-                                          if (
-                                            current &&
-                                            current.isAfter(
-                                              exhibitionEndDay,
-                                              "day"
-                                            )
-                                          ) {
-                                            return true;
-                                          }
-                                        }
-
-                                        return false;
-                                      }}
-                                    />
-                                  </div>
-                                  <div className="grid grid-cols-2 gap-2">
-                                    <div>
+                        {isEditing && (
+                          <div className="mt-2 space-y-2">
+                            {status.statusName !== "RegistrationOpen" &&
+                              status.statusName !== "Finished" && (
+                                <div className="grid grid-cols-1 gap-2">
+                                  <div>
+                                    <div className="mb-1">
                                       <label className="block text-xs mb-1">
-                                        Giờ bắt đầu:
+                                        Ngày diễn ra:
                                       </label>
-                                      <TimePicker
+                                      <DatePicker
                                         className="w-full"
                                         size="small"
                                         value={
@@ -1318,465 +1312,211 @@ const StatusManager = ({
                                             ?.startDate
                                         }
                                         onChange={(value) => {
-                                          if (value) {
+                                          handleStatusDateChange(
+                                            status.statusName,
+                                            "startDate",
+                                            value
+                                          );
+                                        }}
+                                        format="YYYY-MM-DD"
+                                        placeholder="Chọn ngày"
+                                        disabledDate={(current) => {
+                                          return false;
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-2">
+                                      <div>
+                                        <label className="block text-xs mb-1">
+                                          Giờ bắt đầu:
+                                        </label>
+                                        <TimePicker
+                                          className="w-full"
+                                          size="small"
+                                          value={
+                                            editingStatuses[status.statusName]
+                                              ?.startDate
+                                          }
+                                          onChange={(value) => {
                                             handleStatusDateChange(
                                               status.statusName,
                                               "startDate",
                                               value
                                             );
-                                          }
-                                        }}
-                                        format="HH:mm"
-                                        placeholder="Giờ bắt đầu"
-                                        disabledTime={() => {
-                                          const disabledHours = [];
-                                          const disabledMinutes = (
-                                            selectedHour
-                                          ) => {
-                                            const minutesDisabled = [];
-                                            const selectedDate =
-                                              editingStatuses[status.statusName]
-                                                ?.startDate;
-
-                                            if (!selectedDate)
-                                              return minutesDisabled;
-
-                                            // Tìm vị trí của trạng thái hiện tại
-                                            const statusOrder = {
-                                              RegistrationOpen: 1,
-                                              KoiCheckIn: 2,
-                                              TicketCheckIn: 3,
-                                              Preliminary: 4,
-                                              Evaluation: 5,
-                                              Final: 6,
-                                              Exhibition: 7,
-                                              PublicResult: 8,
-                                              Award: 9,
-                                              Finished: 10,
-                                            };
-                                            const currentStatusOrder =
-                                              statusOrder[status.statusName] ||
-                                              0;
-
-                                            // Tìm trạng thái trước đó
-                                            const prevStatusName = Object.keys(
-                                              statusOrder
-                                            ).find(
-                                              (key) =>
-                                                statusOrder[key] ===
-                                                currentStatusOrder - 1
-                                            );
-
-                                            if (
-                                              prevStatusName &&
-                                              editingStatuses[prevStatusName]
-                                                ?.endDate
-                                            ) {
-                                              const prevStatus =
-                                                editingStatuses[prevStatusName];
-
-                                              // Nếu cùng ngày và cùng giờ với giờ kết thúc của trạng thái trước
-                                              if (
-                                                selectedDate.format(
-                                                  "YYYYMMDD"
-                                                ) ===
-                                                  prevStatus.endDate.format(
-                                                    "YYYYMMDD"
-                                                  ) &&
-                                                selectedHour ===
-                                                  prevStatus.endDate.hour()
-                                              ) {
-                                                // Vô hiệu hóa tất cả các phút TRƯỚC phút kết thúc của trạng thái trước
-                                                // Cho phép chọn cùng phút kết thúc
-                                                for (
-                                                  let i = 0;
-                                                  i <
-                                                  prevStatus.endDate.minute();
-                                                  i++
-                                                ) {
-                                                  minutesDisabled.push(i);
-                                                }
-                                              }
-                                            }
-
-                                            return minutesDisabled;
-                                          };
-
-                                          const selectedDate =
+                                          }}
+                                          format="HH:mm"
+                                          placeholder="Giờ bắt đầu"
+                                        />
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs mb-1">
+                                          Giờ kết thúc:
+                                        </label>
+                                        <TimePicker
+                                          className="w-full"
+                                          size="small"
+                                          value={
                                             editingStatuses[status.statusName]
-                                              ?.startDate;
-
-                                          if (!selectedDate)
-                                            return {
-                                              disabledHours: () =>
-                                                disabledHours,
-                                            };
-
-                                          // Tìm vị trí của trạng thái hiện tại
-                                          const statusOrder = {
-                                            RegistrationOpen: 1,
-                                            KoiCheckIn: 2,
-                                            TicketCheckIn: 3,
-                                            Preliminary: 4,
-                                            Evaluation: 5,
-                                            Final: 6,
-                                            Exhibition: 7,
-                                            PublicResult: 8,
-                                            Award: 9,
-                                            Finished: 10,
-                                          };
-                                          const currentStatusOrder =
-                                            statusOrder[status.statusName] || 0;
-
-                                          // Tìm trạng thái trước đó
-                                          const prevStatusName = Object.keys(
-                                            statusOrder
-                                          ).find(
-                                            (key) =>
-                                              statusOrder[key] ===
-                                              currentStatusOrder - 1
-                                          );
-
-                                          if (
-                                            prevStatusName &&
-                                            editingStatuses[prevStatusName]
                                               ?.endDate
-                                          ) {
-                                            const prevStatus =
-                                              editingStatuses[prevStatusName];
-
-                                            // Nếu trạng thái hiện tại có ngày trước ngày kết thúc của trạng thái trước, vô hiệu hóa tất cả các giờ
-                                            if (
-                                              selectedDate.format("YYYYMMDD") <
-                                              prevStatus.endDate.format(
-                                                "YYYYMMDD"
-                                              )
-                                            ) {
-                                              for (let i = 0; i < 24; i++) {
-                                                disabledHours.push(i);
-                                              }
-                                            }
-                                            // Nếu cùng ngày với trạng thái trước
-                                            else if (
-                                              selectedDate.format(
-                                                "YYYYMMDD"
-                                              ) ===
-                                              prevStatus.endDate.format(
-                                                "YYYYMMDD"
-                                              )
-                                            ) {
-                                              // Vô hiệu hóa tất cả các giờ TRƯỚC giờ kết thúc của trạng thái trước
-                                              for (
-                                                let i = 0;
-                                                i < prevStatus.endDate.hour();
-                                                i++
-                                              ) {
-                                                disabledHours.push(i);
-                                              }
-                                            }
                                           }
-
-                                          return {
-                                            disabledHours: () => disabledHours,
-                                            disabledMinutes,
-                                          };
-                                        }}
-                                      />
-                                    </div>
-                                    <div>
-                                      <label className="block text-xs mb-1">
-                                        Giờ kết thúc:
-                                      </label>
-                                      <TimePicker
-                                        className="w-full"
-                                        size="small"
-                                        value={
-                                          editingStatuses[status.statusName]
-                                            ?.endDate
-                                        }
-                                        onChange={(value) => {
-                                          if (
-                                            value &&
-                                            editingStatuses[status.statusName]
-                                              ?.startDate
-                                          ) {
-                                            const newDate = editingStatuses[
-                                              status.statusName
-                                            ].startDate
-                                              .hour(value.hour())
-                                              .minute(value.minute())
-                                              .second(0);
-
-                                            // Kiểm tra với trạng thái trước đó
-                                            const statusOrder = {
-                                              RegistrationOpen: 1,
-                                              KoiCheckIn: 2,
-                                              TicketCheckIn: 3,
-                                              Preliminary: 4,
-                                              Evaluation: 5,
-                                              Final: 6,
-                                              Exhibition: 7,
-                                              PublicResult: 8,
-                                              Award: 9,
-                                              Finished: 10,
-                                            };
-                                            const currentStatusOrder =
-                                              statusOrder[status.statusName] ||
-                                              0;
-
-                                            // Kiểm tra với trạng thái tiếp theo
-                                            const nextStatusName = Object.keys(
-                                              statusOrder
-                                            ).find(
-                                              (key) =>
-                                                statusOrder[key] ===
-                                                currentStatusOrder + 1
-                                            );
-
-                                            // Kiểm tra thời gian kết thúc không được sớm hơn thời gian bắt đầu
-                                            if (
-                                              newDate.isBefore(
-                                                editingStatuses[
-                                                  status.statusName
-                                                ].startDate
-                                              )
-                                            ) {
-                                              message.error(
-                                                `Thời gian kết thúc không được sớm hơn thời gian bắt đầu`
-                                              );
-                                              return;
-                                            }
-
-                                            // Kiểm tra với trạng thái tiếp theo nếu có
-                                            if (
-                                              nextStatusName &&
-                                              editingStatuses[nextStatusName]
-                                                ?.startDate
-                                            ) {
-                                              const nextStatus =
-                                                editingStatuses[nextStatusName];
-                                              // Thời gian kết thúc không được muộn hơn thời gian bắt đầu của trạng thái tiếp theo
-                                              if (
-                                                newDate.isAfter(
-                                                  nextStatus.startDate
-                                                )
-                                              ) {
-                                                message.error(
-                                                  `Thời gian kết thúc phải trước hoặc bằng thời gian bắt đầu của ${
-                                                    statusMapping[
-                                                      nextStatusName
-                                                    ]?.label || nextStatusName
-                                                  }`
-                                                );
-                                                return;
-                                              }
-                                            }
-
+                                          onChange={(value) => {
                                             handleStatusDateChange(
                                               status.statusName,
                                               "endDate",
-                                              newDate
+                                              value
                                             );
-                                          }
-                                        }}
-                                        format="HH:mm"
-                                        placeholder="Giờ kết thúc"
-                                        disabledTime={() => {
-                                          const disabledHours = [];
-                                          const disabledMinutes = (
-                                            selectedHour
-                                          ) => {
-                                            const minutesDisabled = [];
-                                            const selectedDate =
-                                              editingStatuses[status.statusName]
-                                                ?.startDate;
-
-                                            if (!selectedDate)
-                                              return minutesDisabled;
-
-                                            // Kiểm tra không được sớm hơn thời gian bắt đầu
-                                            if (
-                                              selectedHour ===
-                                              selectedDate.hour()
-                                            ) {
-                                              for (
-                                                let i = 0;
-                                                i < selectedDate.minute();
-                                                i++
-                                              ) {
-                                                minutesDisabled.push(i);
-                                              }
-                                            }
-
-                                            // Kiểm tra với trạng thái tiếp theo
-                                            const statusOrder = {
-                                              RegistrationOpen: 1,
-                                              KoiCheckIn: 2,
-                                              TicketCheckIn: 3,
-                                              Preliminary: 4,
-                                              Evaluation: 5,
-                                              Final: 6,
-                                              Exhibition: 7,
-                                              PublicResult: 8,
-                                              Award: 9,
-                                              Finished: 10,
-                                            };
-                                            const currentStatusOrder =
-                                              statusOrder[status.statusName] ||
-                                              0;
-
-                                            const nextStatusName = Object.keys(
-                                              statusOrder
-                                            ).find(
-                                              (key) =>
-                                                statusOrder[key] ===
-                                                currentStatusOrder + 1
-                                            );
-
-                                            if (
-                                              nextStatusName &&
-                                              editingStatuses[nextStatusName]
-                                                ?.startDate
-                                            ) {
-                                              const nextStatus =
-                                                editingStatuses[nextStatusName];
-
-                                              // Nếu cùng ngày và cùng giờ với giờ bắt đầu của trạng thái tiếp theo
-                                              if (
-                                                selectedDate.format(
-                                                  "YYYYMMDD"
-                                                ) ===
-                                                  nextStatus.startDate.format(
-                                                    "YYYYMMDD"
-                                                  ) &&
-                                                selectedHour ===
-                                                  nextStatus.startDate.hour()
-                                              ) {
-                                                // Vô hiệu hóa tất cả các phút SAU phút bắt đầu của trạng thái tiếp theo
-                                                for (
-                                                  let i =
-                                                    nextStatus.startDate.minute() +
-                                                    1;
-                                                  i < 60;
-                                                  i++
-                                                ) {
-                                                  minutesDisabled.push(i);
-                                                }
-                                              }
-                                            }
-
-                                            return minutesDisabled;
-                                          };
-
-                                          const selectedDate =
-                                            editingStatuses[status.statusName]
-                                              ?.startDate;
-
-                                          if (!selectedDate)
-                                            return {
-                                              disabledHours: () =>
-                                                disabledHours,
-                                            };
-
-                                          // Kiểm tra không được sớm hơn thời gian bắt đầu
-                                          for (
-                                            let i = 0;
-                                            i < selectedDate.hour();
-                                            i++
-                                          ) {
-                                            disabledHours.push(i);
-                                          }
-
-                                          // Kiểm tra với trạng thái tiếp theo
-                                          const statusOrder = {
-                                            RegistrationOpen: 1,
-                                            KoiCheckIn: 2,
-                                            TicketCheckIn: 3,
-                                            Preliminary: 4,
-                                            Evaluation: 5,
-                                            Final: 6,
-                                            Exhibition: 7,
-                                            PublicResult: 8,
-                                            Award: 9,
-                                            Finished: 10,
-                                          };
-                                          const currentStatusOrder =
-                                            statusOrder[status.statusName] || 0;
-
-                                          const nextStatusName = Object.keys(
-                                            statusOrder
-                                          ).find(
-                                            (key) =>
-                                              statusOrder[key] ===
-                                              currentStatusOrder + 1
-                                          );
-
-                                          if (
-                                            nextStatusName &&
-                                            editingStatuses[nextStatusName]
-                                              ?.startDate
-                                          ) {
-                                            const nextStatus =
-                                              editingStatuses[nextStatusName];
-
-                                            // Nếu trạng thái hiện tại có ngày sau ngày bắt đầu của trạng thái tiếp theo, vô hiệu hóa tất cả các giờ
-                                            if (
-                                              selectedDate.format("YYYYMMDD") >
-                                              nextStatus.startDate.format(
-                                                "YYYYMMDD"
-                                              )
-                                            ) {
-                                              for (let i = 0; i < 24; i++) {
-                                                disabledHours.push(i);
-                                              }
-                                            }
-                                            // Nếu cùng ngày với trạng thái tiếp theo
-                                            else if (
-                                              selectedDate.format(
-                                                "YYYYMMDD"
-                                              ) ===
-                                              nextStatus.startDate.format(
-                                                "YYYYMMDD"
-                                              )
-                                            ) {
-                                              // Vô hiệu hóa tất cả các giờ SAU giờ bắt đầu của trạng thái tiếp theo
-                                              for (
-                                                let i =
-                                                  nextStatus.startDate.hour() +
-                                                  1;
-                                                i < 24;
-                                                i++
-                                              ) {
-                                                disabledHours.push(i);
-                                              }
-                                            }
-                                          }
-
-                                          return {
-                                            disabledHours: () => disabledHours,
-                                            disabledMinutes,
-                                          };
-                                        }}
-                                      />
+                                          }}
+                                          format="HH:mm"
+                                          placeholder="Giờ kết thúc"
+                                        />
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            )}
-
-                          {errors[status.statusName] && (
-                            <div className="text-red-500 text-xs mt-1">
-                              {errors[status.statusName]}
-                            </div>
-                          )}
-                        </div>
+                              )}
+                          </div>
+                        )}
+                      </div>
+                      {index < array.length - 1 && (
+                        <div className="border-b border-dashed border-gray-200 mx-7 mb-4"></div>
                       )}
                     </div>
+                  );
+                })}
+            </Collapse.Panel>
+
+            {/* Finished phase */}
+            <Collapse.Panel
+              key="finished"
+              header={
+                <div className="flex items-center">
+                  <div
+                    className={`${
+                      localShowStatus === "finished"
+                        ? "-ml-2 -my-2 py-2 pl-2 pr-3  flex items-center "
+                        : ""
+                    }`}
+                  >
+                    <CheckCircleOutlined
+                      className={`${localShowStatus === "finished" ? "text-gray-600 text-lg" : "text-gray-400"} mr-2`}
+                    />
+                    <span
+                      className={`font-medium text-sm md:text-base ${localShowStatus === "finished" ? "text-gray-600 font-bold" : "text-gray-400"}`}
+                    >
+                      Kết thúc
+                    </span>
+                    {localShowStatus === "finished" && (
+                      <div className="ml-2 h-4 w-4 bg-gray-600 rounded-full animate-pulse shadow-sm"></div>
+                    )}
                   </div>
-                ),
-              };
-            })}
-        />
+                </div>
+              }
+              className={`site-collapse-custom-panel border-0 border-l-4 relative ${
+                localShowStatus === "finished"
+                  ? "border-gray-500 pl-1 mb-3 bg-gray-100 rounded-r-md shadow-md"
+                  : "border-gray-200 pl-1 mb-3 bg-gray-50 rounded-r-md"
+              }`}
+            >
+              {localShowStatus === "finished" && (
+                <div className="absolute -left-3 top-1/2 transform -translate-y-1/2 h-6 w-6 bg-gray-500 rounded-full flex items-center justify-center shadow-md z-10">
+                  <div className="h-2 w-2 bg-white rounded-full"></div>
+                </div>
+              )}
+              {availableStatuses
+                .filter(
+                  (status) =>
+                    status.selected &&
+                    statusUIConfig[status.statusName]?.mainCategory ===
+                      "finished"
+                )
+                .sort(
+                  (a, b) =>
+                    statusOrder[a.statusName] - statusOrder[b.statusName]
+                )
+                .map((status) => (
+                  <div
+                    key={status.statusName}
+                    className={`pl-7 relative mb-4 p-3 ${localShowStatus === "finished" ? "border border-gray-200 bg-white rounded-md" : ""}`}
+                  >
+                    <div
+                      className={`absolute left-0 top-6 h-3 w-3 rounded-full ${
+                        localShowStatus === "finished"
+                          ? "bg-gray-500"
+                          : "bg-gray-200"
+                      }`}
+                    ></div>
+                    <div
+                      className={`font-medium ${localShowStatus === "finished" ? "text-gray-800" : "text-gray-500"}`}
+                    >
+                      {status.description}
+                    </div>
+
+                    {!isEditing && status.startDate && (
+                      <div className="text-xs text-gray-500">
+                        {formatDate(status.startDate)},{" "}
+                        {formatTime(status.startDate)}
+                      </div>
+                    )}
+
+                    {isEditing && (
+                      <div className="mt-2 space-y-2">
+                        {status.statusName === "Finished" && (
+                          <div className="grid grid-cols-1 gap-2">
+                            <div>
+                              <div className="mb-1">
+                                <label className="block text-xs mb-1">
+                                  Thời gian kết thúc sự kiện:
+                                </label>
+                                <DatePicker
+                                  className="w-full"
+                                  size="small"
+                                  value={
+                                    editingStatuses[status.statusName]
+                                      ?.startDate
+                                  }
+                                  onChange={(value) => {
+                                    handleStatusDateChange(
+                                      status.statusName,
+                                      "startDate",
+                                      value
+                                    );
+                                  }}
+                                  format="YYYY-MM-DD"
+                                  placeholder="Chọn ngày kết thúc sự kiện"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs mb-1">
+                                  Giờ kết thúc:
+                                </label>
+                                <TimePicker
+                                  className="w-full"
+                                  size="small"
+                                  value={
+                                    editingStatuses[status.statusName]
+                                      ?.startDate
+                                  }
+                                  onChange={(value) => {
+                                    handleStatusDateChange(
+                                      status.statusName,
+                                      "startDate",
+                                      value
+                                    );
+                                  }}
+                                  format="HH:mm"
+                                  placeholder="Giờ kết thúc sự kiện"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
+            </Collapse.Panel>
+          </Collapse>
+        </div>
       </Card>
     </div>
   );

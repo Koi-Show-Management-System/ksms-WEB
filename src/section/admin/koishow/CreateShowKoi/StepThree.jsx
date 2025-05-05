@@ -92,11 +92,11 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
     },
     "Điểm Danh": {
       key: "KoiCheckIn",
-      description: "Giai đoạn check-in cá koi.",
+      description: "Check-in cá koi.",
     },
     "Vé vào": {
       key: "TicketCheckIn",
-      description: "Giai đoạn check-in vé.",
+      description: "Check-in vé.",
     },
     "Vòng Sơ Khảo": {
       key: "Preliminary",

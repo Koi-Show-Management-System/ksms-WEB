@@ -1252,6 +1252,19 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       delete newRoundsErrors.evaluationTwo;
       setRoundsErrors(newRoundsErrors);
     }
+
+    // Kiểm tra số cá qua vòng không vượt quá số lượng tham gia tối đa
+    const maxEntries = form.getFieldValue("maxEntries");
+    if (value && maxEntries && value > maxEntries) {
+      const newRoundsErrors = { ...roundsErrors };
+      newRoundsErrors.evaluationOne = `Số cá qua vòng (${value}) không được vượt quá số lượng tham gia tối đa (${maxEntries})`;
+      setRoundsErrors(newRoundsErrors);
+    } else {
+      // Xóa lỗi nếu hợp lệ
+      const newRoundsErrors = { ...roundsErrors };
+      delete newRoundsErrors.evaluationOne;
+      setRoundsErrors(newRoundsErrors);
+    }
   };
 
   // Thay đổi hàm setEvaluationTwoNumber để kiểm tra giá trị nhập vào
@@ -1595,6 +1608,11 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                               }
                               style={{ width: "100%" }}
                             />
+                            {roundsErrors.evaluationOne && (
+                              <p className="text-red-500 text-xs mt-1">
+                                {roundsErrors.evaluationOne}
+                              </p>
+                            )}
                             {showErrors &&
                               (!evaluationOneNumber ||
                                 evaluationOneNumber < 1) && (

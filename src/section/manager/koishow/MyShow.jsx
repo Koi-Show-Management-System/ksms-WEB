@@ -93,14 +93,14 @@ function MyShow() {
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-        {filteredData.filter((show) => show.status === "in progress").length ===
+        {filteredData.filter((show) => show.status === "inprogress").length ===
         0 ? (
           <div className="flex flex-col items-center justify-center py-12 col-span-3">
             <h3 className="text-xl font-bold">Không có triển lãm nào</h3>
           </div>
         ) : (
           filteredData
-            .filter((show) => show.status === "in progress")
+            .filter((show) => show.status === "inprogress")
             .map((show) => (
               <div
                 key={show.id}
@@ -136,7 +136,7 @@ function MyShow() {
                           ? "Đã duyệt"
                           : show.status === "upcoming"
                             ? "Sắp diễn ra"
-                            : show.status === "in progress"
+                            : show.status === "inprogress"
                               ? "Đang diễn ra"
                               : "Không xác định"}
                     </span>
