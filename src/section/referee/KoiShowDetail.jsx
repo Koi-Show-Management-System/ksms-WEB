@@ -364,6 +364,7 @@ function KoiShowDetail() {
                       <StatusManager
                         showId={id}
                         showStatuses={koiShowDetail.data.showStatuses}
+                        showStatus={koiShowDetail.data.status}
                         disabled={true}
                       />
                     </div>
