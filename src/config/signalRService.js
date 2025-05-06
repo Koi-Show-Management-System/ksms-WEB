@@ -177,7 +177,7 @@ class SignalRService {
         await this.showConnection.start();
         console.log("Show SignalR Connected successfully");
       } else if (this.showConnection.state === "Connected") {
-        console.log("Show SignalR already connected, skipping connection");
+        // console.log("Show SignalR already connected, skipping connection");
       } else {
         console.log(
           "Show SignalR connection in state:",

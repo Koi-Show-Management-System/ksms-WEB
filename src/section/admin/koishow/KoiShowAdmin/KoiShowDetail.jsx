@@ -149,16 +149,13 @@ function KoiShowDetail() {
     const setupSignalR = async () => {
       try {
         await signalRService.startShowConnection();
-        console.log("Show SignalR connection established in KoiShowDetail");
+        // console.log("Show SignalR connection established in KoiShowDetail");
 
         // Subscribe to show status updates
         unsubscribe = signalRService.subscribeToShowStatusUpdates(
           (updatedShowId, updatedStatus) => {
             if (updatedShowId === id && koiShowDetail?.data) {
-              console.log(
-                "Received status update for this show:",
-                updatedStatus
-              );
+          
 
               // Only update if the status actually changed
               if (koiShowDetail.data.status !== updatedStatus) {

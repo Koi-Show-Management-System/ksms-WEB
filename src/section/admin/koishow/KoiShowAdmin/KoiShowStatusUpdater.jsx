@@ -21,16 +21,12 @@ function KoiShowStatusUpdater({
     const initializeSignalR = async () => {
       try {
         await signalRService.startShowConnection();
-        console.log("SignalR Show connection started in KoiShowStatusUpdater");
+        // console.log("SignalR Show connection started in KoiShowStatusUpdater");
 
         // Subscribe to show status updates
         unsubscribe = signalRService.subscribeToShowStatusUpdates(
           (updatedShowId, updatedStatus) => {
             if (updatedShowId === showId) {
-              console.log(
-                "Received status update for this show:",
-                updatedStatus
-              );
               setStatus(updatedStatus);
               // Inform parent component about the status change
               onStatusUpdate(updatedStatus);

@@ -35,11 +35,17 @@ function KoiShow() {
     currentPage,
     pageSize,
     totalItems,
+    reset,
   } = useKoiShow();
 
   useEffect(() => {
+    reset();
     fetchKoiShowList(currentPage, pageSize);
-  }, []);
+
+    return () => {
+      reset();
+    };
+  }, [userRole]);
 
   useEffect(() => {
     handleSearch();

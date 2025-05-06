@@ -16,6 +16,20 @@ const useKoiShow = create((set, get) => ({
   isLoading: false,
   error: null,
 
+  // Add reset function to clear state data
+  reset: () => {
+    set({
+      koiShows: [],
+      koiShowDetail: null,
+      currentPage: 1,
+      pageSize: 10,
+      totalItems: 0,
+      totalPages: 1,
+      isLoading: false,
+      error: null,
+    });
+  },
+
   fetchKoiShowList: async (page = 1, size = 10) => {
     set({ isLoading: true, error: null, currentPage: page, pageSize: size });
 

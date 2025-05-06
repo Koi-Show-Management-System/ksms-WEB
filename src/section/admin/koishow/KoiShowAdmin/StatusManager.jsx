@@ -134,7 +134,7 @@ const StatusManager = ({
       try {
         if (signalRService.getShowConnectionState() !== "Connected") {
           await signalRService.startShowConnection();
-          console.log("Show SignalR connection established for StatusManager");
+          // console.log("Show SignalR connection established for StatusManager");
           setSignalRConnected(true);
         } else {
           console.log("Show SignalR already connected");
@@ -145,7 +145,6 @@ const StatusManager = ({
         unsubscribe = signalRService.subscribeToShowStatusUpdates(
           (updatedShowId, updatedStatus) => {
             if (updatedShowId === showId) {
-              console.log("Received real-time status update:", updatedStatus);
               setLocalShowStatus(updatedStatus);
 
               // No need to fetch the entire show details just for status update

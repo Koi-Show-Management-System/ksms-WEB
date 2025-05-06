@@ -30,8 +30,6 @@ export const CriteriaPage = lazy(
 );
 export const VarietyPage = lazy(() => import("../pages/AdminPage/VarietyPage"));
 
-
-
 export const NewManagerPage = lazy(
   () => import("../pages/ManagerPage/NewPage")
 );
@@ -41,7 +39,6 @@ export const KoiShowStaffPage = lazy(
 export const KoiShowDetailStaffPage = lazy(
   () => import("../pages/StaffPage/KoiShowDetailPage")
 );
-
 
 const ProtectedRoute = ({ children, allowedRole, userRole }) => {
   useEffect(() => {

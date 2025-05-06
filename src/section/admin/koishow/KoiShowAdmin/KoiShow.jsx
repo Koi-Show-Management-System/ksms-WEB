@@ -37,11 +37,19 @@ function KoiShow() {
     pageSize,
     totalItems,
     updateKoiShowStatus,
+    reset,
   } = useKoiShow();
 
   useEffect(() => {
+    // Reset state and fetch fresh data when component mounts or role changes
+    reset();
     fetchKoiShowList(currentPage, pageSize);
-  }, []);
+
+    // Clean up function for when component unmounts
+    return () => {
+      reset();
+    };
+  }, [userRole]); // Add userRole as dependency to re-fetch when it changes
 
   useEffect(() => {
     if (koiShows && koiShows.length > 0) {
