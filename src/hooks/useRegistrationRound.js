@@ -3,6 +3,7 @@ import {
   getRegistrationRound,
   updateFishTank,
   getRegistrationRoundByReferee,
+  assignToFirstRound,
 } from "../api/registrationRoundApi";
 import { updatePublishRound } from "../api/roundApi";
 import { notification } from "antd";
@@ -261,6 +262,58 @@ const useRegistrationRound = create((set, get) => ({
           data: error.response?.data,
         },
       };
+    }
+  },
+
+  // Add new function to assign registrations to first round
+  assignRegistrationsToFirstRound: async (categoryId, registrationIds) => {
+    set({ isLoading: true, error: null });
+
+    if (!categoryId || !registrationIds || registrationIds.length === 0) {
+      notification.error({
+        message: "Lỗi gán vòng",
+        description: "Thiếu thông tin cần thiết để gán vòng",
+        placement: "topRight",
+      });
+      set({ isLoading: false });
+      return { success: false, error: "Missing required information" };
+    }
+
+    try {
+      const res = await assignToFirstRound(categoryId, registrationIds);
+      console.log("Assign to first round response:", res.data);
+
+      if (res && res.status === 200) {
+        notification.success({
+          message: "Gán vòng thành công",
+          description: res.data?.message || "Đã gán vòng thành công",
+          placement: "topRight",
+        });
+
+        set({ isLoading: false });
+        return { success: true, data: res.data };
+      } else {
+        notification.error({
+          message: "Lỗi gán vòng",
+          description: "Không thể gán vòng. Vui lòng thử lại sau.",
+          placement: "topRight",
+        });
+
+        set({ error: res, isLoading: false });
+        return { success: false, error: res };
+      }
+    } catch (error) {
+      console.error("Assign to First Round Error:", error);
+
+      notification.error({
+        message: "Lỗi gán vòng",
+        description:
+          error.response?.data?.message || "Đã xảy ra lỗi khi gán vòng",
+        placement: "topRight",
+      });
+
+      set({ error: error, isLoading: false });
+      return { success: false, error };
     }
   },
 

@@ -28,5 +28,27 @@ const getRegistrationRoundByReferee = (registrationId, roundId) => {
     }
   );
 };
+const getAssignedRound = (categoryId, roundId) => {
+  return axiosClient.get("/registration-round/get-assigned-round", {
+    params: {
+      categoryId: categoryId,
+      roundId: roundId,
+    },
+  });
+};
 
-export { getRegistrationRound, updateFishTank, getRegistrationRoundByReferee };
+// Add new API function to assign registrations to first round
+const assignToFirstRound = (categoryId, registrationIds) => {
+  return axiosClient.post("/registration-round/assign-to-first-round", {
+    categoryId: categoryId,
+    registrationIds: registrationIds,
+  });
+};
+
+export {
+  getRegistrationRound,
+  updateFishTank,
+  getRegistrationRoundByReferee,
+  getAssignedRound,
+  assignToFirstRound,
+};

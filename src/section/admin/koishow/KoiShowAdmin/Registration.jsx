@@ -30,6 +30,7 @@ import {
 } from "@ant-design/icons";
 import useRegistration from "../../../../hooks/useRegistration";
 import useCategory from "../../../../hooks/useCategory";
+import useRegistrationRound from "../../../../hooks/useRegistrationRound";
 import RoundSelector from "./RoundSelector";
 
 // Placeholder image for missing images
@@ -53,11 +54,11 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     clearSelectedRegistrations,
   } = useRegistration();
 
+  const { assignRegistrationsToFirstRound } = useRegistrationRound();
+
   const { categories, fetchCategories } = useCategory();
 
   const [isAssignModalVisible, setIsAssignModalVisible] = useState(false);
-  const [selectedRoundId, setSelectedRoundId] = useState(null);
-  const [selectedRoundName, setSelectedRoundName] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedStatus, setSelectedStatus] = useState(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -65,7 +66,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
   const [updatedStatus, setUpdatedStatus] = useState(null);
   const [checkinRegistrations, setCheckinRegistrations] = useState([]);
   const { confirm } = Modal;
-  const roundSelectorRef = useRef(null);
   const statusOptions = [
     { value: "pending", label: "Đang chờ" },
     { value: "confirmed", label: "Đã xác nhận" },
@@ -210,79 +210,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     );
   };
 
-  const handleRoundSelect = (roundId, roundName, roundCategoryId) => {
-    setSelectedRoundId(roundId);
-    setSelectedRoundName(roundName);
-    setSelectedRoundCategoryId(roundCategoryId || selectedCategory); // Nếu không có roundCategoryId, mặc định là selectedCategory
-  };
-
-  const showAssignModal = () => {
-    if (!selectedCategory) {
-      notification.warning({
-        message: "Chưa chọn hạng mục",
-        description: "Vui lòng chọn hạng mục trước khi gán vòng",
-        placement: "topRight",
-      });
-      return;
-    }
-
-    // Hiển thị loading trước khi lấy dữ liệu
-    notification.info({
-      message: "Đang lấy dữ liệu",
-      description: "Đang lấy tất cả đăng ký đã check-in, vui lòng đợi...",
-      placement: "topRight",
-      duration: 2,
-    });
-
-    // Gọi API để lấy tất cả đăng ký có trạng thái checkin trong hạng mục đã chọn
-    fetchRegistration(
-      1,
-      1000, // Số lượng lớn để lấy tất cả đăng ký
-      showId,
-      [selectedCategory],
-      ["checkin"] // Chỉ lấy các đăng ký đã check-in
-    ).then((response) => {
-      if (response && response.registration) {
-        const checkedInFish = response.registration.filter(
-          (reg) =>
-            reg.status?.toLowerCase() === "checkin" &&
-            reg.competitionCategory?.id === selectedCategory
-        );
-
-        if (checkedInFish.length === 0) {
-          notification.warning({
-            message: "Không có đăng ký",
-            description: "Không có đăng ký nào đã check-in để gán vòng",
-            placement: "topRight",
-          });
-          return;
-        }
-
-        setCheckinRegistrations(checkedInFish);
-        setTotalCheckinRegistrations(checkedInFish.length);
-        setIsAssignModalVisible(true);
-        clearSelectedRegistrations();
-
-        // Đảm bảo RoundSelector đang sử dụng đúng category
-        if (roundSelectorRef.current) {
-          roundSelectorRef.current.updateCategory(selectedCategory);
-        }
-
-        notification.success({
-          message: "Đã lấy dữ liệu",
-          description: `Đã tìm thấy ${checkedInFish.length} đăng ký đã check-in`,
-          placement: "topRight",
-        });
-      } else {
-        notification.error({
-          message: "Lỗi",
-          description: "Không thể lấy dữ liệu đăng ký",
-          placement: "topRight",
-        });
-      }
-    });
-  };
-
   const handleCategoryChangeInModal = (categoryId) => {
     setSelectedCategory(categoryId);
 
@@ -335,23 +262,12 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         });
       }
     });
-
-    // Cập nhật category trong RoundSelector thay vì chỉ reset
-    if (roundSelectorRef.current) {
-      roundSelectorRef.current.updateCategory(categoryId);
-    }
   };
 
   const closeAssignModal = () => {
     setIsAssignModalVisible(false);
-    setSelectedRoundId(null);
-    setSelectedRoundName("");
     clearSelectedRegistrations();
     setIsAllSelected(false);
-
-    if (roundSelectorRef.current) {
-      roundSelectorRef.current.reset();
-    }
   };
 
   const handleTableChange = (pagination, filters, sorter) => {
@@ -377,11 +293,11 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     );
   };
 
-  const handleassignToRound = () => {
-    if (!selectedRoundId) {
+  const handleassignToRound = async () => {
+    if (!selectedCategory) {
       notification.warning({
-        message: "Chưa chọn vòng",
-        description: "Vui lòng chọn vòng trước khi gán vòng",
+        message: "Chưa chọn hạng mục",
+        description: "Vui lòng chọn hạng mục trước khi gán vòng",
         placement: "topRight",
       });
       return;
@@ -396,47 +312,26 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       return;
     }
 
-    // Thay đổi cách kiểm tra - Đảm bảo vòng đang chọn phải thuộc hạng mục hiện tại
-    // Lưu trữ thêm thông tin categoryId của vòng khi chọn vòng
-    if (selectedRoundCategoryId !== selectedCategory) {
-      notification.error({
-        message: "Lỗi hạng mục không khớp",
-        description:
-          "Vòng được chọn không thuộc hạng mục hiện tại. Vui lòng chọn lại vòng phù hợp.",
-        placement: "topRight",
-      });
-      return;
-    }
-
-    // Hiển thị xác nhận khác nhau tùy theo số lượng đăng ký được chọn
-    const isLargeNumber = selectedRegistrations.length > 20;
-    const confirmTitle = isLargeNumber
-      ? "Xác nhận gán vòng cho số lượng lớn"
-      : "Xác nhận gán vòng";
-
-    const confirmContent = (
-      <div>
-        <p>
-          Bạn có chắc chắn muốn gán{" "}
-          <strong>{selectedRegistrations.length}</strong> đăng ký vào vòng:
-        </p>
-        <p>
-          <strong>{selectedRoundName}</strong>?
-        </p>
-        {isLargeNumber && (
-          <Alert
-            type="warning"
-            showIcon
-            message="Lưu ý: Thao tác này có thể mất một chút thời gian để hoàn thành"
-            style={{ marginTop: 16 }}
-          />
-        )}
-      </div>
-    );
-
+    // Show confirmation dialog with simplified UI
     confirm({
-      title: confirmTitle,
-      content: confirmContent,
+      title: "Xác nhận gán vòng",
+      content: (
+        <div>
+          <p>
+            Bạn có chắc chắn muốn gán{" "}
+            <strong>{selectedRegistrations.length}</strong> đăng ký vào vòng đầu
+            tiên?
+          </p>
+          {selectedRegistrations.length > 20 && (
+            <Alert
+              type="warning"
+              showIcon
+              message="Lưu ý: Thao tác này có thể mất một chút thời gian để hoàn thành"
+              style={{ marginTop: 16 }}
+            />
+          )}
+        </div>
+      ),
       icon: <ExclamationCircleOutlined />,
       okText: "Đồng ý",
       cancelText: "Hủy",
@@ -444,13 +339,14 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         // Hiển thị loading khi bắt đầu gán
         notification.info({
           message: "Đang xử lý",
-          description: `Đang gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}...`,
+          description: `Đang gán ${selectedRegistrations.length} đăng ký vào vòng đầu tiên...`,
           placement: "topRight",
           duration: 3,
         });
 
-        const result = await assignToRound(
-          selectedRoundId,
+        // Use the new API function
+        const result = await assignRegistrationsToFirstRound(
+          selectedCategory,
           selectedRegistrations
         );
 
@@ -468,7 +364,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
           // Hiển thị thông báo thành công
           notification.success({
             message: "Gán vòng thành công",
-            description: `Đã gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}`,
+            description: `Đã gán ${selectedRegistrations.length} đăng ký vào vòng đầu tiên`,
             placement: "topRight",
           });
         }
@@ -909,6 +805,68 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         placement: "topRight",
       });
     }
+  };
+
+  const showAssignModal = () => {
+    if (!selectedCategory) {
+      notification.warning({
+        message: "Chưa chọn hạng mục",
+        description: "Vui lòng chọn hạng mục trước khi gán vòng",
+        placement: "topRight",
+      });
+      return;
+    }
+
+    // Hiển thị loading trước khi lấy dữ liệu
+    notification.info({
+      message: "Đang lấy dữ liệu",
+      description: "Đang lấy tất cả đăng ký đã check-in, vui lòng đợi...",
+      placement: "topRight",
+      duration: 2,
+    });
+
+    // Gọi API để lấy tất cả đăng ký có trạng thái checkin trong hạng mục đã chọn
+    fetchRegistration(
+      1,
+      1000, // Số lượng lớn để lấy tất cả đăng ký
+      showId,
+      [selectedCategory],
+      ["checkin"] // Chỉ lấy các đăng ký đã check-in
+    ).then((response) => {
+      if (response && response.registration) {
+        const checkedInFish = response.registration.filter(
+          (reg) =>
+            reg.status?.toLowerCase() === "checkin" &&
+            reg.competitionCategory?.id === selectedCategory
+        );
+
+        if (checkedInFish.length === 0) {
+          notification.warning({
+            message: "Không có đăng ký",
+            description: "Không có đăng ký nào đã check-in để gán vòng",
+            placement: "topRight",
+          });
+          return;
+        }
+
+        setCheckinRegistrations(checkedInFish);
+        setTotalCheckinRegistrations(checkedInFish.length);
+        setIsAssignModalVisible(true);
+        clearSelectedRegistrations();
+
+        notification.success({
+          message: "Đã lấy dữ liệu",
+          description: `Đã tìm thấy ${checkedInFish.length} đăng ký đã check-in`,
+          placement: "topRight",
+        });
+      } else {
+        notification.error({
+          message: "Lỗi",
+          description: "Không thể lấy dữ liệu đăng ký",
+          placement: "topRight",
+        });
+      }
+    });
   };
 
   return (
@@ -1682,166 +1640,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
           )}
         </Modal>
         <Modal
-          title={
-            <div
-              style={{
-                fontSize: "18px",
-                fontWeight: "600",
-                color: "#262626",
-                borderLeft:
-                  mediaType === "video"
-                    ? "4px solid #722ed1"
-                    : "4px solid #1890ff",
-                paddingLeft: "12px",
-              }}
-            >
-              {mediaType === "image"
-                ? "Tất cả hình ảnh"
-                : mediaType === "video"
-                  ? "Tất cả video"
-                  : "Tất cả hình ảnh và video"}
-            </div>
-          }
-          open={mediaModalVisible}
-          onCancel={() => setMediaModalVisible(false)}
-          footer={null}
-          width={"90%"}
-          style={{ maxWidth: 900 }}
-        >
-          {mediaType !== "video" &&
-            currentKoi?.koiMedia?.filter((media) => media.mediaType === "Image")
-              .length > 0 && (
-              <>
-                <Typography.Title
-                  level={5}
-                  style={{
-                    marginBottom: "16px",
-                    position: "relative",
-                    paddingLeft: "16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: "#1890ff",
-                    }}
-                  ></div>
-                  Hình Ảnh
-                </Typography.Title>
-                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
-                  {currentKoi?.koiMedia
-                    ?.filter((media) => media.mediaType === "Image")
-                    .map((media, index) => (
-                      <Col xs={24} sm={12} key={`image-${media.id}`}>
-                        <Card
-                          variant="borderless"
-                          hoverable
-                          style={{
-                            borderRadius: "8px",
-                            overflow: "hidden",
-                            boxShadow:
-                              "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
-                          }}
-                        >
-                          <div
-                            className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
-                            style={{
-                              borderRadius: "4px",
-                              border: "1px solid #f0f0f0",
-                            }}
-                          >
-                            <Image
-                              src={media.mediaUrl}
-                              alt={`Hình Ảnh Koi ${index + 1}`}
-                              style={{
-                                maxWidth: "100%",
-                                maxHeight: "100%",
-                                objectFit: "contain",
-                                margin: "0 auto",
-                                display: "block",
-                              }}
-                            />
-                          </div>
-                        </Card>
-                      </Col>
-                    ))}
-                </Row>
-              </>
-            )}
-
-          {mediaType !== "image" &&
-            currentKoi?.koiMedia?.filter((media) => media.mediaType === "Video")
-              .length > 0 && (
-              <>
-                <Typography.Title
-                  level={5}
-                  style={{
-                    marginBottom: "16px",
-                    position: "relative",
-                    paddingLeft: "16px",
-                  }}
-                >
-                  <div
-                    style={{
-                      position: "absolute",
-                      left: 0,
-                      top: "50%",
-                      transform: "translateY(-50%)",
-                      width: "8px",
-                      height: "8px",
-                      borderRadius: "50%",
-                      background: "#722ed1",
-                    }}
-                  ></div>
-                  Video
-                </Typography.Title>
-                <Row gutter={[16, 16]}>
-                  {currentKoi?.koiMedia
-                    ?.filter((media) => media.mediaType === "Video")
-                    .map((media, index) => (
-                      <Col xs={24} sm={12} key={`video-${media.id}`}>
-                        <Card
-                          variant="borderless"
-                          hoverable
-                          style={{
-                            borderRadius: "8px",
-                            overflow: "hidden",
-                            boxShadow:
-                              "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
-                          }}
-                        >
-                          <div
-                            className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
-                            style={{
-                              borderRadius: "4px",
-                              border: "1px solid #1f1f1f",
-                            }}
-                          >
-                            <video
-                              controls
-                              src={media.mediaUrl}
-                              style={{
-                                width: "100%",
-                                height: "auto",
-                                maxHeight: "100%",
-                                borderRadius: "4px",
-                              }}
-                            />
-                          </div>
-                        </Card>
-                      </Col>
-                    ))}
-                </Row>
-              </>
-            )}
-        </Modal>
-        <Modal
           title="Từ Chối Đăng Ký"
           open={isRejectModalVisible}
           onCancel={() => setIsRejectModalVisible(false)}
@@ -1889,7 +1687,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
           title={
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span>
-                Gán cá tham gia vào vòng{" "}
+                Gán cá tham gia vào vòng đầu tiên{" "}
                 {checkinRegistrations.length > 0
                   ? `- Tất cả ${checkinRegistrations.length} đăng ký đã check-in`
                   : ""}
@@ -1907,9 +1705,9 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
               type="primary"
               loading={assignLoading}
               onClick={handleassignToRound}
-              disabled={selectedRegistrations?.length === 0 || !selectedRoundId}
+              disabled={selectedRegistrations?.length === 0}
             >
-              Gán {selectedRegistrations?.length} đăng ký vào vòng
+              Gán {selectedRegistrations?.length} đăng ký vào vòng đầu tiên
             </Button>,
           ]}
           width={1000}
@@ -1963,101 +1761,78 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                 )}
               </>
             )}
-
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                marginBottom: "12px",
-              }}
-            >
-              <Typography.Text strong>Chọn vòng</Typography.Text>
-            </div>
-
-            <div style={{ display: "flex", alignItems: "center" }}>
-              <RoundSelector
-                ref={roundSelectorRef}
-                onRoundSelect={handleRoundSelect}
-                showId={showId}
-                categoryId={selectedCategory}
-                preSelectPreliminary={true}
-              />
-            </div>
           </div>
 
-          {selectedCategory &&
-            checkinRegistrations.length > 0 &&
-            selectedRoundId && (
-              <>
+          {selectedCategory && checkinRegistrations.length > 0 && (
+            <>
+              <div
+                style={{
+                  borderTop: "1px solid #f0f0f0",
+                  paddingTop: "24px",
+                  marginBottom: "16px",
+                }}
+              >
                 <div
                   style={{
-                    borderTop: "1px solid #f0f0f0",
-                    paddingTop: "24px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
                     marginBottom: "16px",
                   }}
                 >
-                  <div
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "space-between",
-                      marginBottom: "16px",
-                    }}
-                  >
-                    <div style={{ display: "flex", alignItems: "center" }}>
-                      <CheckSquareOutlined
-                        style={{ color: "#1890ff", marginRight: "8px" }}
-                      />
-                      <Typography.Text strong>
-                        Danh sách cá đăng ký
-                      </Typography.Text>
-                    </div>
-
-                    <Button
-                      type={isAllSelected ? "default" : "primary"}
-                      onClick={handleSelectAllInModal}
-                      disabled={checkinRegistrations.length === 0}
-                    >
-                      {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
-                    </Button>
+                  <div style={{ display: "flex", alignItems: "center" }}>
+                    <CheckSquareOutlined
+                      style={{ color: "#1890ff", marginRight: "8px" }}
+                    />
+                    <Typography.Text strong>
+                      Danh sách cá đăng ký
+                    </Typography.Text>
                   </div>
 
-                  {selectedRegistrations?.length > 0 && (
-                    <Alert
-                      type="info"
-                      showIcon
-                      message={
-                        <span>
-                          Đã chọn{" "}
-                          <strong>{selectedRegistrations.length}</strong> /{" "}
-                          <strong>{checkinRegistrations.length}</strong> đăng ký
-                          để gán vào vòng <strong>{selectedRoundName}</strong>
-                          {selectedRegistrations.length ===
-                            checkinRegistrations.length && (
-                            <Tag color="green" style={{ marginLeft: 8 }}>
-                              Đã chọn tất cả
-                            </Tag>
-                          )}
-                        </span>
-                      }
-                      style={{ marginBottom: "16px" }}
-                    />
-                  )}
-
-                  <Table
-                    rowSelection={rowSelection}
-                    columns={columns.filter((col) => col.key !== "actions")}
-                    dataSource={checkinRegistrations}
-                    loading={isLoading}
-                    pagination={false}
-                    rowKey="id"
-                    size="small"
-                    variant="borderless"
-                    scroll={{ y: 400 }}
-                  />
+                  <Button
+                    type={isAllSelected ? "default" : "primary"}
+                    onClick={handleSelectAllInModal}
+                    disabled={checkinRegistrations.length === 0}
+                  >
+                    {isAllSelected ? "Bỏ chọn tất cả" : "Chọn tất cả"}
+                  </Button>
                 </div>
-              </>
-            )}
+
+                {selectedRegistrations?.length > 0 && (
+                  <Alert
+                    type="info"
+                    showIcon
+                    message={
+                      <span>
+                        Đã chọn <strong>{selectedRegistrations.length}</strong>{" "}
+                        / <strong>{checkinRegistrations.length}</strong> đăng ký
+                        để gán vào vòng đầu tiên
+                        {selectedRegistrations.length ===
+                          checkinRegistrations.length && (
+                          <Tag color="green" style={{ marginLeft: 8 }}>
+                            Đã chọn tất cả
+                          </Tag>
+                        )}
+                      </span>
+                    }
+                    style={{ marginBottom: "16px" }}
+                  />
+                )}
+
+                <Table
+                  rowSelection={rowSelection}
+                  columns={columns.filter((col) => col.key !== "actions")}
+                  dataSource={checkinRegistrations}
+                  loading={isLoading}
+                  pagination={false}
+                  rowKey="id"
+                  size="small"
+                  variant="borderless"
+                  scroll={{ y: 400 }}
+                />
+              </div>
+            </>
+          )}
         </Modal>
         <Modal
           title="Hoàn Tiền Hàng Loạt"
