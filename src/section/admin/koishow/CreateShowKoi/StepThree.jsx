@@ -122,10 +122,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
       key: "Award",
       description: "Lễ trao giải.",
     },
-    "Kết thúc sự kiện": {
-      key: "Finished",
-      description: "Kết thúc sự kiện.",
-    },
   };
 
   // Tạo mảng tất cả trạng thái có sẵn
@@ -137,11 +133,31 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
         console.log("Khôi phục dữ liệu từ localStorage");
         const parsedStatuses = JSON.parse(savedStatuses);
         // Chuyển đổi các chuỗi ngày tháng thành đối tượng dayjs
-        return parsedStatuses.map((status) => ({
-          ...status,
-          startDate: status.startDate ? dayjs(status.startDate) : null,
-          endDate: status.endDate ? dayjs(status.endDate) : null,
-        }));
+        const statuses = parsedStatuses
+          .map((status) => ({
+            ...status,
+            startDate: status.startDate ? dayjs(status.startDate) : null,
+            endDate: status.endDate ? dayjs(status.endDate) : null,
+          }))
+          .filter((status) => status.statusName !== "Finished");
+
+        // Cập nhật mô tả cho KoiCheckIn và TicketCheckIn
+        for (const status of statuses) {
+          if (
+            status.statusName === "KoiCheckIn" &&
+            status.description.includes("Giai đoạn")
+          ) {
+            status.description = "Check-in cá koi.";
+          }
+          if (
+            status.statusName === "TicketCheckIn" &&
+            status.description.includes("Giai đoạn")
+          ) {
+            status.description = "Check-in vé.";
+          }
+        }
+
+        return statuses;
       } catch (e) {
         console.error("Lỗi khôi phục dữ liệu từ localStorage:", e);
       }
@@ -150,11 +166,31 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
     // Nếu có dữ liệu sẵn từ initialData.availableStatuses, sử dụng
     if (initialData.availableStatuses?.length > 0) {
       console.log("Khởi tạo từ availableStatuses có sẵn");
-      return initialData.availableStatuses.map((status) => ({
-        ...status,
-        startDate: status.startDate ? dayjs(status.startDate) : null,
-        endDate: status.endDate ? dayjs(status.endDate) : null,
-      }));
+      const statuses = initialData.availableStatuses
+        .map((status) => ({
+          ...status,
+          startDate: status.startDate ? dayjs(status.startDate) : null,
+          endDate: status.endDate ? dayjs(status.endDate) : null,
+        }))
+        .filter((status) => status.statusName !== "Finished");
+
+      // Cập nhật mô tả cho KoiCheckIn và TicketCheckIn
+      for (const status of statuses) {
+        if (
+          status.statusName === "KoiCheckIn" &&
+          status.description.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in cá koi.";
+        }
+        if (
+          status.statusName === "TicketCheckIn" &&
+          status.description.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in vé.";
+        }
+      }
+
+      return statuses;
     }
 
     // Nếu có dữ liệu từ createShowStatusRequests, sử dụng để khởi tạo
@@ -186,34 +222,64 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
               : null,
             endDate: savedStatus.endDate ? dayjs(savedStatus.endDate) : null,
           };
-
-          // Xử lý riêng cho Finished
-          if (
-            savedStatus.statusName === "Finished" &&
-            baseStatuses[index].startDate
-          ) {
-            baseStatuses[index].endDate = baseStatuses[index].startDate
-              .clone()
-              .add(30, "minutes");
-          }
         }
       });
 
-      return baseStatuses;
+      // Lọc bỏ trạng thái Finished và cập nhật mô tả
+      const statuses = baseStatuses.filter(
+        (status) => status.statusName !== "Finished"
+      );
+
+      // Cập nhật mô tả cho KoiCheckIn và TicketCheckIn
+      for (const status of statuses) {
+        if (
+          status.statusName === "KoiCheckIn" &&
+          status.description.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in cá koi.";
+        }
+        if (
+          status.statusName === "TicketCheckIn" &&
+          status.description.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in vé.";
+        }
+      }
+
+      return statuses;
     }
 
     // Nếu không có dữ liệu sẵn, khởi tạo mặc định
     console.log("Khởi tạo mặc định các trạng thái");
-    return Object.entries(statusMapping).map(
-      ([label, { key, description }]) => ({
+    const statuses = Object.entries(statusMapping)
+      .map(([label, { key, description }]) => ({
         label,
         statusName: key,
         description,
         startDate: null,
         endDate: null,
         selected: true,
-      })
-    );
+      }))
+      .filter((status) => status.statusName !== "Finished");
+
+    // Sửa mô tả cho KoiCheckIn và TicketCheckIn (bỏ "Giai đoạn")
+    for (const status of statuses) {
+      // Nếu là KoiCheckIn hoặc TicketCheckIn và có từ "Giai đoạn" trong mô tả, loại bỏ
+      if (
+        status.statusName === "KoiCheckIn" &&
+        status.description.includes("Giai đoạn")
+      ) {
+        status.description = "Check-in cá koi.";
+      }
+      if (
+        status.statusName === "TicketCheckIn" &&
+        status.description.includes("Giai đoạn")
+      ) {
+        status.description = "Check-in vé.";
+      }
+    }
+
+    return statuses;
   });
 
   // Thêm state để theo dõi trạng thái đang được điền
@@ -308,11 +374,9 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
         (status) =>
           status.selected &&
           status.startDate &&
-          // Nếu là RegistrationOpen hoặc các trạng thái khác (trừ Finished), cần cả startDate và endDate
-          (status.statusName === "RegistrationOpen" ||
-          status.statusName !== "Finished"
-            ? status.endDate
-            : true)
+          status.statusName !== "Finished" && // Đảm bảo không có Finished
+          // Nếu là RegistrationOpen hoặc các trạng thái khác, cần cả startDate và endDate
+          (status.statusName === "RegistrationOpen" ? status.endDate : true)
       )
       .map((status) => {
         // Lưu giá trị thời gian gốc, không chuyển đổi múi giờ
@@ -336,15 +400,17 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
       });
 
     // Format date objects in availableStatuses không đổi múi giờ
-    const formattedAvailableStatuses = availableStatuses.map((status) => ({
-      ...status,
-      startDate: status.startDate
-        ? status.startDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
-        : null,
-      endDate: status.endDate
-        ? status.endDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
-        : null,
-    }));
+    const formattedAvailableStatuses = availableStatuses
+      .filter((status) => status.statusName !== "Finished") // Loại bỏ Finished
+      .map((status) => ({
+        ...status,
+        startDate: status.startDate
+          ? status.startDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
+          : null,
+        endDate: status.endDate
+          ? status.endDate.format("YYYY-MM-DDTHH:mm:ss.SSS")
+          : null,
+      }));
 
     console.log("Đang cập nhật dữ liệu form từ StepThree", {
       rulesCount: rules.length,
@@ -444,7 +510,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
       Exhibition: 7,
       PublicResult: 8,
       Award: 9,
-      Finished: 10,
     };
 
     // Lấy trạng thái trước đó dựa trên thứ tự
@@ -458,9 +523,7 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
     if (!prevStatus) return true;
 
     // Kiểm tra xem trạng thái trước đã có đầy đủ thông tin chưa
-    const isPrevComplete =
-      prevStatus.startDate &&
-      (prevStatus.statusName === "Finished" || prevStatus.endDate);
+    const isPrevComplete = prevStatus.startDate && prevStatus.endDate;
 
     return isPrevComplete;
   };
@@ -479,7 +542,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
         Exhibition: 7,
         PublicResult: 8,
         Award: 9,
-        Finished: 10,
       };
 
       // Sắp xếp lại availableStatuses theo thứ tự
@@ -490,9 +552,7 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
       // Tìm trạng thái tiếp theo cần điền
       for (let i = 0; i < sortedStatuses.length; i++) {
         const status = sortedStatuses[i];
-        const isComplete =
-          status.startDate &&
-          (status.statusName === "Finished" || status.endDate);
+        const isComplete = status.startDate && status.endDate;
 
         if (!isComplete) {
           return availableStatuses.findIndex(
@@ -540,62 +600,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
 
     // Kiểm tra tính hợp lệ của ngày tháng
     if (value) {
-      // Nếu đây là trạng thái Finished, chỉ thực hiện các kiểm tra cần thiết
-      if (statusName === "Finished") {
-        // Kiểm tra thứ tự các trạng thái
-        const statusOrder = {
-          RegistrationOpen: 1,
-          KoiCheckIn: 2,
-          TicketCheckIn: 3,
-          Preliminary: 4,
-          Evaluation: 5,
-          Final: 6,
-          Exhibition: 7,
-          PublicResult: 8,
-          Award: 9,
-          Finished: 10,
-        };
-
-        // Tìm trạng thái ngay trước đó
-        const prevStatusName = Object.keys(statusOrder).find(
-          (key) => statusOrder[key] === statusOrder[statusName] - 1
-        );
-
-        // Kiểm tra thứ tự thời gian với trạng thái trước (chỉ áp dụng cho startDate)
-        if (prevStatusName && dateType === "startDate") {
-          const prevStatus = availableStatuses.find(
-            (s) =>
-              s.selected &&
-              s.endDate &&
-              statusOrder[s.statusName] === statusOrder[statusName] - 1
-          );
-
-          if (prevStatus?.endDate) {
-            // Nếu có trạng thái trước và có thời gian kết thúc, thì thời gian bắt đầu của Finished không được trước thời gian kết thúc đó
-            if (
-              prevStatus.endDate.format("HH:mm:ss") !== "00:00:00" &&
-              value.format("HH:mm:ss") !== "00:00:00" &&
-              value.isBefore(prevStatus.endDate)
-            ) {
-              message.error(
-                `Thời gian bắt đầu phải sau thời gian kết thúc của "${prevStatus.label}"`
-              );
-              return;
-            }
-          }
-        }
-
-        // Nếu đang thay đổi startDate, tự động cập nhật endDate = startDate + 30 phút
-        if (dateType === "startDate") {
-          updatedStatuses[index].endDate = value.clone().add(30, "minutes");
-        }
-
-        // Cập nhật giá trị
-        updatedStatuses[index][dateType] = value;
-        setAvailableStatuses(updatedStatuses);
-        return; // Kết thúc xử lý sớm cho Finished
-      }
-
       // Đối với các giai đoạn khác RegistrationOpen, không tự động đặt giờ 00:00:00
       // Giữ nguyên giờ có thể là null để người dùng có thể chọn sau
       if (
@@ -663,7 +667,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
         Exhibition: 7,
         PublicResult: 8,
         Award: 9,
-        Finished: 10,
       };
 
       // Lấy thứ tự của trạng thái hiện tại
@@ -712,11 +715,7 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
             statusOrder[s.statusName] === currentOrder + 1
         );
 
-        if (
-          nextStatus?.endDate &&
-          dateType === "endDate" &&
-          statusName !== "Finished"
-        ) {
+        if (nextStatus?.endDate && dateType === "endDate") {
           // Nếu có trạng thái tiếp theo và có thời gian bắt đầu, thì thời gian kết thúc của trạng thái hiện tại không được sau thời gian bắt đầu đó
           if (
             nextStatus.startDate.format("HH:mm:ss") !== "00:00:00" &&
@@ -730,12 +729,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
           }
         }
       }
-
-      // Các kiểm tra đặc biệt theo loại trạng thái
-      if (statusName === "Award" && dateType === "endDate") {
-        // Không còn tự động cập nhật thời gian bắt đầu của Finished khi thời gian kết thúc Award thay đổi
-        // Để người dùng tự chọn thời gian kết thúc sự kiện
-      }
     }
 
     // Cập nhật giá trị cho trạng thái hiện tại
@@ -748,11 +741,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
   // Kiểm tra xem có lỗi về ngày không
   const getDateError = (status, dateType) => {
     if (!status.selected) return null;
-
-    // Bỏ qua tất cả validation cho endDate của Finished status
-    if (status.statusName === "Finished" && dateType === "endDate") {
-      return null;
-    }
 
     if (dateType === "startDate" && !status.startDate) {
       return "Ngày là bắt buộc";
@@ -824,8 +812,8 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
       ) {
         return "Ngày kết thúc phải sau ngày bắt đầu";
       }
-    } else if (status.statusName !== "Finished") {
-      // For other statuses (except Finished), we need both startDate and endDate
+    } else {
+      // For other statuses, we need both startDate and endDate
       if (dateType === "endDate" && !status.endDate) {
         return "Giờ kết thúc là bắt buộc";
       }
@@ -855,8 +843,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
         return <CheckCircleOutlined />;
       case "Award":
         return <FlagOutlined />;
-      case "Finished":
-        return <ClockCircleOutlined />;
       default:
         return <CalendarOutlined />;
     }
@@ -883,8 +869,6 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
         return "#e6fffb"; // Ngọc lam nhạt
       case "Award":
         return "#fffbe6"; // Vàng đậm nhạt
-      case "Finished":
-        return "#fff1f0"; // Đỏ nhạt
       default:
         return "#f0f2f5"; // Màu mặc định
     }
@@ -918,11 +902,48 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
     []
   );
 
+  // Cập nhật initialData để loại bỏ "Giai đoạn" khi component mount
+  useEffect(() => {
+    if (initialData?.createShowStatusRequests) {
+      initialData.createShowStatusRequests.forEach((status) => {
+        if (
+          status.statusName === "KoiCheckIn" &&
+          status.description?.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in cá koi.";
+        }
+        if (
+          status.statusName === "TicketCheckIn" &&
+          status.description?.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in vé.";
+        }
+      });
+    }
+
+    if (initialData?.availableStatuses) {
+      initialData.availableStatuses.forEach((status) => {
+        if (
+          status.statusName === "KoiCheckIn" &&
+          status.description?.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in cá koi.";
+        }
+        if (
+          status.statusName === "TicketCheckIn" &&
+          status.description?.includes("Giai đoạn")
+        ) {
+          status.description = "Check-in vé.";
+        }
+      });
+    }
+  }, []);
+
   return (
     <div>
       <style>{timezoneCss}</style>
       <Title level={3} className="text-blue-500">
-        Bước 3: Quy Tắc & Quy Định
+        Bước 3: Quy Tắc & Trạng Thái
       </Title>
       <Divider />
 
@@ -1103,7 +1124,15 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
                     <span className="mr-2">
                       {getStatusIcon(status.statusName)}
                     </span>
-                    <span>{status.description}</span>
+                    <span>
+                      {status.statusName === "KoiCheckIn" &&
+                      status.description.includes("Giai đoạn")
+                        ? "Check-in cá koi."
+                        : status.statusName === "TicketCheckIn" &&
+                            status.description.includes("Giai đoạn")
+                          ? "Check-in vé."
+                          : status.description}
+                    </span>
                   </div>
                 }
                 style={{
@@ -1117,164 +1146,7 @@ function StepThree({ updateFormData, initialData, showErrors }, ref) {
                       : "",
                 }}
               >
-                {status.statusName === "Finished" ? (
-                  <div className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <CalendarOutlined className="mr-1" /> Ngày diễn ra
-                      </label>
-                      <DatePicker
-                        className="w-full"
-                        disabled={!status.selected || !isStatusEnabled(index)}
-                        value={status.startDate}
-                        onChange={(value) =>
-                          handleDateChange(index, "startDate", value)
-                        }
-                        format="YYYY-MM-DD"
-                        placeholder="Chọn ngày"
-                        disabledDate={(current) => {
-                          // Vô hiệu hóa ngày nằm ngoài khoảng thời gian triển lãm
-                          if (exhibitionEndDate) {
-                            const startDay = exhibitionStartDate.startOf("day");
-                            const endDay = exhibitionEndDate.startOf("day");
-
-                            if (
-                              current.isBefore(startDay) ||
-                              current.isAfter(endDay)
-                            ) {
-                              return true;
-                            }
-                            return false;
-                          }
-
-                          // Mặc định vô hiệu hóa ngày trong quá khứ
-                          if (current && current.isBefore(dayjs(), "day")) {
-                            return true;
-                          }
-                          return false;
-                        }}
-                      />
-                      {getDateError(status, "startDate") && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {getDateError(status, "startDate")}
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        <ClockCircleOutlined className="mr-1" /> Giờ kết thúc
-                      </label>
-                      <TimePicker
-                        className="w-full"
-                        disabled={!status.selected || !isStatusEnabled(index)}
-                        value={status.startDate}
-                        onChange={(value) => {
-                          if (value && status.startDate) {
-                            // Cập nhật giờ cho startDate
-                            const newStartDate = status.startDate
-                              .hour(value.hour())
-                              .minute(value.minute())
-                              .second(value.second());
-
-                            // Kiểm tra giờ có nằm trong khoảng thời gian của triển lãm
-                            if (exhibitionStartDate && exhibitionEndDate) {
-                              if (
-                                newStartDate.isBefore(exhibitionStartDate) ||
-                                newStartDate.isAfter(exhibitionEndDate)
-                              ) {
-                                message.error(
-                                  "Thời gian kết thúc phải nằm trong khoảng thời gian của triển lãm"
-                                );
-                                return;
-                              }
-                            }
-
-                            // Định nghĩa thứ tự các trạng thái để tìm trạng thái trước đó
-                            const statusOrder = {
-                              RegistrationOpen: 1,
-                              KoiCheckIn: 2,
-                              TicketCheckIn: 3,
-                              Preliminary: 4,
-                              Evaluation: 5,
-                              Final: 6,
-                              Exhibition: 7,
-                              PublicResult: 8,
-                              Award: 9,
-                              Finished: 10,
-                            };
-
-                            // Tìm trạng thái ngay trước đó
-                            const prevStatusName = Object.keys(
-                              statusOrder
-                            ).find(
-                              (key) =>
-                                statusOrder[key] === statusOrder["Finished"] - 1
-                            );
-
-                            // Kiểm tra thứ tự thời gian với trạng thái trước (thường là Award)
-                            if (prevStatusName) {
-                              const prevStatus = availableStatuses.find(
-                                (s) =>
-                                  s.selected &&
-                                  s.endDate &&
-                                  s.statusName === prevStatusName
-                              );
-
-                              if (prevStatus?.endDate) {
-                                // Nếu có trạng thái trước và có thời gian kết thúc, thì thời gian bắt đầu không được trước thời gian kết thúc đó
-                                if (
-                                  prevStatus.endDate.format("HH:mm:ss") !==
-                                    "00:00:00" &&
-                                  newStartDate.isBefore(prevStatus.endDate)
-                                ) {
-                                  message.error(
-                                    `Giờ bắt đầu phải sau giờ kết thúc của "${prevStatus.label}"`
-                                  );
-                                  return;
-                                }
-                              }
-                            }
-
-                            handleDateChange(index, "startDate", newStartDate);
-                          }
-                        }}
-                        format="HH:mm"
-                        placeholder="Chọn giờ"
-                        popupClassName="timezone-popup"
-                        allowClear={true}
-                        disabledTime={(selectedHour) => {
-                          const disabledHours = [];
-                          const now = dayjs().tz("Asia/Ho_Chi_Minh");
-                          const isToday =
-                            status.startDate &&
-                            now.date() === status.startDate.date() &&
-                            now.month() === status.startDate.month() &&
-                            now.year() === status.startDate.year();
-
-                          if (isToday) {
-                            for (let i = 0; i < now.hour(); i++) {
-                              disabledHours.push(i);
-                            }
-                          }
-
-                          return {
-                            disabledHours: () => disabledHours,
-                            disabledMinutes: (selectedHour) => {
-                              const minutesDisabled = [];
-                              if (isToday && selectedHour === now.hour()) {
-                                for (let i = 0; i < now.minute(); i++) {
-                                  minutesDisabled.push(i);
-                                }
-                              }
-                              return minutesDisabled;
-                            },
-                          };
-                        }}
-                      />
-                    </div>
-                  </div>
-                ) : status.statusName === "RegistrationOpen" ? (
+                {status.statusName === "RegistrationOpen" ? (
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -1101,6 +1101,22 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                   {/* Hiển thị nút Đã hoàn tiền khi cần */}
                   {currentKoi.status?.toLowerCase() !== "refunded" && (
                     <>
+                      {/* Logic mới: Luôn hiển thị nút hoàn tiền cho đơn bị từ chối */}
+                      {currentKoi.status?.toLowerCase() === "rejected" && (
+                        <Button
+                          key="refund"
+                          type="primary"
+                          danger
+                          onClick={() => {
+                            setSelectedRegistrationId(currentKoi.id);
+                            setIsRefundModalVisible(true);
+                            setIsModalVisible(false);
+                          }}
+                        >
+                          Đã Hoàn Tiền
+                        </Button>
+                      )}
+
                       {/* Logic 1: Show bị hủy - hiện nút cho đơn pending/confirmed */}
                       {statusShow?.toLowerCase() === "cancelled" &&
                         ["pending", "confirmed", "rejected"].includes(
@@ -1149,7 +1165,9 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                         isCategoryCancelled &&
                         currentKoi.competitionCategory?.id ===
                           selectedCategory &&
-                        currentKoi.status?.toLowerCase() === "checkin" && (
+                        ["checkin", "rejected"].includes(
+                          currentKoi.status?.toLowerCase()
+                        ) && (
                           <Button
                             key="refund"
                             type="primary"

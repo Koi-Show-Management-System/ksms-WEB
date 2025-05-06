@@ -102,11 +102,11 @@ function KoiShow() {
     fetchKoiShowList(currentPage, pageSize);
   };
 
-  const handleNavigation = (recordId, recordStatus) => {
+  const handleNavigation = (recordId) => {
     if (userRole === "Admin") {
-      navigate(`/admin/koiShow/detail/${recordId}?status=${recordStatus}`);
+      navigate(`/admin/koiShow/detail/${recordId}`);
     } else if (userRole === "Manager") {
-      navigate(`/manager/koiShow/detail/${recordId}?status=${recordStatus}`);
+      navigate(`/manager/koiShow/detail/${recordId}`);
     } else {
       notification.error({
         message: "Lỗi phân quyền",

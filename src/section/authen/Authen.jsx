@@ -166,10 +166,7 @@ function Authen() {
           >
             Ghi nhớ đăng nhập
           </Checkbox>
-          <Link
-            to="/forgot-password"
-            className="text-[#3094ff] hover:underline"
-          >
+          <Link to="/" className="text-[#3094ff] hover:underline">
             Quên mật khẩu?
           </Link>
         </div>

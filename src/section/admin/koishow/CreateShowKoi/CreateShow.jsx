@@ -5,6 +5,7 @@ import StepTwo from "./StepTwo";
 import StepThree from "./StepThree";
 import { useNavigate } from "react-router-dom";
 import useCreateKoi from "../../../../hooks/useCreateKoi";
+import dayjs from "dayjs";
 
 function CreateShow() {
   const navigate = useNavigate();
@@ -616,7 +617,7 @@ function CreateShow() {
         }
       }
 
-      // Kiểm tra thời gian các trạng thái có nằm trong khoảng thời gian triển lãm
+      // Kiểm tra thứ tự các trạng thái có nằm trong khoảng thời gian triển lãm
       if (formData.startDate && formData.endDate) {
         const exhibitionStartDate = new Date(formData.startDate);
         const exhibitionEndDate = new Date(formData.endDate);
@@ -834,12 +835,12 @@ function CreateShow() {
         <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
       </Modal>
       {/* Debug Panel */}
-      {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
+      <div className="mt-6 p-4 bg-gray-100 rounded-md">
         <h3 className="text-lg font-semibold">Dữ liệu hiện tại:</h3>
         <pre className="overflow-auto max-h-96">
           {JSON.stringify(formData, null, 2)}
         </pre>
-      </div> */}
+      </div>
     </div>
   );
 }

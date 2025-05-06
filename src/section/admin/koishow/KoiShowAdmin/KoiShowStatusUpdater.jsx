@@ -127,14 +127,6 @@ function KoiShowStatusUpdater({
           placement: "topRight",
         });
 
-        notification.warning({
-          message: "Lưu ý",
-          description:
-            "Khi đã cập nhật trạng thái, bạn sẽ không thể quay lại trạng thái trước đó",
-          placement: "topRight",
-          duration: 5,
-        });
-
         // Don't update the local state - let SignalR handle this to avoid double updates
         // setStatus(status);
       } else {

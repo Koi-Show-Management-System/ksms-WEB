@@ -192,7 +192,7 @@ const DashboardLayout = React.memo(({ children }) => {
       ),
       getItem("Người Dùng", "sub2", <UserAddOutlined />, null, "/admin/users"),
       getItem(
-        "Quản Lý Nhóm",
+        "Quản Lý Nhân Sự",
         "sub3",
         <UsergroupAddOutlined />,
         null,
@@ -220,7 +220,7 @@ const DashboardLayout = React.memo(({ children }) => {
         ],
         null
       ),
-      getItem("Tiêu chí", "sub5", <BookOutlined />, null, "/admin/criteria"),
+      getItem("Tiêu Chí", "sub5", <BookOutlined />, null, "/admin/criteria"),
       getItem(
         "Giống Koi",
         "sub6",
@@ -243,7 +243,7 @@ const DashboardLayout = React.memo(({ children }) => {
         "/manager/showList"
       ),
       getItem(
-        "Quản Lý Nhóm",
+        "Quản Lý Nhân Sự",
         "2",
         <UsergroupAddOutlined />,
         null,
