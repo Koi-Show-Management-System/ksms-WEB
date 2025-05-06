@@ -27,6 +27,7 @@ import RoundResult from "../admin/koishow/KoiShowAdmin/RoundResult";
 import CheckOutKoi from "./CheckOutKoi";
 import Votes from "../admin/koishow/KoiShowAdmin/Votes";
 import StatusManager from "../admin/koishow/KoiShowAdmin/StatusManager";
+import useCategory from "../../hooks/useCategory";
 
 // Tạo một component LiveStream độc lập để ngăn re-render
 function PersistentLiveStream({ showId, visible }) {
@@ -68,6 +69,8 @@ function PersistentLiveStream({ showId, visible }) {
 function KoiShowDetail() {
   const { id } = useParams();
   const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
+  const { categories, fetchCategories } = useCategory();
+  const [cancelledCategoryIds, setCancelledCategoryIds] = useState([]);
 
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -75,6 +78,27 @@ function KoiShowDetail() {
 
   // Xác định có hiển thị LiveStream hay không
   const isLiveStreamVisible = activeTabKey === "liveStream";
+
+  // Fetch cancelled categories khi component mount
+  useEffect(() => {
+    const getCancelledCategories = async () => {
+      try {
+        await fetchCategories(id);
+        // Lọc ra các hạng mục bị hủy
+        const cancelledIds = categories
+          .filter((category) => category.status === "cancelled")
+          .map((category) => category.id);
+
+        setCancelledCategoryIds(cancelledIds);
+      } catch (error) {
+        console.error("Error fetching cancelled categories:", error);
+      }
+    };
+
+    if (id) {
+      getCancelledCategories();
+    }
+  }, [id, fetchCategories, categories]);
 
   // Các tab thông thường
   const renderNormalTab = (key) => {
@@ -89,7 +113,13 @@ function KoiShowDetail() {
           <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />
         );
       case "registration":
-        return <Registration showId={id} />;
+        return (
+          <Registration
+            showId={id}
+            statusShow={koiShowDetail.data.status}
+            cancelledCategoryIds={cancelledCategoryIds}
+          />
+        );
       case "ticket":
         return <Ticket showId={id} />;
       case "tank":
@@ -172,7 +202,7 @@ function KoiShowDetail() {
         children: <div className="livestream-placeholder"></div>,
       },
     ];
-  }, [id, koiShowDetail?.data, activeTabKey]);
+  }, [id, koiShowDetail?.data, activeTabKey, cancelledCategoryIds]);
 
   useEffect(() => {
     fetchKoiShowDetail(id);

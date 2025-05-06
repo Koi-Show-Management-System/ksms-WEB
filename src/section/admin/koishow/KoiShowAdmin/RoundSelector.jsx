@@ -5,7 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { Select, Space, Typography, Tag } from "antd";
+import { Select, Space, Typography, Tag, notification } from "antd";
 import useCategory from "../../../../hooks/useCategory";
 import useRound from "../../../../hooks/useRound";
 
@@ -22,17 +22,14 @@ const RoundSelector = forwardRef(
     const { round, fetchRound, isLoading: roundLoading } = useRound();
     const [selectedCategory, setSelectedCategory] = useState(null);
     const [selectedRound, setSelectedRound] = useState(null);
+    const [roundsByCategoryMap, setRoundsByCategoryMap] = useState({});
 
     useImperativeHandle(ref, () => ({
       reset: () => {
         setSelectedRound(null);
-        // Không reset selectedCategory nếu categoryId được truyền từ props
-        if (!categoryId) {
-          setSelectedCategory(null);
-        }
         // Thông báo cho component cha rằng không có vòng nào được chọn
         if (onRoundSelect) {
-          onRoundSelect(null, "", null);
+          onRoundSelect(null, "", selectedCategory);
         }
       },
       // Thêm method để cập nhật category
@@ -44,11 +41,24 @@ const RoundSelector = forwardRef(
           fetchRound(newCategoryId, "Preliminary", 1, 100);
           // Thông báo cho component cha rằng không có vòng nào được chọn
           if (onRoundSelect) {
-            onRoundSelect(null, "", null);
+            onRoundSelect(null, "", newCategoryId);
           }
         }
       },
     }));
+
+    // Lưu trữ mapping giữa rounds và categories để tham chiếu
+    useEffect(() => {
+      if (round.length > 0) {
+        const newMap = {};
+        round.forEach((r) => {
+          if (r.categoryId) {
+            newMap[r.id] = r.categoryId;
+          }
+        });
+        setRoundsByCategoryMap(newMap);
+      }
+    }, [round]);
 
     // Sử dụng categoryId từ props nếu có
     useEffect(() => {
@@ -73,7 +83,12 @@ const RoundSelector = forwardRef(
           setSelectedRound(firstRound.id);
 
           if (onRoundSelect) {
-            onRoundSelect(firstRound.id, firstRound.name, selectedCategory);
+            // Luôn truyền categoryId cùng với roundId để đảm bảo tính nhất quán
+            onRoundSelect(
+              firstRound.id, 
+              firstRound.name, 
+              firstRound.categoryId || selectedCategory
+            );
           }
         }
       }
@@ -88,14 +103,36 @@ const RoundSelector = forwardRef(
     };
 
     const handleSpecificRoundSelect = (roundId) => {
+      const selectedRoundObj = round.find((r) => r.id === roundId);
+      
+      if (!selectedRoundObj) {
+        notification.error({
+          message: "Lỗi",
+          description: "Không tìm thấy thông tin vòng thi đã chọn",
+          placement: "topRight",
+        });
+        return;
+      }
+
+      // Kiểm tra xem vòng có thuộc hạng mục hiện tại không
+      if (selectedRoundObj.categoryId && selectedRoundObj.categoryId !== selectedCategory) {
+        notification.warning({
+          message: "Cảnh báo",
+          description: "Vòng này thuộc hạng mục khác, vui lòng chọn lại",
+          placement: "topRight",
+        });
+        return;
+      }
+
       setSelectedRound(roundId);
 
-      // Tìm tên của vòng được chọn
-      const selectedRoundObj = round.find((r) => r.id === roundId);
-      const roundName = selectedRoundObj ? selectedRoundObj.name : "";
-
+      // Truyền categoryId của round cho component cha để đảm bảo tính nhất quán
       if (onRoundSelect) {
-        onRoundSelect(roundId, roundName, selectedCategory);
+        onRoundSelect(
+          roundId, 
+          selectedRoundObj.name, 
+          selectedRoundObj.categoryId || selectedCategory
+        );
       }
     };
 
@@ -105,6 +142,13 @@ const RoundSelector = forwardRef(
 
     // Lọc các vòng có roundOrder = 1
     const filteredRounds = round.filter((r) => r.roundOrder === 1);
+
+    // Lọc thêm theo category nếu có
+    const roundsForCategory = selectedCategory
+      ? filteredRounds.filter(
+          (r) => !r.categoryId || r.categoryId === selectedCategory
+        )
+      : filteredRounds;
 
     return (
       <Space
@@ -151,7 +195,7 @@ const RoundSelector = forwardRef(
                     .includes(input.toLowerCase())
                 }
               >
-                {filteredRounds.map((r) => (
+                {roundsForCategory.map((r) => (
                   <Select.Option key={r.id} value={r.id}>
                     {r.name}
                   </Select.Option>
