@@ -66,6 +66,50 @@ function PersistentLiveStream({ showId, visible }) {
   );
 }
 
+// Tạo persistent component cho Registration
+function PersistentRegistration({
+  showId,
+  statusShow,
+  cancelledCategoryIds,
+  visible,
+}) {
+  const componentRef = useRef(null);
+  const instanceRef = useRef(null);
+  const [initialized, setInitialized] = useState(false);
+
+  // Chỉ khởi tạo Registration một lần duy nhất
+  useEffect(() => {
+    if (!instanceRef.current && showId) {
+      instanceRef.current = (
+        <Registration
+          showId={showId}
+          statusShow={statusShow}
+          cancelledCategoryIds={cancelledCategoryIds}
+        />
+      );
+      setInitialized(true);
+    }
+  }, [showId, statusShow, cancelledCategoryIds]);
+
+  // Chỉ ẩn/hiện container khi cần thiết
+  useLayoutEffect(() => {
+    if (componentRef.current) {
+      componentRef.current.style.display = visible ? "block" : "none";
+    }
+  }, [visible]);
+
+  return (
+    <div
+      ref={componentRef}
+      style={{
+        display: visible ? "block" : "none",
+      }}
+    >
+      {initialized && instanceRef.current}
+    </div>
+  );
+}
+
 function KoiShowDetail() {
   const { id } = useParams();
   const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
@@ -78,6 +122,8 @@ function KoiShowDetail() {
 
   // Xác định có hiển thị LiveStream hay không
   const isLiveStreamVisible = activeTabKey === "liveStream";
+  // Xác định có hiển thị Registration hay không
+  const isRegistrationVisible = activeTabKey === "registration";
 
   // Thêm useEffect để lấy danh sách hạng mục bị hủy - giống như admin
   useEffect(() => {
@@ -113,14 +159,9 @@ function KoiShowDetail() {
         return (
           <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />
         );
+      // Registration được quản lý riêng bởi PersistentRegistration component
       case "registration":
-        return (
-          <Registration
-            showId={id}
-            statusShow={koiShowDetail.data.status}
-            cancelledCategoryIds={cancelledCategoryIds}
-          />
-        );
+        return null;
       case "ticket":
         return <Ticket showId={id} />;
       case "tank":
@@ -516,7 +557,15 @@ function KoiShowDetail() {
           className="koishow-tabs"
         />
 
-        {/* Component LiveStream hoàn toàn tách biệt, tạo một lần duy nhất và không bao giờ bị re-render */}
+        {/* Component Registration tách biệt */}
+        <PersistentRegistration
+          showId={id}
+          statusShow={koiShowDetail.data.status}
+          cancelledCategoryIds={cancelledCategoryIds}
+          visible={isRegistrationVisible}
+        />
+
+        {/* Component LiveStream hoàn toàn tách biệt */}
         <PersistentLiveStream showId={id} visible={isLiveStreamVisible} />
       </div>
     </div>

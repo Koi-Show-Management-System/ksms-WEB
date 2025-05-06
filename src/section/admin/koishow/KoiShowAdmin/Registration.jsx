@@ -226,26 +226,30 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       return;
     }
 
-    // Show loading indicator
+    // Hiển thị loading trước khi lấy dữ liệu
     notification.info({
-      message: "Đang xử lý",
-      description: "Đang tải dữ liệu đăng ký đã check-in, vui lòng đợi...",
+      message: "Đang lấy dữ liệu",
+      description: "Đang lấy tất cả đăng ký đã check-in, vui lòng đợi...",
       placement: "topRight",
       duration: 2,
     });
 
-    // First get a count of checked-in registrations to optimize loading
+    // Gọi API để lấy tất cả đăng ký có trạng thái checkin trong hạng mục đã chọn
     fetchRegistration(
       1,
-      1, // Just get one record to see total
+      1000, // Số lượng lớn để lấy tất cả đăng ký
       showId,
       [selectedCategory],
-      ["checkin"]
+      ["checkin"] // Chỉ lấy các đăng ký đã check-in
     ).then((response) => {
-      if (response && response.totalItems) {
-        const totalCheckedIn = response.totalItems;
+      if (response && response.registration) {
+        const checkedInFish = response.registration.filter(
+          (reg) =>
+            reg.status?.toLowerCase() === "checkin" &&
+            reg.competitionCategory?.id === selectedCategory
+        );
 
-        if (totalCheckedIn === 0) {
+        if (checkedInFish.length === 0) {
           notification.warning({
             message: "Không có đăng ký",
             description: "Không có đăng ký nào đã check-in để gán vòng",
@@ -254,42 +258,20 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
           return;
         }
 
-        // Set the total before loading actual data
-        setTotalCheckinRegistrations(totalCheckedIn);
+        setCheckinRegistrations(checkedInFish);
+        setTotalCheckinRegistrations(checkedInFish.length);
+        setIsAssignModalVisible(true);
+        clearSelectedRegistrations();
 
-        // Determine optimal page size based on total items
-        const optimalPageSize = totalCheckedIn > 100 ? 100 : totalCheckedIn;
+        // Đảm bảo RoundSelector đang sử dụng đúng category
+        if (roundSelectorRef.current) {
+          roundSelectorRef.current.updateCategory(selectedCategory);
+        }
 
-        // Now fetch the actual records with pagination if needed
-        fetchRegistration(
-          1,
-          optimalPageSize,
-          showId,
-          [selectedCategory],
-          ["checkin"]
-        ).then((detailResponse) => {
-          if (detailResponse && detailResponse.registration) {
-            const checkedInFish = detailResponse.registration.filter(
-              (reg) =>
-                reg.status?.toLowerCase() === "checkin" &&
-                reg.competitionCategory?.id === selectedCategory
-            );
-
-            setCheckinRegistrations(checkedInFish);
-            setIsAssignModalVisible(true);
-            clearSelectedRegistrations();
-
-            // Ensure RoundSelector is using the correct category
-            if (roundSelectorRef.current) {
-              roundSelectorRef.current.updateCategory(selectedCategory);
-            }
-
-            notification.success({
-              message: "Đã tải dữ liệu",
-              description: `Đã tìm thấy ${totalCheckedIn} đăng ký đã check-in${totalCheckedIn > optimalPageSize ? ` (hiển thị ${optimalPageSize} đầu tiên)` : ""}`,
-              placement: "topRight",
-            });
-          }
+        notification.success({
+          message: "Đã lấy dữ liệu",
+          description: `Đã tìm thấy ${checkedInFish.length} đăng ký đã check-in`,
+          placement: "topRight",
         });
       } else {
         notification.error({
@@ -395,7 +377,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     );
   };
 
-  const handleassignToRound = async () => {
+  const handleassignToRound = () => {
     if (!selectedRoundId) {
       notification.warning({
         message: "Chưa chọn vòng",
@@ -414,7 +396,8 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       return;
     }
 
-    // Verify round belongs to the current category
+    // Thay đổi cách kiểm tra - Đảm bảo vòng đang chọn phải thuộc hạng mục hiện tại
+    // Lưu trữ thêm thông tin categoryId của vòng khi chọn vòng
     if (selectedRoundCategoryId !== selectedCategory) {
       notification.error({
         message: "Lỗi hạng mục không khớp",
@@ -425,7 +408,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       return;
     }
 
-    // Different confirmation for large assignments
+    // Hiển thị xác nhận khác nhau tùy theo số lượng đăng ký được chọn
     const isLargeNumber = selectedRegistrations.length > 20;
     const confirmTitle = isLargeNumber
       ? "Xác nhận gán vòng cho số lượng lớn"
@@ -458,7 +441,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       okText: "Đồng ý",
       cancelText: "Hủy",
       onOk: async () => {
-        // Show loading indicator
+        // Hiển thị loading khi bắt đầu gán
         notification.info({
           message: "Đang xử lý",
           description: `Đang gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}...`,
@@ -466,79 +449,26 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
           duration: 3,
         });
 
-        try {
-          // For large batches, process in chunks
-          if (selectedRegistrations.length > 50) {
-            const chunkSize = 50;
-            let successCount = 0;
+        const result = await assignToRound(
+          selectedRoundId,
+          selectedRegistrations
+        );
 
-            // Process in chunks of 50
-            for (let i = 0; i < selectedRegistrations.length; i += chunkSize) {
-              const chunk = selectedRegistrations.slice(i, i + chunkSize);
-              const result = await assignToRound(selectedRoundId, chunk);
+        if (result.success) {
+          closeAssignModal();
+          // Tải lại dữ liệu sau khi gán thành công
+          fetchRegistration(
+            currentPage,
+            pageSize,
+            showId,
+            selectedCategory ? [selectedCategory] : undefined,
+            selectedStatus
+          );
 
-              if (result.success) {
-                successCount += chunk.length;
-
-                // Update progress for long operations
-                if (selectedRegistrations.length > 100) {
-                  notification.info({
-                    message: "Đang xử lý",
-                    description: `Đã xử lý ${successCount}/${selectedRegistrations.length} đăng ký...`,
-                    placement: "topRight",
-                    duration: 2,
-                  });
-                }
-              }
-            }
-
-            closeAssignModal();
-
-            // Reload data after successful assignment
-            fetchRegistration(
-              currentPage,
-              pageSize,
-              showId,
-              selectedCategory ? [selectedCategory] : undefined,
-              selectedStatus
-            );
-
-            notification.success({
-              message: "Gán vòng thành công",
-              description: `Đã gán ${successCount} đăng ký vào vòng ${selectedRoundName}`,
-              placement: "topRight",
-            });
-          } else {
-            // For smaller batches, process all at once
-            const result = await assignToRound(
-              selectedRoundId,
-              selectedRegistrations
-            );
-
-            if (result.success) {
-              closeAssignModal();
-
-              // Reload data after successful assignment
-              fetchRegistration(
-                currentPage,
-                pageSize,
-                showId,
-                selectedCategory ? [selectedCategory] : undefined,
-                selectedStatus
-              );
-
-              notification.success({
-                message: "Gán vòng thành công",
-                description: `Đã gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}`,
-                placement: "topRight",
-              });
-            }
-          }
-        } catch (error) {
-          console.error("Error assigning to round:", error);
-          notification.error({
-            message: "Lỗi gán vòng",
-            description: "Đã xảy ra lỗi khi gán vòng. Vui lòng thử lại.",
+          // Hiển thị thông báo thành công
+          notification.success({
+            message: "Gán vòng thành công",
+            description: `Đã gán ${selectedRegistrations.length} đăng ký vào vòng ${selectedRoundName}`,
             placement: "topRight",
           });
         }
@@ -709,73 +639,33 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         placement: "topRight",
       });
     } else {
-      // If we have all check-in registrations loaded
-      if (checkinRegistrations.length === totalCheckinRegistrations) {
-        if (checkinRegistrations.length > 100) {
-          // Show confirmation for large selections
-          confirm({
-            title: "Chọn số lượng lớn",
-            content: `Bạn đang chọn ${checkinRegistrations.length} đăng ký. Thao tác này có thể mất một chút thời gian. Bạn có muốn tiếp tục?`,
-            okText: "Tiếp tục",
-            cancelText: "Hủy",
-            onOk: () => {
-              const allIds = checkinRegistrations.map((item) => item.id);
-              setSelectedRegistrations(allIds);
-              setIsAllSelected(true);
-              notification.success({
-                message: "Đã chọn tất cả",
-                description: `Đã chọn tất cả ${allIds.length} đăng ký để gán vòng`,
-                placement: "topRight",
-              });
-            },
-          });
-        } else {
-          // For smaller counts, select immediately
-          const allIds = checkinRegistrations.map((item) => item.id);
-          setSelectedRegistrations(allIds);
-          setIsAllSelected(true);
-          notification.success({
-            message: "Đã chọn tất cả",
-            description: `Đã chọn tất cả ${allIds.length} đăng ký để gán vòng`,
-            placement: "topRight",
-          });
-        }
-      } else {
-        // If we only have a partial list loaded, show loading and fetch all
-        notification.info({
-          message: "Đang xử lý",
-          description: `Đang tải tất cả ${totalCheckinRegistrations} đăng ký để chọn...`,
-          placement: "topRight",
-          duration: 3,
-        });
-
-        // Fetch all registrations then select them
-        fetchRegistration(
-          1,
-          totalCheckinRegistrations, // Get all registrations
-          showId,
-          [selectedCategory],
-          ["checkin"]
-        ).then((response) => {
-          if (response && response.registration) {
-            const allCheckedIn = response.registration.filter(
-              (reg) =>
-                reg.status?.toLowerCase() === "checkin" &&
-                reg.competitionCategory?.id === selectedCategory
-            );
-
-            setCheckinRegistrations(allCheckedIn);
-
-            const allIds = allCheckedIn.map((item) => item.id);
+      if (checkinRegistrations.length > 100) {
+        // Hiển thị xác nhận nếu số lượng lớn
+        confirm({
+          title: "Chọn số lượng lớn",
+          content: `Bạn đang chọn ${checkinRegistrations.length} đăng ký. Thao tác này có thể mất một chút thời gian. Bạn có muốn tiếp tục?`,
+          okText: "Tiếp tục",
+          cancelText: "Hủy",
+          onOk: () => {
+            const allIds = checkinRegistrations.map((item) => item.id);
             setSelectedRegistrations(allIds);
             setIsAllSelected(true);
-
             notification.success({
               message: "Đã chọn tất cả",
               description: `Đã chọn tất cả ${allIds.length} đăng ký để gán vòng`,
               placement: "topRight",
             });
-          }
+          },
+        });
+      } else {
+        // Nếu số lượng nhỏ, chọn ngay
+        const allIds = checkinRegistrations.map((item) => item.id);
+        setSelectedRegistrations(allIds);
+        setIsAllSelected(true);
+        notification.success({
+          message: "Đã chọn tất cả",
+          description: `Đã chọn tất cả ${allIds.length} đăng ký để gán vòng`,
+          placement: "topRight",
         });
       }
     }
@@ -1020,10 +910,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       });
     }
   };
-
-  // Add pagination to the check-in registrations table in the modal
-  const [checkinPage, setCheckinPage] = useState(1);
-  const [checkinPageSize, setCheckinPageSize] = useState(50);
 
   return (
     <ConfigProvider
@@ -1797,11 +1683,215 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         </Modal>
         <Modal
           title={
+            <div
+              style={{
+                fontSize: "18px",
+                fontWeight: "600",
+                color: "#262626",
+                borderLeft:
+                  mediaType === "video"
+                    ? "4px solid #722ed1"
+                    : "4px solid #1890ff",
+                paddingLeft: "12px",
+              }}
+            >
+              {mediaType === "image"
+                ? "Tất cả hình ảnh"
+                : mediaType === "video"
+                  ? "Tất cả video"
+                  : "Tất cả hình ảnh và video"}
+            </div>
+          }
+          open={mediaModalVisible}
+          onCancel={() => setMediaModalVisible(false)}
+          footer={null}
+          width={"90%"}
+          style={{ maxWidth: 900 }}
+        >
+          {mediaType !== "video" &&
+            currentKoi?.koiMedia?.filter((media) => media.mediaType === "Image")
+              .length > 0 && (
+              <>
+                <Typography.Title
+                  level={5}
+                  style={{
+                    marginBottom: "16px",
+                    position: "relative",
+                    paddingLeft: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#1890ff",
+                    }}
+                  ></div>
+                  Hình Ảnh
+                </Typography.Title>
+                <Row gutter={[16, 16]} style={{ marginBottom: 24 }}>
+                  {currentKoi?.koiMedia
+                    ?.filter((media) => media.mediaType === "Image")
+                    .map((media, index) => (
+                      <Col xs={24} sm={12} key={`image-${media.id}`}>
+                        <Card
+                          variant="borderless"
+                          hoverable
+                          style={{
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            boxShadow:
+                              "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
+                          }}
+                        >
+                          <div
+                            className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                            style={{
+                              borderRadius: "4px",
+                              border: "1px solid #f0f0f0",
+                            }}
+                          >
+                            <Image
+                              src={media.mediaUrl}
+                              alt={`Hình Ảnh Koi ${index + 1}`}
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100%",
+                                objectFit: "contain",
+                                margin: "0 auto",
+                                display: "block",
+                              }}
+                            />
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                </Row>
+              </>
+            )}
+
+          {mediaType !== "image" &&
+            currentKoi?.koiMedia?.filter((media) => media.mediaType === "Video")
+              .length > 0 && (
+              <>
+                <Typography.Title
+                  level={5}
+                  style={{
+                    marginBottom: "16px",
+                    position: "relative",
+                    paddingLeft: "16px",
+                  }}
+                >
+                  <div
+                    style={{
+                      position: "absolute",
+                      left: 0,
+                      top: "50%",
+                      transform: "translateY(-50%)",
+                      width: "8px",
+                      height: "8px",
+                      borderRadius: "50%",
+                      background: "#722ed1",
+                    }}
+                  ></div>
+                  Video
+                </Typography.Title>
+                <Row gutter={[16, 16]}>
+                  {currentKoi?.koiMedia
+                    ?.filter((media) => media.mediaType === "Video")
+                    .map((media, index) => (
+                      <Col xs={24} sm={12} key={`video-${media.id}`}>
+                        <Card
+                          variant="borderless"
+                          hoverable
+                          style={{
+                            borderRadius: "8px",
+                            overflow: "hidden",
+                            boxShadow:
+                              "0 1px 2px -2px rgba(0, 0, 0, 0.16), 0 3px 6px 0 rgba(0, 0, 0, 0.12), 0 5px 12px 4px rgba(0, 0, 0, 0.09)",
+                          }}
+                        >
+                          <div
+                            className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-[300px]"
+                            style={{
+                              borderRadius: "4px",
+                              border: "1px solid #1f1f1f",
+                            }}
+                          >
+                            <video
+                              controls
+                              src={media.mediaUrl}
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                maxHeight: "100%",
+                                borderRadius: "4px",
+                              }}
+                            />
+                          </div>
+                        </Card>
+                      </Col>
+                    ))}
+                </Row>
+              </>
+            )}
+        </Modal>
+        <Modal
+          title="Từ Chối Đăng Ký"
+          open={isRejectModalVisible}
+          onCancel={() => setIsRejectModalVisible(false)}
+          onOk={handleRejectConfirm}
+          okText="Xác nhận"
+          cancelText="Hủy"
+          okButtonProps={{ danger: true }}
+        >
+          <div>
+            <Typography.Text>
+              Vui lòng nhập lý do từ chối đăng ký:
+            </Typography.Text>
+            <Input.TextArea
+              rows={4}
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              placeholder="Nhập lý do từ chối..."
+              style={{ marginTop: 16 }}
+            />
+          </div>
+        </Modal>
+        <Modal
+          title="Hoàn Tiền Đăng Ký"
+          open={isRefundModalVisible}
+          onCancel={() => {
+            setIsRefundModalVisible(false);
+            setRefundType(null);
+          }}
+          onOk={handleRefund}
+          okText="Xác nhận"
+          cancelText="Hủy"
+        >
+          <div style={{ marginBottom: 16 }}>
+            <Typography.Text>Chọn lý do hoàn tiền:</Typography.Text>
+            <Select
+              style={{ width: "100%", marginTop: 8 }}
+              placeholder="Chọn lý do hoàn tiền"
+              value={refundType}
+              onChange={(value) => setRefundType(value)}
+              options={REFUND_TYPE_OPTIONS}
+            />
+          </div>
+        </Modal>
+        <Modal
+          title={
             <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
               <span>
                 Gán cá tham gia vào vòng{" "}
-                {totalCheckinRegistrations > 0
-                  ? `- Tổng ${totalCheckinRegistrations} đăng ký đã check-in`
+                {checkinRegistrations.length > 0
+                  ? `- Tất cả ${checkinRegistrations.length} đăng ký đã check-in`
                   : ""}
               </span>
             </div>
@@ -1940,10 +2030,10 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                         <span>
                           Đã chọn{" "}
                           <strong>{selectedRegistrations.length}</strong> /{" "}
-                          <strong>{totalCheckinRegistrations}</strong> đăng ký
+                          <strong>{checkinRegistrations.length}</strong> đăng ký
                           để gán vào vòng <strong>{selectedRoundName}</strong>
                           {selectedRegistrations.length ===
-                            totalCheckinRegistrations && (
+                            checkinRegistrations.length && (
                             <Tag color="green" style={{ marginLeft: 8 }}>
                               Đã chọn tất cả
                             </Tag>
@@ -1959,73 +2049,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                     columns={columns.filter((col) => col.key !== "actions")}
                     dataSource={checkinRegistrations}
                     loading={isLoading}
-                    pagination={
-                      totalCheckinRegistrations > 50
-                        ? {
-                            current: checkinPage,
-                            pageSize: checkinPageSize,
-                            total: totalCheckinRegistrations,
-                            onChange: (page, pageSize) => {
-                              setCheckinPage(page);
-                              setCheckinPageSize(pageSize);
-                              // Only load new data if not all registrations are loaded
-                              if (
-                                checkinRegistrations.length <
-                                totalCheckinRegistrations
-                              ) {
-                                // Calculate offset based on page and pageSize
-                                const offset = (page - 1) * pageSize;
-
-                                // Fetch the specific page of data
-                                fetchRegistration(
-                                  page,
-                                  pageSize,
-                                  showId,
-                                  [selectedCategory],
-                                  ["checkin"]
-                                ).then((response) => {
-                                  if (response && response.registration) {
-                                    const pageRegistrations =
-                                      response.registration.filter(
-                                        (reg) =>
-                                          reg.status?.toLowerCase() ===
-                                            "checkin" &&
-                                          reg.competitionCategory?.id ===
-                                            selectedCategory
-                                      );
-
-                                    // Replace only the visible page of data
-                                    const newRegistrations = [
-                                      ...checkinRegistrations,
-                                    ];
-                                    for (
-                                      let i = 0;
-                                      i < pageRegistrations.length;
-                                      i++
-                                    ) {
-                                      if (
-                                        offset + i <
-                                        newRegistrations.length
-                                      ) {
-                                        newRegistrations[offset + i] =
-                                          pageRegistrations[i];
-                                      } else {
-                                        newRegistrations.push(
-                                          pageRegistrations[i]
-                                        );
-                                      }
-                                    }
-
-                                    setCheckinRegistrations(newRegistrations);
-                                  }
-                                });
-                              }
-                            },
-                            showSizeChanger: true,
-                            pageSizeOptions: ["50", "100", "200"],
-                          }
-                        : false
-                    }
+                    pagination={false}
                     rowKey="id"
                     size="small"
                     variant="borderless"
