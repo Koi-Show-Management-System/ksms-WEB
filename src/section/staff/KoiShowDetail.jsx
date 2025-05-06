@@ -15,7 +15,6 @@ import koiFishImage from "../../assets/koiFishImage.png";
 import { useParams } from "react-router-dom";
 import { Loading } from "../../components";
 import useKoiShow from "../../hooks/useKoiShow";
-import useCategory from "../../hooks/useCategory";
 import Rules from "./Rules";
 import Tank from "../admin/koishow/KoiShowAdmin/Tank";
 import Registration from "../admin/koishow/KoiShowAdmin/Registration";
@@ -69,37 +68,13 @@ function PersistentLiveStream({ showId, visible }) {
 function KoiShowDetail() {
   const { id } = useParams();
   const { koiShowDetail, isLoading, fetchKoiShowDetail } = useKoiShow();
-  const { categories, fetchCategories } = useCategory();
 
   const [showAll, setShowAll] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activeTabKey, setActiveTabKey] = useState("category");
-  const [cancelledCategoryIds, setCancelledCategoryIds] = useState([]);
 
   // Xác định có hiển thị LiveStream hay không
   const isLiveStreamVisible = activeTabKey === "liveStream";
-
-  // Lấy danh sách hạng mục bị hủy
-  useEffect(() => {
-    const getCancelledCategories = async () => {
-      try {
-        await fetchCategories(id);
-
-        // Lọc ra các hạng mục bị hủy
-        const cancelledIds = categories
-          .filter((category) => category.status === "cancelled")
-          .map((category) => category.id);
-
-        setCancelledCategoryIds(cancelledIds);
-      } catch (error) {
-        console.error("Error fetching cancelled categories:", error);
-      }
-    };
-
-    if (id) {
-      getCancelledCategories();
-    }
-  }, [id, fetchCategories, categories]);
 
   // Các tab thông thường
   const renderNormalTab = (key) => {
@@ -114,13 +89,7 @@ function KoiShowDetail() {
           <Category showId={id} statusShow={koiShowDetail.data.showStatuses} />
         );
       case "registration":
-        return (
-          <Registration
-            showId={id}
-            statusShow={koiShowDetail.data.status}
-            cancelledCategoryIds={cancelledCategoryIds}
-          />
-        );
+        return <Registration showId={id} />;
       case "ticket":
         return <Ticket showId={id} />;
       case "tank":

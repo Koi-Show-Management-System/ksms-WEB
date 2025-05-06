@@ -210,10 +210,33 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     );
   };
 
-  const handleRoundSelect = (roundId, roundName, roundCategoryId) => {
+  const handleRoundSelect = (roundId, roundName, selectedCategory) => {
+    // Log để debug
+    console.log("Selected round info:", {
+      roundId,
+      roundName,
+      categoryId: selectedCategory,
+    });
+
+    // Kiểm tra và cảnh báo nếu vòng được chọn thuộc hạng mục khác
+    if (selectedCategory && categoryId && selectedCategory !== categoryId) {
+      console.warn(
+        "Round category mismatch:",
+        selectedCategory,
+        "expected:",
+        categoryId
+      );
+      notification.warning({
+        message: "Cảnh báo",
+        description: "Vòng này thuộc hạng mục khác, vui lòng chọn lại",
+        placement: "topRight",
+      });
+      return;
+    }
+
     setSelectedRoundId(roundId);
     setSelectedRoundName(roundName);
-    setSelectedRoundCategoryId(roundCategoryId || selectedCategory); // Nếu không có roundCategoryId, mặc định là selectedCategory
+    setSelectedRoundCategoryId(selectedCategory || categoryId);
   };
 
   const showAssignModal = () => {
