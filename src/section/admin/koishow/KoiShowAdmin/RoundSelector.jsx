@@ -5,7 +5,7 @@ import React, {
   forwardRef,
   useImperativeHandle,
 } from "react";
-import { Select, Space, Typography } from "antd";
+import { Select, Space, Typography, Tag } from "antd";
 import useCategory from "../../../../hooks/useCategory";
 import useRound from "../../../../hooks/useRound";
 
@@ -32,7 +32,7 @@ const RoundSelector = forwardRef(
         }
         // Thông báo cho component cha rằng không có vòng nào được chọn
         if (onRoundSelect) {
-          onRoundSelect(null, "");
+          onRoundSelect(null, "", null);
         }
       },
       // Thêm method để cập nhật category
@@ -44,7 +44,7 @@ const RoundSelector = forwardRef(
           fetchRound(newCategoryId, "Preliminary", 1, 100);
           // Thông báo cho component cha rằng không có vòng nào được chọn
           if (onRoundSelect) {
-            onRoundSelect(null, "");
+            onRoundSelect(null, "", null);
           }
         }
       },
@@ -73,11 +73,11 @@ const RoundSelector = forwardRef(
           setSelectedRound(firstRound.id);
 
           if (onRoundSelect) {
-            onRoundSelect(firstRound.id, firstRound.name);
+            onRoundSelect(firstRound.id, firstRound.name, selectedCategory);
           }
         }
       }
-    }, [round, selectedRound, onRoundSelect]);
+    }, [round, selectedRound, onRoundSelect, selectedCategory]);
 
     const handleCategoryChange = (categoryId) => {
       setSelectedCategory(categoryId);
@@ -95,15 +95,24 @@ const RoundSelector = forwardRef(
       const roundName = selectedRoundObj ? selectedRoundObj.name : "";
 
       if (onRoundSelect) {
-        onRoundSelect(roundId, roundName);
+        onRoundSelect(roundId, roundName, selectedCategory);
       }
     };
+
+    // Lấy tên hạng mục hiện tại từ danh sách categories
+    const selectedCategoryName =
+      categories.find((c) => c.id === selectedCategory)?.name || "";
 
     // Lọc các vòng có roundOrder = 1
     const filteredRounds = round.filter((r) => r.roundOrder === 1);
 
     return (
-      <Space direction="horizontal" size="middle" className="mb-4">
+      <Space
+        direction="vertical"
+        size="small"
+        className="mb-4"
+        style={{ width: "100%" }}
+      >
         {!categoryId && (
           <Select
             placeholder="Chọn hạng mục"
@@ -122,27 +131,33 @@ const RoundSelector = forwardRef(
 
         {selectedCategory && (
           <>
-            <Typography.Text strong>Vòng sơ khảo</Typography.Text>
-            <Select
-              placeholder="Chọn vòng cụ thể"
-              style={{ width: 200 }}
-              onChange={handleSpecificRoundSelect}
-              value={selectedRound}
-              loading={roundLoading}
-              showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.children ?? "")
-                  .toLowerCase()
-                  .includes(input.toLowerCase())
-              }
-            >
-              {filteredRounds.map((r) => (
-                <Select.Option key={r.id} value={r.id}>
-                  {r.name}
-                </Select.Option>
-              ))}
-            </Select>
+            <Space direction="horizontal" size="middle">
+              <Typography.Text strong>Hạng mục:</Typography.Text>
+              <Tag color="blue" style={{ fontSize: "14px" }}>
+                {selectedCategoryName}
+              </Tag>
+              <Typography.Text strong>Vòng sơ khảo:</Typography.Text>
+              <Select
+                placeholder="Chọn vòng cụ thể"
+                style={{ width: 200 }}
+                onChange={handleSpecificRoundSelect}
+                value={selectedRound}
+                loading={roundLoading}
+                showSearch
+                optionFilterProp="children"
+                filterOption={(input, option) =>
+                  (option?.children ?? "")
+                    .toLowerCase()
+                    .includes(input.toLowerCase())
+                }
+              >
+                {filteredRounds.map((r) => (
+                  <Select.Option key={r.id} value={r.id}>
+                    {r.name}
+                  </Select.Option>
+                ))}
+              </Select>
+            </Space>
           </>
         )}
       </Space>

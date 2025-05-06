@@ -18,6 +18,7 @@ import {
   Menu,
   Space,
   Select,
+  Tooltip,
 } from "antd";
 import dayjs from "dayjs";
 import {
@@ -155,8 +156,6 @@ function KoiShowDetail() {
         unsubscribe = signalRService.subscribeToShowStatusUpdates(
           (updatedShowId, updatedStatus) => {
             if (updatedShowId === id && koiShowDetail?.data) {
-          
-
               // Only update if the status actually changed
               if (koiShowDetail.data.status !== updatedStatus) {
                 // Update the koiShowDetail state without making an API call
@@ -633,6 +632,18 @@ function KoiShowDetail() {
   const openTicketModal = () => {
     ticketForm.resetFields();
     setEditingTicket(null);
+
+    // Only show form if there are available ticket types
+    const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"];
+    const usedTicketTypes = koiShowDetail.data.ticketTypes.map(
+      (ticket) => ticket.name
+    );
+    const availableTicketTypes = TICKET_TYPES.filter(
+      (type) => !usedTicketTypes.includes(type)
+    );
+
+    // Set showTicketForm based on whether there are available types
+    setShowTicketForm(availableTicketTypes.length > 0);
     setTicketModalVisible(true);
   };
 
@@ -1223,12 +1234,9 @@ function KoiShowDetail() {
         centered
         className="ticket-modal"
         closeIcon={
-          <Button
-            icon={<CloseOutlined />}
-            type="text"
-            shape="circle"
-            className="absolute right-4 top-4"
-          />
+          <span className="absolute right-4 top-4">
+            <CloseOutlined />
+          </span>
         }
         styles={{
           content: {
@@ -1257,18 +1265,53 @@ function KoiShowDetail() {
             ) : (
               <div className="mt-auto">
                 {!isStaff && (
-                  <Button
-                    icon={<PlusOutlined />}
-                    className="w-full h-12 text-base flex items-center justify-center text-white"
-                    ghost
-                    onClick={() => {
-                      setShowTicketForm(true);
-                      ticketForm.resetFields();
-                      setEditingTicket(null);
-                    }}
+                  <Tooltip
+                    title={
+                      koiShowDetail.data.ticketTypes.length === 3
+                        ? "Đã sử dụng hết tất cả các loại vé"
+                        : ""
+                    }
+                    placement="top"
                   >
-                    Tạo loại vé mới
-                  </Button>
+                    <Button
+                      icon={<PlusOutlined />}
+                      className="w-full h-12 text-base flex items-center justify-center text-white"
+                      ghost
+                      onClick={() => {
+                        const TICKET_TYPES = [
+                          "Vé Thường",
+                          "Vé Cao Cấp",
+                          "Vé Triễn Lãm",
+                        ];
+                        const usedTicketTypes =
+                          koiShowDetail.data.ticketTypes.map(
+                            (ticket) => ticket.name
+                          );
+                        const availableTicketTypes = TICKET_TYPES.filter(
+                          (type) => !usedTicketTypes.includes(type)
+                        );
+
+                        if (availableTicketTypes.length === 0) {
+                          notification.warning({
+                            message: "Không thể tạo thêm loại vé",
+                            description:
+                              "Đã sử dụng hết tất cả các loại vé. Bạn chỉ có thể chỉnh sửa các loại vé hiện có.",
+                            placement: "top",
+                            duration: 4,
+                          });
+                          return;
+                        }
+
+                        setShowTicketForm(true);
+                        ticketForm.resetFields();
+                        setEditingTicket(null);
+                      }}
+                      size="large"
+                      disabled={koiShowDetail.data.ticketTypes.length === 3}
+                    >
+                      Tạo loại vé mới
+                    </Button>
+                  </Tooltip>
                 )}
               </div>
             )}
@@ -1337,19 +1380,53 @@ function KoiShowDetail() {
                     xem triển lãm
                   </p>
                   {!isEditDisabled && !isStaff && (
-                    <Button
-                      type="primary"
-                      icon={<PlusOutlined />}
-                      onClick={() => {
-                        setShowTicketForm(true);
-                        ticketForm.resetFields();
-                        setEditingTicket(null);
-                      }}
-                      size="large"
-                      className="rounded-lg"
+                    <Tooltip
+                      title={
+                        koiShowDetail.data.ticketTypes.length === 3
+                          ? "Đã sử dụng hết tất cả các loại vé"
+                          : ""
+                      }
+                      placement="top"
                     >
-                      Tạo vé mới
-                    </Button>
+                      <Button
+                        type="primary"
+                        icon={<PlusOutlined />}
+                        onClick={() => {
+                          const TICKET_TYPES = [
+                            "Vé Thường",
+                            "Vé Cao Cấp",
+                            "Vé Triễn Lãm",
+                          ];
+                          const usedTicketTypes =
+                            koiShowDetail.data.ticketTypes.map(
+                              (ticket) => ticket.name
+                            );
+                          const availableTicketTypes = TICKET_TYPES.filter(
+                            (type) => !usedTicketTypes.includes(type)
+                          );
+
+                          if (availableTicketTypes.length === 0) {
+                            notification.warning({
+                              message: "Không thể tạo thêm loại vé",
+                              description:
+                                "Đã sử dụng hết tất cả các loại vé. Bạn chỉ có thể chỉnh sửa các loại vé hiện có.",
+                              placement: "top",
+                              duration: 4,
+                            });
+                            return;
+                          }
+
+                          setShowTicketForm(true);
+                          ticketForm.resetFields();
+                          setEditingTicket(null);
+                        }}
+                        size="large"
+                        className="rounded-lg"
+                        disabled={koiShowDetail.data.ticketTypes.length === 3}
+                      >
+                        Tạo vé mới
+                      </Button>
+                    </Tooltip>
                   )}
                 </div>
               ) : (

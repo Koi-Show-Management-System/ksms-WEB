@@ -51,6 +51,7 @@ function Category({ showId, statusShow, onCategoryCancel }) {
   const isEditDisabled =
     statusShow === "published" ||
     statusShow === "inprogress" ||
+    statusShow === "finished" ||
     statusShow === "upcoming";
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
@@ -412,16 +413,6 @@ function Category({ showId, statusShow, onCategoryCancel }) {
                           ),
                         },
                         {
-                          key: "maxEntries",
-                          label: "Số lượng tối đa",
-                          span: 1,
-                          children: (
-                            <Typography.Text strong>
-                              {selectedCategory.maxEntries}
-                            </Typography.Text>
-                          ),
-                        },
-                        {
                           key: "minEntries",
                           label: "Số lượng tối thiểu",
                           span: 1,
@@ -431,6 +422,17 @@ function Category({ showId, statusShow, onCategoryCancel }) {
                             </Typography.Text>
                           ),
                         },
+                        {
+                          key: "maxEntries",
+                          label: "Số lượng tối đa",
+                          span: 1,
+                          children: (
+                            <Typography.Text strong>
+                              {selectedCategory.maxEntries}
+                            </Typography.Text>
+                          ),
+                        },
+
                         {
                           key: "registrationFee",
                           label: "Phí đăng ký",

@@ -321,16 +321,6 @@ function Category({ showId, statusShow }) {
                           ),
                         },
                         {
-                          key: "maxEntries",
-                          label: "Số lượng tối đa",
-                          span: 1,
-                          children: (
-                            <Typography.Text strong>
-                              {selectedCategory.maxEntries}
-                            </Typography.Text>
-                          ),
-                        },
-                        {
                           key: "minEntries",
                           label: "Số lượng tối thiểu",
                           span: 1,
@@ -340,6 +330,17 @@ function Category({ showId, statusShow }) {
                             </Typography.Text>
                           ),
                         },
+                        {
+                          key: "maxEntries",
+                          label: "Số lượng tối đa",
+                          span: 1,
+                          children: (
+                            <Typography.Text strong>
+                              {selectedCategory.maxEntries}
+                            </Typography.Text>
+                          ),
+                        },
+
                         ...(selectedCategory.status === "cancelled"
                           ? [
                               {
@@ -362,7 +363,7 @@ function Category({ showId, statusShow }) {
                           label: "Mô tả",
                           span: 1,
                           children: (
-                            <div className="bg-gray-50 rounded-md border border-gray-100">
+                            <div >
                               {selectedCategory.description || (
                                 <Typography.Text type="secondary" italic>
                                   Không có mô tả

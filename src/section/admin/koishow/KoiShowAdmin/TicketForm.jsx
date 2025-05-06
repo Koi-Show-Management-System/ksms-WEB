@@ -64,21 +64,8 @@ function TicketForm({
       );
 
       if (availableTicketTypes.length === 0) {
-        // Use notification instead of message for a more professional look
-        notification.warning({
-          message: "Không thể tạo thêm loại vé",
-          description:
-            "Đã sử dụng hết tất cả các loại vé. Bạn chỉ có thể chỉnh sửa các loại vé hiện có.",
-          icon: <WarningOutlined style={{ color: "#faad14" }} />,
-          placement: "top",
-          duration: 4,
-          style: {
-            borderRadius: "8px",
-          },
-        });
-
-        // Close the form after showing the notification
-        setTimeout(() => onCancel(), 100);
+        // Silently close the form without showing notification
+        onCancel();
       } else {
         // Auto-select the first available ticket type
         form.setFieldsValue({ name: availableTicketTypes[0] });
@@ -147,10 +134,12 @@ function TicketForm({
     <div className="p-0">
       <Card
         className="ticket-form-card shadow-lg border-0"
-        bodyStyle={{ padding: "24px" }}
-        headStyle={{
-          borderBottom: `2px solid ${ticketConfig.color}`,
-          padding: "16px 24px",
+        styles={{
+          body: { padding: "24px" },
+          header: {
+            borderBottom: `2px solid ${ticketConfig.color}`,
+            padding: "16px 24px",
+          },
         }}
         title={
           <div className="flex items-center">

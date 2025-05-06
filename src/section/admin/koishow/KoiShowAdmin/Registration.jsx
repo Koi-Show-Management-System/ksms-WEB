@@ -135,6 +135,9 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
   const isCategoryCancelled =
     isCategorySelected && cancelledCategoryIds.includes(selectedCategory);
 
+  // Thêm state để lưu trữ categoryId của round được chọn
+  const [selectedRoundCategoryId, setSelectedRoundCategoryId] = useState(null);
+
   // Cập nhật lại useEffect khi chọn hạng mục
   useEffect(() => {
     if (selectedCategory) {
@@ -207,9 +210,10 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     );
   };
 
-  const handleRoundSelect = (roundId, roundName) => {
+  const handleRoundSelect = (roundId, roundName, roundCategoryId) => {
     setSelectedRoundId(roundId);
     setSelectedRoundName(roundName);
+    setSelectedRoundCategoryId(roundCategoryId || selectedCategory); // Nếu không có roundCategoryId, mặc định là selectedCategory
   };
 
   const showAssignModal = () => {
@@ -392,20 +396,13 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       return;
     }
 
-    // Kiểm tra xem các registration có cùng hạng mục với round hiện tại không
-    const selectedRegs = checkinRegistrations.filter((reg) =>
-      selectedRegistrations.includes(reg.id)
-    );
-
-    // Nếu có registration thuộc hạng mục khác với hạng mục đang chọn, hiển thị cảnh báo
-    const invalidRegs = selectedRegs.filter(
-      (reg) => reg.competitionCategory?.id !== selectedCategory
-    );
-
-    if (invalidRegs.length > 0) {
+    // Thay đổi cách kiểm tra - Đảm bảo vòng đang chọn phải thuộc hạng mục hiện tại
+    // Lưu trữ thêm thông tin categoryId của vòng khi chọn vòng
+    if (selectedRoundCategoryId !== selectedCategory) {
       notification.error({
         message: "Lỗi hạng mục không khớp",
-        description: `Có ${invalidRegs.length} đăng ký thuộc hạng mục khác với hạng mục đang chọn. Vui lòng kiểm tra lại.`,
+        description:
+          "Vòng được chọn không thuộc hạng mục hiện tại. Vui lòng chọn lại vòng phù hợp.",
         placement: "topRight",
       });
       return;
@@ -1928,6 +1925,45 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
               />
             )}
 
+            {selectedCategory && (
+              <>
+                <Alert
+                  message={
+                    <div style={{ display: "flex", alignItems: "center" }}>
+                      <span style={{ marginRight: "8px" }}>
+                        Đang gán vòng cho hạng mục:
+                      </span>
+                      <Tag color="blue" style={{ fontSize: "14px" }}>
+                        {categories.find((c) => c.id === selectedCategory)
+                          ?.name || "N/A"}
+                      </Tag>
+                    </div>
+                  }
+                  type="info"
+                  showIcon
+                  style={{ marginBottom: "16px" }}
+                />
+
+                {checkinRegistrations.length > 0 ? (
+                  <Alert
+                    type="success"
+                    showIcon
+                    message="Tất cả đăng ký đã check-in của hạng mục này đang được hiển thị"
+                    description="Bạn có thể chọn và gán vòng cho tất cả đăng ký cùng một lúc"
+                    style={{ marginBottom: "16px" }}
+                  />
+                ) : (
+                  <Alert
+                    type="warning"
+                    showIcon
+                    message="Không có đăng ký"
+                    description="Không có đăng ký nào đã check-in cho hạng mục này"
+                    style={{ marginBottom: "16px" }}
+                  />
+                )}
+              </>
+            )}
+
             <div
               style={{
                 display: "flex",
@@ -1948,28 +1984,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
               />
             </div>
           </div>
-
-          {selectedCategory && (
-            <>
-              {checkinRegistrations.length > 0 ? (
-                <Alert
-                  type="info"
-                  showIcon
-                  message="Tất cả đăng ký đã check-in của hạng mục này đang được hiển thị"
-                  description="Bạn có thể chọn và gán vòng cho tất cả đăng ký cùng một lúc"
-                  style={{ marginBottom: "16px" }}
-                />
-              ) : (
-                <Alert
-                  type="warning"
-                  showIcon
-                  message="Không có đăng ký"
-                  description="Không có đăng ký nào đã check-in cho hạng mục này"
-                  style={{ marginBottom: "16px" }}
-                />
-              )}
-            </>
-          )}
 
           {selectedCategory &&
             checkinRegistrations.length > 0 &&

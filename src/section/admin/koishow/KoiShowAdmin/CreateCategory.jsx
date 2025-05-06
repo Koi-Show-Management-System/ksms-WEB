@@ -110,8 +110,8 @@ function CreateCategory({ showId, onCategoryCreated }) {
     sizeMin: "",
     sizeMax: "",
     description: "",
-    maxEntries: 0,
-    minEntries: 0,
+    maxEntries: null,
+    minEntries: null,
     registrationFee: 0,
     status: "pending",
     startTime: null,
@@ -168,8 +168,8 @@ function CreateCategory({ showId, onCategoryCreated }) {
       sizeMin: "",
       sizeMax: "",
       description: "",
-      maxEntries: 0,
-      minEntries: 0,
+      maxEntries: null,
+      minEntries: null,
       registrationFee: 0,
       status: "pending",
       startTime: null,
@@ -255,6 +255,29 @@ function CreateCategory({ showId, onCategoryCreated }) {
     if ((field === "minEntries" || field === "maxEntries") && value > 1000) {
       message.error("Số lượng tham gia không được vượt quá 1000!");
       return;
+    }
+
+    // Khi cập nhật maxEntries, kiểm tra và cập nhật lỗi nếu số cá qua vòng vượt quá giới hạn
+    if (field === "maxEntries" && value > 0) {
+      // Kiểm tra số cá qua vòng đánh giá 1 có vượt quá maxEntries không
+      if (evaluationOneNumber && evaluationOneNumber > value) {
+        const newRoundsErrors = { ...roundsErrors };
+        newRoundsErrors.evaluationOne = `Số cá qua vòng (${evaluationOneNumber}) không được vượt quá số lượng tham gia tối đa (${value})`;
+        setRoundsErrors(newRoundsErrors);
+      } else {
+        // Xóa lỗi nếu hợp lệ
+        const newRoundsErrors = { ...roundsErrors };
+        delete newRoundsErrors.evaluationOne;
+        setRoundsErrors(newRoundsErrors);
+      }
+
+      // Kiểm tra số cá qua vòng đánh giá 2 có vượt quá maxEntries không
+      if (evaluationTwoNumber && evaluationTwoNumber > value) {
+        const newRoundsErrors = { ...roundsErrors };
+        const currentError = newRoundsErrors.evaluationTwo || "";
+        newRoundsErrors.evaluationTwo = `${currentError ? currentError + " và k" : "K"}hông được vượt quá số lượng tham gia tối đa (${value})`;
+        setRoundsErrors(newRoundsErrors);
+      }
     }
 
     setCategory((prev) => ({
@@ -830,6 +853,51 @@ function CreateCategory({ showId, onCategoryCreated }) {
       hasError = true;
     }
 
+    // Validate số cá qua vòng
+    if (evaluationOneNumber < 1) {
+      errorDetails.push("số cá qua vòng Đánh Giá 1 phải từ 1 trở lên");
+      hasError = true;
+    }
+
+    if (evaluationTwoNumber < 1) {
+      errorDetails.push("số cá qua vòng Đánh Giá 2 phải từ 1 trở lên");
+      hasError = true;
+    }
+
+    if (
+      evaluationOneNumber &&
+      evaluationTwoNumber &&
+      evaluationTwoNumber >= evaluationOneNumber
+    ) {
+      errorDetails.push(
+        "số cá qua vòng Đánh Giá 2 phải nhỏ hơn vòng Đánh Giá 1"
+      );
+      hasError = true;
+    }
+
+    // Kiểm tra số cá qua vòng không vượt quá số lượng tham gia tối đa
+    if (
+      evaluationOneNumber &&
+      category.maxEntries &&
+      evaluationOneNumber > category.maxEntries
+    ) {
+      errorDetails.push(
+        `số cá qua vòng Đánh Giá 1 (${evaluationOneNumber}) không được vượt quá số lượng tham gia tối đa (${category.maxEntries})`
+      );
+      hasError = true;
+    }
+
+    if (
+      evaluationTwoNumber &&
+      category.maxEntries &&
+      evaluationTwoNumber > category.maxEntries
+    ) {
+      errorDetails.push(
+        `số cá qua vòng Đánh Giá 2 (${evaluationTwoNumber}) không được vượt quá số lượng tham gia tối đa (${category.maxEntries})`
+      );
+      hasError = true;
+    }
+
     // Variety validation
     if (
       !category.createCompetionCategoryVarieties ||
@@ -843,6 +911,20 @@ function CreateCategory({ showId, onCategoryCreated }) {
     if (category.createRoundRequests.length === 0) {
       errorDetails.push("thêm ít nhất một vòng thi");
       hasError = true;
+    }
+
+    // Kiểm tra các lỗi trong roundsErrors
+    if (Object.keys(roundsErrors).length > 0) {
+      // Nếu có lỗi về số cá qua vòng vượt quá số lượng tham gia tối đa
+      if (roundsErrors.evaluationOne) {
+        errorDetails.push(roundsErrors.evaluationOne);
+        hasError = true;
+      }
+
+      if (roundsErrors.evaluationTwo) {
+        errorDetails.push(roundsErrors.evaluationTwo);
+        hasError = true;
+      }
     }
 
     // Kiểm tra số cá qua vòng
@@ -941,28 +1023,6 @@ function CreateCategory({ showId, onCategoryCreated }) {
       hasError = true;
     }
 
-    // Validate số cá qua vòng
-    if (!evaluationOneNumber || evaluationOneNumber < 1) {
-      errorDetails.push("số cá qua vòng Đánh Giá 1 phải từ 1 trở lên");
-      hasError = true;
-    }
-
-    if (!evaluationTwoNumber || evaluationTwoNumber < 1) {
-      errorDetails.push("số cá qua vòng Đánh Giá 2 phải từ 1 trở lên");
-      hasError = true;
-    }
-
-    if (
-      evaluationOneNumber &&
-      evaluationTwoNumber &&
-      evaluationTwoNumber >= evaluationOneNumber
-    ) {
-      errorDetails.push(
-        "số cá qua vòng Đánh Giá 2 phải nhỏ hơn vòng Đánh Giá 1"
-      );
-      hasError = true;
-    }
-
     // Hiển thị thông báo lỗi nếu có
     if (hasError) {
       notification.error({
@@ -1013,6 +1073,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
     // Cập nhật số cá qua vòng từ state vào rounds
     categoryData.createRoundRequests = categoryData.createRoundRequests.map(
       (round) => {
+        // Với vòng đánh giá chính, sử dụng giá trị từ state
         if (round.roundType === "Evaluation" && round.roundOrder === 1) {
           return {
             ...round,
@@ -1200,6 +1261,15 @@ function CreateCategory({ showId, onCategoryCreated }) {
       delete newRoundsErrors.evaluationTwo;
       setRoundsErrors(newRoundsErrors);
     }
+
+    // Kiểm tra số cá qua vòng không vượt quá số lượng tham gia tối đa
+    if (value && category.maxEntries && value > category.maxEntries) {
+      const newRoundsErrors = { ...roundsErrors };
+      const currentErrors = newRoundsErrors.evaluationTwo || "";
+      newRoundsErrors.evaluationTwo = `${currentErrors ? currentErrors + " và k" : "K"}hông được vượt quá số lượng tham gia tối đa (${category.maxEntries})`;
+      setRoundsErrors(newRoundsErrors);
+    }
+
     setEvaluationTwoNumber(value);
 
     // Update round in category state
@@ -1424,7 +1494,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 Số lượng tham gia tối thiểu
               </label>
               <InputNumber
-                min={1}
+                min={0}
                 max={1000}
                 placeholder="Nhập số lượng tham gia tối thiểu"
                 value={category.minEntries}
@@ -1432,7 +1502,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 className="w-full"
               />
               {showErrors &&
-                (!category.minEntries || category.minEntries < 1) && (
+                (!category.minEntries || category.minEntries <= 0) && (
                   <p className="text-red-500 text-xs mt-1">
                     Số lượng tham gia tối thiểu phải lớn hơn 0.
                   </p>
@@ -1443,7 +1513,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 Số lượng tham gia tối đa
               </label>
               <InputNumber
-                min={1}
+                min={0}
                 max={1000}
                 placeholder="Nhập số lượng tối đa"
                 value={category.maxEntries}
@@ -1451,7 +1521,7 @@ function CreateCategory({ showId, onCategoryCreated }) {
                 className="w-full"
               />
               {showErrors &&
-                (!category.maxEntries || category.maxEntries < 1) && (
+                (!category.maxEntries || category.maxEntries <= 0) && (
                   <p className="text-red-500 text-xs mt-1">
                     Số lượng tham gia tối đa phải lớn hơn 0.
                   </p>
@@ -1514,6 +1584,10 @@ function CreateCategory({ showId, onCategoryCreated }) {
                               Số cá qua vòng phải từ 1 trở lên.
                             </p>
                           )}
+                        <p className="text-gray-500 text-xs mt-1">
+                          Không được vượt quá số lượng tham gia tối đa (
+                          {category.maxEntries || "?"})
+                        </p>
                       </div>
                     </Space>
                   </Panel>
@@ -1542,6 +1616,10 @@ function CreateCategory({ showId, onCategoryCreated }) {
                               Số cá qua vòng phải từ 1 trở lên.
                             </p>
                           )}
+                        <p className="text-gray-500 text-xs mt-1">
+                          Không được vượt quá số lượng tham gia tối đa (
+                          {category.maxEntries || "?"}) và phải nhỏ hơn vòng 1
+                        </p>
                       </div>
                     </Space>
                   </Panel>
