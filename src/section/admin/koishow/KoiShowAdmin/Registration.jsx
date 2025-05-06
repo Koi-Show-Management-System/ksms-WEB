@@ -211,39 +211,9 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
   };
 
   const handleRoundSelect = (roundId, roundName, roundCategoryId) => {
-    // Log để debug
-    console.log("Selected round info:", {
-      roundId,
-      roundName,
-      categoryId: roundCategoryId,
-      selectedCategory,
-    });
-
-    // Kiểm tra và cảnh báo nếu vòng được chọn thuộc hạng mục khác
-    if (selectedCategory && roundCategoryId && selectedCategory !== roundCategoryId) {
-      console.warn(
-        "Round category mismatch:",
-        roundCategoryId,
-        "expected:",
-        selectedCategory
-      );
-      notification.warning({
-        message: "Cảnh báo",
-        description: "Vòng này thuộc hạng mục khác, vui lòng chọn lại",
-        placement: "topRight",
-      });
-      // Clear selected round để tránh khả năng gán sai
-      setSelectedRoundId(null);
-      setSelectedRoundName("");
-      if (roundSelectorRef.current) {
-        roundSelectorRef.current.reset();
-      }
-      return;
-    }
-
     setSelectedRoundId(roundId);
     setSelectedRoundName(roundName);
-    setSelectedRoundCategoryId(roundCategoryId);
+    setSelectedRoundCategoryId(roundCategoryId || selectedCategory); // Nếu không có roundCategoryId, mặc định là selectedCategory
   };
 
   const showAssignModal = () => {
@@ -426,39 +396,16 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       return;
     }
 
-    // Kiểm tra xem vòng được chọn có thuộc hạng mục hiện tại không
+    // Thay đổi cách kiểm tra - Đảm bảo vòng đang chọn phải thuộc hạng mục hiện tại
+    // Lưu trữ thêm thông tin categoryId của vòng khi chọn vòng
     if (selectedRoundCategoryId !== selectedCategory) {
       notification.error({
         message: "Lỗi hạng mục không khớp",
-        description: "Vòng được chọn không thuộc hạng mục hiện tại. Vui lòng chọn lại vòng phù hợp.",
+        description:
+          "Vòng được chọn không thuộc hạng mục hiện tại. Vui lòng chọn lại vòng phù hợp.",
         placement: "topRight",
       });
-      // Reset RoundSelector để chọn lại
-      if (roundSelectorRef.current) {
-        roundSelectorRef.current.reset();
-      }
       return;
-    }
-
-    // Thực hiện kiểm tra thêm để đảm bảo tất cả đăng ký thuộc cùng một hạng mục
-    if (selectedRegistrations.length > 0 && checkinRegistrations.length > 0) {
-      const selectedItems = checkinRegistrations.filter(item => 
-        selectedRegistrations.includes(item.id)
-      );
-      
-      // Kiểm tra xem tất cả đều thuộc cùng hạng mục với selectedCategory
-      const invalidItems = selectedItems.filter(item => 
-        item.competitionCategory?.id !== selectedCategory
-      );
-      
-      if (invalidItems.length > 0) {
-        notification.error({
-          message: "Lỗi không tương thích",
-          description: `Có ${invalidItems.length} đăng ký không thuộc hạng mục hiện tại. Vui lòng kiểm tra lại.`,
-          placement: "topRight",
-        });
-        return;
-      }
     }
 
     // Hiển thị xác nhận khác nhau tùy theo số lượng đăng ký được chọn

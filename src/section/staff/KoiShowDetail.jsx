@@ -79,11 +79,12 @@ function KoiShowDetail() {
   // Xác định có hiển thị LiveStream hay không
   const isLiveStreamVisible = activeTabKey === "liveStream";
 
-  // Fetch cancelled categories khi component mount
+  // Thêm useEffect để lấy danh sách hạng mục bị hủy - giống như admin
   useEffect(() => {
     const getCancelledCategories = async () => {
       try {
         await fetchCategories(id);
+
         // Lọc ra các hạng mục bị hủy
         const cancelledIds = categories
           .filter((category) => category.status === "cancelled")
@@ -98,7 +99,7 @@ function KoiShowDetail() {
     if (id) {
       getCancelledCategories();
     }
-  }, [id, fetchCategories, categories]);
+  }, [id, fetchCategories]);
 
   // Các tab thông thường
   const renderNormalTab = (key) => {
@@ -202,7 +203,7 @@ function KoiShowDetail() {
         children: <div className="livestream-placeholder"></div>,
       },
     ];
-  }, [id, koiShowDetail?.data, activeTabKey, cancelledCategoryIds]);
+  }, [id, koiShowDetail?.data, activeTabKey]);
 
   useEffect(() => {
     fetchKoiShowDetail(id);
