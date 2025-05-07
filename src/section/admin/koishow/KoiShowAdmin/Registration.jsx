@@ -141,45 +141,74 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
   // Cập nhật lại useEffect khi chọn hạng mục
   useEffect(() => {
     if (selectedCategory) {
+      // Kiểm tra kiểu dữ liệu và chuyển về string để so sánh
+      const selectedCategoryStr = String(selectedCategory);
+      const isCancelled = cancelledCategoryIds.some(
+        (id) => String(id) === selectedCategoryStr
+      );
+
+   
+
       // Kiểm tra nếu hạng mục đã bị hủy
-      if (cancelledCategoryIds.includes(selectedCategory)) {
-        // Chỉ hiển thị thông báo nếu đáp ứng điều kiện hiển thị nút "Đã hoàn tiền"
-
-        // Logic 1: Show đã bị hủy
+      if (isCancelled) {
+        // Tìm các đơn đăng ký cần hoàn tiền dựa trên trạng thái show
         const showCancelled = statusShow?.toLowerCase() === "cancelled";
+        const showPublished = statusShow?.toLowerCase() === "published";
+        const showInProgressOrFinished = ["inprogress", "finished"].includes(
+          statusShow?.toLowerCase()
+        );
 
-        // Logic 2: Show public và hạng mục bị hủy
-        const showPublicAndCategoryCancelled =
-          statusShow?.toLowerCase() === "public" &&
-          cancelledCategoryIds.includes(selectedCategory);
+        // Đợi đến khi dữ liệu registration đã được tải về
+        if (!isLoading && registration && registration.length > 0) {
+          // Tìm các đơn đăng ký thuộc hạng mục đã chọn
+          const registrationsInCategory = registration.filter(
+            (reg) => String(reg.competitionCategory?.id) === selectedCategoryStr
+          );
 
-        // Logic 3: Show inprogress/finished và hạng mục bị hủy
-        const showInProgressAndCategoryCancelled =
-          ["inprogress", "finished"].includes(statusShow?.toLowerCase()) &&
-          cancelledCategoryIds.includes(selectedCategory);
+          // Xác định các đơn đăng ký cần hoàn tiền dựa vào trạng thái show và trạng thái đơn
+          let refundableRegistrations = [];
 
-        // Hiển thị thông báo nếu nằm trong một trong các trường hợp trên
-        if (
-          showCancelled ||
-          showPublicAndCategoryCancelled ||
-          showInProgressAndCategoryCancelled
-        ) {
-          // Hiển thị thông báo
-          notification.info({
-            message: "Hạng mục đã bị hủy",
-            description:
-              "Hạng mục này đã bị hủy. Bạn có thể hoàn tiền cho các đơn đăng ký.",
-            placement: "topRight",
-            duration: 5,
-          });
+          if (showCancelled) {
+            // Khi show bị hủy: đơn pending, confirmed cần hoàn tiền
+            refundableRegistrations = registrationsInCategory.filter((reg) =>
+              ["pending", "confirmed"].includes(reg.status?.toLowerCase())
+            );
+          } else if (showPublished) {
+            // Khi show đang published: đơn pending, confirmed cần hoàn tiền
+            refundableRegistrations = registrationsInCategory.filter((reg) =>
+              ["pending", "confirmed"].includes(reg.status?.toLowerCase())
+            );
+          } else if (showInProgressOrFinished) {
+            // Khi show đang inprogress/finished: đơn checkin cần hoàn tiền
+            refundableRegistrations = registrationsInCategory.filter(
+              (reg) => reg.status?.toLowerCase() === "checkin"
+            );
+          }
+
+          // Chỉ hiển thị thông báo khi có đơn đăng ký cần hoàn tiền
+          if (refundableRegistrations.length > 0) {
+            notification.info({
+              message: "Hạng mục đã bị hủy",
+              description: `Hạng mục này đã bị hủy. Có ${refundableRegistrations.length} đơn đăng ký cần hoàn tiền.`,
+              placement: "topRight",
+              duration: 5,
+            });
+          }
         }
       }
     }
-  }, [selectedCategory, cancelledCategoryIds, statusShow]);
+  }, [
+    selectedCategory,
+    cancelledCategoryIds,
+    statusShow,
+    registration,
+    isLoading,
+  ]);
 
   useEffect(() => {
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
+
   }, []);
 
   useEffect(() => {}, [categories]);
@@ -199,6 +228,14 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     setSelectedCategory(value);
     setSelectedStatus(null);
     setActiveFilters([]);
+
+    // Kiểm tra với chuyển đổi kiểu dữ liệu
+    const valueStr = String(value);
+    const isCancelled = cancelledCategoryIds.some(
+      (id) => String(id) === valueStr
+    );
+
+   
 
     fetchRegistration(1, 10, showId, value ? [value] : undefined, null).then(
       () => {
@@ -687,22 +724,21 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     setMediaModalVisible(true);
   };
 
-  // Add function to check if category has been canceled and handle batch refund
+  // Sửa lại hàm checkCategoryCanceledAndRefund
   const checkCategoryCanceledAndRefund = (categoryId) => {
     if (!categoryId || statusShow !== "cancelled") return;
 
-    // Previous show statuses that qualify for auto refund when canceled
-    const qualifyingPreviousStatuses = [
-      "inprogress",
-      "public",
-      "internalpublic",
-      "pending",
-    ];
+    // Chuyển đổi kiểu dữ liệu khi so sánh
+    const categoryIdStr = String(categoryId);
+    const isCancelled = cancelledCategoryIds.some(
+      (id) => String(id) === categoryIdStr
+    );
+
 
     // Tìm tất cả đăng ký có trạng thái pending, confirmed, rejected thuộc hạng mục đã chọn
     const eligibleRegistrations = registration.filter(
       (reg) =>
-        reg.competitionCategory?.id === categoryId &&
+        String(reg.competitionCategory?.id) === categoryIdStr &&
         ["pending", "confirmed", "rejected"].includes(reg.status?.toLowerCase())
     );
 
@@ -1045,13 +1081,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
               </Button>
               {currentKoi && (
                 <>
-                  {console.log("Debug Refund Button:", {
-                    koiStatus: currentKoi.status?.toLowerCase(),
-                    showStatus: statusShow?.toLowerCase(),
-                    isCategoryCancelled,
-                    categoryMatch:
-                      currentKoi.competitionCategory?.id === selectedCategory,
-                  })}
+               
 
                   {/* Hiển thị nút Đã hoàn tiền khi cần */}
                   {currentKoi.status?.toLowerCase() !== "refunded" && (
@@ -1074,7 +1104,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
 
                       {/* Logic 1: Show bị hủy - hiện nút cho đơn pending/confirmed */}
                       {statusShow?.toLowerCase() === "cancelled" &&
-                        ["pending", "confirmed", "rejected"].includes(
+                        ["pending", "confirmed"].includes(
                           currentKoi.status?.toLowerCase()
                         ) && (
                           <Button
@@ -1091,12 +1121,12 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                           </Button>
                         )}
 
-                      {/* Logic 2: Hạng mục bị hủy + status public - hiện nút cho đơn pending/confirmed */}
-                      {statusShow?.toLowerCase() === "public" &&
+                      {/* Logic 2: Hạng mục bị hủy + status published - hiện nút cho đơn pending/confirmed */}
+                      {statusShow?.toLowerCase() === "published" &&
                         isCategoryCancelled &&
                         currentKoi.competitionCategory?.id ===
                           selectedCategory &&
-                        ["pending", "confirmed", "rejected"].includes(
+                        ["pending", "confirmed"].includes(
                           currentKoi.status?.toLowerCase()
                         ) && (
                           <Button
@@ -1120,7 +1150,7 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
                         isCategoryCancelled &&
                         currentKoi.competitionCategory?.id ===
                           selectedCategory &&
-                        ["checkin", "rejected"].includes(
+                        ["checkin"].includes(
                           currentKoi.status?.toLowerCase()
                         ) && (
                           <Button
