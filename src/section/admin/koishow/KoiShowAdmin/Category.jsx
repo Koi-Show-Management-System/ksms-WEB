@@ -290,7 +290,7 @@ function Category({ showId, statusShow, onCategoryCancel }) {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4">
         <div className="flex items-center space-x-2 mb-2 sm:mb-0">
           <Search
-            placeholder="Tìm kiếm danh mục..."
+            placeholder="Tìm kiếm hạng mục..."
             onSearch={handleSearch}
             className="w-full sm:w-64 md:w-80"
             allowClear

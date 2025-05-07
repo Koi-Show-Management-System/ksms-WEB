@@ -37,7 +37,7 @@ const useBlog = create((set, get) => ({
       set({ blogCategory: [] });
       notification.error({
         message: "Lỗi",
-        description: "Đã xảy ra lỗi khi tải danh mục blog",
+        description: "Đã xảy ra lỗi khi tải danh mục bài viết",
       });
     }
   },

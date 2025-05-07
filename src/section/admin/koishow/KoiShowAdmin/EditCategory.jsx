@@ -705,10 +705,17 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
 
   // Handle criteria selection
   const handleCriteriaSelection = (values) => {
+    if (!values || values.length === 0) {
+      setTempSelectedCriteria([]);
+      return;
+    }
+
     const selectedCriteriaDetails = values.map((id) => {
       const criteriaInfo = criteria.find((c) => c.id === id);
       return {
         criteriaId: id,
+        criteria: criteriaInfo,
+        roundType: selectedRoundForCriteria, // Track the round explicitly
         weight: 0,
         order: 0,
       };
@@ -722,12 +729,59 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       return;
     }
 
+    // Ensure we're only adding criteria to the selected round
+    if (roundType !== selectedRoundForCriteria) {
+      message.error(
+        `Lỗi: Không khớp loại vòng (${roundType} vs ${selectedRoundForCriteria})`
+      );
+      return;
+    }
+
     const currentCriteria =
       form.getFieldValue("criteriaCompetitionCategories") || [];
+
+    // Filter existing criteria by the selected round type
     const existingCriteriaInRound = currentCriteria.filter(
       (c) => c.roundType === roundType
     );
 
+    // Check if any of the selected criteria already exist in any round
+    let duplicateCriteriaNames = [];
+
+    for (const selectedCriteria of tempSelectedCriteria) {
+      // Find if this criteria exists in any round
+      const existingCriteriaEntry = currentCriteria.find(
+        (c) =>
+          c.criteriaId === selectedCriteria.criteriaId ||
+          c.criteria?.id === selectedCriteria.criteriaId
+      );
+
+      if (existingCriteriaEntry) {
+        // Find the criteria info to get the name
+        const criteriaInfo = criteria.find(
+          (c) => c.id === selectedCriteria.criteriaId
+        );
+        const criteriaName =
+          criteriaInfo?.name || `Tiêu chí ID: ${selectedCriteria.criteriaId}`;
+
+        // Add to the list of duplicates with the round it's already used in
+        const roundName =
+          roundLabelMap[existingCriteriaEntry.roundType] ||
+          existingCriteriaEntry.roundType;
+        duplicateCriteriaNames.push(
+          `${criteriaName} (đã dùng trong ${roundName})`
+        );
+      }
+    }
+
+    if (duplicateCriteriaNames.length > 0) {
+      message.warning(
+        `Các tiêu chí sau đã được sử dụng trong vòng khác: ${duplicateCriteriaNames.join(", ")}`
+      );
+      return;
+    }
+
+    // Make sure each criteria explicitly has the current round type
     const newCriteria = tempSelectedCriteria.map((criteriaItem, index) => {
       const criteriaInfo = criteria.find(
         (c) => c.id === criteriaItem.criteriaId
@@ -739,25 +793,26 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
           id: criteriaItem.criteriaId,
           name: criteriaInfo?.name || "Tiêu chí không xác định",
         },
-        roundType: roundType,
-        // Đảm bảo weight đã là decimal (0-1)
+        roundType: roundType, // Ensure we're setting the round type correctly
         weight: criteriaItem.weight || 0,
         order: existingCriteriaInRound.length + index + 1,
       };
     });
 
-    console.log("New criteria to add:", newCriteria);
-
-    // Cập nhật form với các tiêu chí mới
+    // Create a completely new array to ensure React detects the change
     const updatedCriteria = [...currentCriteria, ...newCriteria];
+
     form.setFieldsValue({
       criteriaCompetitionCategories: updatedCriteria,
     });
 
-    console.log("Updated criteria after adding new ones:", updatedCriteria);
-
     setTempSelectedCriteria([]);
     setSelectedRoundForCriteria(null);
+
+    // Show success message
+    message.success(
+      `Đã thêm ${newCriteria.length} tiêu chí vào ${roundLabelMap[roundType]}`
+    );
   };
 
   const handleRemoveCriteria = (criteriaId, roundType) => {
@@ -825,12 +880,14 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
       ...prev,
       [key]: value,
     }));
+
     // Chuyển từ phần trăm sang decimal (0-1)
     const weightValue = (parseFloat(value) || 0) / 100;
 
     const currentCriteria =
       form.getFieldValue("criteriaCompetitionCategories") || [];
 
+    // Find the exact criteria by both criteriaId and roundType to ensure we're updating the right one
     const updatedCriteria = currentCriteria.map((criteria) => {
       if (
         (criteria.criteriaId === criteriaId ||
@@ -845,6 +902,22 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
     form.setFieldsValue({
       criteriaCompetitionCategories: updatedCriteria,
     });
+
+    // Calculate and check total weight for this round
+    const criteriaInThisRound = updatedCriteria.filter(
+      (c) => c.roundType === roundType
+    );
+    const totalWeight = criteriaInThisRound.reduce(
+      (total, c) => total + (c.weight * 100 || 0),
+      0
+    );
+
+    // Provide feedback about the weights
+    if (Math.abs(totalWeight - 100) > 0.5) {
+      message.warning(
+        `Tổng trọng số cho ${roundLabelMap[roundType]} là ${totalWeight.toFixed(1)}%. Cần điều chỉnh về 100%.`
+      );
+    }
   };
   // Handle referee selection
   const handleRefereeChange = (selectedReferees) => {
@@ -1946,64 +2019,96 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                       ) : (
                         <>
                           {criteriaInRound.length > 0 ? (
-                            <List
-                              dataSource={criteriaInRound}
-                              renderItem={(item) => (
-                                <List.Item
-                                  key={
-                                    item.id ||
-                                    `${item.criteriaId}-${item.roundType}`
+                            <div>
+                              {/* Add total weight display */}
+                              <div className="mb-3 p-2 bg-blue-50 rounded flex justify-between items-center">
+                                <span className="font-medium">
+                                  Tổng trọng số:
+                                </span>
+                                <Tag
+                                  color={
+                                    Math.abs(
+                                      criteriaInRound.reduce(
+                                        (sum, c) => sum + (c.weight * 100 || 0),
+                                        0
+                                      ) - 100
+                                    ) < 0.5
+                                      ? "success"
+                                      : "error"
                                   }
-                                  actions={[
-                                    <InputNumber
-                                      min={0}
-                                      max={100}
-                                      formatter={(value) => `${value}%`}
-                                      parser={(value) => value.replace("%", "")}
-                                      value={
-                                        criteriaWeights[
-                                          `${item.criteriaId || item.criteria?.id}-${item.roundType}`
-                                        ] !== undefined
-                                          ? criteriaWeights[
-                                              `${item.criteriaId || item.criteria?.id}-${item.roundType}`
-                                            ]
-                                          : (item.weight * 100).toFixed(0)
-                                      }
-                                      onChange={(value) =>
-                                        handleWeightChange(
-                                          item.criteriaId || item.criteria?.id,
-                                          item.roundType,
-                                          value
-                                        )
-                                      }
-                                      className="w-24"
-                                    />,
-                                    <Tooltip title="Xóa tiêu chí">
-                                      <Button
-                                        type="text"
-                                        danger
-                                        icon={<DeleteOutlined />}
-                                        onClick={() =>
-                                          handleRemoveCriteria(
+                                >
+                                  {criteriaInRound
+                                    .reduce(
+                                      (sum, c) => sum + (c.weight * 100 || 0),
+                                      0
+                                    )
+                                    .toFixed(1)}
+                                  %
+                                </Tag>
+                              </div>
+
+                              <List
+                                dataSource={criteriaInRound}
+                                renderItem={(item) => (
+                                  <List.Item
+                                    key={
+                                      item.id ||
+                                      `${item.criteriaId}-${item.roundType}`
+                                    }
+                                    actions={[
+                                      <InputNumber
+                                        min={0}
+                                        max={100}
+                                        formatter={(value) => `${value}%`}
+                                        parser={(value) =>
+                                          value.replace("%", "")
+                                        }
+                                        value={
+                                          criteriaWeights[
+                                            `${item.criteriaId || item.criteria?.id}-${item.roundType}`
+                                          ] !== undefined
+                                            ? criteriaWeights[
+                                                `${item.criteriaId || item.criteria?.id}-${item.roundType}`
+                                              ]
+                                            : (item.weight * 100).toFixed(0)
+                                        }
+                                        onChange={(value) =>
+                                          handleWeightChange(
                                             item.criteriaId ||
                                               item.criteria?.id,
-                                            item.roundType
+                                            item.roundType,
+                                            value
                                           )
                                         }
-                                        size="small"
-                                      />
-                                    </Tooltip>,
-                                  ]}
-                                >
-                                  <List.Item.Meta
-                                    title={`${item.order}. ${
-                                      item.criteria?.name ||
-                                      "Tiêu chí không xác định"
-                                    }`}
-                                  />
-                                </List.Item>
-                              )}
-                            />
+                                        className="w-24"
+                                      />,
+                                      <Tooltip title="Xóa tiêu chí">
+                                        <Button
+                                          type="text"
+                                          danger
+                                          icon={<DeleteOutlined />}
+                                          onClick={() =>
+                                            handleRemoveCriteria(
+                                              item.criteriaId ||
+                                                item.criteria?.id,
+                                              item.roundType
+                                            )
+                                          }
+                                          size="small"
+                                        />
+                                      </Tooltip>,
+                                    ]}
+                                  >
+                                    <List.Item.Meta
+                                      title={`${item.order}. ${
+                                        item.criteria?.name ||
+                                        "Tiêu chí không xác định"
+                                      }`}
+                                    />
+                                  </List.Item>
+                                )}
+                              />
+                            </div>
                           ) : (
                             <div className="text-center text-gray-500 rounded-md">
                               Chưa có tiêu chí nào cho {round.label}
@@ -2033,8 +2138,23 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
               <Modal
                 title={`Thêm tiêu chí cho ${roundLabelMap[selectedRoundForCriteria] || ""}`}
                 open={selectedRoundForCriteria !== null}
-                onOk={() => handleAddCriteriaToRound(selectedRoundForCriteria)}
-                onCancel={() => setSelectedRoundForCriteria(null)}
+                onOk={() => {
+                  if (
+                    !tempSelectedCriteria ||
+                    tempSelectedCriteria.length === 0
+                  ) {
+                    message.warning("Vui lòng chọn tiêu chí trước");
+                    return;
+                  }
+                  handleAddCriteriaToRound(selectedRoundForCriteria);
+                }}
+                onCancel={() => {
+                  setSelectedRoundForCriteria(null);
+                  setTempSelectedCriteria([]);
+                }}
+                afterClose={() => {
+                  setTempSelectedCriteria([]);
+                }}
                 okText="Thêm"
                 cancelText="Hủy"
               >
@@ -2048,20 +2168,17 @@ function EditCategory({ categoryId, onClose, onCategoryUpdated, showId }) {
                     className="w-full mb-2"
                     onChange={handleCriteriaSelection}
                     loading={isLoadingCriteria}
+                    value={tempSelectedCriteria.map((item) => item.criteriaId)}
                   >
                     {criteria
                       .filter((item) => {
-                        // Get current criteria for the selected round
+                        // Get current criteria for all rounds
                         const existingCriteria = (
                           form.getFieldValue("criteriaCompetitionCategories") ||
                           []
-                        )
-                          .filter(
-                            (c) => c.roundType === selectedRoundForCriteria
-                          )
-                          .map((c) => c.criteriaId || c.criteria?.id);
+                        ).map((c) => c.criteriaId || c.criteria?.id);
 
-                        // Only show criteria that are not already assigned to this round
+                        // Only show criteria that are not already assigned to any round
                         return !existingCriteria.includes(item.id);
                       })
                       .map((item) => (

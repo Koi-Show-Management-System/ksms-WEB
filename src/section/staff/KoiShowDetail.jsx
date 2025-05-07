@@ -190,7 +190,7 @@ function KoiShowDetail() {
     return [
       {
         key: "category",
-        label: "Danh Mục",
+        label: "Hạng Mục",
         children: renderNormalTab("category"),
       },
       {

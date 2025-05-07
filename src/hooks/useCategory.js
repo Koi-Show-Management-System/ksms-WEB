@@ -144,7 +144,7 @@ const useCategory = create((set, get) => ({
 
         notification.success({
           message: "Thành công",
-          description: res.data.message || "Danh mục đã được tạo thành công!",
+          description: res.data.message || "Hạng mục đã được tạo thành công!",
           placement: "topRight",
         });
 
@@ -152,7 +152,7 @@ const useCategory = create((set, get) => ({
       } else {
         console.error("API Error when creating category:", res);
         set({
-          error: res?.data?.message || "Không thể tạo danh mục.",
+          error: res?.data?.message || "Không thể tạo hạng mục.",
           isLoading: false,
           createSuccess: false,
         });
@@ -160,7 +160,7 @@ const useCategory = create((set, get) => ({
         notification.error({
           message: "Lỗi",
           description:
-            res?.data?.Error || "Không thể tạo danh mục. Vui lòng thử lại.",
+              res?.data?.Error || "Không thể tạo hạng mục. Vui lòng thử lại.",
           placement: "topRight",
         });
 
@@ -169,7 +169,7 @@ const useCategory = create((set, get) => ({
     } catch (error) {
       console.error("API Error when creating category:", error);
       set({
-        error: error.message || "Đã xảy ra lỗi khi tạo danh mục.",
+        error: error.message || "Đã xảy ra lỗi khi tạo hạng mục.",
         isLoading: false,
         createSuccess: false,
       });
@@ -177,7 +177,7 @@ const useCategory = create((set, get) => ({
       notification.error({
         message: "Lỗi",
         description:
-          error?.response?.data?.Error || "Đã xảy ra lỗi khi tạo danh mục.",
+          error?.response?.data?.Error || "Đã xảy ra lỗi khi tạo hạng mục.",
         placement: "topRight",
       });
 
@@ -198,7 +198,7 @@ const useCategory = create((set, get) => ({
       if (res?.data?.statusCode === 200) {
         notification.success({
           message: "Thành công",
-          description: "Danh mục đã cập nhật thành công!",
+          description: "Hạng mục đã cập nhật thành công!",
           placement: "topRight",
         });
 
@@ -240,7 +240,7 @@ const useCategory = create((set, get) => ({
       if (res?.data?.statusCode === 200) {
         notification.success({
           message: "Thành công",
-          description: "Danh mục đã được xóa thành công!",
+          description: "Hạng mục đã được xóa thành công!",
           placement: "topRight",
         });
       } else {

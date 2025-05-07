@@ -688,7 +688,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                     allowClear
                     className="w-full rounded-md"
                     loading={categoryLoading}
-                    placeholder="Chọn danh mục"
+                    placeholder="Chọn hạng mục"
                     size="large"
                     suffixIcon={<AimOutlined />}
                   >
@@ -746,7 +746,7 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
                     allowClear
                     className="w-full rounded-md"
                     loading={categoryLoading}
-                    placeholder="Chọn danh mục"
+                    placeholder="Chọn hạng mục"
                     size="large"
                     suffixIcon={<AimOutlined />}
                   >

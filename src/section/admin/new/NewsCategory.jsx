@@ -97,7 +97,7 @@ function NewsCategory() {
 
   const columns = [
     {
-      title: "Tên hạng mục",
+      title: "Tên danh mục",
       dataIndex: "name",
       key: "name",
     },
@@ -176,7 +176,7 @@ function NewsCategory() {
       />
 
       <Modal
-        title={editingCategory ? "Chỉnh sửa hạng mục" : "Thêm hạng mục mới"}
+        title={editingCategory ? "Chỉnh sửa danh mục" : "Thêm danh mục mới"}
         open={isModalVisible}
         onCancel={handleCancel}
         onOk={handleSubmit}
@@ -186,15 +186,15 @@ function NewsCategory() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="Tên hạng mục"
+            label="Tên danh mục"
             rules={[
               {
                 required: true,
-                message: "Vui lòng nhập tên hạng mục!",
+                message: "Vui lòng nhập tên danh mục!",
               },
             ]}
           >
-            <Input placeholder="Nhập tên hạng mục" />
+            <Input placeholder="Nhập tên danh mục" />
           </Form.Item>
           <Form.Item
             name="description"
@@ -206,7 +206,7 @@ function NewsCategory() {
               },
             ]}
           >
-            <Input.TextArea rows={4} placeholder="Nhập mô tả hạng mục" />
+            <Input.TextArea rows={4} placeholder="Nhập mô tả danh mục" />
           </Form.Item>
         </Form>
       </Modal>

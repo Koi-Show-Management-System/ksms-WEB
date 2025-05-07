@@ -213,7 +213,7 @@ function Category({ showId, statusShow }) {
         <Row gutter={[16, 16]}>
           <Col xs={24} md={12}>
             <Search
-              placeholder="Tìm kiếm danh mục..."
+              placeholder="Tìm kiếm hạng mục..."
               onSearch={handleSearch}
               className="w-full"
               size="large"

@@ -89,7 +89,7 @@ function KoiShowDetail() {
   const items = [
     {
       key: "category",
-      label: "Danh Mục",
+      label: "Hạng Mục",
       children: renderTabContent("category"),
     },
     {
