@@ -66,15 +66,15 @@ function KoiShowStatusUpdater({
   const getAvailableStatusOptions = (status) => {
     if (status === "pending") {
       return statusOptions.filter((option) =>
-        ["internalpublished"].includes(option.value)
+        ["internalpublished", "cancelled"].includes(option.value)
       );
     } else if (status === "internalpublished") {
       return statusOptions.filter((option) =>
-        ["published"].includes(option.value)
+        ["published", "cancelled"].includes(option.value)
       );
     } else if (status === "published") {
       return statusOptions.filter((option) =>
-        ["upcoming"].includes(option.value)
+        ["upcoming", "cancelled"].includes(option.value)
       );
     } else if (status === "upcoming") {
       return statusOptions.filter((option) =>
