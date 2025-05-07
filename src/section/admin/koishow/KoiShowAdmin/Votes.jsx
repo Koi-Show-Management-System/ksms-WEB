@@ -586,11 +586,7 @@ function Votes({ showId }) {
       fetchVotes(showId);
       console.log("Voting enabled successfully with end time:", finalEndTime);
     } catch (error) {
-      notification.error({
-        message: "Lỗi",
-        description: "Lỗi khi bật bình chọn",
-        placement: "topRight",
-      });
+      console.error("Error enabling voting:", error);
     } finally {
       setEnableVoteLoading(false);
     }
@@ -617,11 +613,7 @@ function Votes({ showId }) {
       await fetchVotes(showId);
       console.log("Voting disabled manually");
     } catch (error) {
-      notification.error({
-        message: "Lỗi",
-        description: "Lỗi khi tắt bình chọn",
-        placement: "topRight",
-      });
+      console.error("Error disabling voting:", error);
     } finally {
       isDisablingRef.current = false;
       setDisableVoteLoading(false);

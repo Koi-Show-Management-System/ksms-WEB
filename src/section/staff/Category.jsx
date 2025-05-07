@@ -363,7 +363,7 @@ function Category({ showId, statusShow }) {
                           label: "Mô tả",
                           span: 1,
                           children: (
-                            <div >
+                            <div>
                               {selectedCategory.description || (
                                 <Typography.Text type="secondary" italic>
                                   Không có mô tả
@@ -967,79 +967,91 @@ function Category({ showId, statusShow }) {
                       {groupedRounds.length > 0 ? (
                         <Collapse
                           className="custom-rounds-collapse"
-                          items={groupedRounds.map((group) => ({
-                            key: group.type,
-                            className: `mb-2 border-l-4 ${group.style.borderColor}`,
-                            style: { backgroundColor: group.style.bgColor },
-                            label: (
-                              <div className="flex items-center">
-                                <div
-                                  className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
-                                  style={{
-                                    backgroundColor: `${group.style.color}20`,
-                                  }}
-                                >
-                                  {group.style.icon}
-                                </div>
-                                <Typography.Text
-                                  strong
-                                  style={{ color: group.style.color }}
-                                >
-                                  {group.translatedType}
-                                </Typography.Text>
-                                <Tag
-                                  className="ml-auto"
-                                  color={
-                                    group.type === "Preliminary"
-                                      ? "orange"
-                                      : group.type === "Evaluation"
-                                        ? "blue"
-                                        : "green"
-                                  }
-                                  size="small"
-                                >
-                                  {group.rounds.length} vòng
-                                </Tag>
-                              </div>
-                            ),
-                            children: (
-                              <div className="bg-white px-2">
-                                {group.rounds.map((round, index) => (
-                                  <div
-                                    key={round.id}
-                                    className={`py-2 ${index !== group.rounds.length - 1 ? "border-b border-gray-100" : ""}`}
-                                  >
-                                    <div className="flex items-center">
-                                      <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mr-2 text-xs">
-                                        {round.roundOrder}
-                                      </div>
-                                      <Typography.Text className="text-md">
-                                        <span className="font-medium">
-                                          Vòng {round.roundOrder}
-                                        </span>
-                                        {round.numberOfRegistrationToAdvance !==
-                                          null && (
-                                          <span className="ml-3 text-blue-600 font-medium">
-                                            (số cá qua vòng là{" "}
-                                            {
-                                              round.numberOfRegistrationToAdvance
-                                            }
-                                            )
-                                          </span>
-                                        )}
-                                      </Typography.Text>
-                                    </div>
+                          items={groupedRounds.map((group) => {
+                            // Nếu là vòng Sơ Khảo hoặc Chung Kết và chỉ có 1 vòng thì không cho mở dropdown
+                            const isSingleRound =
+                              (group.type === "Preliminary" ||
+                                group.type === "Final") &&
+                              group.rounds.length === 1;
 
-                                    {round.description && (
-                                      <div className="mt-1 ml-7 text-gray-500 text-xs">
-                                        {round.description}
-                                      </div>
-                                    )}
+                            return {
+                              key: group.type,
+                              className: `mb-2 border-l-4 ${group.style.borderColor}`,
+                              style: { backgroundColor: group.style.bgColor },
+                              collapsible: isSingleRound
+                                ? "disabled"
+                                : undefined,
+                              label: (
+                                <div className="flex items-center">
+                                  <div
+                                    className="w-6 h-6 rounded-full flex items-center justify-center mr-2"
+                                    style={{
+                                      backgroundColor: `${group.style.color}20`,
+                                    }}
+                                  >
+                                    {group.style.icon}
                                   </div>
-                                ))}
-                              </div>
-                            ),
-                          }))}
+                                  <Typography.Text
+                                    strong
+                                    style={{ color: group.style.color }}
+                                  >
+                                    {group.translatedType}
+                                  </Typography.Text>
+                                  <Tag
+                                    className="ml-auto"
+                                    color={
+                                      group.type === "Preliminary"
+                                        ? "orange"
+                                        : group.type === "Evaluation"
+                                          ? "blue"
+                                          : "green"
+                                    }
+                                    size="small"
+                                  >
+                                    {group.rounds.length} vòng
+                                  </Tag>
+                                </div>
+                              ),
+                              // Chỉ hiển thị nội dung chi tiết nếu không phải là vòng Sơ Khảo/Chung Kết có 1 vòng
+                              children: !isSingleRound ? (
+                                <div className="bg-white px-2">
+                                  {group.rounds.map((round, index) => (
+                                    <div
+                                      key={round.id}
+                                      className={`py-2 ${index !== group.rounds.length - 1 ? "border-b border-gray-100" : ""}`}
+                                    >
+                                      <div className="flex items-center">
+                                        <div className="w-5 h-5 rounded-full bg-gray-100 flex items-center justify-center mr-2 text-xs">
+                                          {round.roundOrder}
+                                        </div>
+                                        <Typography.Text className="text-md">
+                                          <span className="font-medium">
+                                            Vòng {round.roundOrder}
+                                          </span>
+                                          {round.numberOfRegistrationToAdvance !==
+                                            null && (
+                                            <span className="ml-3 text-blue-600 font-medium">
+                                              (số cá qua vòng là{" "}
+                                              {
+                                                round.numberOfRegistrationToAdvance
+                                              }
+                                              )
+                                            </span>
+                                          )}
+                                        </Typography.Text>
+                                      </div>
+
+                                      {round.description && (
+                                        <div className="mt-1 ml-7 text-gray-500 text-xs">
+                                          {round.description}
+                                        </div>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null,
+                            };
+                          })}
                         />
                       ) : (
                         <Empty

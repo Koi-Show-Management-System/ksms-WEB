@@ -135,10 +135,53 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
         roundOrder: item.roundOrder,
       }));
       setSubRounds(uniqueSubRounds);
+
+      // Tự động chọn vòng khi chỉ có 1 vòng duy nhất cho vòng sơ khảo và chung kết
+      if (
+        uniqueSubRounds.length === 1 &&
+        (selectedRoundType === "Preliminary" ||
+          selectedRoundType === "Final") &&
+        !selectedSubRound
+      ) {
+        setSelectedSubRound(uniqueSubRounds[0].id);
+        setCurrentStep(2);
+
+        // Fetch tiêu chí nếu cần cho vòng chung kết
+        if (selectedRoundType === "Final" && categoryId) {
+          fetchCriteriaCompetitionRound(categoryId, uniqueSubRounds[0].id);
+        }
+
+        // Hiển thị modal hướng dẫn cho vòng sơ khảo nếu cần
+        if (selectedRoundType === "Preliminary" && !preliminaryGuideConfirmed) {
+          const getNextRoundInfo = async () => {
+            try {
+              const data = await fetchNextRound(uniqueSubRounds[0].id);
+              if (data && data.data) {
+                const numberRegisToAdvance =
+                  data.data.nextRoundNumberRegistrationToAdvance;
+                setNumberRegisToAdvance(numberRegisToAdvance);
+              }
+            } catch (error) {
+              console.error("Error fetching next round:", error);
+            }
+          };
+
+          getNextRoundInfo();
+          setShowPreliminaryGuideModal(true);
+        }
+      }
     } else {
       setSubRounds([]);
     }
-  }, [round]);
+  }, [
+    round,
+    selectedRoundType,
+    selectedSubRound,
+    categoryId,
+    fetchCriteriaCompetitionRound,
+    preliminaryGuideConfirmed,
+    fetchNextRound,
+  ]);
 
   useEffect(() => {
     if (
@@ -628,96 +671,159 @@ function ScanQrByReferee({ showId, refereeAccountId }) {
 
       <AntCard className="shadow-sm mb-6">
         <Row gutter={[16, 16]} className="mb-2">
-          <Col xs={24} sm={8}>
-            <div>
-              <Text strong className="block text-base mb-2 text-gray-700">
-                Hạng Mục:
-              </Text>
-              <Select
-                value={categoryId}
-                onChange={handleCategoryChange}
-                allowClear
-                style={{ width: "100%" }}
-                className="rounded-md"
-                loading={categoryLoading}
-                placeholder="Chọn danh mục"
-                size="large"
-                suffixIcon={<AimOutlined />}
-              >
-                {categories?.map((category) => (
-                  <Option key={category.id} value={category.id}>
-                    {category.name}
-                  </Option>
-                ))}
-              </Select>
-            </div>
-          </Col>
+          {/* Kiểm tra nếu chỉ hiển thị 2 ô input */}
+          {(selectedRoundType === "Preliminary" ||
+            selectedRoundType === "Final") &&
+          subRounds.length === 1 ? (
+            <>
+              {/* Trường hợp chỉ hiển thị 2 input: Hạng Mục và Loại Vòng - mỗi ô chiếm 1/2 chiều rộng */}
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text strong className="block text-base mb-2 text-gray-700">
+                    Hạng Mục:
+                  </Text>
+                  <Select
+                    value={categoryId}
+                    onChange={handleCategoryChange}
+                    allowClear
+                    className="w-full rounded-md"
+                    loading={categoryLoading}
+                    placeholder="Chọn danh mục"
+                    size="large"
+                    suffixIcon={<AimOutlined />}
+                  >
+                    {categories?.map((category) => (
+                      <Option key={category.id} value={category.id}>
+                        {category.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </div>
+              </Col>
 
-          <Col xs={24} sm={8}>
-            <div>
-              <Text strong className="block text-base mb-2 text-gray-700">
-                Loại Vòng:
-              </Text>
-              <Select
-                value={selectedRoundType}
-                onChange={handleRoundTypeChange}
-                allowClear
-                style={{ width: "100%" }}
-                className="rounded-md"
-                loading={roundLoading}
-                placeholder="Chọn vòng thi"
-                size="large"
-                disabled={!categoryId}
-                suffixIcon={<TrophyOutlined />}
-              >
-                {refereeRoundTypes
-                  ?.sort((a, b) => {
-                    const orderA = roundTypeOrder.indexOf(a);
-                    const orderB = roundTypeOrder.indexOf(b);
-                    return orderA - orderB;
-                  })
-                  .map((roundType) => (
-                    <Option key={roundType} value={roundType}>
-                      {roundTypeLabels[roundType] || roundType}
-                    </Option>
-                  ))}
-              </Select>
-            </div>
-          </Col>
+              <Col xs={24} sm={12}>
+                <div>
+                  <Text strong className="block text-base mb-2 text-gray-700">
+                    Loại Vòng:
+                  </Text>
+                  <Select
+                    value={selectedRoundType}
+                    onChange={handleRoundTypeChange}
+                    allowClear
+                    className="w-full rounded-md"
+                    loading={roundLoading}
+                    placeholder="Chọn vòng thi"
+                    size="large"
+                    disabled={!categoryId}
+                    suffixIcon={<TrophyOutlined />}
+                  >
+                    {refereeRoundTypes
+                      ?.sort((a, b) => {
+                        const orderA = roundTypeOrder.indexOf(a);
+                        const orderB = roundTypeOrder.indexOf(b);
+                        return orderA - orderB;
+                      })
+                      .map((roundType) => (
+                        <Option key={roundType} value={roundType}>
+                          {roundTypeLabels[roundType] || roundType}
+                        </Option>
+                      ))}
+                  </Select>
+                </div>
+              </Col>
+            </>
+          ) : (
+            <>
+              {/* Trường hợp hiển thị 3 input: Hạng Mục, Loại Vòng, và Vòng - mỗi ô chiếm 1/3 chiều rộng */}
+              <Col xs={24} sm={8}>
+                <div>
+                  <Text strong className="block text-base mb-2 text-gray-700">
+                    Hạng Mục:
+                  </Text>
+                  <Select
+                    value={categoryId}
+                    onChange={handleCategoryChange}
+                    allowClear
+                    className="w-full rounded-md"
+                    loading={categoryLoading}
+                    placeholder="Chọn danh mục"
+                    size="large"
+                    suffixIcon={<AimOutlined />}
+                  >
+                    {categories?.map((category) => (
+                      <Option key={category.id} value={category.id}>
+                        {category.name}
+                      </Option>
+                    ))}
+                  </Select>
+                </div>
+              </Col>
 
-          <Col xs={24} sm={8}>
-            <div>
-              <Text strong className="block text-base mb-2 text-gray-700">
-                Vòng:
-              </Text>
-              <Select
-                value={selectedSubRound}
-                onChange={handleSubRoundChange}
-                style={{ width: "100%" }}
-                className="rounded-md"
-                placeholder="Chọn vòng"
-                size="large"
-                disabled={!selectedRoundType}
-                suffixIcon={<TrophyOutlined />}
-              >
-                {subRounds
-                  .sort((a, b) => {
-                    if (
-                      a.roundOrder !== undefined &&
-                      b.roundOrder !== undefined
-                    ) {
-                      return a.roundOrder - b.roundOrder;
-                    }
-                    return (a.name || "").localeCompare(b.name || "");
-                  })
-                  .map((subRound) => (
-                    <Option key={subRound.id} value={subRound.id}>
-                      {subRound.name}
-                    </Option>
-                  ))}
-              </Select>
-            </div>
-          </Col>
+              <Col xs={24} sm={8}>
+                <div>
+                  <Text strong className="block text-base mb-2 text-gray-700">
+                    Loại Vòng:
+                  </Text>
+                  <Select
+                    value={selectedRoundType}
+                    onChange={handleRoundTypeChange}
+                    allowClear
+                    className="w-full rounded-md"
+                    loading={roundLoading}
+                    placeholder="Chọn vòng thi"
+                    size="large"
+                    disabled={!categoryId}
+                    suffixIcon={<TrophyOutlined />}
+                  >
+                    {refereeRoundTypes
+                      ?.sort((a, b) => {
+                        const orderA = roundTypeOrder.indexOf(a);
+                        const orderB = roundTypeOrder.indexOf(b);
+                        return orderA - orderB;
+                      })
+                      .map((roundType) => (
+                        <Option key={roundType} value={roundType}>
+                          {roundTypeLabels[roundType] || roundType}
+                        </Option>
+                      ))}
+                  </Select>
+                </div>
+              </Col>
+
+              <Col xs={24} sm={8}>
+                <div>
+                  <Text strong className="block text-base mb-2 text-gray-700">
+                    Vòng:
+                  </Text>
+                  <Select
+                    value={selectedSubRound}
+                    onChange={handleSubRoundChange}
+                    className="w-full rounded-md"
+                    placeholder="Chọn vòng"
+                    size="large"
+                    disabled={!selectedRoundType}
+                    suffixIcon={<TrophyOutlined />}
+                  >
+                    {subRounds
+                      .sort((a, b) => {
+                        if (
+                          a.roundOrder !== undefined &&
+                          b.roundOrder !== undefined
+                        ) {
+                          return a.roundOrder - b.roundOrder;
+                        }
+                        return (a.name || "").localeCompare(b.name || "");
+                      })
+                      .map((subRound) => (
+                        <Option key={subRound.id} value={subRound.id}>
+                          {subRound.name}
+                        </Option>
+                      ))}
+                  </Select>
+                </div>
+              </Col>
+            </>
+          )}
         </Row>
       </AntCard>
 

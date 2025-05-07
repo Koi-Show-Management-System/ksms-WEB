@@ -247,7 +247,7 @@ function CheckOutKoi() {
         break;
       case "prizewinner":
         color = "purple";
-        text = "Đã nhận giải";
+        text = "Đã đạt giải";
         break;
       case "eliminated":
         color = "purple";

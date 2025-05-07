@@ -47,7 +47,7 @@ const useVote = create((set, get) => ({
 
       notification.success({
         message: "Thành công",
-        description: response.data?.message || "Bật bình chọn thành công",
+        description: response.data.message,
         placement: "topRight",
       });
 
@@ -56,7 +56,7 @@ const useVote = create((set, get) => ({
     } catch (error) {
       notification.error({
         message: "Lỗi",
-        description: "Lỗi khi bật bình chọn: " + error.message,
+        description: error?.response?.data?.Error || "Lỗi khi bật bình chọn",
         placement: "topRight",
       });
 
@@ -70,12 +70,9 @@ const useVote = create((set, get) => ({
     try {
       const response = await updateDisableVote(showId);
 
-      // Hiển thị thông báo dựa trên nguyên nhân tắt bình chọn
       notification.success({
         message: "Thành công",
-        description: isTimeout
-          ? "Đã tự động tắt bình chọn do hết thời gian"
-          : response.data?.message,
+        description: response.data.message,
         placement: "topRight",
       });
 
@@ -84,9 +81,7 @@ const useVote = create((set, get) => ({
     } catch (error) {
       notification.error({
         message: "Lỗi",
-        description: isTimeout
-          ? "Lỗi khi tự động tắt bình chọn: " + error.message
-          : "Lỗi khi tắt bình chọn: " + error.message,
+        description: error?.response?.data?.Error || "Lỗi khi tắt bình chọn",
         placement: "topRight",
       });
 
