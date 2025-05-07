@@ -126,6 +126,32 @@ const EvaluationScoreSheet = ({
     { label: "Lỗi nghiêm trọng (70-100%)", value: "sb", range: [70, 100] },
   ];
 
+  // Add a helper function to check if adding a new error would exceed 100 points
+  const wouldExceedMaxDeduction = (
+    newPointMinus,
+    criteriaIdToExclude = null,
+    errorIndexToExclude = null
+  ) => {
+    let currentTotal = 0;
+
+    // Calculate current total deduction excluding the error being edited (if any)
+    Object.entries(criteriaErrors).forEach(([criteriaId, errors]) => {
+      errors.forEach((error, index) => {
+        if (
+          criteriaId === criteriaIdToExclude &&
+          index === errorIndexToExclude
+        ) {
+          // Skip this error if it's being edited
+          return;
+        }
+        currentTotal += error.pointMinus || 0;
+      });
+    });
+
+    // Check if adding the new error would exceed 100
+    return currentTotal + newPointMinus > 100;
+  };
+
   // Add error to a criteria
   const addError = (criteriaId, errorTypeId, severity, percentage) => {
     // Tìm tiêu chí
@@ -145,6 +171,15 @@ const EvaluationScoreSheet = ({
     const pointMinus = parseFloat(
       (criteriaWeight * (percentage / 100) * 100).toFixed(2)
     );
+
+    // Check if adding this error would exceed 100 points total deduction
+    if (wouldExceedMaxDeduction(pointMinus)) {
+      notification.error({
+        message: "Lỗi",
+        description: "Tổng điểm trừ không thể vượt quá 100 điểm",
+      });
+      return false;
+    }
 
     // Tạo object lỗi
     const error = {
@@ -173,6 +208,8 @@ const EvaluationScoreSheet = ({
       console.log("New errors state:", newErrors);
       return newErrors;
     });
+
+    return true;
   };
 
   // Remove error from a criteria
@@ -195,23 +232,6 @@ const EvaluationScoreSheet = ({
 
     setCreatingError(true);
     try {
-      // Tạo một ID tạm thời cho lỗi mới (ID âm để tránh xung đột với ID từ server)
-      const localErrorId = tempErrorId;
-
-      // Giảm tempErrorId để ID tiếp theo sẽ khác
-      setTempErrorId((prevId) => prevId - 1);
-
-      // Tạo error type cục bộ
-      const newErrorType = {
-        id: localErrorId,
-        name: newErrorName,
-        criteriaId: currentCriteriaId,
-        isLocal: true, // Đánh dấu đây là lỗi cục bộ, chưa được lưu trên server
-      };
-
-      // Lưu error type mới vào state
-      setLocalErrorTypes((prev) => [...prev, newErrorType]);
-
       // Lấy thông tin từ form
       const formValues = form.getFieldsValue([
         "severity",
@@ -235,6 +255,33 @@ const EvaluationScoreSheet = ({
       const pointMinus = parseFloat(
         (criteriaWeight * (formValues.percentage / 100) * 100).toFixed(2)
       );
+
+      // Check if adding this error would exceed 100 points total deduction
+      if (wouldExceedMaxDeduction(pointMinus)) {
+        notification.error({
+          message: "Lỗi",
+          description: "Tổng điểm trừ không thể vượt quá 100 điểm",
+        });
+        setCreatingError(false);
+        return;
+      }
+
+      // Tạo một ID tạm thời cho lỗi mới (ID âm để tránh xung đột với ID từ server)
+      const localErrorId = tempErrorId;
+
+      // Giảm tempErrorId để ID tiếp theo sẽ khác
+      setTempErrorId((prevId) => prevId - 1);
+
+      // Tạo error type cục bộ
+      const newErrorType = {
+        id: localErrorId,
+        name: newErrorName,
+        criteriaId: currentCriteriaId,
+        isLocal: true, // Đánh dấu đây là lỗi cục bộ, chưa được lưu trên server
+      };
+
+      // Lưu error type mới vào state
+      setLocalErrorTypes((prev) => [...prev, newErrorType]);
 
       // Tạo object lỗi với điểm trừ đã tính
       const error = {
@@ -289,12 +336,23 @@ const EvaluationScoreSheet = ({
     );
     const criteriaWeight = criteria ? criteria.weight || 0 : 0;
 
+    const pointMinus = parseFloat(
+      (criteriaWeight * (percentage / 100) * 100).toFixed(2)
+    );
+
+    // Check if adding this error would exceed 100 points total deduction
+    if (wouldExceedMaxDeduction(pointMinus)) {
+      notification.error({
+        message: "Lỗi",
+        description: "Tổng điểm trừ không thể vượt quá 100 điểm",
+      });
+      return false;
+    }
+
     const error = {
       errorTypeId, // ID từ API createErrorType
       severity, // Mức độ lỗi (eb, mb, sb)
-      pointMinus: parseFloat(
-        (criteriaWeight * (percentage / 100) * 100).toFixed(2)
-      ),
+      pointMinus,
       percentage, // % lỗi đã chọn
       errorName: newErrorName, // Tên lỗi (để hiển thị)
     };
@@ -315,6 +373,8 @@ const EvaluationScoreSheet = ({
       newErrors[criteriaId] = [...newErrors[criteriaId], error];
       return newErrors;
     });
+
+    return true;
   };
 
   // Sửa lại hàm handleSubmit để xử lý cả lỗi cục bộ
@@ -570,6 +630,21 @@ const EvaluationScoreSheet = ({
       const pointMinus = parseFloat(
         (criteriaWeight * (formValues.percentage / 100) * 100).toFixed(2)
       );
+
+      // Check if editing this error would cause total to exceed 100
+      if (
+        wouldExceedMaxDeduction(
+          pointMinus,
+          currentCriteriaId,
+          editingErrorIndex
+        )
+      ) {
+        notification.error({
+          message: "Lỗi",
+          description: "Tổng điểm trừ không thể vượt quá 100 điểm",
+        });
+        return;
+      }
 
       // Cập nhật lỗi đang chỉnh sửa
       const updatedError = {
@@ -845,9 +920,25 @@ const EvaluationScoreSheet = ({
         <div className="flex justify-between items-center mb-4">
           <Text strong>Điểm cuối cùng:</Text>
           <Text strong className="text-xl">
-            {(initialScore - totalDeduction).toFixed(2)}
+            {Math.max(initialScore - totalDeduction, 0).toFixed(2)}
           </Text>
         </div>
+        {totalDeduction > 0 && totalDeduction <= 100 && (
+          <Alert
+            message={`Đã trừ ${totalDeduction.toFixed(2)} điểm (${((totalDeduction / initialScore) * 100).toFixed(2)}% tổng điểm)`}
+            type="warning"
+            showIcon
+            className="mb-4"
+          />
+        )}
+        {totalDeduction > 100 && (
+          <Alert
+            message="Tổng điểm trừ đã vượt quá 100 điểm. Điểm cuối cùng sẽ được tính là 0."
+            type="error"
+            showIcon
+            className="mb-4"
+          />
+        )}
         <Divider />
         <Form layout="vertical">
           <Form.Item label="Ghi chú">
