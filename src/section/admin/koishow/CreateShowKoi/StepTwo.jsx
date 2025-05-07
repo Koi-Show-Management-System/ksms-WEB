@@ -1547,18 +1547,11 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
                       {/* Vòng Sơ Khảo */}
                       <div className="mb-4">
                         <div className="p-2 border rounded-md">
-                          <div className="flex justify-between items-center">
-                            <span className="font-semibold">Vòng Sơ Khảo</span>
-                            <Tag color="orange" size="small">
-                              1 vòng
-                            </Tag>
-                          </div>
-                          <p className="text-gray-500 text-xs mt-1">
-                            Vòng sơ khảo chỉ áp dụng hình thức chấm đạt/không
-                            đạt (Pass/Fail)
-                          </p>
+                          <span className="font-semibold">Vòng Sơ Khảo</span>
                         </div>
-                        {/* Không hiển thị dropdown cho Vòng 1 */}
+                        <Collapse className="mt-2">
+                          <Panel header="Vòng 1" key="preliminary_1"></Panel>
+                        </Collapse>
                       </div>
 
                       {/* Vòng Đánh Giá Chính */}
@@ -1730,13 +1723,12 @@ function StepTwo({ updateFormData, initialData, showErrors }) {
 
                       {/* Vòng Chung Kết */}
                       <div className="mb-4">
-                        <div className="p-2 border rounded-md flex justify-between items-center">
+                        <div className="p-2 border rounded-md">
                           <span className="font-semibold">Vòng Chung Kết</span>
-                          <Tag className="ml-2" color="green" size="small">
-                            1 vòng
-                          </Tag>
                         </div>
-                        {/* Không hiển thị dropdown cho Vòng 1 */}
+                        <Collapse className="mt-2">
+                          <Panel header="Vòng 1" key="final_1"></Panel>
+                        </Collapse>
                       </div>
                     </div>
                   </div>
