@@ -8,8 +8,13 @@ import {
   DatePicker,
   Row,
   Col,
+  Popconfirm,
 } from "antd";
-import { SearchOutlined, CalendarOutlined } from "@ant-design/icons";
+import {
+  SearchOutlined,
+  CalendarOutlined,
+  DeleteOutlined,
+} from "@ant-design/icons";
 import NoKoiShow from "../../../../assets/NoKoiShow.png";
 import { useNavigate } from "react-router-dom";
 import useKoiShow from "../../../../hooks/useKoiShow";
@@ -37,6 +42,7 @@ function KoiShow() {
     pageSize,
     totalItems,
     updateKoiShowStatus,
+    deleteKoiShow,
     reset,
   } = useKoiShow();
 
@@ -110,6 +116,16 @@ function KoiShow() {
     fetchKoiShowList(currentPage, pageSize);
   };
 
+  const handleDeleteKoiShow = async (id) => {
+    try {
+      await deleteKoiShow(id);
+      // Refresh data after deletion
+      fetchKoiShowList(currentPage, pageSize);
+    } catch (error) {
+      console.error("Error deleting show:", error);
+    }
+  };
+
   const handleNavigation = (recordId) => {
     if (userRole === "Admin") {
       navigate(`/admin/koiShow/detail/${recordId}`);
@@ -129,7 +145,7 @@ function KoiShow() {
     return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
   }
 
-  const columns = [
+  const baseColumns = [
     {
       title: "Tên Sự Kiện",
       dataIndex: "name",
@@ -163,7 +179,7 @@ function KoiShow() {
       key: "minParticipants",
       render: (value) => value || "0",
       responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "12%",
+      width: "10%",
       align: "center",
     },
     {
@@ -172,7 +188,7 @@ function KoiShow() {
       key: "maxParticipants",
       render: (value) => value || "0",
       responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "12%",
+      width: "10%",
       align: "center",
     },
     {
@@ -199,9 +215,52 @@ function KoiShow() {
         />
       ),
       responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "16%",
+      width: "15%",
     },
   ];
+
+  // Only add the actions column for Admin users
+  const actionsColumn = {
+    title: "Hành động",
+    key: "actions",
+    render: (_, record) => {
+      // Only show delete button when status is Pending or InternalPublished
+      const canDelete =
+        record.status === "pending" || record.status === "internalpublished";
+
+      return canDelete ? (
+        <Popconfirm
+          title="Xác nhận xóa"
+          description="Bạn có chắc chắn muốn xóa triển lãm này?"
+          onConfirm={() => handleDeleteKoiShow(record.id)}
+          okText="Xác nhận"
+          cancelText="Hủy"
+        >
+          <Button
+            type="text"
+            danger
+            icon={<DeleteOutlined />}
+            size="middle"
+            shape="circle"
+          />
+        </Popconfirm>
+      ) : null;
+    },
+    width: "10%",
+    responsive: ["xs", "sm", "md", "lg", "xl"],
+    align: "center",
+  };
+
+  // Final columns array - conditionally include actions column only for Admin
+  // AND only if there's at least one show that can be deleted
+  const hasShowsToDelete = filteredData.some(
+    (show) => show.status === "pending" || show.status === "internalpublished"
+  );
+
+  const columns =
+    userRole === "Admin" && hasShowsToDelete
+      ? [...baseColumns, actionsColumn]
+      : baseColumns;
 
   return (
     <div className=" rounded-lg shadow-sm space-y-5">

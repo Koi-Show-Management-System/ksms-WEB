@@ -18,4 +18,7 @@ const updateKoiShowStatus = (id, status, cancellationReason = "") => {
     `/koi-show/update-show-status${id}?status=${status}${cancellationReason ? `&cancellationReason=${encodeURIComponent(cancellationReason)}` : ""}`
   );
 };
-export { getKoiShowList, getKoiShowDetail, updateShow, updateKoiShowStatus };
+const deleteKoiShow = (id) => {
+  return axiosClient.delete(`/koi-show/${id}`);
+};
+export { getKoiShowList, getKoiShowDetail, updateShow, updateKoiShowStatus, deleteKoiShow };

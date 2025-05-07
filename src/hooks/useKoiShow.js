@@ -4,7 +4,9 @@ import {
   getKoiShowDetail,
   updateShow,
   updateKoiShowStatus,
+  deleteKoiShow,
 } from "../api/koiShowApi";
+import { notification } from "antd";
 
 const useKoiShow = create((set, get) => ({
   koiShows: [],
@@ -182,6 +184,40 @@ const useKoiShow = create((set, get) => ({
         message: error.message,
         details: error.response?.data,
       };
+    }
+  },
+  deleteKoiShow: async (id) => {
+    set({ isLoading: true, error: null });
+
+    try {
+      const res = await deleteKoiShow(id);
+      if (res && res.status === 200) {
+        notification.success({
+          message: "Thành công",
+          description: res?.data?.message || "Xóa triển lãm thành công",
+          placement: "topRight",
+        });
+        // Update local state to remove the deleted show
+        set((state) => ({
+          koiShows: state.koiShows.filter((show) => show.id !== id),
+          isLoading: false,
+        }));
+        return { success: true };
+      } else {
+        set({ error: res?.data?.message || "Delete failed", isLoading: false });
+        return {
+          success: false,
+          message: res?.data?.message || "Delete failed",
+        };
+      }
+    } catch (error) {
+      notification.error({
+        title: "Lỗi",
+        description: error.response?.data?.Error || "Xóa triển lãm thất bại",
+        placement: "topRight",
+      });
+      set({ error: error.message, isLoading: false });
+      return { success: false, message: error.message };
     }
   },
 }));
