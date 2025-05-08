@@ -21,6 +21,7 @@ import {
   Col,
   Space,
   Empty,
+  Avatar,
 } from "antd";
 import {
   EditOutlined,
@@ -833,9 +834,17 @@ function Category({ showId, statusShow }) {
                             className: "mb-2 border-l-4 border-blue-300",
                             label: (
                               <div className="flex items-center">
-                                <div className="w-7 h-7 rounded-full bg-blue-100 flex items-center justify-center mr-2">
-                                  <UserOutlined style={{ color: "#1890ff" }} />
-                                </div>
+                                <Avatar
+                                  size={32}
+                                  icon={<UserOutlined />}
+                                  src={item.referee?.avatar}
+                                  className="mr-2"
+                                  style={{
+                                    backgroundColor: !item.referee?.avatar
+                                      ? "#1890ff"
+                                      : undefined,
+                                  }}
+                                />
                                 <div className="flex-grow">
                                   <span className="font-medium">
                                     {item.referee?.fullName}
@@ -1055,15 +1064,6 @@ function Category({ showId, statusShow }) {
           />
         )}
       </Drawer>
-
-      {isEditModalVisible && (
-        <EditCategory
-          categoryId={editingCategoryId}
-          onClose={closeEditModal}
-          showId={showId}
-          onCategoryUpdated={() => fetchCategories(showId, 1, 10)}
-        />
-      )}
 
       {/* Modal Nhập lý do hủy */}
       <Modal

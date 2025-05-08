@@ -892,9 +892,6 @@ function Votes({ showId }) {
                   <Descriptions.Item label="Chủ sở hữu">
                     {currentRecord.ownerName}
                   </Descriptions.Item>
-                  <Descriptions.Item label="Người đăng ký">
-                    {currentRecord.registerName}
-                  </Descriptions.Item>
                 </Descriptions>
 
                 {/* Images and Videos */}

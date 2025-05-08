@@ -390,7 +390,7 @@ const NewsOverview = () => {
             allowClear
             style={{ width: "100%", maxWidth: "300px" }}
           >
-            <Select.Option value="">Tất cả danh mục</Select.Option>
+            <Select.Option value="">Tất cả chuyên mục</Select.Option>
             {blogCategory.map((category) => (
               <Select.Option key={category.id} value={category.id}>
                 {category.name}

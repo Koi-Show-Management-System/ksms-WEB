@@ -82,10 +82,6 @@ function KoiShowDetail() {
 
   // Error states for validation
   const [nameError, setNameError] = useState("");
-  const [participantErrors, setParticipantErrors] = useState({
-    minParticipants: "",
-    maxParticipants: "",
-  });
   const [timeErrors, setTimeErrors] = useState({
     startDate: "",
     endDate: "",
@@ -218,10 +214,6 @@ function KoiShowDetail() {
   const openEditModal = () => {
     // Reset error states
     setNameError("");
-    setParticipantErrors({
-      minParticipants: "",
-      maxParticipants: "",
-    });
     setTimeErrors({
       startDate: "",
       endDate: "",
@@ -268,40 +260,6 @@ function KoiShowDetail() {
       setNameError("");
     }
     form.setFieldsValue({ name: value });
-  };
-
-  // Handle participant validation
-  const handleParticipantChange = (field, value) => {
-    // Validate participant numbers
-    const newParticipantErrors = { ...participantErrors };
-
-    if (value > MAX_PARTICIPANTS) {
-      newParticipantErrors[field] =
-        `Giá trị không được vượt quá ${MAX_PARTICIPANTS.toLocaleString("vi-VN")}`;
-      setParticipantErrors(newParticipantErrors);
-      return;
-    }
-
-    if (field === "minParticipants") {
-      const maxValue = form.getFieldValue("maxParticipants");
-      if (maxValue && value >= maxValue) {
-        newParticipantErrors.minParticipants =
-          "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa";
-      } else {
-        newParticipantErrors.minParticipants = "";
-      }
-    } else if (field === "maxParticipants") {
-      const minValue = form.getFieldValue("minParticipants");
-      if (minValue && value <= minValue) {
-        newParticipantErrors.maxParticipants =
-          "Số lượng tối đa phải lớn hơn số lượng tối thiểu";
-      } else {
-        newParticipantErrors.maxParticipants = "";
-      }
-    }
-
-    setParticipantErrors(newParticipantErrors);
-    form.setFieldsValue({ [field]: value });
   };
 
   // Handle date validation
@@ -393,34 +351,12 @@ function KoiShowDetail() {
       const values = await form.validateFields();
 
       // Check for validation errors
-      if (
-        nameError ||
-        participantErrors.minParticipants ||
-        participantErrors.maxParticipants ||
-        timeErrors.startDate ||
-        timeErrors.endDate
-      ) {
+      if (nameError || timeErrors.startDate || timeErrors.endDate) {
         // Show validation error message
         notification.error({
           key: "validationError",
           message: "Lỗi nhập liệu",
           description: "Vui lòng kiểm tra và sửa các lỗi trước khi cập nhật.",
-          placement: "topRight",
-        });
-        return;
-      }
-
-      // Check if min participants is less than max participants
-      if (values.minParticipants >= values.maxParticipants) {
-        setParticipantErrors({
-          ...participantErrors,
-          minParticipants: "Số lượng tối thiểu phải nhỏ hơn số lượng tối đa",
-        });
-        notification.error({
-          key: "participantError",
-          message: "Lỗi nhập liệu",
-          description:
-            "Số lượng tham gia tối thiểu phải nhỏ hơn số lượng tối đa.",
           placement: "topRight",
         });
         return;
@@ -622,7 +558,7 @@ function KoiShowDetail() {
       label: "Tài Trợ",
       children: (
         <div style={{ display: activeTabKey === "sponsor" ? "block" : "none" }}>
-          <Sponsor showId={id} />
+          <Sponsor showId={id} statusShow={koiShowDetail.data.status} />
         </div>
       ),
     },
@@ -634,7 +570,7 @@ function KoiShowDetail() {
     setEditingTicket(null);
 
     // Only show form if there are available ticket types
-    const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"];
+    const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp"];
     const usedTicketTypes = koiShowDetail.data.ticketTypes.map(
       (ticket) => ticket.name
     );
@@ -855,16 +791,6 @@ function KoiShowDetail() {
                                           koiShowDetail.data.endDate
                                         ).toLocaleDateString("vi-VN")}{" "}
                                         {formatTime(koiShowDetail.data.endDate)}
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col md:flex-row md:justify-between">
-                                      <span className="font-medium">
-                                        Số người tham gia:
-                                      </span>
-                                      <span>
-                                        {koiShowDetail.data.minParticipants} -{" "}
-                                        {koiShowDetail.data.maxParticipants}{" "}
-                                        người
                                       </span>
                                     </div>
                                     <div className="flex flex-col md:flex-row md:justify-between">
@@ -1113,36 +1039,13 @@ function KoiShowDetail() {
               <Input />
             </Form.Item>
 
-            <Form.Item
-              name="minParticipants"
-              label="Số Người Tham Gia Tối Thiểu"
-              validateStatus={participantErrors.minParticipants ? "error" : ""}
-              help={participantErrors.minParticipants}
-            >
-              <InputNumber
-                min={0}
-                max={MAX_PARTICIPANTS}
-                style={{ width: "100%" }}
-                onChange={(value) =>
-                  handleParticipantChange("minParticipants", value)
-                }
-              />
+            {/* Keep minParticipants and maxParticipants as hidden fields */}
+            <Form.Item name="minParticipants" hidden>
+              <InputNumber />
             </Form.Item>
 
-            <Form.Item
-              name="maxParticipants"
-              label="Số Người Tham Gia Tối Đa"
-              validateStatus={participantErrors.maxParticipants ? "error" : ""}
-              help={participantErrors.maxParticipants}
-            >
-              <InputNumber
-                min={0}
-                max={MAX_PARTICIPANTS}
-                style={{ width: "100%" }}
-                onChange={(value) =>
-                  handleParticipantChange("maxParticipants", value)
-                }
-              />
+            <Form.Item name="maxParticipants" hidden>
+              <InputNumber />
             </Form.Item>
 
             <Form.Item
@@ -1267,7 +1170,7 @@ function KoiShowDetail() {
                 {!isStaff && (
                   <Tooltip
                     title={
-                      koiShowDetail.data.ticketTypes.length === 3
+                      koiShowDetail.data.ticketTypes.length === 2
                         ? "Đã sử dụng hết tất cả các loại vé"
                         : ""
                     }
@@ -1278,11 +1181,7 @@ function KoiShowDetail() {
                       className="w-full h-12 text-base flex items-center justify-center text-white"
                       ghost
                       onClick={() => {
-                        const TICKET_TYPES = [
-                          "Vé Thường",
-                          "Vé Cao Cấp",
-                          "Vé Triễn Lãm",
-                        ];
+                        const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp"];
                         const usedTicketTypes =
                           koiShowDetail.data.ticketTypes.map(
                             (ticket) => ticket.name
@@ -1307,7 +1206,7 @@ function KoiShowDetail() {
                         setEditingTicket(null);
                       }}
                       size="large"
-                      disabled={koiShowDetail.data.ticketTypes.length === 3}
+                      disabled={koiShowDetail.data.ticketTypes.length === 2}
                     >
                       Tạo loại vé mới
                     </Button>
@@ -1382,7 +1281,7 @@ function KoiShowDetail() {
                   {!isEditDisabled && !isStaff && (
                     <Tooltip
                       title={
-                        koiShowDetail.data.ticketTypes.length === 3
+                        koiShowDetail.data.ticketTypes.length === 2
                           ? "Đã sử dụng hết tất cả các loại vé"
                           : ""
                       }
@@ -1392,11 +1291,7 @@ function KoiShowDetail() {
                         type="primary"
                         icon={<PlusOutlined />}
                         onClick={() => {
-                          const TICKET_TYPES = [
-                            "Vé Thường",
-                            "Vé Cao Cấp",
-                            "Vé Triễn Lãm",
-                          ];
+                          const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp"];
                           const usedTicketTypes =
                             koiShowDetail.data.ticketTypes.map(
                               (ticket) => ticket.name
@@ -1422,7 +1317,7 @@ function KoiShowDetail() {
                         }}
                         size="large"
                         className="rounded-lg"
-                        disabled={koiShowDetail.data.ticketTypes.length === 3}
+                        disabled={koiShowDetail.data.ticketTypes.length === 2}
                       >
                         Tạo vé mới
                       </Button>

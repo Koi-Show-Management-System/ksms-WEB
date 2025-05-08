@@ -5,10 +5,11 @@ const useDashBoard = create((set, get) => ({
   dashboardData: null,
   isLoading: false,
   error: null,
-  fetchDashboardData: async () => {
-    set({ isLoading: true });
+  selectedKoiShowId: null,
+  fetchDashboardData: async (koiShowId = null) => {
+    set({ isLoading: true, selectedKoiShowId: koiShowId });
     try {
-      const response = await dashboardApi();
+      const response = await dashboardApi(koiShowId);
       if (response.status === 200) {
         console.log(response.data);
         set({

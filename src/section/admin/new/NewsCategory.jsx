@@ -97,7 +97,7 @@ function NewsCategory() {
 
   const columns = [
     {
-      title: "Tên danh mục",
+      title: "Tên chuyên mục",
       dataIndex: "name",
       key: "name",
     },
@@ -144,7 +144,7 @@ function NewsCategory() {
     <div className="">
       <div className="flex justify-between items-center mb-4">
         <Input
-          placeholder="Tìm kiếm hạng mục..."
+          placeholder="Tìm kiếm chuyên mục..."
           prefix={<SearchOutlined />}
           onChange={(e) => setSearchText(e.target.value)}
           style={{ width: 300 }}
@@ -176,7 +176,7 @@ function NewsCategory() {
       />
 
       <Modal
-        title={editingCategory ? "Chỉnh sửa danh mục" : "Thêm danh mục mới"}
+        title={editingCategory ? "Chỉnh sửa chuyên mục" : "Thêm chuyên mục mới"}
         open={isModalVisible}
         onCancel={handleCancel}
         onOk={handleSubmit}
@@ -186,15 +186,15 @@ function NewsCategory() {
         <Form form={form} layout="vertical">
           <Form.Item
             name="name"
-            label="Tên danh mục"
+            label="Tên chuyên mục"
             rules={[
               {
                 required: true,
-                message: "Vui lòng nhập tên danh mục!",
+                message: "Vui lòng nhập tên chuyên mục!",
               },
             ]}
           >
-            <Input placeholder="Nhập tên danh mục" />
+            <Input placeholder="Nhập tên chuyên mục" />
           </Form.Item>
           <Form.Item
             name="description"
@@ -206,7 +206,7 @@ function NewsCategory() {
               },
             ]}
           >
-            <Input.TextArea rows={4} placeholder="Nhập mô tả danh mục" />
+            <Input.TextArea rows={4} placeholder="Nhập mô tả chuyên mục" />
           </Form.Item>
         </Form>
       </Modal>

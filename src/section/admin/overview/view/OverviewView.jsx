@@ -9,14 +9,58 @@ const { Text } = Typography;
 
 function OverviewView() {
   const [selectedShow, setSelectedShow] = useState("all");
+  const [selectedKoiShowId, setSelectedKoiShowId] = useState(null);
   const { dashboardData, isLoading, error, fetchDashboardData } =
     useDashBoard();
+  const [allKoiShows, setAllKoiShows] = useState([]);
 
+  // Tách thành 2 gọi API riêng biệt:
+  // 1. Gọi để lấy danh sách tất cả các triển lãm (API không có tham số koiShowId)
+  // 2. Gọi để lấy chi tiết triển lãm cụ thể (API có tham số koiShowId)
   useEffect(() => {
-    fetchDashboardData();
-  }, [fetchDashboardData]);
+    // Đầu tiên luôn gọi API để lấy danh sách tất cả các triển lãm
+    const fetchAllShowsData = async () => {
+      await fetchDashboardData();
+    };
 
-  if (isLoading) {
+    fetchAllShowsData();
+  }, []);
+
+  // Khi có dữ liệu tất cả triển lãm và chưa lưu vào state
+  useEffect(() => {
+    if (
+      dashboardData &&
+      dashboardData.koiShowRevenues &&
+      (!allKoiShows.length || selectedShow === "all")
+    ) {
+      setAllKoiShows(dashboardData.koiShowRevenues);
+    }
+  }, [dashboardData]);
+
+  // Khi người dùng chọn một triển lãm cụ thể
+  useEffect(() => {
+    if (selectedKoiShowId) {
+      fetchDashboardData(selectedKoiShowId);
+    }
+  }, [selectedKoiShowId]);
+
+  const handleShowChange = (value, option) => {
+    setSelectedShow(value);
+    if (value === "all") {
+      setSelectedKoiShowId(null);
+      fetchDashboardData();
+    } else {
+      // Find the koiShowId based on the selected show name
+      const selectedShowData = allKoiShows.find(
+        (show) => show.koiShowName === value
+      );
+      if (selectedShowData) {
+        setSelectedKoiShowId(selectedShowData.koiShowId);
+      }
+    }
+  };
+
+  if (isLoading && !dashboardData) {
     return (
       <div className="p-8 bg-gray-50 min-h-screen">
         <div className="flex justify-center items-center h-96">
@@ -48,6 +92,10 @@ function OverviewView() {
     );
   }
 
+  // Sử dụng danh sách triển lãm từ state allKoiShows để dropdown luôn hiển thị đủ
+  const koiShowOptions =
+    allKoiShows.length > 0 ? allKoiShows : dashboardData.koiShowRevenues;
+
   return (
     <div className="p-8 bg-gray-50 min-h-screen">
       <div className="flex justify-between items-center mb-6">
@@ -55,24 +103,32 @@ function OverviewView() {
         <Select
           style={{ width: 240 }}
           placeholder="Chọn triển lãm"
-          onChange={setSelectedShow}
+          onChange={handleShowChange}
           defaultValue="all"
+          value={selectedShow}
+          loading={isLoading}
         >
           <Option value="all">Tất cả các triển lãm</Option>
-          {dashboardData.koiShowRevenues.map((show) => (
+          {koiShowOptions.map((show) => (
             <Option key={show.koiShowId} value={show.koiShowName}>
               {show.koiShowName}
             </Option>
           ))}
         </Select>
       </div>
-      <Overview
-        selectedShow={selectedShow}
-        onShowChange={setSelectedShow}
-        dashboardData={dashboardData}
-        isLoading={isLoading}
-        error={error}
-      />
+      {isLoading && selectedKoiShowId ? (
+        <div className="flex justify-center items-center py-10">
+          <Loading />
+        </div>
+      ) : (
+        <Overview
+          selectedShow={selectedShow}
+          onShowChange={handleShowChange}
+          dashboardData={dashboardData}
+          isLoading={isLoading}
+          error={error}
+        />
+      )}
     </div>
   );
 }

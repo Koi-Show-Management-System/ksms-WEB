@@ -1,6 +1,9 @@
 import axiosClient from "../config/axiosClient";
 
-const dashboardApi = () => {
+const dashboardApi = (koiShowId = null) => {
+  if (koiShowId) {
+    return axiosClient.get(`/dashboard?koiShowId=${koiShowId}`);
+  }
   return axiosClient.get(`/dashboard`);
 };
 

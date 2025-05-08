@@ -12,6 +12,7 @@ import {
   Upload,
   Card,
   Typography,
+  Tooltip,
 } from "antd";
 import {
   PlusOutlined,
@@ -24,7 +25,7 @@ import useSponsor from "../../../../hooks/useSponsor";
 
 const { Title, Text } = Typography;
 
-function Sponsor({ showId }) {
+function Sponsor({ showId, statusShow }) {
   const {
     sponsors,
     fetchSponsors,
@@ -49,11 +50,25 @@ function Sponsor({ showId }) {
     investMoney: 0,
   });
 
+  // Check if editing is disabled based on show status
+  const isEditDisabled = ["inprogress", "finished"].includes(statusShow);
+
   useEffect(() => {
     fetchSponsors(showId);
   }, [fetchSponsors, showId]);
 
   const showModal = (sponsor = null) => {
+    // If editing is disabled, don't allow opening the modal for edit or create
+    if (isEditDisabled) {
+      notification.warning({
+        message: "Không thể thực hiện",
+        description: sponsor
+          ? "Không thể chỉnh sửa nhà tài trợ khi triển lãm đang diễn ra hoặc đã kết thúc!"
+          : "Không thể thêm nhà tài trợ khi triển lãm đang diễn ra hoặc đã kết thúc!",
+      });
+      return;
+    }
+
     setCurrentSponsor(sponsor);
     setIsModalVisible(true);
 
@@ -109,6 +124,16 @@ function Sponsor({ showId }) {
 
   const handleSubmit = async () => {
     try {
+      // Prevent submission when editing is disabled
+      if (isEditDisabled) {
+        notification.warning({
+          message: "Không thể thực hiện",
+          description:
+            "Không thể thêm hoặc chỉnh sửa nhà tài trợ khi triển lãm đang diễn ra hoặc đã kết thúc!",
+        });
+        return;
+      }
+
       const values = await form.validateFields();
 
       const sponsorData = {
@@ -163,6 +188,16 @@ function Sponsor({ showId }) {
   };
 
   const handleDelete = async (id) => {
+    // If editing is disabled, prevent deletion
+    if (isEditDisabled) {
+      notification.warning({
+        message: "Không thể xóa",
+        description:
+          "Không thể xóa nhà tài trợ khi triển lãm đang diễn ra hoặc đã kết thúc!",
+      });
+      return;
+    }
+
     try {
       const success = await deleteSponsor(id, showId);
       if (success) {
@@ -290,43 +325,65 @@ function Sponsor({ showId }) {
           currency: "VND",
         }).format(money),
     },
-    {
-      title: "Thao tác",
-      key: "action",
-      render: (_, record) => (
-        <div className="flex items-center space-x-4">
-          <EyeOutlined
-            className="text-gray-500 hover:text-blue-500 cursor-pointer "
-            onClick={() => showViewModal(record)}
-          />
-          <EditOutlined
-            className="text-blue-500 hover:text-blue-700 cursor-pointer  ml-4"
-            onClick={() => showModal(record)}
-          />
-          <Popconfirm
-            title="Bạn có chắc chắn muốn xóa nhà tài trợ này?"
-            onConfirm={() => handleDelete(record.id)}
-            okText="Có"
-            cancelText="Không"
-          >
-            <DeleteOutlined className="text-red-500 hover:text-red-700 cursor-pointerml-4" />
-          </Popconfirm>
-        </div>
-      ),
-    },
+    // Only include action column if editing is allowed
+    ...(isEditDisabled
+      ? []
+      : [
+          {
+            title: "Thao tác",
+            key: "action",
+            render: (_, record) => (
+              <div className="flex items-center space-x-4">
+                <EyeOutlined
+                  className="text-gray-500 hover:text-blue-500 cursor-pointer"
+                  onClick={() => showViewModal(record)}
+                />
+                <EditOutlined
+                  className="text-blue-500 hover:text-blue-700 cursor-pointer ml-4"
+                  onClick={() => showModal(record)}
+                />
+                <Popconfirm
+                  title="Bạn có chắc chắn muốn xóa nhà tài trợ này?"
+                  onConfirm={() => handleDelete(record.id)}
+                  okText="Có"
+                  cancelText="Không"
+                >
+                  <DeleteOutlined className="text-red-500 hover:text-red-700 cursor-pointer ml-4" />
+                </Popconfirm>
+              </div>
+            ),
+          },
+        ]),
+    // Always include a view action even when editing is disabled
+    ...(isEditDisabled
+      ? [
+          {
+            title: "Xem chi tiết",
+            key: "view",
+            render: (_, record) => (
+              <EyeOutlined
+                className="text-blue-500 hover:text-blue-700 cursor-pointer"
+                onClick={() => showViewModal(record)}
+              />
+            ),
+          },
+        ]
+      : []),
   ];
 
   return (
     <div className="sponsor-container p-4 bg-white rounded-lg shadow-md">
       <div className="sponsor-header flex flex-col md:flex-row md:items-center md:justify-between mb-4">
         <Title level={3}>Quản lý nhà tài trợ</Title>
-        <Button
-          type="primary"
-          icon={<PlusOutlined />}
-          onClick={() => showModal()}
-        >
-          Thêm nhà tài trợ
-        </Button>
+        {!isEditDisabled && (
+          <Button
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => showModal()}
+          >
+            Thêm nhà tài trợ
+          </Button>
+        )}
       </div>
 
       <Table

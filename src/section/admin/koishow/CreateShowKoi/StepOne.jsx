@@ -62,6 +62,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
   const [sponsorErrors, setSponsorErrors] = useState([]);
   const [ticketErrors, setTicketErrors] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [ticketPriceError, setTicketPriceError] = useState("");
   const managerSelectRef = useRef(null);
   const staffSelectRef = useRef(null);
 
@@ -340,7 +341,7 @@ function StepOne({ updateFormData, initialData, showErrors }) {
 
   const handleAddTicketType = () => {
     // Danh sách loại vé
-    const ticketTypes = ["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"];
+    const ticketTypes = ["Vé Thường", "Vé Cao Cấp"];
 
     // Tìm loại vé chưa được sử dụng
     const usedTicketTypes = data.createTicketTypeRequests.map((t) => t.name);
@@ -397,7 +398,45 @@ function StepOne({ updateFormData, initialData, showErrors }) {
     const newTicketTypes = [...data.createTicketTypeRequests];
     newTicketTypes[index] = { ...newTicketTypes[index], [field]: value };
     setData({ ...data, createTicketTypeRequests: newTicketTypes });
+
+    // Validate ticket prices if price field was changed
+    if (field === "price") {
+      validateTicketPrices(newTicketTypes);
+    }
   };
+
+  // Function to validate that standard ticket price is less than premium ticket price
+  const validateTicketPrices = (tickets) => {
+    // Find standard and premium ticket
+    const standardTicket = tickets.find(
+      (ticket) => ticket.name === "Vé Thường"
+    );
+    const premiumTicket = tickets.find(
+      (ticket) => ticket.name === "Vé Cao Cấp"
+    );
+
+    // Clear any existing error
+    setTicketPriceError("");
+
+    // If both ticket types exist, compare their prices
+    if (
+      standardTicket &&
+      premiumTicket &&
+      standardTicket.price > 0 &&
+      premiumTicket.price > 0
+    ) {
+      if (standardTicket.price >= premiumTicket.price) {
+        setTicketPriceError("Giá Vé Thường phải nhỏ hơn giá Vé Cao Cấp");
+      }
+    }
+  };
+
+  // Add effect to validate ticket prices when ticket types change
+  useEffect(() => {
+    if (data.createTicketTypeRequests.length > 0) {
+      validateTicketPrices(data.createTicketTypeRequests);
+    }
+  }, [data.createTicketTypeRequests]);
 
   const handleRemoveTicketType = (index) => {
     const newTicketTypes = data.createTicketTypeRequests.filter(
@@ -646,59 +685,10 @@ function StepOne({ updateFormData, initialData, showErrors }) {
       <input type="hidden" value={data.startExhibitionDate || ""} />
       <input type="hidden" value={data.endExhibitionDate || ""} />
 
-      <div className="flex space-x-4">
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Số lượng người tham gia tối thiểu
-          </label>
-          <Input
-            type="number"
-            placeholder="Nhập số lượng tối thiểu"
-            value={data.minParticipants}
-            onChange={(e) =>
-              handleNumberChange("minParticipants", parseInt(e.target.value))
-            }
-            min={0}
-            max={MAX_PARTICIPANTS}
-          />
-          {participantErrors.minParticipants && (
-            <p className="text-red-500 text-xs mt-1">
-              {participantErrors.minParticipants}
-            </p>
-          )}
-          {showErrors && !data.minParticipants && (
-            <p className="text-red-500 text-xs mt-1">
-              Số lượng tối thiểu là bắt buộc.{" "}
-            </p>
-          )}
-        </div>
+      {/* Trường minParticipants và maxParticipants ẩn nhưng vẫn truyền dữ liệu */}
+      <input type="hidden" value={data.minParticipants || ""} />
+      <input type="hidden" value={data.maxParticipants || ""} />
 
-        <div className="flex-1">
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Số lượng người tham gia tối đa
-          </label>
-          <Input
-            type="number"
-            placeholder="Nhập số lượng tối đa"
-            value={data.maxParticipants}
-            onChange={(e) =>
-              handleNumberChange("maxParticipants", parseInt(e.target.value))
-            }
-            min={0}
-            max={MAX_PARTICIPANTS}
-          />
-          {participantErrors.maxParticipants && (
-            <p className="text-red-500 text-xs mt-1">
-              {participantErrors.maxParticipants}
-            </p>
-          )}
-          {showErrors && !data.maxParticipants && (
-            <p className="text-red-500 text-xs mt-1">
-              Số lượng tối đa là bắt buộc.{" "}
-            </p>
-          )}
-        </div>
-      </div>
       <div className="flex space-x-4">
         <div className="flex-1 ">
           <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -921,24 +911,22 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                   }
                   placeholder="Chọn loại vé"
                 >
-                  {["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"].map(
-                    (ticketType) => {
-                      // Kiểm tra xem loại vé này đã được sử dụng bởi vé khác chưa
-                      const isUsed = data.createTicketTypeRequests.some(
-                        (t, i) => t.name === ticketType && i !== index
-                      );
+                  {["Vé Thường", "Vé Cao Cấp"].map((ticketType) => {
+                    // Kiểm tra xem loại vé này đã được sử dụng bởi vé khác chưa
+                    const isUsed = data.createTicketTypeRequests.some(
+                      (t, i) => t.name === ticketType && i !== index
+                    );
 
-                      return (
-                        <Option
-                          key={ticketType}
-                          value={ticketType}
-                          disabled={isUsed}
-                        >
-                          {ticketType}
-                        </Option>
-                      );
-                    }
-                  )}
+                    return (
+                      <Option
+                        key={ticketType}
+                        value={ticketType}
+                        disabled={isUsed}
+                      >
+                        {ticketType}
+                      </Option>
+                    );
+                  })}
                 </Select>
                 {showErrors && !ticket.name && (
                   <p className="text-red-500 text-xs mt-1">
@@ -970,6 +958,12 @@ function StepOne({ updateFormData, initialData, showErrors }) {
                 {showErrors && (!ticket.price || ticket.price <= 0) && (
                   <p className="text-red-500 text-xs mt-1">
                     Giá vé phải lớn hơn 0.
+                  </p>
+                )}
+                {/* Display ticket price validation error for "Vé Thường" */}
+                {ticket.name === "Vé Thường" && ticketPriceError && (
+                  <p className="text-red-500 text-xs mt-1">
+                    {ticketPriceError}
                   </p>
                 )}
               </div>

@@ -22,8 +22,8 @@ function CreateShow() {
     endDate: null,
     startExhibitionDate: null,
     endExhibitionDate: null,
-    minParticipants: "",
-    maxParticipants: "",
+    minParticipants: null,
+    maxParticipants: null,
     location: "",
     imgUrl: "",
     registrationFee: "",
@@ -67,10 +67,6 @@ function CreateShow() {
         errorDetails.push("ngày bắt đầu và kết thúc");
         stepOneHasError = true;
       }
-      if (!formData.minParticipants || !formData.maxParticipants) {
-        errorDetails.push("số lượng người tham gia tối thiểu và tối đa");
-        stepOneHasError = true;
-      }
       if (!formData.location?.trim()) {
         errorDetails.push("địa điểm tổ chức");
         stepOneHasError = true;
@@ -78,24 +74,6 @@ function CreateShow() {
       if (!formData.imgUrl) {
         errorDetails.push("hình ảnh chương trình");
         stepOneHasError = true;
-      }
-
-      // Kiểm tra số lượng tham gia
-      if (formData.minParticipants && formData.maxParticipants) {
-        const min = parseInt(formData.minParticipants);
-        const max = parseInt(formData.maxParticipants);
-        if (min >= max) {
-          errorDetails.push("số lượng tối thiểu phải nhỏ hơn số lượng tối đa");
-          stepOneHasError = true;
-        }
-
-        // Check for maximum participant values
-        if (min > 10000 || max > 10000) {
-          errorDetails.push(
-            "số lượng người tham gia không được vượt quá 10.000"
-          );
-          stepOneHasError = true;
-        }
       }
 
       // Kiểm tra nhà tài trợ
@@ -152,6 +130,25 @@ function CreateShow() {
           errorDetails.push(
             `${invalidTickets.length} loại vé thiếu thông tin hoặc có thông tin không hợp lệ`
           );
+          stepOneHasError = true;
+        }
+
+        // Kiểm tra giá vé thường phải nhỏ hơn vé cao cấp
+        const standardTicket = formData.createTicketTypeRequests.find(
+          (ticket) => ticket.name === "Vé Thường"
+        );
+        const premiumTicket = formData.createTicketTypeRequests.find(
+          (ticket) => ticket.name === "Vé Cao Cấp"
+        );
+
+        if (
+          standardTicket &&
+          premiumTicket &&
+          standardTicket.price > 0 &&
+          premiumTicket.price > 0 &&
+          standardTicket.price >= premiumTicket.price
+        ) {
+          errorDetails.push("giá vé thường phải nhỏ hơn giá vé cao cấp");
           stepOneHasError = true;
         }
       }
@@ -666,22 +663,6 @@ function CreateShow() {
 
     if (!validateStep()) {
       return;
-    }
-
-    // Kiểm tra và hiển thị cảnh báo về số lượng người tham gia, nhưng vẫn cho phép chuyển bước
-    if (currentStep === 1) {
-      const min = parseInt(formData.minParticipants);
-      const max = parseInt(formData.maxParticipants);
-
-      if (min >= max) {
-        notification.warning({
-          message: "Cảnh báo nhập liệu",
-          description:
-            "Số lượng tối thiểu đang lớn hơn hoặc bằng số lượng tối đa. Vui lòng kiểm tra lại.",
-          placement: "topRight",
-        });
-        // Không return ở đây để vẫn cho phép chuyển bước
-      }
     }
 
     // Lưu rõ trạng thái của dữ liệu hiện tại

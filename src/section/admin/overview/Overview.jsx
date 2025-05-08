@@ -20,6 +20,9 @@ import {
   RollbackOutlined,
   LineChartOutlined,
   DollarOutlined,
+  GiftOutlined,
+  ShoppingOutlined,
+  TagOutlined,
 } from "@ant-design/icons";
 
 // Hàm định dạng số tiền
@@ -54,14 +57,16 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
     .sort((a, b) => b.netProfit - a.netProfit)
     .slice(0, 5);
 
-  // Dữ liệu doanh thu cho biểu đồ cột - đơn giản hóa
-  const revenueData = topKoiShows.map((show) => ({
+  // Dữ liệu cho biểu đồ cột - đơn giản hóa
+  const chartData = topKoiShows.map((show) => ({
     name:
       show.koiShowName.length > 15
         ? show.koiShowName.substring(0, 12) + "..."
         : show.koiShowName,
-    revenue:
-      show.registrationRevenue + show.ticketRevenue + show.sponsorRevenue,
+    registration: show.registrationRevenue,
+    ticket: show.ticketRevenue,
+    sponsor: show.sponsorRevenue,
+    award: show.awardRevenue,
     refund: show.registrationRefundAmount + show.ticketRefundAmount,
     profit: show.netProfit,
     fullName: show.koiShowName,
@@ -96,6 +101,8 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
   // Lấy số liệu thống kê theo triển lãm đã chọn
   function getTotalValue(key) {
     if (selectedShow === "all") {
+      // Không hiển thị totalRevenue khi xem tất cả triển lãm
+      if (key === "totalRevenue") return null;
       return dashboardData[key];
     }
 
@@ -109,14 +116,10 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
       case "totalKoiShows":
         return 1;
       case "totalUsers":
-      case "totalKoi":
         return "-";
-      case "totalRevenue":
-        return (
-          selectedShowData.registrationRevenue +
-          selectedShowData.ticketRevenue +
-          selectedShowData.sponsorRevenue
-        );
+      case "totalKoi":
+        // Sử dụng giá trị totalKoi từ API nếu đang xem một triển lãm cụ thể
+        return dashboardData.totalKoi || "-";
       case "totalRefund":
         return (
           selectedShowData.registrationRefundAmount +
@@ -124,6 +127,14 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
         );
       case "netProfit":
         return selectedShowData.netProfit;
+      case "registrationRevenue":
+        return selectedShowData.registrationRevenue;
+      case "ticketRevenue":
+        return selectedShowData.ticketRevenue;
+      case "sponsorRevenue":
+        return selectedShowData.sponsorRevenue;
+      case "awardRevenue":
+        return selectedShowData.awardRevenue;
       default:
         return 0;
     }
@@ -150,17 +161,17 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
   );
 
   // Dữ liệu cho biểu đồ được chọn
-  const filteredRevenueData =
+  const filteredChartData =
     selectedShow === "all"
-      ? revenueData
+      ? chartData
       : dashboardData.koiShowRevenues
           .filter((show) => show.koiShowName === selectedShow)
           .map((show) => ({
             name: show.koiShowName,
-            revenue:
-              show.registrationRevenue +
-              show.ticketRevenue +
-              show.sponsorRevenue,
+            registration: show.registrationRevenue,
+            ticket: show.ticketRevenue,
+            sponsor: show.sponsorRevenue,
+            award: show.awardRevenue,
             refund: show.registrationRefundAmount + show.ticketRefundAmount,
             profit: show.netProfit,
             fullName: show.koiShowName,
@@ -189,15 +200,18 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
     return null;
   };
 
+  // Xác định xem có đang xem triển lãm cụ thể không
+  const isViewingSpecificShow = selectedShow !== "all";
+
   return (
     <div>
       <Row gutter={[16, 16]} className="mb-5">
         <Col xs={24} sm={8}>
           <StatCard
-            title="Tổng doanh thu"
-            value={getTotalValue("totalRevenue")}
-            icon={<DollarOutlined style={{ fontSize: "24px" }} />}
-            color="#1890ff"
+            title="Lợi nhuận"
+            value={getTotalValue("netProfit")}
+            icon={<LineChartOutlined style={{ fontSize: "24px" }} />}
+            color="#52c41a"
             isCurrency={true}
           />
         </Col>
@@ -212,37 +226,7 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
         </Col>
         <Col xs={24} sm={8}>
           <StatCard
-            title="Lợi nhuận ròng"
-            value={getTotalValue("netProfit")}
-            icon={<LineChartOutlined style={{ fontSize: "24px" }} />}
-            color="#52c41a"
-            isCurrency={true}
-          />
-        </Col>
-      </Row>
-
-      <Row gutter={[16, 16]} className="mb-5">
-        <Col xs={24} sm={8}>
-          <StatCard
-            title="Số lượng triển lãm"
-            value={getTotalValue("totalKoiShows")}
-            icon={<TrophyOutlined style={{ fontSize: "24px" }} />}
-            color="#722ed1"
-            isCurrency={false}
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <StatCard
-            title="Tổng số người dùng"
-            value={getTotalValue("totalUsers")}
-            icon={<UserOutlined style={{ fontSize: "24px" }} />}
-            color="#fa8c16"
-            isCurrency={false}
-          />
-        </Col>
-        <Col xs={24} sm={8}>
-          <StatCard
-            title="Tổng số Koi"
+            title="Tổng số Koi tham gia"
             value={getTotalValue("totalKoi")}
             icon={<GoldOutlined style={{ fontSize: "24px" }} />}
             color="#13c2c2"
@@ -251,20 +235,84 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
         </Col>
       </Row>
 
+      {!isViewingSpecificShow ? (
+        // Hiển thị thông tin tổng quan khi xem tất cả triển lãm
+        <Row gutter={[16, 16]} justify="space-between" className="mb-5">
+          <Col xs={24} sm={12}>
+            <StatCard
+              title="Số lượng triển lãm"
+              value={getTotalValue("totalKoiShows")}
+              icon={<TrophyOutlined style={{ fontSize: "24px" }} />}
+              color="#722ed1"
+              isCurrency={false}
+            />
+          </Col>
+          <Col xs={24} sm={12}>
+            <StatCard
+              title="Tổng số người dùng"
+              value={getTotalValue("totalUsers")}
+              icon={<UserOutlined style={{ fontSize: "24px" }} />}
+              color="#fa8c16"
+              isCurrency={false}
+            />
+          </Col>
+        </Row>
+      ) : (
+        // Hiển thị thông tin chi tiết khi xem triển lãm cụ thể
+        <Row gutter={[16, 16]} className="mb-5">
+          <Col xs={24} sm={6}>
+            <StatCard
+              title="Tổng giá trị đăng ký"
+              value={getTotalValue("registrationRevenue")}
+              icon={<ShoppingOutlined style={{ fontSize: "24px" }} />}
+              color="#1890ff"
+              isCurrency={true}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <StatCard
+              title="Tổng giá trị vé"
+              value={getTotalValue("ticketRevenue")}
+              icon={<TagOutlined style={{ fontSize: "24px" }} />}
+              color="#13c2c2"
+              isCurrency={true}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <StatCard
+              title="Tổng giá trị tài trợ"
+              value={getTotalValue("sponsorRevenue")}
+              icon={<DollarOutlined style={{ fontSize: "24px" }} />}
+              color="#722ed1"
+              isCurrency={true}
+            />
+          </Col>
+          <Col xs={24} sm={6}>
+            <StatCard
+              title="Tổng giá trị giải thưởng"
+              value={getTotalValue("awardRevenue")}
+              icon={<GiftOutlined style={{ fontSize: "24px" }} />}
+              color="#fa8c16"
+              isCurrency={true}
+            />
+          </Col>
+        </Row>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Card
           title={
             <h3 className="text-lg font-semibold">
               {selectedShow === "all"
-                ? "Top 5 triển lãm theo doanh thu"
-                : "Chi tiết doanh thu"}
+                ? "Top 5 triển lãm theo lợi nhuận"
+                : "Chi tiết triển lãm"}
             </h3>
           }
         >
           <div style={{ height: "400px" }}>
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
-                data={filteredRevenueData}
+                data={filteredChartData}
                 margin={{ top: 10, right: 10, left: 20, bottom: 50 }}
                 barSize={30}
               >
@@ -287,12 +335,34 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
                   height={50}
                   wrapperStyle={{ paddingTop: 40, marginBottom: 1 }}
                 />
-                <Bar
-                  dataKey="revenue"
-                  name="Doanh thu"
-                  fill="#1890ff"
-                  radius={[4, 4, 0, 0]}
-                />
+                {isViewingSpecificShow && (
+                  <>
+                    <Bar
+                      dataKey="registration"
+                      name="Đăng ký"
+                      fill="#1890ff"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="ticket"
+                      name="Vé"
+                      fill="#13c2c2"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="sponsor"
+                      name="Tài trợ"
+                      fill="#722ed1"
+                      radius={[4, 4, 0, 0]}
+                    />
+                    <Bar
+                      dataKey="award"
+                      name="Giải thưởng"
+                      fill="#fa8c16"
+                      radius={[4, 4, 0, 0]}
+                    />
+                  </>
+                )}
                 <Bar
                   dataKey="refund"
                   name="Hoàn trả"

@@ -69,6 +69,8 @@ function KoiShow() {
         status: item.status,
         minParticipants: item.minParticipants,
         maxParticipants: item.maxParticipants,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
       }));
       setLocalData(formattedData);
     }
@@ -161,7 +163,6 @@ function KoiShow() {
       ),
       responsive: ["xs", "sm", "md", "lg", "xl"],
       ellipsis: true,
-      width: "25%",
     },
     {
       title: "Ngày Bắt Đầu",
@@ -170,25 +171,6 @@ function KoiShow() {
       sorter: (a, b) => new Date(a.startDate) - new Date(b.startDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
       responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "15%",
-      align: "center",
-    },
-    {
-      title: "SL tối thiểu",
-      dataIndex: "minParticipants",
-      key: "minParticipants",
-      render: (value) => value || "0",
-      responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "10%",
-      align: "center",
-    },
-    {
-      title: "SL tối đa",
-      dataIndex: "maxParticipants",
-      key: "maxParticipants",
-      render: (value) => value || "0",
-      responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "10%",
       align: "center",
     },
     {
@@ -197,7 +179,32 @@ function KoiShow() {
       key: "location",
       responsive: ["xs", "sm", "md", "lg", "xl"],
       ellipsis: true,
-      width: "20%",
+    },
+    {
+      title: "Ngày Tạo",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      render: (date) => {
+        if (!date) return "N/A";
+        const dateObj = new Date(date);
+        return `${dateObj.toLocaleDateString("vi-VN")} ${dateObj.getHours().toString().padStart(2, "0")}:${dateObj.getMinutes().toString().padStart(2, "0")}`;
+      },
+      responsive: ["md", "lg", "xl"],
+      align: "center",
+    },
+    {
+      title: "Cập Nhật",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      sorter: (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt),
+      render: (date) => {
+        if (!date) return "N/A";
+        const dateObj = new Date(date);
+        return `${dateObj.toLocaleDateString("vi-VN")} ${dateObj.getHours().toString().padStart(2, "0")}:${dateObj.getMinutes().toString().padStart(2, "0")}`;
+      },
+      responsive: ["md", "lg", "xl"],
+      align: "center",
     },
     {
       title: "Trạng Thái",
@@ -215,7 +222,7 @@ function KoiShow() {
         />
       ),
       responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "15%",
+      width: "12%",
     },
   ];
 

@@ -159,20 +159,6 @@ function Authen() {
       </Form.Item>
 
       <Form.Item>
-        <div className="flex justify-between items-center">
-          <Checkbox
-            checked={rememberMe}
-            onChange={(e) => setRememberMe(e.target.checked)}
-          >
-            Ghi nhớ đăng nhập
-          </Checkbox>
-          <Link to="/" className="text-[#3094ff] hover:underline">
-            Quên mật khẩu?
-          </Link>
-        </div>
-      </Form.Item>
-
-      <Form.Item>
         <Button
           type="primary"
           htmlType="submit"

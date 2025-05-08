@@ -25,6 +25,7 @@ function KoiShow() {
   const [searchText, setSearchText] = useState("");
   const [selectedDate, setSelectedDate] = useState(null);
   const [filteredData, setFilteredData] = useState([]);
+  const [localData, setLocalData] = useState([]);
   const { checkRole } = useAuth();
   const userRole = Cookies.get("__role");
   const {
@@ -48,17 +49,36 @@ function KoiShow() {
   }, [userRole]);
 
   useEffect(() => {
+    if (koiShows && koiShows.length > 0) {
+      const formattedData = koiShows.map((item) => ({
+        key: item.id,
+        id: item.id,
+        name: item.name,
+        startDate: item.startDate,
+        registrationFee: item.registrationFee,
+        location: item.location,
+        status: item.status,
+        minParticipants: item.minParticipants,
+        maxParticipants: item.maxParticipants,
+        createdAt: item.createdAt,
+        updatedAt: item.updatedAt,
+      }));
+      setLocalData(formattedData);
+    }
+  }, [koiShows]);
+
+  useEffect(() => {
     handleSearch();
-  }, [searchText, selectedDate, koiShows]);
+  }, [searchText, selectedDate, localData]);
 
   const handleSearch = () => {
-    const filtered = koiShows.filter((item) => {
+    const filtered = localData.filter((item) => {
       const matchName = item.name
         .toLowerCase()
-        .includes(searchText.toLowerCase());
+        .includes(searchText.toLowerCase().trim());
 
       const matchDate = selectedDate
-        ? dayjs(item.startExhibitionDate).format("DD/MM/YYYY") ===
+        ? dayjs(item.startDate).format("DD/MM/YYYY") ===
           selectedDate.format("DD/MM/YYYY")
         : true;
 
@@ -86,8 +106,8 @@ function KoiShow() {
     }
   };
 
-  if (isLoading) return <Loading />;
-  if (error) {
+  if (isLoading && localData.length === 0) return <Loading />;
+  if (error && localData.length === 0) {
     return <p className="text-red-500 text-center">Không thể tải dữ liệu.</p>;
   }
 
@@ -107,35 +127,14 @@ function KoiShow() {
       ),
       responsive: ["xs", "sm", "md", "lg", "xl"],
       ellipsis: true,
-      width: "25%",
     },
     {
       title: "Ngày Bắt Đầu",
-      dataIndex: "startExhibitionDate",
-      key: "startExhibitionDate",
-      sorter: (a, b) =>
-        new Date(a.startExhibitionDate) - new Date(b.startExhibitionDate),
+      dataIndex: "startDate",
+      key: "startDate",
+      sorter: (a, b) => new Date(a.startDate) - new Date(b.startDate),
       render: (date) => new Date(date).toLocaleDateString("vi-VN"),
       responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "15%",
-      align: "center",
-    },
-    {
-      title: "SL tối thiểu",
-      dataIndex: "minParticipants",
-      key: "minParticipants",
-      render: (value) => value || "0",
-      responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "12%",
-      align: "center",
-    },
-    {
-      title: "SL tối đa",
-      dataIndex: "maxParticipants",
-      key: "maxParticipants",
-      render: (value) => value || "0",
-      responsive: ["xs", "sm", "md", "lg", "xl"],
-      width: "12%",
       align: "center",
     },
     {
@@ -144,7 +143,32 @@ function KoiShow() {
       key: "location",
       responsive: ["xs", "sm", "md", "lg", "xl"],
       ellipsis: true,
-      width: "20%",
+    },
+    {
+      title: "Ngày Tạo",
+      dataIndex: "createdAt",
+      key: "createdAt",
+      sorter: (a, b) => new Date(a.createdAt) - new Date(b.createdAt),
+      render: (date) => {
+        if (!date) return "N/A";
+        const dateObj = new Date(date);
+        return `${dateObj.toLocaleDateString("vi-VN")} ${dateObj.getHours().toString().padStart(2, "0")}:${dateObj.getMinutes().toString().padStart(2, "0")}`;
+      },
+      responsive: ["md", "lg", "xl"],
+      align: "center",
+    },
+    {
+      title: "Cập Nhật",
+      dataIndex: "updatedAt",
+      key: "updatedAt",
+      sorter: (a, b) => new Date(a.updatedAt) - new Date(b.updatedAt),
+      render: (date) => {
+        if (!date) return "N/A";
+        const dateObj = new Date(date);
+        return `${dateObj.toLocaleDateString("vi-VN")} ${dateObj.getHours().toString().padStart(2, "0")}:${dateObj.getMinutes().toString().padStart(2, "0")}`;
+      },
+      responsive: ["md", "lg", "xl"],
+      align: "center",
     },
     {
       title: "Trạng Thái",
@@ -217,17 +241,7 @@ function KoiShow() {
       <div className="overflow-x-auto">
         <Table
           columns={columns}
-          dataSource={filteredData.map((item) => ({
-            key: item.id,
-            id: item.id,
-            name: item.name,
-            startExhibitionDate: item.startExhibitionDate,
-            registrationFee: item.registrationFee,
-            location: item.location,
-            minParticipants: item.minParticipants,
-            maxParticipants: item.maxParticipants,
-            status: item.status,
-          }))}
+          dataSource={filteredData}
           pagination={false}
           scroll={{ x: 1000 }}
           locale={{

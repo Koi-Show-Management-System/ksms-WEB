@@ -39,11 +39,6 @@ const TICKET_CONFIG = {
     color: "#722ed1",
     badge: "purple",
   },
-  "Vé Triễn Lãm": {
-    icon: <ScheduleOutlined />,
-    color: "#13c2c2",
-    badge: "cyan",
-  },
 };
 
 function TicketForm({
@@ -53,7 +48,7 @@ function TicketForm({
   onCancel,
   existingTickets = [],
 }) {
-  const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp", "Vé Triễn Lãm"];
+  const TICKET_TYPES = ["Vé Thường", "Vé Cao Cấp"];
 
   useEffect(() => {
     // Check if all ticket types are already used when component mounts
@@ -115,6 +110,46 @@ function TicketForm({
           duration: 4,
         });
         return;
+      }
+
+      // Check if standard ticket price is less than premium ticket price
+      if (values.name === "Vé Thường") {
+        // Find premium ticket if it exists
+        const premiumTicket = existingTickets.find(
+          (ticket) =>
+            ticket.name === "Vé Cao Cấp" &&
+            (!editingTicket || ticket.id !== editingTicket.id)
+        );
+
+        if (premiumTicket && values.price >= premiumTicket.price) {
+          notification.error({
+            message: "Giá vé không hợp lệ",
+            description: "Giá Vé Thường phải nhỏ hơn giá Vé Cao Cấp",
+            placement: "top",
+            duration: 4,
+          });
+          return;
+        }
+      }
+
+      // Check if premium ticket price is greater than standard ticket price
+      if (values.name === "Vé Cao Cấp") {
+        // Find standard ticket if it exists
+        const standardTicket = existingTickets.find(
+          (ticket) =>
+            ticket.name === "Vé Thường" &&
+            (!editingTicket || ticket.id !== editingTicket.id)
+        );
+
+        if (standardTicket && values.price <= standardTicket.price) {
+          notification.error({
+            message: "Giá vé không hợp lệ",
+            description: "Giá Vé Cao Cấp phải lớn hơn giá Vé Thường",
+            placement: "top",
+            duration: 4,
+          });
+          return;
+        }
       }
 
       onFinish(values);
