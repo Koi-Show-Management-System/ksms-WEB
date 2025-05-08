@@ -284,7 +284,12 @@ function Tank({ showId }) {
             placeholder="Chọn hạng mục "
             style={{ width: "100%", maxWidth: "250px" }}
             allowClear
-            onChange={(value) => setSelectedCategoryId(value)}
+            onChange={(value) => {
+              setSelectedCategoryId(value);
+              if (value) {
+                fetchTanks(value, 1, 10);
+              }
+            }}
             value={selectedCategoryId}
           >
             {categories
@@ -366,141 +371,145 @@ function Tank({ showId }) {
           setIsFormMounted(false);
         }}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          initialValues={{
-            waterType: "Fresh",
-            status: "available",
-          }}
-          onFinish={handleSubmit}
-          preserve={false}
-        >
-          {!selectedTank && (
-            <Form.Item
-              name="competitionCategoryId"
-              label="Hạng mục"
-              rules={[{ required: true, message: "Vui lòng chọn hạng mục!" }]}
-              initialValue={selectedCategoryId}
-            >
-              <Select
-                placeholder="Chọn hạng mục"
-                onChange={(value) => setSelectedCategoryId(value)}
-                allowClear
+        {isFormMounted && (
+          <Form
+            form={form}
+            layout="vertical"
+            initialValues={{
+              waterType: "Fresh",
+              status: "available",
+            }}
+            onFinish={handleSubmit}
+            preserve={false}
+          >
+            {!selectedTank && (
+              <Form.Item
+                name="competitionCategoryId"
+                label="Hạng mục"
+                rules={[{ required: true, message: "Vui lòng chọn hạng mục!" }]}
+                initialValue={selectedCategoryId}
               >
-                {categories
-                  .filter((category) => category.hasTank)
-                  .map((category) => (
-                    <Option key={category.id} value={category.id}>
-                      {category.name}
-                    </Option>
-                  ))}
+                <Select
+                  placeholder="Chọn hạng mục"
+                  onChange={(value) => setSelectedCategoryId(value)}
+                  allowClear
+                >
+                  {categories
+                    .filter((category) => category.hasTank)
+                    .map((category) => (
+                      <Option key={category.id} value={category.id}>
+                        {category.name}
+                      </Option>
+                    ))}
+                </Select>
+              </Form.Item>
+            )}
+
+            <Form.Item
+              name="name"
+              label="Tên Bể Cá"
+              rules={[{ required: true, message: "Vui lòng nhập tên bể cá" }]}
+            >
+              <Input placeholder="Nhập tên bể cá" />
+            </Form.Item>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Form.Item
+                name="capacity"
+                label="Sức chứa"
+                rules={[{ required: true, message: "Vui lòng nhập sức chứa" }]}
+              >
+                <InputNumber
+                  min={0}
+                  max={100}
+                  style={{ width: "100%" }}
+                  placeholder="Nhập sức chứa"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="waterType"
+                label="Loại Nước"
+                rules={[{ required: true, message: "Vui lòng chọn loại nước" }]}
+              >
+                <Select placeholder="Chọn loại nước">
+                  <Option value="Fresh">Nước Ngọt</Option>
+                  <Option value="Salt">Nước Mặn</Option>
+                  <Option value="Brackish">Nước Lợ</Option>
+                </Select>
+              </Form.Item>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Form.Item
+                name="temperature"
+                label="Nhiệt Độ (°C)"
+                rules={[{ required: true, message: "Vui lòng nhập nhiệt độ" }]}
+              >
+                <InputNumber
+                  min={0}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  placeholder="Nhập nhiệt độ"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="phLevel"
+                label="Độ pH"
+                rules={[{ required: true, message: "Vui lòng nhập độ pH" }]}
+              >
+                <InputNumber
+                  min={0}
+                  max={14}
+                  step={0.1}
+                  style={{ width: "100%" }}
+                  placeholder="Nhập độ pH"
+                />
+              </Form.Item>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <Form.Item
+                name="size"
+                label="Kích Thước (cm)"
+                rules={[
+                  { required: true, message: "Vui lòng nhập kích thước" },
+                ]}
+              >
+                <InputNumber
+                  min={0}
+                  step={0.01}
+                  style={{ width: "100%" }}
+                  placeholder="Nhập kích thước (cm)"
+                />
+              </Form.Item>
+
+              <Form.Item
+                name="location"
+                label="Vị Trí"
+                rules={[{ required: true, message: "Vui lòng nhập vị trí" }]}
+              >
+                <Input placeholder="Nhập vị trí bể cá" />
+              </Form.Item>
+            </div>
+
+            <Form.Item
+              name="status"
+              label="Trạng Thái"
+              rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
+            >
+              <Select placeholder="Chọn trạng thái">
+                <Option value="available">Sẵn Sàng</Option>
+                <Option value="occupied">Đang Sử Dụng</Option>
+                <Option value="maintenance">Bảo Trì</Option>
+                <Option value="cleaning">Đang Dọn Dẹp</Option>
+                <Option value="damaged">Hư Hỏng</Option>
+                <Option value="outOfService">Ngưng Phục Vụ</Option>
               </Select>
             </Form.Item>
-          )}
-
-          <Form.Item
-            name="name"
-            label="Tên Bể Cá"
-            rules={[{ required: true, message: "Vui lòng nhập tên bể cá" }]}
-          >
-            <Input placeholder="Nhập tên bể cá" />
-          </Form.Item>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item
-              name="capacity"
-              label="Sức chứa"
-              rules={[{ required: true, message: "Vui lòng nhập sức chứa" }]}
-            >
-              <InputNumber
-                min={0}
-                max={100}
-                style={{ width: "100%" }}
-                placeholder="Nhập sức chứa"
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="waterType"
-              label="Loại Nước"
-              rules={[{ required: true, message: "Vui lòng chọn loại nước" }]}
-            >
-              <Select placeholder="Chọn loại nước">
-                <Option value="Fresh">Nước Ngọt</Option>
-                <Option value="Salt">Nước Mặn</Option>
-                <Option value="Brackish">Nước Lợ</Option>
-              </Select>
-            </Form.Item>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item
-              name="temperature"
-              label="Nhiệt Độ (°C)"
-              rules={[{ required: true, message: "Vui lòng nhập nhiệt độ" }]}
-            >
-              <InputNumber
-                min={0}
-                step={0.1}
-                style={{ width: "100%" }}
-                placeholder="Nhập nhiệt độ"
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="phLevel"
-              label="Độ pH"
-              rules={[{ required: true, message: "Vui lòng nhập độ pH" }]}
-            >
-              <InputNumber
-                min={0}
-                max={14}
-                step={0.1}
-                style={{ width: "100%" }}
-                placeholder="Nhập độ pH"
-              />
-            </Form.Item>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Form.Item
-              name="size"
-              label="Kích Thước (cm)"
-              rules={[{ required: true, message: "Vui lòng nhập kích thước" }]}
-            >
-              <InputNumber
-                min={0}
-                step={0.01}
-                style={{ width: "100%" }}
-                placeholder="Nhập kích thước (cm)"
-              />
-            </Form.Item>
-
-            <Form.Item
-              name="location"
-              label="Vị Trí"
-              rules={[{ required: true, message: "Vui lòng nhập vị trí" }]}
-            >
-              <Input placeholder="Nhập vị trí bể cá" />
-            </Form.Item>
-          </div>
-
-          <Form.Item
-            name="status"
-            label="Trạng Thái"
-            rules={[{ required: true, message: "Vui lòng chọn trạng thái" }]}
-          >
-            <Select placeholder="Chọn trạng thái">
-              <Option value="available">Sẵn Sàng</Option>
-              <Option value="occupied">Đang Sử Dụng</Option>
-              <Option value="maintenance">Bảo Trì</Option>
-              <Option value="cleaning">Đang Dọn Dẹp</Option>
-              <Option value="damaged">Hư Hỏng</Option>
-              <Option value="outOfService">Ngưng Phục Vụ</Option>
-            </Select>
-          </Form.Item>
-        </Form>
+          </Form>
+        )}
       </Modal>
     </div>
   );

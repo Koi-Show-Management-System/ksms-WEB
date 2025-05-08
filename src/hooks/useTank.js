@@ -30,6 +30,20 @@ const useTank = create((set, get) => ({
     }
 
     try {
+      // Check that categoryId is a valid value before making the API call
+      if (
+        !categoryId ||
+        (typeof categoryId !== "string" && typeof categoryId !== "number")
+      ) {
+        console.error("Invalid categoryId:", categoryId);
+        set({
+          error: new Error("Invalid category ID"),
+          isLoading: false,
+          tanks: forCompetitionRound ? get().competitionRoundTanks : [],
+        });
+        return;
+      }
+
       const res = await getTank(categoryId, page, size);
 
       if (res && res.status === 200) {
@@ -77,14 +91,6 @@ const useTank = create((set, get) => ({
             isLoading: false,
           });
         }
-      } else {
-        console.error("API Error:", res);
-        notification.error({
-          message: "Thông báo",
-          description: res?.data?.Error || "Lỗi khi tải danh sách bể cá",
-          duration: 3,
-        });
-        set({ error: res, isLoading: false });
       }
     } catch (error) {
       console.error("API Error:", error);
@@ -108,16 +114,19 @@ const useTank = create((set, get) => ({
       if (res?.data?.statusCode === 200) {
         // Refresh tank list after creation
         const showId = tankData.showId;
+        const categoryId = tankData.competitionCategoryId;
+
         notification.success({
           message: "Thành công",
           description: res.data.message || "Tạo bể cá thành công",
           duration: 3,
         });
-        get().fetchTanks(
-          competitionCategoryId,
-          get().currentPage,
-          get().pageSize
-        );
+
+        // Use the category ID from the tank data
+        if (categoryId) {
+          get().fetchTanks(categoryId, get().currentPage, get().pageSize);
+        }
+
         set({ isModalVisible: false });
         return { success: true, data: res.data };
       } else {

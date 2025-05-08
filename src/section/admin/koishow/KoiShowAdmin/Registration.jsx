@@ -18,6 +18,7 @@ import {
   Input,
   Empty,
   Spin,
+  Tabs,
 } from "antd";
 import {
   ExclamationCircleOutlined,
@@ -147,8 +148,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
         (id) => String(id) === selectedCategoryStr
       );
 
-   
-
       // Kiểm tra nếu hạng mục đã bị hủy
       if (isCancelled) {
         // Tìm các đơn đăng ký cần hoàn tiền dựa trên trạng thái show
@@ -208,7 +207,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
   useEffect(() => {
     fetchCategories(showId);
     fetchRegistration(1, 10, showId);
-
   }, []);
 
   useEffect(() => {}, [categories]);
@@ -234,8 +232,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
     const isCancelled = cancelledCategoryIds.some(
       (id) => String(id) === valueStr
     );
-
-   
 
     fetchRegistration(1, 10, showId, value ? [value] : undefined, null).then(
       () => {
@@ -734,7 +730,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
       (id) => String(id) === categoryIdStr
     );
 
-
     // Tìm tất cả đăng ký có trạng thái pending, confirmed, rejected thuộc hạng mục đã chọn
     const eligibleRegistrations = registration.filter(
       (reg) =>
@@ -1081,8 +1076,6 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
               </Button>
               {currentKoi && (
                 <>
-               
-
                   {/* Hiển thị nút Đã hoàn tiền khi cần */}
                   {currentKoi.status?.toLowerCase() !== "refunded" && (
                     <>
@@ -1894,6 +1887,180 @@ function Registration({ showId, statusShow, cancelledCategoryIds = [] }) {
               />
             )}
           </div>
+        </Modal>
+
+        {/* Media modal for displaying all images or videos */}
+        <Modal
+          title={
+            mediaType === "image"
+              ? "Tất cả hình ảnh"
+              : mediaType === "video"
+                ? "Tất cả video"
+                : "Tất cả media"
+          }
+          open={mediaModalVisible}
+          onCancel={() => setMediaModalVisible(false)}
+          footer={null}
+          width={750}
+          style={{ top: 20 }}
+        >
+          {currentKoi && (
+            <div>
+              {mediaType === "image" && (
+                <div style={{ marginBottom: 16 }}>
+                  <Typography.Text strong>
+                    {
+                      currentKoi.koiMedia.filter(
+                        (media) => media.mediaType === "Image"
+                      ).length
+                    }{" "}
+                    hình ảnh
+                  </Typography.Text>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                    {currentKoi.koiMedia
+                      .filter((media) => media.mediaType === "Image")
+                      .map((media, index) => (
+                        <div
+                          key={index}
+                          className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[220px]"
+                          style={{ border: "1px solid #f0f0f0" }}
+                        >
+                          <Image
+                            src={media.mediaUrl}
+                            alt={`Hình ảnh ${index + 1}`}
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "100%",
+                              objectFit: "contain",
+                              margin: "0 auto",
+                              display: "block",
+                            }}
+                            placeholder={
+                              <div
+                                style={{
+                                  width: "100%",
+                                  height: "220px",
+                                  display: "flex",
+                                  justifyContent: "center",
+                                  alignItems: "center",
+                                }}
+                              >
+                                <Spin size="small" />
+                              </div>
+                            }
+                          />
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {mediaType === "video" && (
+                <div style={{ marginBottom: 16 }}>
+                  <Typography.Text strong>
+                    {
+                      currentKoi.koiMedia.filter(
+                        (media) => media.mediaType === "Video"
+                      ).length
+                    }{" "}
+                    video
+                  </Typography.Text>
+                  <div className="grid grid-cols-1 gap-4 mt-3">
+                    {currentKoi.koiMedia
+                      .filter((media) => media.mediaType === "Video")
+                      .map((media, index) => (
+                        <div key={index} className="mb-4">
+                          <Typography.Text className="text-md font-medium mb-1 block">
+                            Video {index + 1}
+                          </Typography.Text>
+                          <div
+                            className="bg-gray-900 rounded-lg overflow-hidden flex items-center justify-center h-auto"
+                            style={{
+                              borderRadius: "8px",
+                              border: "1px solid #1f1f1f",
+                            }}
+                          >
+                            <video
+                              controls
+                              src={media.mediaUrl}
+                              style={{
+                                width: "100%",
+                                height: "auto",
+                                maxHeight: "320px",
+                                borderRadius: "8px",
+                              }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+              )}
+
+              {mediaType === "all" && (
+                <div>
+                  <Tabs defaultActiveKey="images">
+                    <Tabs.TabPane
+                      tab={`Hình ảnh (${currentKoi.koiMedia.filter((media) => media.mediaType === "Image").length})`}
+                      key="images"
+                    >
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+                        {currentKoi.koiMedia
+                          .filter((media) => media.mediaType === "Image")
+                          .map((media, index) => (
+                            <div
+                              key={index}
+                              className="bg-gray-100 rounded-lg overflow-hidden flex items-center justify-center h-[220px]"
+                              style={{ border: "1px solid #f0f0f0" }}
+                            >
+                              <Image
+                                src={media.mediaUrl}
+                                alt={`Hình ảnh ${index + 1}`}
+                                style={{
+                                  maxWidth: "100%",
+                                  maxHeight: "100%",
+                                  objectFit: "contain",
+                                  margin: "0 auto",
+                                  display: "block",
+                                }}
+                              />
+                            </div>
+                          ))}
+                      </div>
+                    </Tabs.TabPane>
+                    <Tabs.TabPane
+                      tab={`Video (${currentKoi.koiMedia.filter((media) => media.mediaType === "Video").length})`}
+                      key="videos"
+                    >
+                      <div className="grid grid-cols-1 gap-4 mt-3">
+                        {currentKoi.koiMedia
+                          .filter((media) => media.mediaType === "Video")
+                          .map((media, index) => (
+                            <div key={index} className="mb-4">
+                              <Typography.Text className="text-md font-medium mb-1 block">
+                                Video {index + 1}
+                              </Typography.Text>
+                              <div className="bg-gray-900 rounded-lg overflow-hidden">
+                                <video
+                                  controls
+                                  src={media.mediaUrl}
+                                  style={{
+                                    width: "100%",
+                                    height: "auto",
+                                    maxHeight: "320px",
+                                    borderRadius: "8px",
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </Tabs.TabPane>
+                  </Tabs>
+                </div>
+              )}
+            </div>
+          )}
         </Modal>
       </Card>
     </ConfigProvider>

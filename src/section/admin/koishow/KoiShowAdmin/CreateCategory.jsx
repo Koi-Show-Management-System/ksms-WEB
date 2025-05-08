@@ -1070,6 +1070,29 @@ function CreateCategory({ showId, onCategoryCreated }) {
         prizeValue: parseFloat(award.prizeValue) || 0,
       }));
 
+    // Make sure all rounds are included (Preliminary, Evaluation, and Final)
+    // Check if all required rounds exist
+    const requiredRoundTypes = ["Preliminary", "Evaluation", "Final"];
+    const existingRoundTypes = new Set(
+      categoryData.createRoundRequests.map((round) => round.roundType)
+    );
+
+    // Add any missing round types
+    for (const roundType of requiredRoundTypes) {
+      if (!existingRoundTypes.has(roundType)) {
+        // Add the missing round
+        categoryData.createRoundRequests.push({
+          name: `Vòng 1`,
+          roundOrder: 1,
+          roundType: roundType,
+          startTime: dayjs().format(),
+          endTime: dayjs().add(1, "day").format(),
+          numberOfRegistrationToAdvance: null,
+          status: "pending",
+        });
+      }
+    }
+
     // Cập nhật số cá qua vòng từ state vào rounds
     categoryData.createRoundRequests = categoryData.createRoundRequests.map(
       (round) => {
