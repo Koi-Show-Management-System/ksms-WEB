@@ -313,7 +313,7 @@ const Overview = ({ selectedShow = "all", onShowChange, dashboardData }) => {
             <ResponsiveContainer width="100%" height="100%">
               <BarChart
                 data={filteredChartData}
-                margin={{ top: 10, right: 10, left: 20, bottom: 50 }}
+                margin={{ top: 10, right: 10, left: 50, bottom: 50 }}
                 barSize={30}
               >
                 <CartesianGrid
