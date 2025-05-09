@@ -52,6 +52,7 @@ function CompetitionRound({ showId }) {
   const [scoreDetails, setScoreDetails] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
   const [currentRoundType, setCurrentRoundType] = useState(null);
+  const [hasTanks, setHasTanks] = useState(false);
 
   const roundTypeLabels = {
     Preliminary: "Vòng Sơ Khảo",
@@ -132,6 +133,17 @@ function CompetitionRound({ showId }) {
       fetchRegistrationRound(selectedSubRound, 1, 10);
     }
   }, [selectedSubRound, fetchRegistrationRound]);
+
+  // Check if any registration has a non-empty tankName
+  useEffect(() => {
+    if (registrationRound && Array.isArray(registrationRound)) {
+      // Kiểm tra xem có bất kỳ registrationRound nào có tankName không rỗng
+      const categoryHasTanks = registrationRound.some(
+        (item) => item.tankName && item.tankName.trim() !== ""
+      );
+      setHasTanks(categoryHasTanks);
+    }
+  }, [registrationRound]);
 
   // Image handling functions
   const handleImageLoad = (id) => {
@@ -301,16 +313,11 @@ function CompetitionRound({ showId }) {
                 color="blue"
                 style={{ fontSize: "14px", fontWeight: "bold" }}
               >
-                {totalScore}
+                {totalScore.toFixed(2)}
               </Tag>
             </Tooltip>
           );
         },
-      },
-      {
-        title: "Bể",
-        dataIndex: "tankName",
-        render: (tank) => <span>{tank || "Chưa phân bổ"}</span>,
       },
       {
         title: "Hành động",
@@ -326,8 +333,17 @@ function CompetitionRound({ showId }) {
       },
     ];
 
+    // Chỉ hiển thị cột "Bể" nếu hạng mục có bể
+    if (hasTanks) {
+      baseColumns.splice(baseColumns.length - 1, 0, {
+        title: "Bể",
+        dataIndex: "tankName",
+        render: (tank) => <span>{tank || "Chưa phân bổ"}</span>,
+      });
+    }
+
     return baseColumns;
-  }, [categories, selectedRoundType]);
+  }, [categories, selectedRoundType, hasTanks]);
 
   const displayData = useMemo(() => {
     if (
