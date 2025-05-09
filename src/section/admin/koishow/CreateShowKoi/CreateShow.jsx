@@ -805,7 +805,7 @@ function CreateShow() {
       </div>
 
       <Modal
-        title="Xác nhận gửi chương trình"
+        title="Xác nhận tạo triển lãm"
         open={isConfirmModalOpen}
         onOk={handleSubmit}
         onCancel={() => setIsConfirmModalOpen(false)}
@@ -813,7 +813,7 @@ function CreateShow() {
         cancelText="Hủy"
         confirmLoading={isLoading}
       >
-        <p>Bạn có chắc chắn muốn gửi chương trình này không?</p>
+        <p>Bạn có chắc chắn muốn tạo triển lãm này không?</p>
       </Modal>
       {/* Debug Panel */}
       {/* <div className="mt-6 p-4 bg-gray-100 rounded-md">
