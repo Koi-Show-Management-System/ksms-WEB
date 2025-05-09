@@ -189,16 +189,6 @@ function KoiShowDetail() {
                                     </div>
                                     <div className="flex flex-col md:flex-row md:justify-between">
                                       <span className="font-medium">
-                                        Số người tham gia:
-                                      </span>
-                                      <span>
-                                        {koiShowDetail.data.minParticipants} -{" "}
-                                        {koiShowDetail.data.maxParticipants}{" "}
-                                        người
-                                      </span>
-                                    </div>
-                                    <div className="flex flex-col md:flex-row md:justify-between">
-                                      <span className="font-medium">
                                         Địa điểm:
                                       </span>
                                       <span>{koiShowDetail.data.location}</span>
